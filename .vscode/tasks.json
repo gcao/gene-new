@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "nimbuild",
+      "type": "shell",
+      "command": "~/.nimble/bin/nim",
+      "args": [
+        "c",
+        "--debugger:native",
+        "--out:bin/gene",
+        "src/gene.nim"
+      ],
+    },
+    {
+      "label": "nimbuild - wip_test",
+      "type": "shell",
+      "command": "~/.nimble/bin/nim",
+      "args": [
+        "c",
+        "--debugger:native",
+        "tests/wip_test.nim"
+      ],
+    },
+  ]
+}

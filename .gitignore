@@ -1,0 +1,20 @@
+# Ignore all
+*
+
+# Unignore all with extensions
+!*/
+!*.*
+!Makefile
+!LICENSE
+!Vagrantfile
+
+*.out
+.vagrant
+*.dSYM/
+tmp/
+bin/
+*.dylib
+wip_test.nim
+profile_results.txt
+callgrind.out*
+scratch*

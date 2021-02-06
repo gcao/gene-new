@@ -1,0 +1,7 @@
+#!/usr/bin/env gene
+
+(import upcase from "src/index" ^pkg "my-lib")
+
+(fn mungle s
+  ("" s ":" (upcase s))
+)

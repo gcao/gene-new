@@ -1,0 +1,11 @@
+#!/usr/bin/env gene
+
+(import genex/tests/[test skip_test])
+
+(test "A basic test"
+  (assert true)
+)
+
+(test "A basic test"
+  (assert false)
+)

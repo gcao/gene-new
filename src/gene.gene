@@ -1,0 +1,351 @@
+(macro gene/assert [expr message = ("" expr " is NOT true.")]
+  (if not (caller_eval expr)
+    (println message)
+  )
+)
+(var global/assert gene/assert)
+
+(macro gene/with [name value body...]
+  (var expr
+    :(do
+      (var %name %value)
+      %body...
+      %name ))
+  (caller_eval expr)
+)
+(var global/with gene/with)
+
+(macro gene/debug expr
+  (var s (expr .to_s))
+  (println s " begin")
+  (var result (caller_eval expr))
+  (println s " end => " result)
+  result
+)
+(var global/debug gene/debug)
+
+(var gene/base64 gene/native/base64)
+
+(var gene/sleep gene/native/sleep)
+
+(var gene/sleep_async gene/native/sleep_async)
+
+(class gene/Object
+  (method class _
+    ($get_class self)
+  )
+
+  (native_method is gene/native/object_is)
+
+  (native_method to_s gene/native/object_to_s)
+
+  (native_method to_json gene/native/object_to_json)
+
+  # (native_method to_xml gene/native/object_to_xml)
+)
+
+(class gene/Namespace
+  (native_method name gene/native/ns_name)
+)
+
+(class gene/Class
+  (var /new gene/native/class_new)
+
+  (native_method name gene/native/class_name)
+
+  (native_method parent gene/native/class_parent)
+)
+
+(class gene/Exception     # All exceptions should inherit from this class
+  (native_method message gene/native/exception_message)
+
+  # (method extra _       # additional data related to the exception
+  # )
+)
+
+(var global/Exception gene/Exception)
+
+(class gene/Nil
+)
+
+(class gene/Bool
+)
+
+(class gene/Int
+  (method times block
+    (for i in (range 0 self)
+      (block i)
+    )
+  )
+
+  (method to_json _
+    self
+  )
+)
+
+(class gene/Char
+)
+
+(class gene/String
+  (native_method size gene/native/str_size)
+
+  (native_method to_i gene/native/str_to_i)
+  (native_method append gene/native/str_append)
+  (native_method size gene/native/str_size)
+  (native_method substr gene/native/str_substr)
+  (native_method split gene/native/str_split)
+
+  # (method substr [start end = nil]
+  #   (if start
+  #     (if end
+  #       (call_native "str_substr" self start end)
+  #     else
+  #       (call_native "str_substr" self start)
+  #     )
+  #   else
+  #     (not_allowed "Start index is required")
+  #   )
+  # )
+
+  # (method split [sep limit = nil]
+  #   (if limit
+  #     (call_native "str_split" self sep limit)
+  #   else
+  #     (call_native "str_split" self sep)
+  #   )
+  # )
+
+  (method lines _
+    (self .split "\n")
+  )
+
+  (native_method contains gene/native/str_contains)
+  (native_method index gene/native/str_index)
+  (native_method rindex gene/native/str_rindex)
+  (native_method char_at gene/native/str_char_at)
+  (native_method trim gene/native/str_trim)
+  (native_method starts_with gene/native/str_starts_with)
+  (native_method ends_with gene/native/str_ends_with)
+  (native_method to_upper_case gene/native/str_to_upper_case)
+  (native_method to_lower_case gene/native/str_to_lower_case)
+)
+
+(class gene/Symbol
+)
+
+(class gene/Date
+  (native_method year gene/native/date_year)
+)
+
+(class gene/DateTime
+  (native_method year gene/native/date_year)
+  (native_method "-" gene/native/datetime_sub)
+  (native_method elapsed gene/native/datetime_elapsed)
+)
+
+(class gene/Time
+  (native_method hour gene/native/time_hour)
+)
+
+(class gene/Timezone
+)
+
+(var gene/today gene/native/date_today)
+
+(fn gene/yesterday _
+)
+
+(fn gene/tomorrow _
+)
+
+(var gene/now gene/native/time_now)
+
+(class gene/Array
+  (native_method size gene/native/array_size)
+
+  (native_method get gene/native/array_get)
+
+  (native_method set gene/native/array_set)
+
+  (native_method add gene/native/array_add)
+
+  (native_method del gene/native/array_del)
+
+  (method join [with = ""]
+    (gene/with s ""
+      (for [i item] in self
+        (s .append (item .to_s) (if (i < (.size)) with))
+      )
+    )
+  )
+
+  (method each block
+    (for item in self
+      (block item)
+    )
+  )
+
+  (method map block
+    (var result [])
+    (for item in self
+      (result .add (block item))
+    )
+    result
+  )
+
+  (method filter block
+    (var result [])
+    (for item in self
+      (if (block item)
+        (result .add item)
+      )
+    )
+    result
+  )
+)
+
+(class gene/Map
+  (native_method size gene/native/map_size)
+  (native_method contain gene/native/map_contain)
+  (native_method merge gene/native/map_merge)
+
+  # (method to_iterator _
+  #   (gene/native/props_iterator self)
+  # )
+
+  (method keys _
+    (var result [])
+    (for [k _] in self
+      (result .add k)
+    )
+    result
+  )
+
+  (method values _
+    (var result [])
+    (for [_ v] in self
+      (result .add v)
+    )
+    result
+  )
+
+  (method map block
+    (var result [])
+    (for [k v] in self
+      (result .add (block k v))
+    )
+    result
+  )
+
+  (method each block
+    (for [k v] in self
+      (block k v)
+    )
+  )
+)
+
+(class gene/Gene
+  (native_method type gene/native/gene_type)
+  (native_method props gene/native/gene_props)
+  (native_method contain gene/native/gene_contain)
+
+  # (method props_iterator _
+  #   (gene/native/props_iterator self)
+  # )
+
+  (method prop name
+  )
+
+  (native_method data gene/native/gene_data)
+
+  (method get [i]
+  )
+)
+
+(class gene/Regex
+)
+
+(class gene/Application
+)
+
+(class gene/Package
+  (native_method name gene/native/package_name)
+
+  (native_method version gene/native/package_version)
+)
+
+(class gene/Future
+  (method on_success blk
+    ($on_future_success self blk)
+  )
+
+  (method on_failure blk
+    ($on_future_failure self blk)
+  )
+
+  (native_method finished gene/native/future_finished)
+
+  # Use (async) to create Future
+  # (fn new _
+  #   (call_native "future_new")
+  # )
+)
+
+(class gene/File
+  (method new _
+    (not_allowed "File objects can not be created with (new File ...)")
+  )
+
+  (method read _
+    # (call_native "file_close" self)
+    (gene/native/file_read self)
+  )
+
+  (method close _
+    # (call_native "file_close" self)
+    (gene/native/file_close self)
+  )
+
+  (var /open gene/native/file_open)
+
+  (var /read gene/native/file_read)
+
+  (var /read_async gene/native/file_read_async)
+
+  (var /write gene/native/file_write)
+)
+
+(ns gene/os
+  (fn exec [cmd args...]
+    (gene/native/os_exec cmd args)
+  )
+)
+
+(ns gene/json
+  (var /parse gene/native/json_parse)
+)
+
+(class gene/AssertionError < gene/Exception
+)
+
+(var global/AssertionError gene/AssertionError)
+
+(ns global/nim) # Namespace for Nim classes
+
+(class nim/CatchableError   # Base class for Nim exception classes
+  (native_method message gene/native/exception_message)
+)
+
+# Some utility methods
+(fn gene/id v v)
+(fn gene/inc v (v + 1))
+(fn gene/dec v (v - 1))
+
+(var gene/run_forever gene/native/run_forever)
+
+(ns gene/csv
+  (var /parse_string gene/native/csv_parse)
+)
+
+(var gene/url_encode gene/native/url_encode)
+(var gene/url_decode gene/native/url_decode)

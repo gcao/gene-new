@@ -1,0 +1,4 @@
+{
+  ^name "Test"
+  ^description "A sample json response served by the HTTP server"
+}

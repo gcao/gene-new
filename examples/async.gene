@@ -1,0 +1,29 @@
+#!/usr/bin/env gene
+
+(fn f a
+  (var future
+    (gene/sleep_async 2500)
+  )
+  (future .on_success (->
+    (println a)
+  ))
+  future
+)
+(await (f "first"))
+(f "second")
+(println 0)
+(gene/sleep 1000)
+(println 1)
+(gene/sleep 1000)
+(println 2)
+(gene/sleep 1000)
+(println 3)
+
+#< Output should look like below, because futures are not checked after every expression.
+first
+0
+1
+2
+3
+second
+#>#

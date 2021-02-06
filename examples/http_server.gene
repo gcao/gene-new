@@ -1,0 +1,66 @@
+#!/usr/bin/env gene
+
+# Handler: proc(req, data): nil|response
+# * Native handlers
+# * Gene handlers
+# * A default handler is included which will call a list of handlers provided
+#   by the application one by one, until a response is returned.
+# * Child handlers can be added and the order matters.
+#
+# * Response can be in a few formats:
+#   "response body"
+#   [code "response body" optional headers]
+#   Stream
+#   Exception -> will produce a HTTP 500 response with the message as the response body
+#   What else?
+#
+# * Middlewares
+# - Middlewares usually handles authentication, authorization, response
+#   transformation etc
+# - In order to support middlewares, we'll need to separate regular handlers
+#   and middlewares.
+# - There are middlewares run before / after handlers
+#
+# * Router
+# - Router usually handles mapping between url patterns and handlers.
+# - Everything a router does can be supported by regular handlers, however
+#   a router provides some convenience, e.g. decouple routing and controller
+#   logic
+#
+# * Asset handler
+#
+
+(var docroot "examples/www")
+
+(fn hello req
+  (var name ((req .params).@name))
+  (if name
+    ("Hello " name)
+  else
+    "Hello world!"
+  )
+)
+
+(var handlers [hello])
+
+(fn handler req
+  (var result)
+  (for h in handlers
+    (result = (h req))
+    (if result break)
+  )
+  (println "200 " (req .method) " " (req .url))
+  result
+catch _
+  (println "500 " (req .method) " " (req .url))
+  (throw $ex)
+)
+
+(var port 2080)
+(if (($cmd_args .size) > 1)
+  (port = (($cmd_args .get 1).to_i))
+)
+(println "Starting HTTP server at port " port " ...")
+
+(genex/http/start_server port handler)
+(gene/run_forever)

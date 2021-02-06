@@ -1,0 +1,11 @@
+^name "my-app"
+^version "0.1.0"
+^deps [
+  (dep "my-lib" ">=0.1.0" ^location "../my-lib")
+  # Same as below
+  # (dep
+  #   ^name     "my-lib"
+  #   ^version  ">= 0.1.0"
+  #   ^location "../my-lib"
+  # )
+]
