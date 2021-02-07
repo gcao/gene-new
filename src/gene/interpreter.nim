@@ -12,7 +12,7 @@ import ./translators
 type
   Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: Value): Value
 
-var Evaluators = Table[ValueKind, Evaluator]()
+var Evaluators* = Table[ValueKind, Evaluator]()
 
 let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
 let GENE_RUNTIME* = Runtime(
@@ -20,6 +20,10 @@ let GENE_RUNTIME* = Runtime(
   name: "default",
   version: read_file(GENE_HOME & "/VERSION").strip(),
 )
+
+#################### Definitions #################
+
+proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value
 
 #################### Application #################
 
@@ -41,7 +45,25 @@ proc init_app_and_vm*() =
 
 proc prepare*(self: VirtualMachine, code: string): Value =
   var parsed = read_all(code)
-  translate(parsed[0])
+  case parsed.len:
+  of 0:
+    Nil
+  of 1:
+    translate(parsed[0])
+  else:
+    translate(new_gene_stream(parsed))
+
+proc default_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  case expr.kind:
+  of VkNil, VkBool, VkInt:
+    result = expr
+  of VkString:
+    result = new_gene_string(expr.str)
+  of VkStream:
+    for e in expr.stream:
+      result = self.eval(frame, e)
+  else:
+    not_allowed()
 
 proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value =
   var evaluator = Evaluators.get_or_default(expr.kind, default_evaluator)
@@ -53,13 +75,6 @@ proc eval*(self: VirtualMachine, code: string): Value =
   frame.ns = module.root_ns
   frame.scope = new_scope()
   result = self.eval(frame, self.prepare(code))
-
-proc default_evaluator*(self: VirtualMachine, frame: Frame, expr: Value): Value =
-  case expr.kind:
-  of VkNil, VkBool, VkInt:
-    result = expr
-  else:
-    not_allowed()
 
 proc init_evaluators*() =
   Evaluators[VkSymbol] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =

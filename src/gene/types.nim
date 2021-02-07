@@ -166,6 +166,7 @@ type
     VkGene
     VkStream
     VkDocument
+    # Internal types
     VkException = 128
     VkApplication
     VkPackage
@@ -183,8 +184,11 @@ type
     VkEnumMember
     VkExplode
     VkFile
-    # Vk512 = 512 # Custom types
-    # Vk513
+    # Standard expressions
+    VkExGroup = 512
+    # Custom expressions
+    VkEx1024 = 1024
+    VkEx1025, VkEx1026 # ...
 
   Value* {.acyclic.} = ref object
     case kind*: ValueKind

@@ -1,30 +1,28 @@
-import tables, strutils
+import tables
 
 import ./map_key
 import ./types
-import ./normalizers
-
-const SIMPLE_BINARY_OPS* = [
-  "+", "-", "*", "/", "**",
-  "==", "!=", "<", "<=", ">", ">=",
-  "&&", "||", # TODO: xor
-  "&",  "|",  # TODO: xor for bit operation
-]
-
-const COMPLEX_BINARY_OPS* = [
-  "+=", "-=", "*=", "/=", "**=",
-  "&&=", "||=", # TODO: xor
-  "&=",  "|=",  # TODO: xor for bit operation
-]
 
 type
-  Translator* = proc(node: Value): Value
+  Translator* = proc(v: Value): Value
 
-proc translate*(node: Value): Value =
-  case node.kind:
-  of VkNil, VkBool, VkInt:
-    return node
-  of VkSymbol:
-    todo()
-  else:
-    todo()
+var Translators*     = Table[ValueKind, Translator]()
+var GeneTranslators* = Table[Value, Translator]()
+
+proc default_translator(v: Value): Value =
+  v
+  # case v.kind:
+  # of VkNil, VkBool, VkInt, VkString:
+  #   return v
+  # else:
+  #   return v
+
+proc translate*(v: Value): Value =
+  var translator = Translators.get_or_default(v.kind, default_translator)
+  translator(v)
+
+proc init_translators() =
+  Translators[VkSymbol] = proc(v: Value): Value =
+    v
+
+init_translators()

@@ -6,15 +6,15 @@ import gene/interpreter
 import ./helpers
 
 test_interpreter "nil", Nil
-# test_interpreter "1", 1
-# test_interpreter "true", true
-# test_interpreter "false", false
-# test_interpreter "\"string\"", "string"
+test_interpreter "1", 1
+test_interpreter "true", true
+test_interpreter "false", false
+test_interpreter "\"string\"", "string"
 # test_interpreter ":a", new_gene_symbol("a")
 
-# test_interpreter "1 2 3", 3
+test_interpreter "1 2 3", 3
 
-# test_interpreter "[]", new_gene_vec()
+test_interpreter "[]", new_gene_vec()
 # test_interpreter "[1 2]", new_gene_vec(new_gene_int(1), new_gene_int(2))
 
 # test_interpreter "{}", OrderedTable[string, GeneValue]()
