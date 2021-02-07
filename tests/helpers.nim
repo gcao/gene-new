@@ -4,16 +4,15 @@ import gene/map_key
 import gene/types
 import gene/parser
 # import gene/normalizers
-# import gene/interpreter
+import gene/interpreter
 # import gene/interpreter_extras
 
 # Uncomment below lines to see logs
 # import logging
 # addHandler(newConsoleLogger())
 
-# proc init_all*() =
-#   init_app_and_vm()
-#   VM.init_extras()
+proc init_all*() =
+  todo()
 
 # This is added to make it easier to write tests
 converter str_to_key*(s: string): MapKey {.inline.} =
@@ -77,17 +76,17 @@ proc test_read_all*(code: string, callback: proc(result: seq[Value])) =
 # proc test_normalize*(code: string, r: string) =
 #   test_normalize(code, read(r))
 
-# proc test_interpreter*(code: string, result: Value) =
-#   var code = cleanup(code)
-#   test "Interpreter / eval: " & code:
-#     init_all()
-#     check VM.eval(code) == result
+proc test_interpreter*(code: string, result: Value) =
+  var code = cleanup(code)
+  test "Interpreter / eval: " & code:
+    init_all()
+    check VM.eval(code) == result
 
-# proc test_interpreter*(code: string, callback: proc(result: Value)) =
-#   var code = cleanup(code)
-#   test "Interpreter / eval: " & code:
-#     init_all()
-#     callback VM.eval(code)
+proc test_interpreter*(code: string, callback: proc(result: Value)) =
+  var code = cleanup(code)
+  test "Interpreter / eval: " & code:
+    init_all()
+    callback VM.eval(code)
 
 proc test_parse_document*(code: string, callback: proc(result: Document)) =
   var code = cleanup(code)
