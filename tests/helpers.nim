@@ -12,7 +12,7 @@ import gene/interpreter
 # addHandler(newConsoleLogger())
 
 proc init_all*() =
-  todo()
+  init_app_and_vm()
 
 # This is added to make it easier to write tests
 converter str_to_key*(s: string): MapKey {.inline.} =

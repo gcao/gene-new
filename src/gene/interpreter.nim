@@ -9,6 +9,11 @@ import ./types
 import ./parser
 import ./translators
 
+type
+  Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: Value): Value
+
+var Evaluators = Table[ValueKind, Evaluator]()
+
 let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
 let GENE_RUNTIME* = Runtime(
   home: GENE_HOME,
@@ -39,7 +44,8 @@ proc prepare*(self: VirtualMachine, code: string): Value =
   translate(parsed[0])
 
 proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value =
-  todo()
+  var evaluator = Evaluators.get_or_default(expr.kind, default_evaluator)
+  evaluator(self, frame, expr)
 
 proc eval*(self: VirtualMachine, code: string): Value =
   var module = new_module()
@@ -47,3 +53,16 @@ proc eval*(self: VirtualMachine, code: string): Value =
   frame.ns = module.root_ns
   frame.scope = new_scope()
   result = self.eval(frame, self.prepare(code))
+
+proc default_evaluator*(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  case expr.kind:
+  of VkNil, VkBool, VkInt:
+    result = expr
+  else:
+    not_allowed()
+
+proc init_evaluators*() =
+  Evaluators[VkSymbol] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+    todo()
+
+init_evaluators()
