@@ -186,6 +186,7 @@ type
     VkFile
     # Standard expressions
     VkExGroup = 512
+    VkExBinOp
     VkExQuote
     # Custom expressions
     VkEx1024 = 1024
@@ -238,8 +239,13 @@ type
       gene_data*: seq[Value]
     of VkStream:
       stream*: seq[Value]
+    # Expressions
     of VkExQuote:
       ex_quote*: Value
+    of VkExBinOp:
+      ex_bin_op*: BinOp
+      ex_bin_op1*: Value
+      ex_bin_op2*: Value
     else:
       discard
     # line*: int
@@ -307,7 +313,7 @@ type
     frame*: Frame
     val*: Value
 
-  BinOps* = enum
+  BinOp* = enum
     BinAdd
     BinSub
     BinMul
