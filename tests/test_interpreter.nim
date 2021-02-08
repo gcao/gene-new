@@ -20,10 +20,10 @@ test_interpreter "[1 2]", new_gene_vec(1, 2)
 test_interpreter "{}", OrderedTable[string, Value]()
 test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 
-# test_interpreter "(:test 1 2)", proc(r: Value) =
-#   check r.gene_type == new_gene_symbol("test")
-#   check r.gene_data[0] == 1
-#   check r.gene_data[1] == 2
+test_interpreter "(:test 1 2)", proc(r: Value) =
+  check r.gene_type == new_gene_symbol("test")
+  check r.gene_data[0] == 1
+  check r.gene_data[1] == 2
 
 # test_interpreter """
 #   (var a 1)
