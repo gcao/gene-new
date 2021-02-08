@@ -186,6 +186,7 @@ type
     VkFile
     # Standard expressions
     VkExGroup = 512
+    VkExQuote
     # Custom expressions
     VkEx1024 = 1024
     VkEx1025, VkEx1026 # ...
@@ -237,6 +238,8 @@ type
       gene_data*: seq[Value]
     of VkStream:
       stream*: seq[Value]
+    of VkExQuote:
+      ex_quote*: Value
     else:
       discard
     # line*: int

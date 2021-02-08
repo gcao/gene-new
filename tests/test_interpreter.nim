@@ -10,7 +10,7 @@ test_interpreter "1", 1
 test_interpreter "true", true
 test_interpreter "false", false
 test_interpreter "\"string\"", "string"
-# test_interpreter ":a", new_gene_symbol("a")
+test_interpreter ":a", new_gene_symbol("a")
 
 test_interpreter "1 2 3", 3
 
@@ -18,7 +18,7 @@ test_interpreter "[]", new_gene_vec()
 test_interpreter "[1 2]", new_gene_vec(1, 2)
 
 test_interpreter "{}", OrderedTable[string, Value]()
-# test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
+test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 
 # test_interpreter "(:test 1 2)", proc(r: Value) =
 #   check r.gene.type == new_gene_symbol("test")

@@ -1,8 +1,4 @@
-{.experimental: "codeReordering".}
-
-import strutils, sequtils, tables, strutils, parsecsv, streams
-import os, osproc, json, httpclient, base64, times, dynlib, uri
-import asyncdispatch, asyncfile, asynchttpserver
+import strutils, tables, strutils, os
 
 import ./map_key
 import ./types
@@ -84,3 +80,4 @@ init_evaluators()
 
 import "./features/array" as array_feature; array_feature.init()
 import "./features/map" as map_feature; map_feature.init()
+import "./features/gene" as gene_feature; gene_feature.init()
