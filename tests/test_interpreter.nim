@@ -15,12 +15,12 @@ test_interpreter "\"string\"", "string"
 test_interpreter "1 2 3", 3
 
 test_interpreter "[]", new_gene_vec()
-# test_interpreter "[1 2]", new_gene_vec(new_gene_int(1), new_gene_int(2))
+test_interpreter "[1 2]", new_gene_vec(1, 2)
 
-# test_interpreter "{}", OrderedTable[string, GeneValue]()
+test_interpreter "{}", OrderedTable[string, Value]()
 # test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 
-# test_interpreter "(:test 1 2)", proc(r: GeneValue) =
+# test_interpreter "(:test 1 2)", proc(r: Value) =
 #   check r.gene.type == new_gene_symbol("test")
 #   check r.gene.data[0] == 1
 #   check r.gene.data[1] == 2
@@ -28,7 +28,7 @@ test_interpreter "[]", new_gene_vec()
 # test_interpreter """
 #   (var a 1)
 #   :(test %a 2)
-# """, proc(r: GeneValue) =
+# """, proc(r: Value) =
 #   check r.gene.type == new_gene_symbol("test")
 #   check r.gene.data[0] == 1
 #   check r.gene.data[1] == 2
@@ -39,7 +39,7 @@ test_interpreter "[]", new_gene_vec()
 #     %a
 #     2
 #   )
-# """, proc(r: GeneValue) =
+# """, proc(r: Value) =
 #   check r.gene.type == new_gene_symbol("test")
 #   check r.gene.data[0] == 1
 #   check r.gene.data[1] == 2
@@ -50,7 +50,7 @@ test_interpreter "[]", new_gene_vec()
 # #     %a...
 # #     3
 # #   )
-# # """, proc(r: GeneValue) =
+# # """, proc(r: Value) =
 # #   check r.gene.type == new_gene_symbol("test")
 # #   check r.gene.data[0] == 1
 # #   check r.gene.data[1] == 2
@@ -60,16 +60,16 @@ test_interpreter "[]", new_gene_vec()
 # # test_interpreter """
 # #   (var a 1)
 # #   ::(test %a 2)
-# # """, proc(r: GeneValue) =
+# # """, proc(r: Value) =
 # #   check r == read(":(test %a 2)")
 
 # # test_interpreter """
 # #   (var a 1)
 # #   ::(test %%a 2)
-# # """, proc(r: GeneValue) =
+# # """, proc(r: Value) =
 # #   check r == read(":(test 1 2)")
 
-# test_interpreter "(range 0 100)", proc(r: GeneValue) =
+# test_interpreter "(range 0 100)", proc(r: Value) =
 #   check r.range_start == 0
 #   check r.range_end == 100
 
@@ -101,7 +101,7 @@ test_interpreter "[]", new_gene_vec()
 #   (var a 1)
 #   (var b 2)
 #   [a b]
-# """, proc(r: GeneValue) =
+# """, proc(r: Value) =
 #   check r.vec[0] == 1
 #   check r.vec[1] == 2
 
@@ -109,7 +109,7 @@ test_interpreter "[]", new_gene_vec()
 #   (var a 1)
 #   (var b 2)
 #   {^a a ^b b}
-# """, proc(r: GeneValue) =
+# """, proc(r: Value) =
 #   check r.map["a"] == 1
 #   check r.map["b"] == 2
 
@@ -117,7 +117,7 @@ test_interpreter "[]", new_gene_vec()
 #   (var a 1)
 #   (var b 2)
 #   (:test ^a a b)
-# """, proc(r: GeneValue) =
+# """, proc(r: Value) =
 #   check r.gene.props["a"] == 1
 #   check r.gene.data[0] == 2
 
@@ -286,7 +286,7 @@ test_interpreter "[]", new_gene_vec()
 # test_interpreter """
 #   (enum A first second)
 #   A
-# """, proc(r: GeneValue) =
+# """, proc(r: Value) =
 #   var e = r.internal.enum
 #   check e.name == "A"
 #   check e.members.len == 2
@@ -301,7 +301,7 @@ test_interpreter "[]", new_gene_vec()
 #     second      # value will be 2
 #   )
 #   A/second
-# """, proc(r: GeneValue) =
+# """, proc(r: Value) =
 #   var m = r.internal.enum_member
 #   check m.parent.name == "A"
 #   check m.name == "second"
@@ -310,7 +310,7 @@ test_interpreter "[]", new_gene_vec()
 # test_interpreter """
 #   (enum A first second)
 #   A/second/parent
-# """, proc(r: GeneValue) =
+# """, proc(r: Value) =
 #   var e = r.internal.enum
 #   check e.name == "A"
 
@@ -326,7 +326,7 @@ test_interpreter "[]", new_gene_vec()
 
 # test "Interpreter / eval: native function (test)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, GeneValue], data: seq[GeneValue]): GeneValue {.nimcall.} =
+#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], data: seq[Value]): Value {.nimcall.} =
 #     1
 #   var code = cleanup """
 #     (test)
@@ -335,7 +335,7 @@ test_interpreter "[]", new_gene_vec()
 
 # test "Interpreter / eval: native function (test 1 2)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, GeneValue], data: seq[GeneValue]): GeneValue {.nimcall.} =
+#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], data: seq[Value]): Value {.nimcall.} =
 #     data[0].int + data[1].int
 #   var code = cleanup """
 #     (test 1 2)
@@ -369,7 +369,7 @@ test_interpreter "[]", new_gene_vec()
 
 # test_interpreter """
 #   $app
-# """, proc(r: GeneValue) =
+# """, proc(r: Value) =
 #   check r.internal.app.ns.name == "global"
 
 # # HOT RELOAD

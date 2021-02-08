@@ -81,3 +81,6 @@ proc init_evaluators*() =
     todo()
 
 init_evaluators()
+
+import "./features/array" as array_feature; array_feature.init()
+import "./features/map" as map_feature; map_feature.init()

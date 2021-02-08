@@ -6,7 +6,6 @@ import gene/parser
 # import gene/normalizers
 import gene/interpreter
 # import gene/interpreter_extras
-import gene/features
 
 # Uncomment below lines to see logs
 # import logging
@@ -14,7 +13,6 @@ import gene/features
 
 proc init_all*() =
   init_app_and_vm()
-  init_features()
 
 # This is added to make it easier to write tests
 converter str_to_key*(s: string): MapKey {.inline.} =
