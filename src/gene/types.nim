@@ -424,6 +424,8 @@ proc parse*(self: var RootMatcher, v: Value)
 
 ##################################################
 
+proc identity*[T](v: T): T = v
+
 proc todo*() =
   raise new_exception(Exception, "TODO")
 

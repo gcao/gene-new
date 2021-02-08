@@ -7,7 +7,7 @@ type
   Translator* = proc(v: Value): Value
 
 var Translators*     = Table[ValueKind, Translator]()
-var GeneTranslators* = Table[Value, Translator]()
+var GeneTranslators* = Table[string, Translator]()
 
 proc default_translator(v: Value): Value =
   v

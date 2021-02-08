@@ -21,17 +21,17 @@ test_interpreter "{}", OrderedTable[string, Value]()
 test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 
 # test_interpreter "(:test 1 2)", proc(r: Value) =
-#   check r.gene.type == new_gene_symbol("test")
-#   check r.gene.data[0] == 1
-#   check r.gene.data[1] == 2
+#   check r.gene_type == new_gene_symbol("test")
+#   check r.gene_data[0] == 1
+#   check r.gene_data[1] == 2
 
 # test_interpreter """
 #   (var a 1)
 #   :(test %a 2)
 # """, proc(r: Value) =
-#   check r.gene.type == new_gene_symbol("test")
-#   check r.gene.data[0] == 1
-#   check r.gene.data[1] == 2
+#   check r.gene_type == new_gene_symbol("test")
+#   check r.gene_data[0] == 1
+#   check r.gene_data[1] == 2
 
 # test_interpreter """
 #   :(test
@@ -40,9 +40,9 @@ test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 #     2
 #   )
 # """, proc(r: Value) =
-#   check r.gene.type == new_gene_symbol("test")
-#   check r.gene.data[0] == 1
-#   check r.gene.data[1] == 2
+#   check r.gene_type == new_gene_symbol("test")
+#   check r.gene_data[0] == 1
+#   check r.gene_data[1] == 2
 
 # # test_interpreter """
 # #   (var a [1 2])
@@ -51,10 +51,10 @@ test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 # #     3
 # #   )
 # # """, proc(r: Value) =
-# #   check r.gene.type == new_gene_symbol("test")
-# #   check r.gene.data[0] == 1
-# #   check r.gene.data[1] == 2
-# #   check r.gene.data[2] == 3
+# #   check r.gene_type == new_gene_symbol("test")
+# #   check r.gene_data[0] == 1
+# #   check r.gene_data[1] == 2
+# #   check r.gene_data[2] == 3
 
 # # TODO: nested quote/unquote, need more thoughts before implementing
 # # test_interpreter """
@@ -118,8 +118,8 @@ test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 #   (var b 2)
 #   (:test ^a a b)
 # """, proc(r: Value) =
-#   check r.gene.props["a"] == 1
-#   check r.gene.data[0] == 2
+#   check r.gene_props["a"] == 1
+#   check r.gene_data[0] == 2
 
 # test_interpreter "(if true 1)", 1
 # test_interpreter "(if not false 1)", 1
