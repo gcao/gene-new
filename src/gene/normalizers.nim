@@ -3,6 +3,16 @@ import strutils, tables
 import ./map_key
 import ./types
 
+const BINARY_OPS* = [
+  "+", "-", "*", "/", "**",
+  "=", "+=", "-=", "*=", "/=", "**=",
+  "==", "!=", "<", "<=", ">", ">=",
+  "&&", "||", # TODO: xor
+  "&&=", "||=",
+  "&",  "|",  # TODO: xor for bit operation
+  "&=", "|=",
+]
+
 type
   Normalizer* = proc(self: Value): bool
 

@@ -2,18 +2,7 @@ import os, re, strutils, tables, unicode, hashes, sets, json, asyncdispatch, tim
 
 import ./map_key
 
-export MapKey
-
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
-const BINARY_OPS* = [
-  "+", "-", "*", "/", "**",
-  "=", "+=", "-=", "*=", "/=", "**=",
-  "==", "!=", "<", "<=", ">", ">=",
-  "&&", "||", # TODO: xor
-  "&&=", "||=",
-  "&",  "|",  # TODO: xor for bit operation
-  "&=", "|=",
-]
 
 type
   Exception* = object of CatchableError
@@ -188,6 +177,8 @@ type
     VkExGroup = 512
     VkExBinOp
     VkExQuote
+    VkExSymbol
+    VkExVar
     # Custom expressions
     VkEx1024 = 1024
     VkEx1025, VkEx1026 # ...
@@ -246,6 +237,11 @@ type
       ex_bin_op*: BinOp
       ex_bin_op1*: Value
       ex_bin_op2*: Value
+    of VkExSymbol:
+      ex_symbol*: MapKey
+    of VkExVar:
+      ex_var_name*: MapKey
+      ex_var_value*: Value
     else:
       discard
     # line*: int
