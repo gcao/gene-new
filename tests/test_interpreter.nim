@@ -1,7 +1,6 @@
 import unittest, tables
 
 import gene/types
-import gene/interpreter
 
 import ./helpers
 
@@ -91,8 +90,8 @@ test_interpreter "(true || false)", true
 test_interpreter "(false && false)", false
 
 test_interpreter "(var a 1) a", 1
-# test_interpreter "(var a 1) (a = 2) a", 2
-# test_interpreter "(var a) (a = 2) a", 2
+test_interpreter "(var a 1) (a = 2) a", 2
+test_interpreter "(var a) (a = 2) a", 2
 
 # test_interpreter "(var /a 1) a", 1
 # test_interpreter "(var /a 1) /a", 1

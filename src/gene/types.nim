@@ -179,6 +179,7 @@ type
     VkExQuote
     VkExSymbol
     VkExVar
+    VkExAssignment
     # Custom expressions
     VkEx1024 = 1024
     VkEx1025, VkEx1026 # ...
@@ -242,6 +243,9 @@ type
     of VkExVar:
       ex_var_name*: MapKey
       ex_var_value*: Value
+    of VkExAssignment:
+      ex_assign_name*: MapKey
+      ex_assign_value*: Value
     else:
       discard
     # line*: int
