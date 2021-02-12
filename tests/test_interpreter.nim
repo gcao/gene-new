@@ -96,42 +96,42 @@ test_interpreter "(var a) (a = 2) a", 2
 # test_interpreter "(var /a 1) a", 1
 # test_interpreter "(var /a 1) /a", 1
 
-# test_interpreter """
-#   (var a 1)
-#   (var b 2)
-#   [a b]
-# """, proc(r: Value) =
-#   check r.vec[0] == 1
-#   check r.vec[1] == 2
+test_interpreter """
+  (var a 1)
+  (var b 2)
+  [a b]
+""", proc(r: Value) =
+  check r.vec[0] == 1
+  check r.vec[1] == 2
 
-# test_interpreter """
-#   (var a 1)
-#   (var b 2)
-#   {^a a ^b b}
-# """, proc(r: Value) =
-#   check r.map["a"] == 1
-#   check r.map["b"] == 2
+test_interpreter """
+  (var a 1)
+  (var b 2)
+  {^a a ^b b}
+""", proc(r: Value) =
+  check r.map["a"] == 1
+  check r.map["b"] == 2
 
-# test_interpreter """
-#   (var a 1)
-#   (var b 2)
-#   (:test ^a a b)
-# """, proc(r: Value) =
-#   check r.gene_props["a"] == 1
-#   check r.gene_data[0] == 2
+test_interpreter """
+  (var a 1)
+  (var b 2)
+  (:test ^a a b)
+""", proc(r: Value) =
+  check r.gene_props["a"] == 1
+  check r.gene_data[0] == 2
 
-# test_interpreter "(if true 1)", 1
+test_interpreter "(if true 1)", 1
 # test_interpreter "(if not false 1)", 1
-# test_interpreter "(if false 1 else 2)", 2
-# test_interpreter """
-#   (if false
-#     1
-#   elif true
-#     2
-#   else
-#     3
-#   )
-# """, 2
+test_interpreter "(if false 1 else 2)", 2
+test_interpreter """
+  (if false
+    1
+  elif true
+    2
+  else
+    3
+  )
+""", 2
 
 # test_interpreter "(do 1 2)", 2
 

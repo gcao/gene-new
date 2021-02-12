@@ -180,6 +180,7 @@ type
     VkExSymbol
     VkExVar
     VkExAssignment
+    VkExIf
     # Custom expressions
     VkEx1024 = 1024
     VkEx1025, VkEx1026 # ...
@@ -246,6 +247,11 @@ type
     of VkExAssignment:
       ex_assign_name*: MapKey
       ex_assign_value*: Value
+    of VkExIf:
+      ex_if_cond*: Value
+      ex_if_then*: Value
+      ex_if_elifs*: seq[(Value, Value)]
+      ex_if_else*: Value
     else:
       discard
     # line*: int

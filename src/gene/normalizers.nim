@@ -64,12 +64,12 @@ Normalizers.add proc(self: Value): bool =
           logic.add(input)
       of IsIfLogic:
         if input == nil:
-          self.gene_props[THEN_KEY] = logic
+          self.gene_props[THEN_KEY] = new_gene_stream(logic)
         elif input == Elif:
-          self.gene_props[THEN_KEY] = logic
+          self.gene_props[THEN_KEY] = new_gene_stream(logic)
           state = IsElif
         elif input == Else:
-          self.gene_props[THEN_KEY] = logic
+          self.gene_props[THEN_KEY] = new_gene_stream(logic)
           state = IsElse
           logic = @[]
         else:
@@ -94,14 +94,14 @@ Normalizers.add proc(self: Value): bool =
           logic.add(input)
       of IsElifLogic:
         if input == nil:
-          elifs.add(new_gene_vec(logic))
+          elifs.add(new_gene_stream(logic))
           self.gene_props[ELIF_KEY] = elifs
         elif input == Elif:
-          elifs.add(new_gene_vec(logic))
+          elifs.add(new_gene_stream(logic))
           self.gene_props[ELIF_KEY] = elifs
           state = IsElif
         elif input == Else:
-          elifs.add(new_gene_vec(logic))
+          elifs.add(new_gene_stream(logic))
           self.gene_props[ELIF_KEY] = elifs
           state = IsElse
           logic = @[]
@@ -109,7 +109,7 @@ Normalizers.add proc(self: Value): bool =
           logic.add(input)
       of IsElse:
         if input == nil:
-          self.gene_props[ELSE_KEY] = logic
+          self.gene_props[ELSE_KEY] = new_gene_stream(logic)
         else:
           logic.add(input)
 
@@ -119,9 +119,9 @@ Normalizers.add proc(self: Value): bool =
 
     # Add empty blocks when they are missing
     if not self.gene_props.has_key(THEN_KEY):
-      self.gene_props[THEN_KEY] = @[]
+      self.gene_props[THEN_KEY] = new_gene_stream(@[])
     if not self.gene_props.has_key(ELSE_KEY):
-      self.gene_props[ELSE_KEY] = @[]
+      self.gene_props[ELSE_KEY] = new_gene_stream(@[])
 
     self.gene_data.reset  # Clear our gene_data as it's not needed any more
 

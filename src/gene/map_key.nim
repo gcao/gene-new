@@ -10,9 +10,12 @@ converter to_key*(i: int): MapKey {.inline.} =
   result = cast[MapKey](i)
 
 proc add_key*(s: string): MapKey {.inline.} =
-  result = Keys.len
-  Keys.add(s)
-  KeyMapping[s] = result
+  if KeyMapping.has_key(s):
+    result = KeyMapping[s]
+  else:
+    result = Keys.len
+    Keys.add(s)
+    KeyMapping[s] = result
 
 proc to_key*(s: string): MapKey {.inline.} =
   if KeyMapping.has_key(s):

@@ -21,8 +21,8 @@ proc translate*(v: Value): Value =
   var translator = Translators.get_or_default(v.kind, default_translator)
   translator(v)
 
-proc init_translators() =
-  Translators[VkSymbol] = proc(v: Value): Value =
-    v
+# proc init_translators() =
+#   Translators[VkSymbol] = proc(v: Value): Value =
+#     v
 
-init_translators()
+# init_translators()
