@@ -181,6 +181,8 @@ type
     VkExVar
     VkExAssignment
     VkExIf
+    VkExFn
+    VkExNsDef
     # Custom expressions
     VkEx1024 = 1024
     VkEx1025, VkEx1026 # ...
@@ -232,6 +234,8 @@ type
       gene_data*: seq[Value]
     of VkStream:
       stream*: seq[Value]
+    of VkFunction:
+      fn*: Function
     # Expressions
     of VkExQuote:
       ex_quote*: Value
@@ -252,6 +256,11 @@ type
       ex_if_then*: Value
       ex_if_elifs*: seq[(Value, Value)]
       ex_if_else*: Value
+    of VkExFn:
+      ex_fn*: Function
+    of VkExNsDef:
+      ex_ns_def_name*: MapKey
+      ex_ns_def_value*: Value
     else:
       discard
     # line*: int
@@ -1284,29 +1293,6 @@ proc wrap_with_try*(body: seq[Value]): seq[Value] =
     return @[new_gene_gene(Try, body)]
   else:
     return body
-
-converter to_function*(node: Value): Function =
-  case node.kind:
-  of VkGene:
-    var first = node.gene_data[0]
-    var name: string
-    if first.kind == VkSymbol:
-      name = first.symbol
-    elif first.kind == VkComplexSymbol:
-      name = first.csymbol[^1]
-
-    var matcher = new_arg_matcher()
-    matcher.parse(node.gene_data[1])
-
-    var body: seq[Value] = @[]
-    for i in 2..<node.gene_data.len:
-      body.add node.gene_data[i]
-
-    body = wrap_with_try(body)
-    result = new_fn(name, matcher, body)
-    result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
-  else:
-    not_allowed()
 
 converter to_macro*(node: Value): Macro =
   var first = node.gene_data[0]
