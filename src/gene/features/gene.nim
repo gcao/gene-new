@@ -5,6 +5,13 @@ import ../normalizers
 import ../translators
 import ../interpreter
 
+proc default_invoker(self: VirtualMachine, frame: Frame, `type`: Value, expr: Value): Value =
+  result = new_gene_gene(`type`)
+  for k, v in expr.gene_props:
+    result.gene_props[k] = self.eval(frame, v)
+  for v in expr.gene_data:
+    result.gene_data.add(self.eval(frame, v))
+
 proc init*() =
   Translators[VkGene] = proc(v: Value): Value =
     v.normalize()
@@ -17,14 +24,5 @@ proc init*() =
 
   Evaluators[VkGene] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     var `type` = self.eval(frame, expr.gene_type)
-    case `type`.kind:
-    of VkString:
-      todo()
-    else:
-      discard
-
-    result = new_gene_gene(`type`)
-    for k, v in expr.gene_props:
-      result.gene_props[k] = self.eval(frame, v)
-    for v in expr.gene_data:
-      result.gene_data.add(self.eval(frame, v))
+    var invoker = GeneInvokers.get_or_default(`type`.kind, default_invoker)
+    invoker(self, frame, `type`, expr)

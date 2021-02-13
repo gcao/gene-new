@@ -41,3 +41,6 @@ proc init*() =
       kind: VkFunction,
       fn: expr.ex_fn,
     )
+
+  GeneInvokers[VkFunction] = proc(self: VirtualMachine, frame: Frame, `type`: Value, expr: Value): Value =
+    todo()

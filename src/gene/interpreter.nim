@@ -8,7 +8,11 @@ import ./translators
 type
   Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: Value): Value
 
+  # Invoker for VkGene values
+  GeneInvoker* = proc(self: VirtualMachine, frame: Frame, `type`: Value, expr: Value): Value
+
 var Evaluators* = Table[ValueKind, Evaluator]()
+var GeneInvokers* = Table[ValueKind, GeneInvoker]()
 
 let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
 let GENE_RUNTIME* = Runtime(

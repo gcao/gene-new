@@ -288,8 +288,6 @@ type
     class_class*: Value
     exception_class*: Value
 
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, value: Value): Value
-
   FrameKind* = enum
     FrFunction
     FrMacro
