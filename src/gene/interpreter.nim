@@ -20,7 +20,7 @@ let GENE_RUNTIME* = Runtime(
 
 #################### Definitions #################
 
-proc eval*(self: VirtualMachine, frame: Frame, node: Value): Value
+proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value
 
 #################### Application #################
 
@@ -62,8 +62,7 @@ proc default_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
   else:
     not_allowed($expr.kind)
 
-proc eval*(self: VirtualMachine, frame: Frame, node: Value): Value =
-  var expr = translate(node)
+proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value =
   var evaluator = Evaluators.get_or_default(expr.kind, default_evaluator)
   evaluator(self, frame, expr)
 
@@ -72,8 +71,10 @@ proc eval*(self: VirtualMachine, code: string): Value =
   var frame = new_frame()
   frame.ns = module.root_ns
   frame.scope = new_scope()
-  result = self.eval(frame, self.prepare(code))
+  var expr = translate(self.prepare(code))
+  result = self.eval(frame, expr)
 
+import "./features/core" as core_feature; core_feature.init()
 import "./features/array" as array_feature; array_feature.init()
 import "./features/map" as map_feature; map_feature.init()
 import "./features/gene" as gene_feature; gene_feature.init()

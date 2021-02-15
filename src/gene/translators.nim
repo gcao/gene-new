@@ -9,13 +9,20 @@ type
 var Translators*     = Table[ValueKind, Translator]()
 var GeneTranslators* = Table[string, Translator]()
 
+#################### Definitions #################
+
+proc translate*(stmts: seq[Value]): Value
+
+##################################################
+
 proc default_translator(v: Value): Value =
-  v
-  # case v.kind:
-  # of VkNil, VkBool, VkInt, VkString:
-  #   return v
-  # else:
-  #   return v
+  case v.kind:
+  of VkNil, VkBool, VkInt, VkString:
+    return v
+  of VkStream:
+    return translate(v.stream)
+  else:
+    return v
 
 proc translate*(v: Value): Value =
   var translator = Translators.get_or_default(v.kind, default_translator)

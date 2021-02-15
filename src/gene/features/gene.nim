@@ -15,9 +15,9 @@ proc default_translator(v: Value): Value =
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: Value): Value =
   result = new_gene_gene(target)
   for k, v in expr.gene_props:
-    result.gene_props[k] = self.eval(frame, v)
+    result.gene_props[k] = self.eval(frame, translate(v))
   for v in expr.gene_data:
-    result.gene_data.add(self.eval(frame, v))
+    result.gene_data.add(self.eval(frame, translate(v)))
 
 proc init*() =
   Translators[VkGene] = proc(v: Value): Value =

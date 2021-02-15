@@ -178,6 +178,8 @@ type
     VkFile
     # Standard expressions
     VkExGroup = 512
+    VkExArray
+    VkExMap
     VkExGene
     VkExBinOp
     VkExQuote
@@ -243,6 +245,10 @@ type
     # Expressions
     of VkExGroup:
       ex_group*: seq[Value]
+    of VkExArray:
+      ex_array*: seq[Value]
+    of VkExMap:
+      ex_map*: Table[MapKey, Value]
     of VkExGene:
       ex_gene_type*: Value
       ex_gene_value*: Value
@@ -896,7 +902,7 @@ proc `==`*(this, that: Value): bool =
              this.range_incl_start == that.range_incl_start and
              this.range_incl_end   == that.range_incl_end
     else:
-      todo()
+      todo($this.kind)
 
 proc hash*(node: Value): Hash =
   var h: Hash = 0
@@ -947,7 +953,7 @@ proc hash*(node: Value): Hash =
   of VkRange:
     h = h !& hash(node.range_start) !& hash(node.range_end)
   else:
-    todo()
+    todo($node.kind)
   result = !$h
 
 proc is_literal*(self: Value): bool =
@@ -1034,7 +1040,7 @@ proc `%`*(self: Value): JsonNode =
     for k, v in self.map:
       result[k.to_s] = %v
   else:
-    todo()
+    todo($self.kind)
 
 proc to_json*(self: Value): string =
   return $(%self)
