@@ -21,6 +21,17 @@ proc translate*(v: Value): Value =
   var translator = Translators.get_or_default(v.kind, default_translator)
   translator(v)
 
+proc translate*(stmts: seq[Value]): Value =
+  case stmts.len:
+  of 0:
+    result = Nil
+  of 1:
+    result = translate(stmts[0])
+  else:
+    result = Value(kind: VkExGroup)
+    for stmt in stmts:
+      result.ex_group.add(translate(stmt))
+
 # proc init_translators() =
 #   Translators[VkSymbol] = proc(v: Value): Value =
 #     v

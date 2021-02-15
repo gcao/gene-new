@@ -35,6 +35,9 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: V
 
   # self.process_args(new_frame, fn.matcher, new_frame.args)
 
+  if fn.body_compiled == nil:
+    fn.body_compiled = translate(fn.body)
+
   try:
     for e in fn.body:
       result = self.eval(new_frame, e)

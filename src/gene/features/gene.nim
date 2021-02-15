@@ -5,6 +5,13 @@ import ../normalizers
 import ../translators
 import ../interpreter
 
+proc default_translator(v: Value): Value =
+  Value(
+    kind: VkExGene,
+    ex_gene_type: translate(v.gene_type),
+    ex_gene_value: v,
+  )
+
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: Value): Value =
   result = new_gene_gene(target)
   for k, v in expr.gene_props:
@@ -17,7 +24,7 @@ proc init*() =
     v.normalize()
     case v.gene_type.kind:
     of VkSymbol:
-      var translator = GeneTranslators.get_or_default(v.gene_type.symbol, identity)
+      var translator = GeneTranslators.get_or_default(v.gene_type.symbol, default_translator)
       translator(v)
     else:
       Value(

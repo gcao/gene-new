@@ -30,7 +30,7 @@ proc init*() =
         ex_var_value: value,
       )
     else:
-      todo()
+      todo($name.kind)
 
   Evaluators[VkExVar] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     var value = self.eval(frame, expr.ex_var_value)

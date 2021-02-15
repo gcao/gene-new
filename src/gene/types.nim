@@ -87,6 +87,7 @@ type
     name*: string
     matcher*: RootMatcher
     body*: seq[Value]
+    body_compiled*: Value
 
   Block* = ref object
     frame*: Frame
@@ -240,6 +241,8 @@ type
     of VkFunction:
       fn*: Function
     # Expressions
+    of VkExGroup:
+      ex_group*: seq[Value]
     of VkExGene:
       ex_gene_type*: Value
       ex_gene_value*: Value

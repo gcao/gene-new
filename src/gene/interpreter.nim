@@ -60,7 +60,7 @@ proc default_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
     for e in expr.stream:
       result = self.eval(frame, e)
   else:
-    not_allowed()
+    not_allowed($expr.kind)
 
 proc eval*(self: VirtualMachine, frame: Frame, node: Value): Value =
   var expr = translate(node)
