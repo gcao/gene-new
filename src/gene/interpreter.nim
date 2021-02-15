@@ -9,6 +9,7 @@ type
   Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: Value): Value
 
 var Evaluators* = Table[ValueKind, Evaluator]()
+var Invokers* =   Table[ValueKind, Invoker]()
 
 let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
 let GENE_RUNTIME* = Runtime(

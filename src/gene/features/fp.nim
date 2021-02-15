@@ -24,6 +24,33 @@ proc to_function(node: Value): Function =
   result = new_fn(name, matcher, body)
   result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
 
+proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: Value): Value =
+  var fn = target.fn
+  var ns = fn.ns
+  var fn_scope = new_scope()
+  fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
+  var new_frame = Frame(ns: ns, scope: fn_scope)
+  new_frame.parent = frame
+  new_frame.self = target
+
+  # self.process_args(new_frame, fn.matcher, new_frame.args)
+
+  try:
+    for e in fn.body:
+      result = self.eval(new_frame, e)
+  except Return as r:
+    # return's frame is the same as new_frame(current function's frame)
+    if r.frame == new_frame:
+      result = r.val
+    else:
+      raise
+  except CatchableError as e:
+    if self.repl_on_error:
+      # result = repl_on_error(self, frame, e)
+      discard
+    else:
+      raise
+
 proc init*() =
   GeneTranslators["fn"] = proc(v: Value): Value =
     var fn = to_function(v)
@@ -41,3 +68,5 @@ proc init*() =
       kind: VkFunction,
       fn: expr.ex_fn,
     )
+
+  Invokers[VkFunction] = function_invoker

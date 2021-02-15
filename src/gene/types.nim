@@ -13,6 +13,8 @@ type
   # index of a name in a scope
   NameIndexScope* = distinct int
 
+  Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: Value): Value
+
   Runtime* = ref object
     name*: string     # default/...
     home*: string     # GENE_HOME directory
@@ -175,6 +177,7 @@ type
     VkFile
     # Standard expressions
     VkExGroup = 512
+    VkExGene
     VkExBinOp
     VkExQuote
     VkExSymbol
@@ -237,6 +240,10 @@ type
     of VkFunction:
       fn*: Function
     # Expressions
+    of VkExGene:
+      ex_gene_type*: Value
+      ex_gene_value*: Value
+      ex_gene_invoker*: Invoker
     of VkExQuote:
       ex_quote*: Value
     of VkExBinOp:
@@ -287,8 +294,6 @@ type
     object_class*: Value
     class_class*: Value
     exception_class*: Value
-
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, value: Value): Value
 
   FrameKind* = enum
     FrFunction

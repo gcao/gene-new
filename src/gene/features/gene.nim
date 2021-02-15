@@ -5,6 +5,13 @@ import ../normalizers
 import ../translators
 import ../interpreter
 
+proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: Value): Value =
+  result = new_gene_gene(target)
+  for k, v in expr.gene_props:
+    result.gene_props[k] = self.eval(frame, v)
+  for v in expr.gene_data:
+    result.gene_data.add(self.eval(frame, v))
+
 proc init*() =
   Translators[VkGene] = proc(v: Value): Value =
     v.normalize()
@@ -13,18 +20,14 @@ proc init*() =
       var translator = GeneTranslators.get_or_default(v.gene_type.symbol, identity)
       translator(v)
     else:
-      v
+      Value(
+        kind: VkExGene,
+        ex_gene_type: translate(v.gene_type),
+        ex_gene_value: v,
+      )
 
-  Evaluators[VkGene] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
-    var `type` = self.eval(frame, expr.gene_type)
-    case `type`.kind:
-    of VkString:
-      todo()
-    else:
-      discard
-
-    result = new_gene_gene(`type`)
-    for k, v in expr.gene_props:
-      result.gene_props[k] = self.eval(frame, v)
-    for v in expr.gene_data:
-      result.gene_data.add(self.eval(frame, v))
+  Evaluators[VkExGene] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+    var `type` = self.eval(frame, expr.ex_gene_type)
+    if expr.ex_gene_invoker == nil:
+      expr.ex_gene_invoker = Invokers.get_or_default(`type`.kind, default_invoker)
+    expr.ex_gene_invoker(self, frame, `type`, expr.ex_gene_value)
