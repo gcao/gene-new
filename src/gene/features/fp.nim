@@ -24,6 +24,21 @@ proc to_function(node: Value): Function =
   result = new_fn(name, matcher, body)
   result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
 
+proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
+  var match_result = matcher.match(args)
+  case match_result.kind:
+  of MatchSuccess:
+    for field in match_result.fields:
+      if field.value_expr != nil:
+        frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
+      else:
+        frame.scope.def_member(field.name, field.value)
+  of MatchMissingFields:
+    for field in match_result.missing:
+      not_allowed("Argument " & field.to_s & " is missing.")
+  else:
+    todo()
+
 proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: Value): Value =
   var fn = target.fn
   var ns = fn.ns
@@ -33,14 +48,16 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: V
   new_frame.parent = frame
   new_frame.self = target
 
-  # self.process_args(new_frame, fn.matcher, new_frame.args)
+  var args = new_gene_gene()
+  for e in expr.gene_data:
+    args.gene_data.add(self.eval(frame, e))
+  self.process_args(new_frame, fn.matcher, args)
 
   if fn.body_compiled == nil:
     fn.body_compiled = translate(fn.body)
 
   try:
-    for e in fn.body:
-      result = self.eval(new_frame, e)
+    result = self.eval(new_frame, fn.body_compiled)
   except Return as r:
     # return's frame is the same as new_frame(current function's frame)
     if r.frame == new_frame:

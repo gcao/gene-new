@@ -382,6 +382,7 @@ type
     name*: MapKey
     # match_name*: bool # Match symbol to name - useful for (myif true then ... else ...)
     default_value*: Value
+    default_value_expr*: Value
     splat*: bool
     min_left*: int # Minimum number of args following this
     children*: seq[Matcher]
@@ -395,6 +396,7 @@ type
   MatchedField* = ref object
     name*: MapKey
     value*: Value # Either value_expr or value must be given
+    value_expr*: Value
 
   MatchResult* = ref object
     message*: string
@@ -1509,6 +1511,7 @@ proc match(self: Matcher, input: Value, state: MatchState, r: MatchResult) =
   case self.kind:
   of MatchData:
     var value: Value
+    var value_expr: Value
     if self.splat:
       value = new_gene_vec()
       for i in state.data_index..<input.len - self.min_left:
@@ -1522,15 +1525,13 @@ proc match(self: Matcher, input: Value, state: MatchState, r: MatchResult) =
         r.kind = MatchMissingFields
         r.missing.add(self.name)
         return
-      # TODO:
-      # elif self.default_value_expr != nil:
-      #   value_expr = self.default_value_expr
+      elif self.default_value_expr != nil:
+        value_expr = self.default_value_expr
       else:
         value = self.default_value # Default value
     if self.name != EMPTY_STRING_KEY:
       var matched_field = new_matched_field(self.name, value)
-      # matched_field.value_expr = value_expr
-      todo()
+      matched_field.value_expr = value_expr
       r.fields.add(matched_field)
     var child_state = MatchState()
     for child in self.children:
@@ -1538,6 +1539,7 @@ proc match(self: Matcher, input: Value, state: MatchState, r: MatchResult) =
     match_prop_splat(self.children, value, r)
   of MatchProp:
     var value: Value
+    var value_expr: Value
     if self.splat:
       return
     elif input.gene_props.has_key(self.name):
@@ -1547,14 +1549,12 @@ proc match(self: Matcher, input: Value, state: MatchState, r: MatchResult) =
         r.kind = MatchMissingFields
         r.missing.add(self.name)
         return
-      # TODO:
-      # elif self.default_value_expr != nil:
-      #   value_expr = self.default_value_expr
+      elif self.default_value_expr != nil:
+        value_expr = self.default_value_expr
       else:
         value = self.default_value # Default value
     var matched_field = new_matched_field(self.name, value)
-    # matched_field.value_expr = value_expr
-    todo()
+    matched_field.value_expr = value_expr
     r.fields.add(matched_field)
   else:
     todo()
