@@ -13,7 +13,7 @@ proc init*() =
     )
 
   Evaluators[VkExSymbol] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
-    result = frame.scope[expr.ex_symbol]
+    result = frame[expr.ex_symbol]
 
   GeneTranslators["var"] = proc(v: Value): Value =
     var name = v.gene_data[0]

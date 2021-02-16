@@ -163,6 +163,7 @@ type
     VkApplication
     VkPackage
     VkModule
+    VkNamespace
     VkFunction
     VkMacro
     VkBlock
@@ -171,7 +172,6 @@ type
     VkMixin
     VkMethod
     VkInstance
-    VkNamespace
     VkEnum
     VkEnumMember
     VkExplode
@@ -181,6 +181,7 @@ type
     VkExArray
     VkExMap
     VkExGene
+    VkExNamespace
     VkExBinOp
     VkExQuote
     VkExSymbol
@@ -240,6 +241,9 @@ type
       gene_data*: seq[Value]
     of VkStream:
       stream*: seq[Value]
+    # Internal types
+    of VkNamespace:
+      ns*: Namespace
     of VkFunction:
       fn*: Function
     # Expressions
@@ -253,6 +257,9 @@ type
       ex_gene_type*: Value
       ex_gene_value*: Value
       ex_gene_invoker*: Invoker
+    of VkExNamespace:
+      ex_ns_name*: string
+      ex_ns_body*: Value
     of VkExQuote:
       ex_quote*: Value
     of VkExBinOp:
