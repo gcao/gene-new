@@ -423,6 +423,9 @@ type
     # prop_processed*: seq[MapKey]
     data_index*: int
 
+  # Types related to command line argument parsing
+  ArgumentError* = object of CatchableError
+
 let
   Nil*   = Value(kind: VkNil)
   True*  = Value(kind: VkBool, bool: true)
