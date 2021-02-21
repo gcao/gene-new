@@ -61,12 +61,12 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: V
       result = r.val
     else:
       raise
-  except CatchableError as e:
-    if self.repl_on_error:
-      # result = repl_on_error(self, frame, e)
-      discard
-    else:
-      raise
+  # except CatchableError as e:
+  #   if self.repl_on_error:
+  #     result = repl_on_error(self, frame, e)
+  #     discard
+  #   else:
+  #     raise
 
 proc init*() =
   GeneTranslators["fn"] = proc(v: Value): Value =

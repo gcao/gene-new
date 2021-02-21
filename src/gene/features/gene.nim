@@ -40,13 +40,12 @@ proc init*() =
 
   Evaluators[VkExGene] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     var `type` = self.eval(frame, expr.ex_gene_type)
-    if expr.ex_gene_invoker == nil:
-      var extension = Extensions.get_or_default(`type`.kind, DEFAULT_EXTENSION)
-      expr.ex_gene_value = extension.translator(expr)
-      expr.ex_gene_invoker = extension.invoker
+    if expr.ex_gene_extension == nil:
+      expr.ex_gene_extension = Extensions.get_or_default(`type`.kind, DEFAULT_EXTENSION)
+      expr.ex_gene_value = expr.ex_gene_extension.translator(expr)
 
     var args = self.eval(frame, expr.ex_gene_value)
-    expr.ex_gene_invoker(self, frame, `type`, args)
+    expr.ex_gene_extension.invoker(self, frame, `type`, args)
 
   Evaluators[VkExArgument] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     result = Value(kind: VkGene)
@@ -54,4 +53,3 @@ proc init*() =
       result.gene_props[k] = self.eval(frame, v)
     for item in expr.ex_arg_data:
       result.gene_data.add(self.eval(frame, item))
-

@@ -262,7 +262,7 @@ type
     of VkExGene:
       ex_gene_type*: Value
       ex_gene_value*: Value
-      ex_gene_invoker*: Invoker
+      ex_gene_extension*: GeneExtension
     of VkExArgument:
       ex_arg_props*: Table[MapKey, Value]
       ex_arg_data*: seq[Value]
