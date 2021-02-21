@@ -26,6 +26,8 @@ Vagrant.configure(2) do |config|
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
   config.vm.provider "virtualbox" do |vb|
+    vb.name = "gene-new"
+
     # Forward GDB port
     # config.vm.network "forwarded_port", guest: 1234, host: 1234
 

@@ -3,9 +3,6 @@ import tables
 import ./map_key
 import ./types
 
-type
-  Translator* = proc(v: Value): Value
-
 var Translators*     = Table[ValueKind, Translator]()
 var GeneTranslators* = Table[string, Translator]()
 
@@ -38,6 +35,13 @@ proc translate*(stmts: seq[Value]): Value =
     result = Value(kind: VkExGroup)
     for stmt in stmts:
       result.ex_group.add(translate(stmt))
+
+proc arg_translator*(v: Value): Value =
+  result = Value(kind: VkExArgument)
+  for key, value in v.ex_gene_value.gene_props:
+    result.ex_arg_props[key] = translate(value)
+  for item in v.ex_gene_value.gene_data:
+    result.ex_arg_data.add(translate(item))
 
 # proc init_translators() =
 #   Translators[VkSymbol] = proc(v: Value): Value =

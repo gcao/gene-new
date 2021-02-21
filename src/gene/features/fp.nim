@@ -39,7 +39,7 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
   else:
     todo()
 
-proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: Value): Value =
+proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   var fn = target.fn
   var ns = fn.ns
   var fn_scope = new_scope()
@@ -48,9 +48,6 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: V
   new_frame.parent = frame
   new_frame.self = target
 
-  var args = new_gene_gene()
-  for e in expr.gene_data:
-    args.gene_data.add(self.eval(frame, translate(e)))
   self.process_args(new_frame, fn.matcher, args)
 
   if fn.body_compiled == nil:
@@ -90,4 +87,4 @@ proc init*() =
       fn: expr.ex_fn,
     )
 
-  Invokers[VkFunction] = function_invoker
+  Extensions[VkFunction] = GeneExtension(translator: arg_translator, invoker: function_invoker)

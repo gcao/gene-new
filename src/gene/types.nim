@@ -13,7 +13,8 @@ type
   # index of a name in a scope
   NameIndexScope* = distinct int
 
-  Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: Value): Value
+  Translator* = proc(v: Value): Value
+  Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 
   Runtime* = ref object
     name*: string     # default/...
@@ -101,6 +102,10 @@ type
     matcher*: RootMatcher
     body*: seq[Value]
 
+  GeneExtension* = ref object
+    translator*: Translator
+    invoker*: Invoker
+
   Enum* = ref object
     name*: string
     members*: OrderedTable[string, EnumMember]
@@ -181,6 +186,7 @@ type
     VkExArray
     VkExMap
     VkExGene
+    VkExArgument
     VkExNamespace
     VkExBinOp
     VkExQuote
@@ -257,6 +263,9 @@ type
       ex_gene_type*: Value
       ex_gene_value*: Value
       ex_gene_invoker*: Invoker
+    of VkExArgument:
+      ex_arg_props*: Table[MapKey, Value]
+      ex_arg_data*: seq[Value]
     of VkExNamespace:
       ex_ns_name*: string
       ex_ns_body*: Value

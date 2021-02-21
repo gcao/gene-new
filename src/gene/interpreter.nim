@@ -9,7 +9,7 @@ type
   Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: Value): Value
 
 var Evaluators* = Table[ValueKind, Evaluator]()
-var Invokers* =   Table[ValueKind, Invoker]()
+var Extensions* = Table[ValueKind, GeneExtension]()
 
 let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
 let GENE_RUNTIME* = Runtime(
@@ -20,7 +20,7 @@ let GENE_RUNTIME* = Runtime(
 
 #################### Definitions #################
 
-proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value
+proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value {.inline.}
 
 #################### Application #################
 
@@ -62,7 +62,7 @@ proc default_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
   else:
     not_allowed($expr.kind)
 
-proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value =
+proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value {.inline.} =
   var evaluator = Evaluators.get_or_default(expr.kind, default_evaluator)
   evaluator(self, frame, expr)
 
