@@ -14,9 +14,9 @@ proc default_translator(v: Value): Value =
 
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: Value): Value =
   result = new_gene_gene(target)
-  for k, v in expr.gene_props:
+  for k, v in expr.ex_arg_props:
     result.gene_props[k] = self.eval(frame, v)
-  for v in expr.gene_data:
+  for v in expr.ex_arg_data:
     result.gene_data.add(self.eval(frame, v))
 
 var DEFAULT_EXTENSION = GeneExtension(
@@ -44,8 +44,7 @@ proc init*() =
       expr.ex_gene_extension = Extensions.get_or_default(`type`.kind, DEFAULT_EXTENSION)
       expr.ex_gene_value = expr.ex_gene_extension.translator(expr)
 
-    var args = self.eval(frame, expr.ex_gene_value)
-    expr.ex_gene_extension.invoker(self, frame, `type`, args)
+    expr.ex_gene_extension.invoker(self, frame, `type`, expr.ex_gene_value)
 
   Evaluators[VkExArgument] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     result = Value(kind: VkGene)

@@ -48,7 +48,7 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: V
   new_frame.parent = frame
   new_frame.self = target
 
-  self.process_args(new_frame, fn.matcher, args)
+  self.process_args(new_frame, fn.matcher, self.eval(frame, args))
 
   if fn.body_compiled == nil:
     fn.body_compiled = translate(fn.body)
