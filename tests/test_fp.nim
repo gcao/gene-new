@@ -76,16 +76,16 @@ test_interpreter "(fn f a (a + 1)) (f 1)", 2
 #   (f)
 # """, 1
 
-# test_interpreter """
-#   (fn fib n
-#     (if (n < 2)
-#       n
-#     else
-#       ((fib (n - 1)) + (fib (n - 2)))
-#     )
-#   )
-#   (fib 6)
-# """, 8
+test_interpreter """
+  (fn fib n
+    (if (n < 2)
+      n
+    else
+      ((fib (n - 1)) + (fib (n - 2)))
+    )
+  )
+  (fib 6)
+""", 8
 
 # test_interpreter """
 #   (fn f _

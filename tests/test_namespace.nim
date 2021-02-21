@@ -25,11 +25,11 @@ test_interpreter "(ns test)", proc(r: Value) =
 # """, proc(r: Value) =
 #   check r.internal.class.name == "A"
 
-# test_interpreter """
-#   (ns n)
-#   n
-# """, proc(r: Value) =
-#   check r.internal.ns.name == "n"
+test_interpreter """
+  (ns n)
+  n
+""", proc(r: Value) =
+  check r.ns.name == "n"
 
 # test_core "(global .name)", "global"
 

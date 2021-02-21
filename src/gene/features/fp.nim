@@ -50,7 +50,7 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: V
 
   var args = new_gene_gene()
   for e in expr.gene_data:
-    args.gene_data.add(self.eval(frame, e))
+    args.gene_data.add(self.eval(frame, translate(e)))
   self.process_args(new_frame, fn.matcher, args)
 
   if fn.body_compiled == nil:
@@ -84,6 +84,7 @@ proc init*() =
     )
 
   Evaluators[VkExFn] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+    expr.ex_fn.ns = frame.ns
     result = Value(
       kind: VkFunction,
       fn: expr.ex_fn,
