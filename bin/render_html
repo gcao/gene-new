@@ -1,0 +1,12 @@
+#!/usr/bin/env gene
+
+(import genex/html/tags/*)
+
+#< Usage:
+render_html <file>
+#>#
+
+(var file ($cmd_args .@1))
+(println
+  ((eval ($parse (gene/File/read file))).to_s)
+)
