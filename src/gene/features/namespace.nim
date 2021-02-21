@@ -5,10 +5,10 @@ import ../translators
 import ../interpreter
 
 proc init*() =
-  GeneTranslators["ns"] = proc(v: Value): Value =
+  GeneTranslators["ns"] = proc(value: Value): Value =
     Value(
       kind: VkExNamespace,
-      ex_ns_name: v.gene_data[0].symbol,
+      ex_ns_name: value.gene_data[0].symbol,
     )
 
   Evaluators[VkExNamespace] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =

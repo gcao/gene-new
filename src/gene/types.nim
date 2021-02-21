@@ -13,7 +13,7 @@ type
   # index of a name in a scope
   NameIndexScope* = distinct int
 
-  Translator* = proc(v: Value): Value
+  Translator* = proc(value: Value): Value
   Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 
   Runtime* = ref object

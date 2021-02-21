@@ -5,11 +5,11 @@ import ../normalizers
 import ../translators
 import ../interpreter
 
-proc default_translator(v: Value): Value =
+proc default_translator(value: Value): Value =
   Value(
     kind: VkExGene,
-    ex_gene_type: translate(v.gene_type),
-    ex_gene_value: v,
+    ex_gene_type: translate(value.gene_type),
+    ex_gene_value: value,
   )
 
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: Value): Value =
@@ -25,17 +25,17 @@ var DEFAULT_EXTENSION = GeneExtension(
 )
 
 proc init*() =
-  Translators[VkGene] = proc(v: Value): Value =
-    v.normalize()
-    case v.gene_type.kind:
+  Translators[VkGene] = proc(value: Value): Value =
+    value.normalize()
+    case value.gene_type.kind:
     of VkSymbol:
-      var translator = GeneTranslators.get_or_default(v.gene_type.symbol, default_translator)
-      translator(v)
+      var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
+      translator(value)
     else:
       Value(
         kind: VkExGene,
-        ex_gene_type: translate(v.gene_type),
-        ex_gene_value: v,
+        ex_gene_type: translate(value.gene_type),
+        ex_gene_value: value,
       )
 
   Evaluators[VkExGene] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
@@ -50,5 +50,5 @@ proc init*() =
     result = Value(kind: VkGene)
     for k, v in expr.ex_arg_props:
       result.gene_props[k] = self.eval(frame, v)
-    for item in expr.ex_arg_data:
-      result.gene_data.add(self.eval(frame, item))
+    for v in expr.ex_arg_data:
+      result.gene_data.add(self.eval(frame, v))

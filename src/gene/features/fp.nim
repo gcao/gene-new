@@ -69,8 +69,8 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: V
   #     raise
 
 proc init*() =
-  GeneTranslators["fn"] = proc(v: Value): Value =
-    var fn = to_function(v)
+  GeneTranslators["fn"] = proc(value: Value): Value =
+    var fn = to_function(value)
     result = Value(
       kind: VkExNsDef,
       ex_ns_def_name: fn.name.to_key,

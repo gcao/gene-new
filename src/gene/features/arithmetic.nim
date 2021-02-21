@@ -4,8 +4,8 @@ import ../types
 import ../translators
 import ../interpreter
 
-proc translate_arithmetic(v: Value): Value =
-  case v.gene_type.symbol:
+proc translate_arithmetic(value: Value): Value =
+  case value.gene_type.symbol:
   of "+":
     result = Value(kind: VkExBinOp)
     result.ex_bin_op = BinAdd
@@ -43,8 +43,8 @@ proc translate_arithmetic(v: Value): Value =
     result = Value(kind: VkExBinOp)
     result.ex_bin_op = BinOr
 
-  result.ex_bin_op1 = translate(v.gene_data[0])
-  result.ex_bin_op2 = translate(v.gene_data[1])
+  result.ex_bin_op1 = translate(value.gene_data[0])
+  result.ex_bin_op2 = translate(value.gene_data[1])
 
 proc init*() =
   GeneTranslators["+"] = translate_arithmetic

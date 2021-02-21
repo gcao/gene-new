@@ -6,11 +6,11 @@ import ../translators
 import ../interpreter
 
 proc init*() =
-  GeneTranslators["="] = proc(v: Value): Value =
+  GeneTranslators["="] = proc(value: Value): Value =
     Value(
       kind: VkExAssignment,
-      ex_assign_name: v.gene_data[0].symbol.to_key,
-      ex_assign_value: translate(v.gene_data[1]),
+      ex_assign_name: value.gene_data[0].symbol.to_key,
+      ex_assign_value: translate(value.gene_data[1]),
     )
 
   Evaluators[VkExAssignment] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =

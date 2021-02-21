@@ -5,12 +5,12 @@ import ../translators
 import ../interpreter
 
 proc init*() =
-  Translators[VkMap] = proc(v: Value): Value =
+  Translators[VkMap] = proc(value: Value): Value =
     result = Value(kind: VkExMap)
-    for k, value in v.map:
-      result.ex_map[k] = translate(value)
+    for k, v in value.map:
+      result.ex_map[k] = translate(v)
 
   Evaluators[VkExMap] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     result = new_gene_map()
-    for k, e in expr.ex_map:
-      result.map[k] = self.eval(frame, e)
+    for k, v in expr.ex_map:
+      result.map[k] = self.eval(frame, v)

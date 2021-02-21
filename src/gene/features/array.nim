@@ -5,10 +5,10 @@ import ../translators
 import ../interpreter
 
 proc init*() =
-  Translators[VkVector] = proc(v: Value): Value =
+  Translators[VkVector] = proc(value: Value): Value =
     result = Value(kind: VkExArray)
-    for item in v.vec:
-      result.ex_array.add(translate(item))
+    for v in value.vec:
+      result.ex_array.add(translate(v))
 
   Evaluators[VkExArray] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     result = new_gene_vec()
