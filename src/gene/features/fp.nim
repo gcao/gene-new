@@ -48,7 +48,28 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: V
   new_frame.parent = frame
   new_frame.self = target
 
-  self.process_args(new_frame, fn.matcher, self.eval(frame, args))
+  case fn.matching_hint.mode:
+  of MhSimpleData:
+    case args.kind:
+    of VkExArgument:
+      for _, v in args.ex_arg_props:
+        discard self.eval(frame, v)
+      for i, v in args.ex_arg_data:
+        var field = fn.matcher.children[i]
+        new_frame.scope.def_member(field.name, self.eval(frame, v))
+    else:
+      todo($args.kind)
+  of MhNone:
+    case args.kind:
+    of VkExArgument:
+      for _, v in args.ex_arg_props:
+        discard self.eval(frame, v)
+      for v in args.ex_arg_data:
+        discard self.eval(frame, v)
+    else:
+      todo($args.kind)
+  else:
+    self.process_args(new_frame, fn.matcher, self.eval(frame, args))
 
   if fn.body_compiled == nil:
     fn.body_compiled = translate(fn.body)

@@ -87,6 +87,7 @@ type
     parent_scope_max*: NameIndexScope
     name*: string
     matcher*: RootMatcher
+    matching_hint*: MatchingHint
     body*: seq[Value]
     body_compiled*: Value
 
@@ -387,6 +388,14 @@ type
     mode*: MatchingMode
     children*: seq[Matcher]
 
+  MatchingHintMode* = enum
+    MhDefault
+    MhNone
+    MhSimpleData  # E.g. [a b]
+
+  MatchingHint* = object
+    mode*: MatchingHintMode
+
   MatcherKind* = enum
     MatchOp
     MatchProp
@@ -476,6 +485,7 @@ proc new_namespace*(): Namespace
 proc new_namespace*(parent: Namespace): Namespace
 proc new_match_matcher*(): RootMatcher
 proc new_arg_matcher*(): RootMatcher
+proc hint*(self: RootMatcher): MatchingHint
 proc parse*(self: var RootMatcher, v: Value)
 
 ##################################################
@@ -748,6 +758,7 @@ proc new_fn*(name: string, matcher: RootMatcher, body: seq[Value]): Function =
   return Function(
     name: name,
     matcher: matcher,
+    matching_hint: matcher.hint,
     body: body,
   )
 
@@ -1396,6 +1407,12 @@ proc new_matcher(root: RootMatcher, kind: MatcherKind): Matcher =
     root: root,
     kind: kind,
   )
+
+proc hint*(self: RootMatcher): MatchingHint =
+  if self.children.len == 0:
+    result.mode = MhNone
+  else:
+    result.mode = MhSimpleData
 
 proc new_matched_field(name: MapKey, value: Value): MatchedField =
   result = MatchedField(
