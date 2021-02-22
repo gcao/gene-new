@@ -4,12 +4,11 @@
 # import nimprof
 # setSamplingFrequency(1)
 
-import times, logging, os, streams, parsecsv, re
+# import times, logging, os, streams, parsecsv, re
 
-import gene/types
-import gene/parser
-import gene/interpreter
-import gene/features
+# import gene/types
+# import gene/parser
+# import gene/interpreter
 # import gene/repl
 # import cmdline/option_parser
 
