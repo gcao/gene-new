@@ -676,7 +676,7 @@ proc new_scope*(): Scope =
   internal.refCount = 1
   return Scope(d: internal)
 
-proc max*(self: Scope): NameIndexScope {.inline.} =
+proc max*(self: var Scope): NameIndexScope {.inline.} =
   return self.d.members.len
 
 proc set_parent*(self: var Scope, parent: Scope, max: NameIndexScope) {.inline.} =
@@ -687,7 +687,7 @@ proc reset*(self: var Scope) {.inline.} =
   self.d.parent = Scope()
   self.d.members.setLen(0)
 
-proc has_key(self: Scope, key: MapKey, max: int): bool {.inline.} =
+proc has_key(self: var Scope, key: MapKey, max: int): bool {.inline.} =
   if self.d.mappings.has_key(key):
     # If first >= max, all others will be >= max
     if self.d.mappings[key][0] < max:
@@ -696,7 +696,7 @@ proc has_key(self: Scope, key: MapKey, max: int): bool {.inline.} =
   if self.d.parent.d != nil:
     return self.d.parent.has_key(key, self.d.parent_index_max)
 
-proc has_key*(self: Scope, key: MapKey): bool {.inline.} =
+proc has_key*(self: var Scope, key: MapKey): bool {.inline.} =
   if self.d.mappings.has_key(key):
     return true
   elif self.d.parent.d != nil:
@@ -710,7 +710,7 @@ proc def_member*(self: var Scope, key: MapKey, val: Value) {.inline.} =
   else:
     self.d.mappings[key] = @[cast[NameIndexScope](index)]
 
-proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
+proc `[]`(self: var Scope, key: MapKey, max: int): Value {.inline.} =
   if self.d.mappings.has_key(key):
     var found = self.d.mappings[key]
     var i = found.len - 1
@@ -723,7 +723,7 @@ proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
   if self.d.parent.d != nil:
     return self.d.parent[key, self.d.parent_index_max]
 
-proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
+proc `[]`*(self: var Scope, key: MapKey): Value {.inline.} =
   if self.d.mappings.has_key(key):
     var i: int = self.d.mappings[key][^1]
     return self.d.members[i]
