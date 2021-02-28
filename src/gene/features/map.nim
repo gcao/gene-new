@@ -10,7 +10,9 @@ proc init*() =
     for k, v in value.map:
       result.ex_map[k] = translate(v)
 
-  Evaluators[VkExMap.ord] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc map_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
     result = new_gene_map()
     for k, v in expr.ex_map:
       result.map[k] = self.eval(frame, v)
+
+  Evaluators[VkExMap.ord] = map_evaluator

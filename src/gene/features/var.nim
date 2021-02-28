@@ -12,7 +12,7 @@ proc init*() =
       ex_symbol: value.symbol.to_key,
     )
 
-  Evaluators[VkExSymbol.ord] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc symbol_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
     result = frame[expr.ex_symbol]
 
   GeneTranslators["var"] = proc(value: Value): Value =
@@ -32,6 +32,9 @@ proc init*() =
     else:
       todo($name.kind)
 
-  Evaluators[VkExVar.ord] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc var_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
     var value = self.eval(frame, expr.ex_var_value)
     frame.scope.def_member(expr.ex_var_name, value)
+
+  Evaluators[VkExSymbol.ord] = symbol_evaluator
+  Evaluators[VkExVar.ord] = var_evaluator

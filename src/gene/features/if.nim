@@ -27,7 +27,7 @@ proc init*() =
         i += 2
     result.ex_if_else = translate(value.gene_props[ELSE_KEY])
 
-  Evaluators[VkExIf.ord] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc if_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
     var v = self.eval(frame, expr.ex_if_cond)
     if v:
       result = self.eval(frame, expr.ex_if_then)
@@ -37,3 +37,5 @@ proc init*() =
           return self.eval(frame, pair[1])
     elif expr.ex_if_else != nil:
       result = self.eval(frame, expr.ex_if_else)
+
+  Evaluators[VkExIf.ord] = if_evaluator

@@ -38,7 +38,7 @@ proc init*() =
         ex_gene_value: value,
       )
 
-  Evaluators[VkExGene.ord] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc gene_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
     var `type` = self.eval(frame, expr.ex_gene_type)
     if expr.ex_gene_extension == nil:
       expr.ex_gene_extension = Extensions.get_or_default(`type`.kind, DEFAULT_EXTENSION)
@@ -46,9 +46,12 @@ proc init*() =
 
     expr.ex_gene_extension.invoker(self, frame, `type`, expr.ex_gene_value)
 
-  Evaluators[VkExArgument.ord] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc arg_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
     result = Value(kind: VkGene)
     for k, v in expr.ex_arg_props:
       result.gene_props[k] = self.eval(frame, v)
     for v in expr.ex_arg_data:
       result.gene_data.add(self.eval(frame, v))
+
+  Evaluators[VkExGene.ord] = gene_evaluator
+  Evaluators[VkExArgument.ord] = arg_evaluator
