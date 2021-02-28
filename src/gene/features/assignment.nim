@@ -13,7 +13,7 @@ proc init*() =
       ex_assign_value: translate(value.gene_data[1]),
     )
 
-  Evaluators[VkExAssignment] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  Evaluators[VkExAssignment.ord] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     if frame.scope.has_key(expr.ex_assign_name):
       frame.scope[expr.ex_assign_name] = self.eval(frame, expr.ex_assign_value)
     else:

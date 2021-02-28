@@ -101,7 +101,7 @@ proc init*() =
       ),
     )
 
-  Evaluators[VkExFn] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  Evaluators[VkExFn.ord] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     expr.ex_fn.ns = frame.ns
     result = Value(
       kind: VkFunction,

@@ -8,7 +8,7 @@ import ./translators
 type
   Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: Value): Value
 
-var Evaluators* = Table[ValueKind, Evaluator]()
+var Evaluators*: array[0..2048, Evaluator]
 var Extensions* = Table[ValueKind, GeneExtension]()
 
 let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
@@ -62,8 +62,11 @@ proc default_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
   else:
     not_allowed($expr.kind)
 
+for i in 0..<Evaluators.len:
+  Evaluators[i] = default_evaluator
+
 proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value {.inline.} =
-  var evaluator = Evaluators.get_or_default(expr.kind, default_evaluator)
+  var evaluator = Evaluators[expr.kind.ord]
   evaluator(self, frame, expr)
 
 proc eval*(self: VirtualMachine, code: string): Value =
