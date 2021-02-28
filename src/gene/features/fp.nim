@@ -101,11 +101,13 @@ proc init*() =
       ),
     )
 
-  Evaluators[VkExFn] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc fn_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
     expr.ex_fn.ns = frame.ns
     result = Value(
       kind: VkFunction,
       fn: expr.ex_fn,
     )
+
+  Evaluators[VkExFn] = fn_evaluator
 
   Extensions[VkFunction] = GeneExtension(translator: arg_translator, invoker: function_invoker)

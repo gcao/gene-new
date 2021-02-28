@@ -59,7 +59,7 @@ proc init*() =
   GeneTranslators["&&"] = translate_arithmetic
   GeneTranslators["||"] = translate_arithmetic
 
-  Evaluators[VkExBinOp] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc bin_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
     var first = self.eval(frame, expr.ex_bin_op1)
     var second = self.eval(frame, expr.ex_bin_op2)
     case expr.ex_bin_op:
@@ -85,3 +85,5 @@ proc init*() =
       result = new_gene_bool(first.bool or second.bool)
     else:
       todo()
+
+  Evaluators[VkExBinOp] = bin_evaluator

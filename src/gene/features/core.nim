@@ -1,10 +1,12 @@
 import tables
 
 import ../types
-import ../translators
+# import ../translators
 import ../interpreter
 
 proc init*() =
-  Evaluators[VkExGroup] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc group_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
     for e in expr.ex_group:
       result = self.eval(frame, e)
+
+  Evaluators[VkExGroup] = group_evaluator
