@@ -30,9 +30,9 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
   of MatchSuccess:
     for field in match_result.fields:
       if field.value_expr != nil:
-        frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
+        frame.d.scope.def_member(field.name, self.eval(frame, field.value_expr))
       else:
-        frame.scope.def_member(field.name, field.value)
+        frame.d.scope.def_member(field.name, field.value)
   of MatchMissingFields:
     for field in match_result.missing:
       not_allowed("Argument " & field.to_s & " is missing.")
@@ -44,9 +44,11 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: V
   var ns = fn.ns
   var fn_scope = new_scope()
   fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
-  var new_frame = Frame(ns: ns, scope: fn_scope)
-  new_frame.parent = frame
-  new_frame.self = target
+  var new_frame = new_frame()
+  new_frame.d.ns = ns
+  new_frame.d.scope = fn_scope
+  new_frame.d.parent = frame
+  new_frame.d.self = target
 
   case fn.matching_hint.mode:
   of MhSimpleData:
@@ -56,7 +58,7 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: V
         discard self.eval(frame, v)
       for i, v in args.ex_arg_data:
         var field = fn.matcher.children[i]
-        new_frame.scope.def_member(field.name, self.eval(frame, v))
+        new_frame.d.scope.def_member(field.name, self.eval(frame, v))
     else:
       todo($args.kind)
   of MhNone:
@@ -102,7 +104,7 @@ proc init*() =
     )
 
   Evaluators[VkExFn] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
-    expr.ex_fn.ns = frame.ns
+    expr.ex_fn.ns = frame.d.ns
     result = Value(
       kind: VkFunction,
       fn: expr.ex_fn,

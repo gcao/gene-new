@@ -14,7 +14,7 @@ proc init*() =
     )
 
   Evaluators[VkExAssignment] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
-    if frame.scope.has_key(expr.ex_assign_name):
-      frame.scope[expr.ex_assign_name] = self.eval(frame, expr.ex_assign_value)
+    if frame.d.scope.has_key(expr.ex_assign_name):
+      frame.d.scope[expr.ex_assign_name] = self.eval(frame, expr.ex_assign_value)
     else:
-      frame.ns[expr.ex_assign_name] = self.eval(frame, expr.ex_assign_value)
+      frame.d.ns[expr.ex_assign_name] = self.eval(frame, expr.ex_assign_value)

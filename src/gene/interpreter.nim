@@ -69,8 +69,8 @@ proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value {.inline.} =
 proc eval*(self: VirtualMachine, code: string): Value =
   var module = new_module()
   var frame = new_frame()
-  frame.ns = module.root_ns
-  frame.scope = new_scope()
+  frame.d.ns = module.root_ns
+  frame.d.scope = new_scope()
   var expr = translate(self.prepare(code))
   result = self.eval(frame, expr)
 

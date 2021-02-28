@@ -34,4 +34,4 @@ proc init*() =
 
   Evaluators[VkExVar] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     var value = self.eval(frame, expr.ex_var_value)
-    frame.scope.def_member(expr.ex_var_name, value)
+    frame.d.scope.def_member(expr.ex_var_name, value)

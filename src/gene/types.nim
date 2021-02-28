@@ -342,7 +342,11 @@ type
     else:
       discard
 
-  Frame* = ref object
+  Frame* = object
+    d*: FrameInternal
+
+  FrameInternal* = ptr object
+    refCount*: int
     parent*: Frame
     self*: Value
     ns*: Namespace
@@ -443,6 +447,36 @@ type
 
   # Types related to command line argument parsing
   ArgumentError* = object of CatchableError
+
+var FrameCache*: seq[FrameInternal] = @[]
+let FrameSize = sizeof(typeof(default(FrameInternal)[]))
+
+proc `=destroy`*(x: var Frame) {.nimcall.} =
+  if x.d == nil:
+    return
+  if x.d.refCount == 1:
+    # We have the last reference
+    x.d[].wasMoved()
+    FrameCache.add(x.d)
+  else:
+    x.d.refCount -= 1
+  x.d = nil
+
+proc `=sink`*(dst: var Frame, src: Frame) {.nimcall.} =
+  if dst.d != nil:
+    `=destroy`(dst)
+  if src.d != nil:
+    dst.d = src.d
+
+proc `=`*(dst: var Frame, src: Frame) {.nimcall.} =
+  if src.d == dst.d:
+    return
+  `=destroy`(dst)
+  if src.d == nil:
+    dst.d = nil
+  else:
+    src.d.refCount += 1
+    dst.d = src.d
 
 let
   Nil*   = Value(kind: VkNil)
@@ -713,20 +747,26 @@ proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.inline.} =
 
 #################### Frame #######################
 
-proc new_frame*(): Frame = Frame(
-  self: Nil,
-)
+proc new_frame*(): Frame =
+  var internal: FrameInternal
+  if FrameCache.len > 0:
+    internal = FrameCache.pop()
+  else:
+    internal = cast[FrameInternal](alloc0(FrameSize))
+  internal.refCount = 1
+  internal.self = Nil
+  Frame(d: internal)
 
-proc reset*(self: var Frame) {.inline.} =
-  self.self = nil
-  self.ns = nil
-  self.scope = nil
-  self.extra = nil
+# proc reset*(self: var Frame) {.inline.} =
+#   self.self = nil
+#   self.ns = nil
+#   self.scope = nil
+#   self.extra = nil
 
 proc `[]`*(self: Frame, name: MapKey): Value {.inline.} =
-  result = self.scope[name]
+  result = self.d.scope[name]
   if result == nil:
-    return self.ns[name]
+    return self.d.ns[name]
 
 proc `[]`*(self: Frame, name: Value): Value {.inline.} =
   case name.kind:

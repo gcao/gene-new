@@ -14,8 +14,8 @@ proc init*() =
   Evaluators[VkExNamespace] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     var ns = new_namespace(expr.ex_ns_name)
     result = Value(kind: VkNamespace, ns: ns)
-    frame.ns[expr.ex_ns_name] = result
+    frame.d.ns[expr.ex_ns_name] = result
 
   Evaluators[VkExNsDef] = proc(self: VirtualMachine, frame: Frame, expr: Value): Value =
     result = self.eval(frame, expr.ex_ns_def_value)
-    frame.ns[expr.ex_ns_def_name] = result
+    frame.d.ns[expr.ex_ns_def_name] = result
