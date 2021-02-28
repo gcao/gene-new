@@ -56,6 +56,10 @@ Vagrant.configure(2) do |config|
     # Install linux-tools which contains perf
     sudo apt-get install linux-tools-4.15.0-51-generic
 
+    sudo apt-get install valgrind -y
+    sudo apt-get install xfce4 virtualbox-guest-dkms virtualbox-guest-utils virtualbox-guest-x11 -y
+    sudo apt-get install kcachegrind -y
+
     sudo python3 -m pip install --upgrade pip
     sudo python3 -m pip install requests
 
