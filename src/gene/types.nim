@@ -465,9 +465,9 @@ let
   Call*      = Value(kind: VkSymbol, symbol: "call")
   Do*        = Value(kind: VkSymbol, symbol: "do")
 
-var Ints: array[111, Value]
-for i in 0..110:
-  Ints[i] = Value(kind: VkInt, int: i - 10)
+var Ints: array[512, Value]
+for i in 0..<512:
+  Ints[i] = Value(kind: VkInt, int: i - 11)
 
 var VM*: VirtualMachine   # The current virtual machine
 
@@ -477,9 +477,9 @@ var ExceptionClass*: Value
 
 #################### Definitions #################
 
-proc new_gene_int*(val: BiggestInt): Value
-proc new_gene_string*(s: string): Value {.gcsafe.}
-proc new_gene_string_move*(s: string): Value
+proc new_gene_int*(val: BiggestInt): Value {.inline.}
+proc new_gene_string*(s: string): Value {.inline, gcsafe.}
+proc new_gene_string_move*(s: string): Value {.inline.}
 proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
 proc new_namespace*(): Namespace
 proc new_namespace*(parent: Namespace): Namespace
@@ -1094,33 +1094,35 @@ proc new_gene_any*(v: pointer, `type`: MapKey): Value =
 proc new_gene_any*(v: pointer, `type`: string): Value =
   return Value(kind: VkAny, any: v, any_type: `type`.to_key)
 
-proc new_gene_string*(s: string): Value {.gcsafe.} =
+proc new_gene_string*(s: string): Value {.inline, gcsafe.} =
   return Value(kind: VkString, str: s)
 
-proc new_gene_string_move*(s: string): Value =
+proc new_gene_string_move*(s: string): Value {.inline.} =
   result = Value(kind: VkString)
   shallowCopy(result.str, s)
 
 proc new_gene_int*(s: string): Value =
   return Value(kind: VkInt, int: parseBiggestInt(s))
 
-proc new_gene_int*(val: BiggestInt): Value =
+{.push checks: off.}
+proc new_gene_int*(val: BiggestInt): Value {.inline.} =
   # return Value(kind: VkInt, int: val)
-  if val > 100 or val < -10:
-    return Value(kind: VkInt, int: val)
+  if val > 500 or val < -11:
+    Value(kind: VkInt, int: val)
   else:
-    return Ints[val + 10]
+    Ints[val + 11]
+{.pop.}
 
 proc new_gene_ratio*(nom, denom: BiggestInt): Value =
   return Value(kind: VkRatio, ratio: (nom, denom))
 
-proc new_gene_float*(s: string): Value =
+proc new_gene_float*(s: string): Value {.inline.} =
   return Value(kind: VkFloat, float: parseFloat(s))
 
-proc new_gene_float*(val: float): Value =
+proc new_gene_float*(val: float): Value {.inline.} =
   return Value(kind: VkFloat, float: val)
 
-proc new_gene_bool*(val: bool): Value =
+proc new_gene_bool*(val: bool): Value {.inline.} =
   case val
   of true: return True
   of false: return False
