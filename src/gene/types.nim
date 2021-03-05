@@ -58,7 +58,7 @@ type
     parent_index_max*: NameIndexScope
     members*:  seq[Value]
     # Value of mappings is composed of two bytes:
-    #   first is the optional index in self.mapping_history
+    #   first is the optional index in self.mapping_history + 1
     #   second is the index in self.members
     mappings*: Table[MapKey, int]
     mapping_history*: seq[seq[NameIndexScope]]
@@ -687,12 +687,6 @@ proc def_member*(self: var Scope, key: MapKey, val: Value) {.inline.} =
 
 proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
   if self.mappings.has_key(key):
-    # var i = found.len - 1
-    # while i >= 0:
-    #   var index: int = found[i]
-    #   if index < max:
-    #     return self.members[index]
-    #   i -= 1
     var found = self.mappings[key]
     if found > 255:
       var cur = found and 0xFF
@@ -721,14 +715,7 @@ proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
 
 proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
   if self.mappings.has_key(key):
-    # var i = found.len - 1
-    # while i >= 0:
-    #   var index: int = found[i]
-    #   if index < max:
-    #     self.members[i] = val
-    #     return
-    #   i -= 1
-    var found = self.mappings[key]
+   var found = self.mappings[key]
     if found > 255:
       var index = found and 0xFF
       if index < max:
