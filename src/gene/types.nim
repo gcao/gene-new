@@ -57,7 +57,11 @@ type
     parent*: Scope
     parent_index_max*: NameIndexScope
     members*:  seq[Value]
-    mappings*: Table[MapKey, seq[NameIndexScope]]
+    # Value of mappings is composed of two bytes:
+    #   first is the optional index in self.mapping_history
+    #   second is the index in self.members
+    mappings*: Table[MapKey, int]
+    mapping_history*: seq[seq[NameIndexScope]]
 
   Class* = ref object
     parent*: Class
@@ -629,7 +633,8 @@ proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.} =
 
 proc new_scope*(): Scope = Scope(
   members: @[],
-  mappings: Table[MapKey, seq[NameIndexScope]](),
+  mappings: Table[MapKey, int](),
+  mapping_history: @[],
 )
 
 proc max*(self: Scope): NameIndexScope {.inline.} =
@@ -645,9 +650,18 @@ proc reset*(self: var Scope) {.inline.} =
 
 proc has_key(self: Scope, key: MapKey, max: int): bool {.inline.} =
   if self.mappings.has_key(key):
-    # If first >= max, all others will be >= max
-    if self.mappings[key][0] < max:
+    var found = self.mappings[key]
+    if found < max:
       return true
+    if found > 255:
+      var index = found and 0xFF
+      if index < max:
+        return true
+      var history_index = found.shr(8) - 1
+      var history = self.mapping_history[history_index]
+      # If first >= max, all others will be >= max
+      if history[0] < max:
+        return true
 
   if self.parent != nil:
     return self.parent.has_key(key, self.parent_index_max)
@@ -661,41 +675,76 @@ proc has_key*(self: Scope, key: MapKey): bool {.inline.} =
 proc def_member*(self: var Scope, key: MapKey, val: Value) {.inline.} =
   var index = self.members.len
   self.members.add(val)
-  if self.mappings.has_key(key):
-    self.mappings[key].add(index)
-  else:
-    self.mappings[key] = @[cast[NameIndexScope](index)]
+  if self.mappings.has_key_or_put(key, index):
+    var cur = self.mappings[key]
+    if cur > 255:
+      var history_index = cur.shr(8) - 1
+      self.mapping_history[history_index].add(cur and 0xFF)
+      self.mappings[key] = cur and 0b1111111100000000 + index
+    else:
+      var history_index = self.mapping_history.len
+      self.mappings[key] = (history_index + 1).shl(8) + index
 
 proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
   if self.mappings.has_key(key):
+    # var i = found.len - 1
+    # while i >= 0:
+    #   var index: int = found[i]
+    #   if index < max:
+    #     return self.members[index]
+    #   i -= 1
     var found = self.mappings[key]
-    var i = found.len - 1
-    while i >= 0:
-      var index: int = found[i]
-      if index < max:
-        return self.members[index]
-      i -= 1
+    if found > 255:
+      var cur = found and 0xFF
+      if cur < max:
+        return self.members[cur]
+      else:
+        var history_index = found.shr(8) - 1
+        var history = self.mapping_history[history_index]
+        var i = history.len - 1
+        while i >= 0:
+          var index: int = history[i]
+          if index < max:
+            return self.members[index]
+          i -= 1
+    elif found < max:
+      return self.members[found.int]
 
   if self.parent != nil:
     return self.parent[key, self.parent_index_max]
 
 proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
   if self.mappings.has_key(key):
-    var i: int = self.mappings[key][^1]
-    return self.members[i]
+    return self.members[self.mappings[key].int]
   elif self.parent != nil:
     return self.parent[key, self.parent_index_max]
 
 proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
   if self.mappings.has_key(key):
+    # var i = found.len - 1
+    # while i >= 0:
+    #   var index: int = found[i]
+    #   if index < max:
+    #     self.members[i] = val
+    #     return
+    #   i -= 1
     var found = self.mappings[key]
-    var i = found.len - 1
-    while i >= 0:
-      var index: int = found[i]
+    if found > 255:
+      var index = found and 0xFF
       if index < max:
-        self.members[i] = val
-        return
-      i -= 1
+        self.members[index] = val
+      else:
+        var history_index = found.shr(8) - 1
+        var history = self.mapping_history[history_index]
+        var i = history.len - 1
+        while i >= 0:
+          var index: int = history[history_index]
+          if index < max:
+            self.members[index] = val
+          i -= 1
+    elif found < max:
+      self.members[found.int] = val
+
 
   if self.parent != nil:
     self.parent.`[]=`(key, val, self.parent_index_max)
@@ -704,8 +753,7 @@ proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
 
 proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.inline.} =
   if self.mappings.has_key(key):
-    var i: int = self.mappings[key][^1]
-    self.members[i] = val
+    self.members[self.mappings[key].int] = val
   elif self.parent != nil:
     self.parent.`[]=`(key, val, self.parent_index_max)
   else:
