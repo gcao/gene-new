@@ -5,9 +5,6 @@ import ./types
 import ./parser
 import ./translators
 
-type
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: Value): Value
-
 var Evaluators*: array[0..2048, Evaluator]
 var Extensions* = Table[ValueKind, GeneExtension]()
 
