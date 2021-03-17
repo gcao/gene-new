@@ -294,6 +294,7 @@ type
       ex_bin_op2*: Value
     of VkExSymbol:
       ex_symbol*: MapKey
+      ex_symbol_kind*: SymbolKind
       # ex_symbol_eval*: Evaluator
     of VkExVar:
       ex_var_name*: MapKey
