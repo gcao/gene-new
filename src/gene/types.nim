@@ -155,8 +155,8 @@ type
 
   ValueKind* = enum
     VkNil
-    VkPlaceholder
     VkAny
+    VkCustom
     VkBool
     VkInt
     VkRatio
@@ -179,6 +179,7 @@ type
     VkGene
     VkStream
     VkDocument
+    VkPlaceholder
     # Internal types
     VkException = 128
     VkApplication
@@ -221,6 +222,8 @@ type
     of VkAny:
       any_type*: MapKey   # Optional type info
       any*: pointer
+    of VkCustom:
+      custom*: CustomValue
     of VkBool:
       bool*: bool
     of VkInt:
@@ -294,6 +297,7 @@ type
       ex_bin_op2*: Value
     of VkExSymbol:
       ex_symbol*: MapKey
+      ex_symbol_kind*: SymbolKind
       # ex_symbol_eval*: Evaluator
     of VkExVar:
       ex_var_name*: MapKey
@@ -315,6 +319,8 @@ type
       discard
     # line*: int
     # column*: int
+
+  CustomValue* = ref object of RootObj
 
   Document* = ref object
     `type`: Value
