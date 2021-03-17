@@ -715,7 +715,7 @@ proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
 
 proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
   if self.mappings.has_key(key):
-   var found = self.mappings[key]
+    var found = self.mappings[key]
     if found > 255:
       var index = found and 0xFF
       if index < max:
