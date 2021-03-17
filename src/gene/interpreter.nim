@@ -17,7 +17,7 @@ let GENE_RUNTIME* = Runtime(
 
 #################### Definitions #################
 
-proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value {.inline.}
+proc eval*(self: VirtualMachine, frame: Frame, expr: var Value): Value {.inline.}
 
 #################### Application #################
 
@@ -47,14 +47,14 @@ proc prepare*(self: VirtualMachine, code: string): Value =
   else:
     new_gene_stream(parsed)
 
-proc default_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
+proc default_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
   case expr.kind:
   of VkNil, VkBool, VkInt:
     result = expr
   of VkString:
     result = new_gene_string(expr.str)
   of VkStream:
-    for e in expr.stream:
+    for e in expr.stream.mitems:
       result = self.eval(frame, e)
   else:
     not_allowed($expr.kind)
@@ -62,7 +62,7 @@ proc default_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
 for i in 0..<Evaluators.len:
   Evaluators[i] = default_evaluator
 
-proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value {.inline.} =
+proc eval*(self: VirtualMachine, frame: Frame, expr: var Value): Value {.inline.} =
   var evaluator = Evaluators[expr.kind.ord]
   evaluator(self, frame, expr)
 

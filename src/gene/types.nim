@@ -14,8 +14,8 @@ type
   NameIndexScope* = distinct int
 
   Translator* = proc(value: Value): Value
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: Value): Value
-  Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
+  Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: var Value): Value
+  Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, args: var Value): Value
 
   Runtime* = ref object
     name*: string     # default/...

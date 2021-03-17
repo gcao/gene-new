@@ -59,7 +59,7 @@ proc init*() =
   GeneTranslators["&&"] = translate_arithmetic
   GeneTranslators["||"] = translate_arithmetic
 
-  proc bin_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc bin_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
     var first = self.eval(frame, expr.ex_bin_op1)
     var second = self.eval(frame, expr.ex_bin_op2)
     case expr.ex_bin_op:

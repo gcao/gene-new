@@ -39,7 +39,7 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
   else:
     todo()
 
-proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
+proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: var Value): Value =
   var fn = target.fn
   var ns = fn.ns
   var fn_scope = new_scope()
@@ -52,9 +52,9 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: V
   of MhSimpleData:
     case args.kind:
     of VkExArgument:
-      for _, v in args.ex_arg_props:
+      for _, v in args.ex_arg_props.mpairs:
         discard self.eval(frame, v)
-      for i, v in args.ex_arg_data:
+      for i, v in args.ex_arg_data.mpairs:
         var field = fn.matcher.children[i]
         new_frame.scope.def_member(field.name, self.eval(frame, v))
     else:
@@ -62,9 +62,9 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: V
   of MhNone:
     case args.kind:
     of VkExArgument:
-      for _, v in args.ex_arg_props:
+      for _, v in args.ex_arg_props.mpairs:
         discard self.eval(frame, v)
-      for v in args.ex_arg_data:
+      for v in args.ex_arg_data.mitems:
         discard self.eval(frame, v)
     else:
       todo($args.kind)
@@ -101,7 +101,7 @@ proc init*() =
       ),
     )
 
-  proc fn_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc fn_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
     expr.ex_fn.ns = frame.ns
     result = Value(
       kind: VkFunction,
