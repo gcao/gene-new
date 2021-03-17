@@ -12,8 +12,21 @@ proc init*() =
       ex_symbol: value.symbol.to_key,
     )
 
-  proc symbol_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
-    result = frame[expr.ex_symbol]
+  proc symbol_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
+    case expr.ex_symbol_kind:
+    of SkUnknown:
+      if frame.scope.has_key(expr.ex_symbol):
+        expr.ex_symbol_kind = SkScope
+        result = frame.scope[expr.ex_symbol]
+      else:
+        expr.ex_symbol_kind = SkNamespace
+        result = frame.ns[expr.ex_symbol]
+    of SkScope:
+      result = frame.scope[expr.ex_symbol]
+    of SkNamespace:
+      result = frame.ns[expr.ex_symbol]
+    else:
+      todo()
 
   GeneTranslators["var"] = proc(value: Value): Value =
     var name = value.gene_data[0]
@@ -32,7 +45,7 @@ proc init*() =
     else:
       todo($name.kind)
 
-  proc var_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc var_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
     var value = self.eval(frame, expr.ex_var_value)
     frame.scope.def_member(expr.ex_var_name, value)
 

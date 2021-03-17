@@ -17,7 +17,7 @@ when isMainModule:
     )
     (fib 24)
   """
-  let e = translate(VM.prepare(code))
+  var e = translate(VM.prepare(code))
   let module = new_module()
   var frame = Frame(ns: module.root_ns, scope: new_scope(), self: Nil)
   let start = cpuTime()

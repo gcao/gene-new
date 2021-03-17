@@ -10,9 +10,9 @@ proc init*() =
     for v in value.vec:
       result.ex_array.add(translate(v))
 
-  proc array_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
+  proc array_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
     result = new_gene_vec()
-    for e in expr.ex_array:
+    for e in expr.ex_array.mitems:
       result.vec.add(self.eval(frame, e))
 
   Evaluators[VkExArray.ord] = array_evaluator
