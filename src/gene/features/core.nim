@@ -1,12 +1,12 @@
-import tables
+# import tables
 
-import ../types
-# import ../translators
-import ../interpreter
+# import ../types
+# # import ../translators
+# import ../interpreter
 
-proc init*() =
-  proc group_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
-    for e in expr.ex_group.mitems:
-      result = self.eval(frame, e)
+# proc init*() =
+#   proc group_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
+#     for e in expr.ex_group.mitems:
+#       result = self.eval(frame, e)
 
-  Evaluators[VkExGroup.ord] = group_evaluator
+#   Evaluators[VkExGroup.ord] = group_evaluator

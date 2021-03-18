@@ -13,9 +13,9 @@ type
   # index of a name in a scope
   NameIndexScope* = distinct int
 
-  Translator* = proc(value: Value): Value
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: var Value): Value
-  Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, args: var Value): Value
+  Translator* = proc(value: Value): Expr
+  Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
+  Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, args: var Expr): Value
 
   Runtime* = ref object
     name*: string     # default/...
@@ -198,24 +198,6 @@ type
     VkEnumMember
     VkExplode
     VkFile
-    # Standard expressions
-    VkExGroup = 512
-    VkExArray
-    VkExMap
-    VkExGene
-    VkExArgument
-    VkExNamespace
-    VkExBinOp
-    VkExQuote
-    VkExSymbol
-    VkExVar
-    VkExAssignment
-    VkExIf
-    VkExFn
-    VkExNsDef
-    # Custom expressions
-    VkEx1024 = 1024
-    VkEx1025, VkEx1026 # ...
 
   Value* {.acyclic.} = ref object
     case kind*: ValueKind
@@ -272,53 +254,52 @@ type
       ns*: Namespace
     of VkFunction:
       fn*: Function
-    # Expressions
-    of VkExGroup:
-      ex_group*: seq[Value]
-    of VkExArray:
-      ex_array*: seq[Value]
-    of VkExMap:
-      ex_map*: Table[MapKey, Value]
-    of VkExGene:
-      ex_gene_type*: Value
-      ex_gene_value*: Value
-      ex_gene_extension*: GeneExtension
-    of VkExArgument:
-      ex_arg_props*: Table[MapKey, Value]
-      ex_arg_data*: seq[Value]
-    of VkExNamespace:
-      ex_ns_name*: string
-      ex_ns_body*: Value
-    of VkExQuote:
-      ex_quote*: Value
-    of VkExBinOp:
-      ex_bin_op*: BinOp
-      ex_bin_op1*: Value
-      ex_bin_op2*: Value
-    of VkExSymbol:
-      ex_symbol*: MapKey
-      ex_symbol_kind*: SymbolKind
-      # ex_symbol_eval*: Evaluator
-    of VkExVar:
-      ex_var_name*: MapKey
-      ex_var_value*: Value
-    of VkExAssignment:
-      ex_assign_name*: MapKey
-      ex_assign_value*: Value
-    of VkExIf:
-      ex_if_cond*: Value
-      ex_if_then*: Value
-      ex_if_elifs*: seq[(Value, Value)]
-      ex_if_else*: Value
-    of VkExFn:
-      ex_fn*: Function
-    of VkExNsDef:
-      ex_ns_def_name*: MapKey
-      ex_ns_def_value*: Value
     else:
       discard
-    # line*: int
-    # column*: int
+
+  Expr* = ref object of RootObj
+    evaluator*: Evaluator
+  ExRaw* = ref object of Expr
+    orig*: Value
+    data*: Expr
+  ExLiteral* = ref object of Expr
+    data*: Value
+  ExGroup* = ref object of Expr
+    data*: seq[Expr]
+  ExArray* = ref object of Expr
+    data*: seq[Expr]
+  ExMap* = ref object of Expr
+    data*: Table[MapKey, Expr]
+  ExGene* = ref object of Expr
+    `type`*: Expr
+    args*: Expr
+  ExArgument* = ref object of Expr
+    props*: Table[MapKey, Value]
+    data*: seq[Value]
+  ExNamespace* = ref object of Expr
+    name*: Value
+    body*: Expr
+  ExQuote* = ref object of Expr
+    quote*: Value
+  ExSymbol* = ref object of Expr
+    name*: MapKey
+    kind*: SymbolKind
+  ExVar* = ref object of Expr
+    name*: MapKey
+    value*: Expr
+  ExAssignment* = ref object of Expr
+    name*: MapKey
+    value*: Expr
+  ExIf* = ref object of Expr
+    cond*: Expr
+    then*: Expr
+    elifs*: seq[(Expr, Expr)]
+    `else`*: Expr
+  ExFn* = ref object of Expr
+    data*: Function
+  ExNsDef* = ref object of Expr
+    name*: MapKey
+    value*: Expr
 
   CustomValue* = ref object of RootObj
 
@@ -381,20 +362,6 @@ type
   Return* = ref object of CatchableError
     frame*: Frame
     val*: Value
-
-  BinOp* = enum
-    BinAdd
-    BinSub
-    BinMul
-    BinDiv
-    BinEq
-    BinNeq
-    BinLt
-    BinLe
-    BinGt
-    BinGe
-    BinAnd
-    BinOr
 
   MatchMode* = enum
     MatchDefault
@@ -1325,6 +1292,8 @@ proc merge*(self: var Value, value: Value) =
 
 proc new_doc*(data: seq[Value]): Document =
   return Document(data: data)
+
+include ./expr
 
 #################### Converters ##################
 

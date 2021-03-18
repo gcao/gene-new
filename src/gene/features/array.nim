@@ -2,17 +2,23 @@ import tables
 
 import ../types
 import ../translators
-import ../interpreter
+# import ../interpreter
+
+type
+  ExArray* = ref object of Expr
+    data*: seq[Expr]
+
+proc eval_array(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  result = new_gene_vec()
+  for e in cast[ExArray](expr).data.mitems:
+    result.vec.add(self.eval(frame, e))
 
 proc init*() =
-  Translators[VkVector] = proc(value: Value): Value =
-    result = Value(kind: VkExArray)
+  Translators[VkVector] = proc(value: Value): Expr =
+    result = ExArray(
+      evaluator: eval_array,
+    )
     for v in value.vec:
-      result.ex_array.add(translate(v))
+      cast[ExArray](result).data.add(translate(v))
 
-  proc array_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
-    result = new_gene_vec()
-    for e in expr.ex_array.mitems:
-      result.vec.add(self.eval(frame, e))
-
-  Evaluators[VkExArray.ord] = array_evaluator
+  # Evaluators[VkExArray.ord] = array_evaluator
