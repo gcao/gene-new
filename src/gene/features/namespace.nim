@@ -1,24 +1,30 @@
 import tables
 
+import ../map_key
 import ../types
 import ../translators
-import ../interpreter
+# import ../interpreter
+
+type
+  ExNamespace* = ref object of Expr
+    name*: string
+    body*: Expr
+
+proc eval_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  var ns = new_namespace(cast[ExNamespace](expr).name)
+  result = Value(kind: VkNamespace, ns: ns)
+  frame.ns[cast[ExNamespace](expr).name] = result
+
+# proc eval_ns_def(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+#   result = self.eval(frame, cast[ExNsDef](expr).value)
+#   frame.ns[cast[ExNsDef](expr).name] = result
 
 proc init*() =
-  GeneTranslators["ns"] = proc(value: Value): Value =
-    Value(
-      kind: VkExNamespace,
-      ex_ns_name: value.gene_data[0].symbol,
+  GeneTranslators["ns"] = proc(value: Value): Expr =
+    ExNamespace(
+      evaluator: eval_ns,
+      name: value.gene_data[0].symbol,
     )
 
-  proc ns_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
-    var ns = new_namespace(expr.ex_ns_name)
-    result = Value(kind: VkNamespace, ns: ns)
-    frame.ns[expr.ex_ns_name] = result
-
-  proc ns_def_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
-    result = self.eval(frame, expr.ex_ns_def_value)
-    frame.ns[expr.ex_ns_def_name] = result
-
-  Evaluators[VkExNamespace.ord] = ns_evaluator
-  Evaluators[VkExNsDef.ord] = ns_def_evaluator
+  # Evaluators[VkExNamespace.ord] = ns_evaluator
+  # Evaluators[VkExNsDef.ord] = ns_def_evaluator

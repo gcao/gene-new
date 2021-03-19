@@ -70,4 +70,3 @@ proc init*() =
 
   # Evaluators[VkExGene.ord] = gene_evaluator
   # Evaluators[VkExArgument.ord] = arg_evaluator
-

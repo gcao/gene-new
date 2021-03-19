@@ -5,6 +5,17 @@ import ../types
 import ../translators
 import ../interpreter
 
+type
+  ExFn* = ref object of Expr
+    data*: Function
+
+proc eval_fn(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  cast[ExFn](expr).data.ns = frame.ns
+  result = Value(
+    kind: VkFunction,
+    fn: cast[ExFn](expr).data,
+  )
+
 proc to_function(node: Value): Function =
   var first = node.gene_data[0]
   var name: string
@@ -90,24 +101,16 @@ proc function_invoker(self: VirtualMachine, frame: Frame, target: Value, args: v
   #     raise
 
 proc init*() =
-  GeneTranslators["fn"] = proc(value: Value): Value =
+  GeneTranslators["fn"] = proc(value: Value): Expr =
     var fn = to_function(value)
-    result = Value(
-      kind: VkExNsDef,
-      ex_ns_def_name: fn.name.to_key,
-      ex_ns_def_value: Value(
-        kind: VkExFn,
-        ex_fn: fn,
-      ),
+    var expr = new_ex_ns_def()
+    expr.name = fn.name.to_key,
+    expr.value = ExFn(
+      evaluator: eval_fn,
+      data: fn,
     )
+    return expr
 
-  proc fn_evaluator(self: VirtualMachine, frame: Frame, expr: var Value): Value =
-    expr.ex_fn.ns = frame.ns
-    result = Value(
-      kind: VkFunction,
-      fn: expr.ex_fn,
-    )
-
-  Evaluators[VkExFn.ord] = fn_evaluator
+  # Evaluators[VkExFn.ord] = fn_evaluator
 
   Extensions[VkFunction] = GeneExtension(translator: arg_translator, invoker: function_invoker)
