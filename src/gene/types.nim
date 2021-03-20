@@ -259,47 +259,6 @@ type
 
   Expr* = ref object of RootObj
     evaluator*: Evaluator
-  ExRaw* = ref object of Expr
-    orig*: Value
-    data*: Expr
-  ExLiteral* = ref object of Expr
-    data*: Value
-  ExGroup* = ref object of Expr
-    data*: seq[Expr]
-  ExArray* = ref object of Expr
-    data*: seq[Expr]
-  ExMap* = ref object of Expr
-    data*: Table[MapKey, Expr]
-  ExGene* = ref object of Expr
-    `type`*: Expr
-    args*: Expr
-  ExArgument* = ref object of Expr
-    props*: Table[MapKey, Value]
-    data*: seq[Value]
-  ExNamespace* = ref object of Expr
-    name*: Value
-    body*: Expr
-  ExQuote* = ref object of Expr
-    quote*: Value
-  ExSymbol* = ref object of Expr
-    name*: MapKey
-    kind*: SymbolKind
-  ExVar* = ref object of Expr
-    name*: MapKey
-    value*: Expr
-  ExAssignment* = ref object of Expr
-    name*: MapKey
-    value*: Expr
-  ExIf* = ref object of Expr
-    cond*: Expr
-    then*: Expr
-    elifs*: seq[(Expr, Expr)]
-    `else`*: Expr
-  ExFn* = ref object of Expr
-    data*: Function
-  ExNsDef* = ref object of Expr
-    name*: MapKey
-    value*: Expr
 
   CustomValue* = ref object of RootObj
 
@@ -307,13 +266,6 @@ type
     `type`: Value
     props*: OrderedTable[MapKey, Value]
     data*: seq[Value]
-
-  SymbolKind* = enum
-    SkUnknown
-    SkGene
-    SkGenex
-    SkNamespace
-    SkScope
 
   VirtualMachine* = ref object
     app*: Application
@@ -397,7 +349,7 @@ type
     name*: MapKey
     # match_name*: bool # Match symbol to name - useful for (myif true then ... else ...)
     default_value*: Value
-    default_value_expr*: Value
+    default_value_expr*: Expr
     splat*: bool
     min_left*: int # Minimum number of args following this
     children*: seq[Matcher]
@@ -411,7 +363,7 @@ type
   MatchedField* = ref object
     name*: MapKey
     value*: Value # Either value_expr or value must be given
-    value_expr*: Value
+    value_expr*: Expr
 
   MatchResult* = ref object
     message*: string
@@ -1293,8 +1245,6 @@ proc merge*(self: var Value, value: Value) =
 proc new_doc*(data: seq[Value]): Document =
   return Document(data: data)
 
-include ./expr
-
 #################### Converters ##################
 
 converter to_gene*(v: int): Value                      = new_gene_int(v)
@@ -1538,7 +1488,7 @@ proc match(self: Matcher, input: Value, state: MatchState, r: MatchResult) =
   case self.kind:
   of MatchData:
     var value: Value
-    var value_expr: Value
+    var value_expr: Expr
     if self.splat:
       value = new_gene_vec()
       for i in state.data_index..<input.len - self.min_left:
@@ -1566,7 +1516,7 @@ proc match(self: Matcher, input: Value, state: MatchState, r: MatchResult) =
     match_prop_splat(self.children, value, r)
   of MatchProp:
     var value: Value
-    var value_expr: Value
+    var value_expr: Expr
     if self.splat:
       return
     elif input.gene_props.has_key(self.name):
@@ -1593,3 +1543,55 @@ proc match*(self: RootMatcher, input: Value): MatchResult =
   for child in children:
     child.match(input, state, result)
   match_prop_splat(children, input, result)
+
+#################### Expr ########################
+
+proc eval_todo*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  todo()
+
+#################### ExLiteral ###################
+
+type
+  ExLiteral* = ref object of Expr
+    data*: Value
+
+proc eval_literal(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  cast[ExLiteral](expr).data
+
+proc new_ex_literal*(v: Value): ExLiteral =
+  ExLiteral(
+    evaluator: eval_literal,
+    data: v,
+  )
+
+#################### ExGroup #####################
+
+type
+  ExGroup* = ref object of Expr
+    data*: seq[Expr]
+
+proc eval_group(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  for item in cast[ExGroup](expr).data.mitems:
+    result = item.evaluator(self, frame, item)
+
+proc new_ex_group*(): ExGroup =
+  result = ExGroup(
+    evaluator: eval_group,
+  )
+
+#################### ExNsDef #####################
+
+type
+  ExNsDef* = ref object of Expr
+    name*: MapKey
+    value*: Expr
+
+proc eval_ns_def(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  var e = cast[ExNsDef](expr)
+  result = e.value.evaluator(self, frame, e.value)
+  frame.ns[e.name] = result
+
+proc new_ex_ns_def*(): ExNsDef =
+  result = ExNsDef(
+    evaluator: eval_ns_def,
+  )

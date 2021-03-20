@@ -9,29 +9,40 @@ import ../interpreter
 type
   ExGene* = ref object of Expr
     `type`*: Expr
-    value*: Value
-    extension*: GeneExtension
+    orig*: Value                # The original gene value
+    props*: Expr                # The expr translated from orig.gene_props
+    data*: Expr                 # The expr translated from orig.gene_data
 
   ExArgument* = ref object of Expr
     props*: Table[MapKey, Value]
     data*: seq[Value]
 
+proc should_translate_args(`type`: Value): bool =
+  true
+
+proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  result = new_gene_gene(target)
+  # var e = cast[ExGene](expr)
+  # for k, v in e.args.mpairs:
+  #   result.gene_props[k] = self.eval(frame, v)
+  # for v in expr.ex_arg_data.mitems:
+  #   result.gene_data.add(self.eval(frame, v))
+
+proc invoker(`type`: Value): Invoker =
+  case `type`.kind:
+  of VkFunction:
+    function_invoker
+  else:
+    default_invoker
+
 # proc translate_args(value: Value): Expr =
 #   todo()
 
-proc default_translator(value: Value): Expr =
-  ExGene(
-    `type`: translate(value.gene_type),
-    value: value,
-  )
-
-# proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-#   result = new_gene_gene(target)
-#   # var e = cast[ExGene](expr)
-#   # for k, v in e.args.mpairs:
-#   #   result.gene_props[k] = self.eval(frame, v)
-#   # for v in expr.ex_arg_data.mitems:
-#   #   result.gene_data.add(self.eval(frame, v))
+# proc default_translator(value: Value): Expr =
+#   ExGene(
+#     `type`: translate(value.gene_type),
+#     value: value,
+#   )
 
 # var DEFAULT_EXTENSION = GeneExtension(
 #   translator: translate_args,
@@ -41,6 +52,10 @@ proc default_translator(value: Value): Expr =
 proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e = cast[ExGene](expr)
   var `type` = self.eval(frame, e.`type`)
+  if `type`.should_translate_args():
+    todo()
+  invoker(`type`)(self, frame, `type`, expr)
+
   # if e.extension == nil:
   #   e.extension = Extensions.get_or_default(`type`.kind, DEFAULT_EXTENSION)
   #   expr.ex_gene_value = expr.ex_gene_extension.translator(expr)
@@ -57,16 +72,20 @@ proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 proc init*() =
   Translators[VkGene] = proc(value: Value): Expr =
     value.normalize()
-    case value.gene_type.kind:
-    of VkSymbol:
-      var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
-      translator(value)
-    else:
-      ExGene(
-        evaluator: eval_gene,
-        `type`: translate(value.gene_type),
-        # args: value,
-      )
+    ExGene(
+      evaluator: eval_gene,
+      `type`: translate(value.gene_type),
+    )
+    # case value.gene_type.kind:
+    # of VkSymbol:
+    #   var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
+    #   translator(value)
+    # else:
+    #   ExGene(
+    #     evaluator: eval_gene,
+    #     `type`: translate(value.gene_type),
+    #     # args: value,
+    #   )
 
   # Evaluators[VkExGene.ord] = gene_evaluator
   # Evaluators[VkExArgument.ord] = arg_evaluator
