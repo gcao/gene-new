@@ -9,9 +9,8 @@ import ../interpreter
 type
   ExGene* = ref object of Expr
     `type`*: Expr
-    orig*: Value                # The original gene value
-    props*: Expr                # The expr translated from orig.gene_props
-    data*: Expr                 # The expr translated from orig.gene_data
+    input*: Value   # The unprocessed input
+    processor*: GeneProcessor
 
   ExArgument* = ref object of Expr
     props*: Table[MapKey, Value]
@@ -61,6 +60,9 @@ proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   #   expr.ex_gene_value = expr.ex_gene_extension.translator(expr)
 
   # expr.ex_gene_extension.invoker(self, frame, `type`, expr.ex_gene_value)
+
+proc eval_gene2(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  todo()
 
 # proc eval_args(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 #   result = Value(kind: VkGene)

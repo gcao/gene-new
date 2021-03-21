@@ -17,6 +17,11 @@ type
   Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
   Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, args: var Expr): Value
 
+  GeneProcessor* = ref object of RootObj
+    translate_args*: bool
+    translator*: Translator
+    invoker*: Invoker
+
   Runtime* = ref object
     name*: string     # default/...
     home*: string     # GENE_HOME directory
