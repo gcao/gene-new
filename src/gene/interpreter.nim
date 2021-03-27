@@ -1,12 +1,12 @@
 import strutils, tables, strutils, os
 
-# import ./map_key
+import ./map_key
 import ./types
 import ./parser
 import ./translators
 
 # var Evaluators*: array[0..2048, Evaluator]
-var Extensions* = Table[ValueKind, GeneExtension]()
+# var Extensions* = Table[ValueKind, GeneExtension]()
 
 let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
 let GENE_RUNTIME* = Runtime(
@@ -145,7 +145,7 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, args: 
   #   else:
   #     raise
 
-import "./features/core" as core_feature; core_feature.init()
+# import "./features/core" as core_feature; core_feature.init()
 import "./features/array" as array_feature; array_feature.init()
 import "./features/map" as map_feature; map_feature.init()
 import "./features/gene" as gene_feature; gene_feature.init()

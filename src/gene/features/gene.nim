@@ -9,15 +9,18 @@ import ../interpreter
 type
   ExGene* = ref object of Expr
     `type`*: Expr
-    input*: Value   # The unprocessed input
-    processor*: GeneProcessor
+    args*: Value        # The unprocessed args
+    args_expr*: Expr    # The translated args
 
   ExArgument* = ref object of Expr
     props*: Table[MapKey, Value]
     data*: seq[Value]
 
-proc should_translate_args(`type`: Value): bool =
+proc should_translate_args*(value: Value): bool =
   true
+
+proc translator*(value: Value): Translator =
+  arg_translator
 
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = new_gene_gene(target)
@@ -49,6 +52,11 @@ proc invoker(`type`: Value): Invoker =
 # )
 
 proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  todo()
+
+proc eval_gene_init(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  # For future invocations
+  expr.evaluator = eval_gene
   var e = cast[ExGene](expr)
   var `type` = self.eval(frame, e.`type`)
   if `type`.should_translate_args():
@@ -61,9 +69,6 @@ proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 
   # expr.ex_gene_extension.invoker(self, frame, `type`, expr.ex_gene_value)
 
-proc eval_gene2(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  todo()
-
 # proc eval_args(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 #   result = Value(kind: VkGene)
 #   for k, v in expr.ex_arg_props.mpairs:
@@ -75,7 +80,7 @@ proc init*() =
   Translators[VkGene] = proc(value: Value): Expr =
     value.normalize()
     ExGene(
-      evaluator: eval_gene,
+      evaluator: eval_gene_init,
       `type`: translate(value.gene_type),
     )
     # case value.gene_type.kind:

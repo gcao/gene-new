@@ -36,12 +36,13 @@ proc translate*(stmts: seq[Value]): Expr =
     for stmt in stmts:
       cast[ExGroup](result).data.add(translate(stmt))
 
-# proc arg_translator*(value: Value): Value =
-#   result = Value(kind: VkExArgument)
-#   for k, v in value.ex_gene_value.gene_props:
-#     result.ex_arg_props[k] = translate(v)
-#   for v in value.ex_gene_value.gene_data:
-#     result.ex_arg_data.add(translate(v))
+proc arg_translator*(value: Value): Expr =
+  var e = new_ex_arg()
+  for k, v in value.gene_props:
+    e.props[k] = translate(v)
+  for v in value.gene_data:
+    e.data.add(translate(v))
+  return e
 
 # proc init_translators() =
 #   Translators[VkSymbol] = proc(value: Value): Value =

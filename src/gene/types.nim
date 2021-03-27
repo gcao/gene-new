@@ -100,7 +100,7 @@ type
     class*: Class
     value*: Value
 
-  Function* = ref object
+  Function* = ref object of GeneProcessor
     async*: bool
     ns*: Namespace
     parent_scope*: Scope
@@ -109,23 +109,23 @@ type
     matcher*: RootMatcher
     matching_hint*: MatchingHint
     body*: seq[Value]
-    body_compiled*: Value
+    body_compiled*: Expr
 
-  Block* = ref object
+  Block* = ref object of GeneProcessor
     frame*: Frame
     parent_scope_max*: NameIndexScope
     matcher*: RootMatcher
     body*: seq[Value]
 
-  Macro* = ref object
+  Macro* = ref object of GeneProcessor
     ns*: Namespace
     name*: string
     matcher*: RootMatcher
     body*: seq[Value]
 
-  GeneExtension* = ref object
-    translator*: Translator
-    invoker*: Invoker
+  # GeneExtension* = ref object
+  #   translator*: Translator
+  #   invoker*: Invoker
 
   Enum* = ref object
     name*: string
@@ -1599,4 +1599,19 @@ proc eval_ns_def(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 proc new_ex_ns_def*(): ExNsDef =
   result = ExNsDef(
     evaluator: eval_ns_def,
+  )
+
+#################### ExArgument #####################
+
+type
+  ExArguments* = ref object of Expr
+    props*: Table[MapKey, Expr]
+    data*: seq[Expr]
+
+proc eval_args(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  todo()
+
+proc new_ex_arg*(): ExArguments =
+  result = ExArguments(
+    evaluator: eval_args,
   )
