@@ -37,7 +37,7 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
   else:
     todo()
 
-proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, args: var Expr): Value =
+proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var fn = target.fn
   var ns = fn.ns
   var fn_scope = new_scope()
@@ -46,22 +46,23 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, args: 
   new_frame.parent = frame
   new_frame.self = target
 
-  var e = cast[ExArguments](args)
+  var args = cast[ExArguments](cast[ExGene](expr).args_expr)
   case fn.matching_hint.mode:
   of MhSimpleData:
-    for _, v in e.props.mpairs:
+    for _, v in args.props.mpairs:
       discard self.eval(frame, v)
-    for i, v in e.data.mpairs:
+    for i, v in args.data.mpairs:
       var field = fn.matcher.children[i]
       new_frame.scope.def_member(field.name, self.eval(frame, v))
   of MhNone:
-    for _, v in e.props.mpairs:
+    for _, v in args.props.mpairs:
       discard self.eval(frame, v)
-    for i, v in e.data.mpairs:
+    for i, v in args.data.mpairs:
       var field = fn.matcher.children[i]
       discard self.eval(frame, v)
   else:
-    self.process_args(new_frame, fn.matcher, self.eval(frame, args))
+    todo()
+    # self.process_args(new_frame, fn.matcher, self.eval(frame, args))
 
   if fn.body_compiled == nil:
     fn.body_compiled = translate(fn.body)
@@ -106,19 +107,20 @@ proc invoker(`type`: Value): Invoker =
 # )
 
 proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  todo()
   var e = cast[ExGene](expr)
   var `type` = self.eval(frame, e.`type`)
   `type`.invoker()(self, frame, `type`, expr)
 
 proc eval_gene_init(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  # For future invocations
-  expr.evaluator = eval_gene
   var e = cast[ExGene](expr)
   var `type` = self.eval(frame, e.`type`)
+
   if `type`.should_translate_args():
     e.args_expr = `type`.translator()(e.args)
-  invoker(`type`)(self, frame, `type`, expr)
+  # For future invocations
+  expr.evaluator = eval_gene
+
+  `type`.invoker()(self, frame, `type`, expr)
 
   # if e.extension == nil:
   #   e.extension = Extensions.get_or_default(`type`.kind, DEFAULT_EXTENSION)
