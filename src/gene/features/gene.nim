@@ -12,9 +12,9 @@ type
     args*: Value        # The unprocessed args
     args_expr*: Expr    # The translated args
 
-  ExArgument* = ref object of Expr
-    props*: Table[MapKey, Value]
-    data*: seq[Value]
+  # ExArgument* = ref object of Expr
+  #   props*: Table[MapKey, Value]
+  #   data*: seq[Value]
 
 proc should_translate_args*(value: Value): bool =
   true
@@ -22,8 +22,68 @@ proc should_translate_args*(value: Value): bool =
 proc translator*(value: Value): Translator =
   arg_translator
 
+proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
+  var match_result = matcher.match(args)
+  case match_result.kind:
+  of MatchSuccess:
+    for field in match_result.fields:
+      if field.value_expr != nil:
+        frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
+      else:
+        frame.scope.def_member(field.name, field.value)
+  of MatchMissingFields:
+    for field in match_result.missing:
+      not_allowed("Argument " & field.to_s & " is missing.")
+  else:
+    todo()
+
+proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, args: var Expr): Value =
+  var fn = target.fn
+  var ns = fn.ns
+  var fn_scope = new_scope()
+  fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
+  var new_frame = Frame(ns: ns, scope: fn_scope)
+  new_frame.parent = frame
+  new_frame.self = target
+
+  var e = cast[ExArguments](args)
+  case fn.matching_hint.mode:
+  of MhSimpleData:
+    for _, v in e.props.mpairs:
+      discard self.eval(frame, v)
+    for i, v in e.data.mpairs:
+      var field = fn.matcher.children[i]
+      new_frame.scope.def_member(field.name, self.eval(frame, v))
+  of MhNone:
+    for _, v in e.props.mpairs:
+      discard self.eval(frame, v)
+    for i, v in e.data.mpairs:
+      var field = fn.matcher.children[i]
+      discard self.eval(frame, v)
+  else:
+    self.process_args(new_frame, fn.matcher, self.eval(frame, args))
+
+  if fn.body_compiled == nil:
+    fn.body_compiled = translate(fn.body)
+
+  try:
+    result = self.eval(new_frame, fn.body_compiled)
+  except Return as r:
+    # return's frame is the same as new_frame(current function's frame)
+    if r.frame == new_frame:
+      result = r.val
+    else:
+      raise
+  # except CatchableError as e:
+  #   if self.repl_on_error:
+  #     result = repl_on_error(self, frame, e)
+  #     discard
+  #   else:
+  #     raise
+
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  result = new_gene_gene(target)
+  todo()
+  # result = new_gene_gene(target)
   # var e = cast[ExGene](expr)
   # for k, v in e.args.mpairs:
   #   result.gene_props[k] = self.eval(frame, v)
@@ -40,12 +100,6 @@ proc invoker(`type`: Value): Invoker =
 # proc translate_args(value: Value): Expr =
 #   todo()
 
-# proc default_translator(value: Value): Expr =
-#   ExGene(
-#     `type`: translate(value.gene_type),
-#     value: value,
-#   )
-
 # var DEFAULT_EXTENSION = GeneExtension(
 #   translator: translate_args,
 #   invoker: default_invoker,
@@ -53,6 +107,9 @@ proc invoker(`type`: Value): Invoker =
 
 proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   todo()
+  var e = cast[ExGene](expr)
+  var `type` = self.eval(frame, e.`type`)
+  `type`.invoker()(self, frame, `type`, expr)
 
 proc eval_gene_init(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   # For future invocations
@@ -60,7 +117,7 @@ proc eval_gene_init(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e = cast[ExGene](expr)
   var `type` = self.eval(frame, e.`type`)
   if `type`.should_translate_args():
-    todo()
+    e.args_expr = `type`.translator()(e.args)
   invoker(`type`)(self, frame, `type`, expr)
 
   # if e.extension == nil:
@@ -76,23 +133,26 @@ proc eval_gene_init(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 #   for v in expr.ex_arg_data.mitems:
 #     result.gene_data.add(self.eval(frame, v))
 
+proc default_translator(value: Value): Expr =
+  ExGene(
+    evaluator: eval_gene_init,
+    `type`: translate(value.gene_type),
+    args: value,
+  )
+
 proc init*() =
   Translators[VkGene] = proc(value: Value): Expr =
     value.normalize()
-    ExGene(
-      evaluator: eval_gene_init,
-      `type`: translate(value.gene_type),
-    )
-    # case value.gene_type.kind:
-    # of VkSymbol:
-    #   var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
-    #   translator(value)
-    # else:
-    #   ExGene(
-    #     evaluator: eval_gene,
-    #     `type`: translate(value.gene_type),
-    #     # args: value,
-    #   )
+    case value.gene_type.kind:
+    of VkSymbol:
+      var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
+      return translator(value)
+    else:
+      return ExGene(
+        evaluator: eval_gene_init,
+        `type`: translate(value.gene_type),
+        args: value,
+      )
 
   # Evaluators[VkExGene.ord] = gene_evaluator
   # Evaluators[VkExArgument.ord] = arg_evaluator
