@@ -1601,7 +1601,7 @@ proc new_ex_ns_def*(): ExNsDef =
     evaluator: eval_ns_def,
   )
 
-#################### ExArguments ####################
+#################### ExArguments #################
 
 type
   ExArguments* = ref object of Expr
