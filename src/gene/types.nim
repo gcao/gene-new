@@ -14,13 +14,26 @@ type
   NameIndexScope* = distinct int
 
   Translator* = proc(value: Value): Value
+  Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: Value): Value
   Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 
   Runtime* = ref object
     name*: string     # default/...
     home*: string     # GENE_HOME directory
     version*: string
-    features*: Table[string, Value]
+    features*: Table[string, Feature]
+    props*: Table[string, Value]  # Additional properties
+
+  # To group functionality like oop, macro, repl
+  # Features should be divided into core features (e.g. if, var, namespace etc)
+  # and non-core features (e.g. repl etc)
+  Feature* = ref object
+    parent*: Feature
+    key*: string                  # E.g. oop
+    name*: string                 # E.g. Object Oriented Programming
+    description*: string          # E.g. More descriptive information about the feature
+    props*: Table[string, Value]  # Additional properties
+    children*: seq[Feature]
 
   ## This is the root of a running application
   Application* = ref object
@@ -29,6 +42,7 @@ type
     ns*: Namespace
     cmd*: string
     args*: seq[string]
+    props*: Table[string, Value]  # Additional properties
 
   Package* = ref object
     dir*: string          # Where the package assets are installed
@@ -46,6 +60,7 @@ type
     pkg*: Package         # Package in which the module belongs, or stdlib if not set
     name*: string
     root_ns*: Namespace
+    props*: Table[string, Value]  # Additional properties
 
   Namespace* = ref object
     parent*: Namespace
@@ -144,8 +159,8 @@ type
 
   ValueKind* = enum
     VkNil
-    VkPlaceholder
     VkAny
+    VkCustom
     VkBool
     VkInt
     VkRatio
@@ -168,6 +183,7 @@ type
     VkGene
     VkStream
     VkDocument
+    VkPlaceholder
     # Internal types
     VkException = 128
     VkApplication
@@ -210,12 +226,15 @@ type
     of VkAny:
       any_type*: MapKey   # Optional type info
       any*: pointer
+    of VkCustom:
+      custom*: CustomValue
     of VkBool:
       bool*: bool
     of VkInt:
       int*: BiggestInt
     of VkRatio:
-      ratio*: tuple[numerator, denominator: BiggestInt]
+      ratio_num*: BiggestInt
+      ratio_denom*: BiggestInt
     of VkFloat:
       float*: float
     of VkChar:
@@ -282,6 +301,8 @@ type
       ex_bin_op2*: Value
     of VkExSymbol:
       ex_symbol*: MapKey
+      ex_symbol_kind*: SymbolKind
+      # ex_symbol_eval*: Evaluator
     of VkExVar:
       ex_var_name*: MapKey
       ex_var_value*: Value
@@ -302,6 +323,8 @@ type
       discard
     # line*: int
     # column*: int
+
+  CustomValue* = ref object of RootObj
 
   Document* = ref object
     `type`: Value
@@ -934,7 +957,7 @@ proc `==`*(this, that: Value): bool =
     of VkInt:
       return this.int == that.int
     of VkRatio:
-      return this.ratio == that.ratio
+      return this.ratio_num == that.ratio_num and this.ratio_denom == that.ratio_denom
     of VkFloat:
       return this.float == that.float
     of VkString:
@@ -975,8 +998,6 @@ proc hash*(node: Value): Hash =
   var h: Hash = 0
   h = h !& hash(node.kind)
   case node.kind
-  of VkAny:
-    todo()
   of VkNil, VkPlaceholder:
     discard
   of VkBool:
@@ -986,7 +1007,8 @@ proc hash*(node: Value): Hash =
   of VkInt:
     h = h !& hash(node.int)
   of VkRatio:
-    h = h !& hash(node.ratio)
+    h = h !& hash(node.ratio_num)
+    h = h !& hash(node.ratio_denom)
   of VkFloat:
     h = h !& hash(node.float)
   of VkString:
@@ -1146,8 +1168,8 @@ proc new_gene_int*(val: BiggestInt): Value =
   else:
     return Ints[val + 10]
 
-proc new_gene_ratio*(nom, denom: BiggestInt): Value =
-  return Value(kind: VkRatio, ratio: (nom, denom))
+proc new_gene_ratio*(num, denom: BiggestInt): Value =
+  return Value(kind: VkRatio, ratio_num: num, ratio_denom: denom)
 
 proc new_gene_float*(s: string): Value =
   return Value(kind: VkFloat, float: parseFloat(s))

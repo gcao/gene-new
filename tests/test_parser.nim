@@ -146,7 +146,8 @@ test_parser "%_foo", proc(r: Value) = # -> (unquote foo)
 
 test_parser "1/2", proc(r: Value) =
   check r.kind == VkRatio
-  check r.ratio == (BiggestInt(1), BiggestInt(2))
+  check r.ratio_num == BiggestInt(1)
+  check r.ratio_denom == BiggestInt(2)
 
 test_parser "{^ratio -1/2}", proc(r: Value) =
   check r.kind == VkMap
