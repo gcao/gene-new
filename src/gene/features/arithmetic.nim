@@ -99,5 +99,3 @@ proc init*() =
   GeneTranslators[">="] = translate_arithmetic
   GeneTranslators["&&"] = translate_arithmetic
   GeneTranslators["||"] = translate_arithmetic
-
-  # Evaluators[VkExBinOp.ord] = bin_evaluator

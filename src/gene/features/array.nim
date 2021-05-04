@@ -20,5 +20,3 @@ proc init*() =
     )
     for v in value.vec:
       cast[ExArray](result).data.add(translate(v))
-
-  # Evaluators[VkExArray.ord] = array_evaluator

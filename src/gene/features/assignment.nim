@@ -20,15 +20,8 @@ proc eval_assignment(self: VirtualMachine, frame: Frame, expr: var Expr): Value 
 
 proc init*() =
   GeneTranslators["="] = proc(value: Value): Expr =
-    # Value(
-    #   kind: VkExAssignment,
-    #   ex_assign_name: value.gene_data[0].symbol.to_key,
-    #   ex_assign_value: translate(value.gene_data[1]),
-    # )
     ExAssignment(
       evaluator: eval_assignment,
       name: value.gene_data[0].symbol.to_key,
       value: translate(value.gene_data[1]),
     )
-
-  # Evaluators[VkExAssignment.ord] = assign_evaluator

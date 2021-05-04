@@ -123,10 +123,6 @@ type
     matcher*: RootMatcher
     body*: seq[Value]
 
-  # GeneExtension* = ref object
-  #   translator*: Translator
-  #   invoker*: Invoker
-
   Enum* = ref object
     name*: string
     members*: OrderedTable[string, EnumMember]

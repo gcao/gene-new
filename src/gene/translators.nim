@@ -43,9 +43,3 @@ proc arg_translator*(value: Value): Expr =
   for v in value.gene_data:
     e.data.add(translate(v))
   return e
-
-# proc init_translators() =
-#   Translators[VkSymbol] = proc(value: Value): Value =
-#     value
-
-# init_translators()
