@@ -5,9 +5,6 @@ import ./types
 import ./parser
 import ./translators
 
-var Evaluators*: array[0..2048, Evaluator]
-var Extensions* = Table[ValueKind, GeneExtension]()
-
 let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
 let GENE_RUNTIME* = Runtime(
   home: GENE_HOME,
@@ -17,7 +14,7 @@ let GENE_RUNTIME* = Runtime(
 
 #################### Definitions #################
 
-proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value {.inline.}
+proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.inline.}
 
 #################### Application #################
 
@@ -47,24 +44,10 @@ proc prepare*(self: VirtualMachine, code: string): Value =
   else:
     new_gene_stream(parsed)
 
-proc default_evaluator(self: VirtualMachine, frame: Frame, expr: Value): Value =
-  case expr.kind:
-  of VkNil, VkBool, VkInt:
-    result = expr
-  of VkString:
-    result = new_gene_string(expr.str)
-  of VkStream:
-    for e in expr.stream:
-      result = self.eval(frame, e)
-  else:
-    not_allowed($expr.kind)
-
-for i in 0..<Evaluators.len:
-  Evaluators[i] = default_evaluator
-
-proc eval*(self: VirtualMachine, frame: Frame, expr: Value): Value {.inline.} =
-  var evaluator = Evaluators[expr.kind.ord]
-  evaluator(self, frame, expr)
+proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.inline.} =
+  # var evaluator = Evaluators[expr.kind.ord]
+  # evaluator(self, frame, expr)
+  expr.evaluator(self, frame, expr)
 
 proc eval*(self: VirtualMachine, code: string): Value =
   var module = new_module()
@@ -74,7 +57,7 @@ proc eval*(self: VirtualMachine, code: string): Value =
   var expr = translate(self.prepare(code))
   result = self.eval(frame, expr)
 
-import "./features/core" as core_feature; core_feature.init()
+# import "./features/core" as core_feature; core_feature.init()
 import "./features/array" as array_feature; array_feature.init()
 import "./features/map" as map_feature; map_feature.init()
 import "./features/gene" as gene_feature; gene_feature.init()
