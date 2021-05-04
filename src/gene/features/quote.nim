@@ -13,10 +13,7 @@ proc eval_quote(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 
 proc init*() =
   GeneTranslators["quote"] = proc(value: Value): Expr =
-    # Value(kind: VkExQuote, ex_quote: value.gene_data[0])
     ExQuote(
       evaluator: eval_quote,
       data: value.gene_data[0],
     )
-
-  # Evaluators[VkExQuote.ord] = quote_evaluator

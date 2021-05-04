@@ -21,5 +21,3 @@ proc init*() =
     )
     for k, v in value.map:
       cast[ExMap](result).data[k] = translate(v)
-
-  # Evaluators[VkExMap.ord] = map_evaluator

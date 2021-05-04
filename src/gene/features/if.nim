@@ -46,5 +46,3 @@ proc init*() =
         i += 2
     r.`else` = translate(value.gene_props[ELSE_KEY])
     return r
-
-  # Evaluators[VkExIf.ord] = if_evaluator

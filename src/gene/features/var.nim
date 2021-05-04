@@ -63,6 +63,3 @@ proc init*() =
       )
     else:
       todo($name.kind)
-
-  # Evaluators[VkExSymbol.ord] = symbol_evaluator
-  # Evaluators[VkExVar.ord] = var_evaluator
