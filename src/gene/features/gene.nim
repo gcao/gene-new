@@ -38,37 +38,35 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
     todo()
 
 proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var fn = target.fn
-  var ns = fn.ns
   var fn_scope = new_scope()
-  fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
-  var new_frame = Frame(ns: ns, scope: fn_scope)
+  fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
+  var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
   new_frame.parent = frame
   new_frame.self = target
 
   var args = cast[ExArguments](cast[ExGene](expr).args_expr)
-  case fn.matching_hint.mode:
+  case target.fn.matching_hint.mode:
   of MhSimpleData:
     for _, v in args.props.mpairs:
       discard self.eval(frame, v)
     for i, v in args.data.mpairs:
-      var field = fn.matcher.children[i]
+      let field = target.fn.matcher.children[i]
       new_frame.scope.def_member(field.name, self.eval(frame, v))
   of MhNone:
     for _, v in args.props.mpairs:
       discard self.eval(frame, v)
     for i, v in args.data.mpairs:
-      var field = fn.matcher.children[i]
+      # var field = target.fn.matcher.children[i]
       discard self.eval(frame, v)
   else:
     todo()
     # self.process_args(new_frame, fn.matcher, self.eval(frame, args))
 
-  if fn.body_compiled == nil:
-    fn.body_compiled = translate(fn.body)
+  if target.fn.body_compiled == nil:
+    target.fn.body_compiled = translate(target.fn.body)
 
   try:
-    result = self.eval(new_frame, fn.body_compiled)
+    result = self.eval(new_frame, target.fn.body_compiled)
   except Return as r:
     # return's frame is the same as new_frame(current function's frame)
     if r.frame == new_frame:
@@ -107,8 +105,7 @@ proc invoker(`type`: Value): Invoker =
 # )
 
 proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var e = cast[ExGene](expr)
-  var `type` = self.eval(frame, e.`type`)
+  var `type` = self.eval(frame, cast[ExGene](expr).`type`)
   `type`.invoker()(self, frame, `type`, expr)
 
 proc eval_gene_init(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
