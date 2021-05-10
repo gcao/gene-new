@@ -21,18 +21,19 @@ type
 
 proc eval_symbol(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   frame[cast[ExSymbol](expr).name]
-  # case expr.ex_symbol_kind:
+  # var e = cast[ExSymbol](expr)
+  # case e.kind:
   # of SkUnknown:
-  #   if frame.scope.has_key(expr.ex_symbol):
-  #     expr.ex_symbol_kind = SkScope
-  #     result = frame.scope[expr.ex_symbol]
+  #   if frame.scope.has_key(e.name):
+  #     e.kind = SkScope
+  #     result = frame.scope[e.name]
   #   else:
-  #     expr.ex_symbol_kind = SkNamespace
-  #     result = frame.ns[expr.ex_symbol]
+  #     e.kind = SkNamespace
+  #     result = frame.ns[e.name]
   # of SkScope:
-  #   result = frame.scope[expr.ex_symbol]
+  #   result = frame.scope[e.name]
   # of SkNamespace:
-  #   result = frame.ns[expr.ex_symbol]
+  #   result = frame.ns[e.name]
   # else:
   #   todo()
 
