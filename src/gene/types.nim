@@ -5,7 +5,9 @@ import ./map_key
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
 
 type
-  Exception* = object of CatchableError
+  Catchable* = object of CatchableError
+
+  Exception* = object of Catchable
     instance*: Value  # instance of Gene exception class
 
   NotDefinedException* = object of Exception
@@ -18,7 +20,6 @@ type
   Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
 
   GeneProcessor* = ref object of RootObj
-    translate_args*: bool
     translator*: Translator
     invoker*: Invoker
 
@@ -187,6 +188,7 @@ type
     VkPlaceholder
     # Internal types
     VkException = 128
+    VkExpr
     VkApplication
     VkPackage
     VkModule
@@ -255,6 +257,8 @@ type
     of VkStream:
       stream*: seq[Value]
     # Internal types
+    of VkExpr:
+      expr*: Expr
     of VkNamespace:
       ns*: Namespace
     of VkFunction:
@@ -311,12 +315,12 @@ type
     args*: Value # This is only available in some frames (e.g. function/macro/block)
     extra*: FrameExtra
 
-  Break* = ref object of CatchableError
+  Break* = ref object of Catchable
     val*: Value
 
-  Continue* = ref object of CatchableError
+  Continue* = ref object of Catchable
 
-  Return* = ref object of CatchableError
+  Return* = ref object of Catchable
     frame*: Frame
     val*: Value
 
@@ -389,7 +393,7 @@ type
     data_index*: int
 
   # Types related to command line argument parsing
-  ArgumentError* = object of CatchableError
+  ArgumentError* = object of Exception
 
 let
   Nil*   = Value(kind: VkNil)

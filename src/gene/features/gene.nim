@@ -12,9 +12,6 @@ type
     args*: Value        # The unprocessed args
     args_expr*: Expr    # The translated args
 
-proc should_translate_args*(value: Value): bool =
-  true
-
 proc translator*(value: Value): Translator =
   arg_translator
 
@@ -100,8 +97,7 @@ proc eval_gene_init(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e = cast[ExGene](expr)
   var `type` = self.eval(frame, e.`type`)
 
-  if `type`.should_translate_args():
-    e.args_expr = `type`.translator()(e.args)
+  e.args_expr = `type`.translator()(e.args)
   # For future invocations
   expr.evaluator = eval_gene
 
