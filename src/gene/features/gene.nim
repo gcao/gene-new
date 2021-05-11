@@ -2,6 +2,7 @@ import tables
 
 import ../map_key
 import ../types
+import ../exprs
 import ../normalizers
 import ../translators
 import ../interpreter

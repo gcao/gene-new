@@ -2,6 +2,7 @@ import tables
 
 import ./map_key
 import ./types
+import ./exprs
 
 var Translators*     = Table[ValueKind, Translator]()
 var GeneTranslators* = Table[string, Translator]()
