@@ -84,10 +84,12 @@ test_interpreter "(1 <= 0)", false
 test_interpreter "(1 <= 1)", true
 test_interpreter "(1 <= 2)", true
 
-test_interpreter "(true && false)", false
 test_interpreter "(true && true)", true
-test_interpreter "(true || false)", true
+test_interpreter "(true && false)", false
 test_interpreter "(false && false)", false
+test_interpreter "(true || true)", true
+test_interpreter "(true || false)", true
+test_interpreter "(false || false)", false
 
 test_interpreter "(var a 1) a", 1
 test_interpreter "(var a 1) (a = 2) a", 2
