@@ -7,15 +7,8 @@ import ../translators
 import ../interpreter
 
 type
-  # SymbolKind* = enum
-  #   SkUnknown
-  #   SkGene
-  #   SkGenex
-  #   SkNamespace
-  #   SkScope
   ExSymbol* = ref object of Expr
     name*: MapKey
-    # kind*: SymbolKind
   ExVar* = ref object of Expr
     name*: MapKey
     value*: Expr
@@ -27,30 +20,12 @@ proc eval_symbol_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   frame.ns[cast[ExSymbol](expr).name]
 
 proc eval_symbol(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  # frame[cast[ExSymbol](expr).name]
-  let name = cast[ExSymbol](expr).name
-  if frame.scope.has_key(name):
-    expr.evaluator = eval_symbol_scope
-    return frame.scope[name]
-  else:
+  result = frame.scope[cast[ExSymbol](expr).name]
+  if result == nil:
     expr.evaluator = eval_symbol_ns
-    return frame.ns[name]
-
-  # var e = cast[ExSymbol](expr)
-  # case e.kind:
-  # of SkUnknown:
-  #   if frame.scope.has_key(e.name):
-  #     e.kind = SkScope
-  #     result = frame.scope[e.name]
-  #   else:
-  #     e.kind = SkNamespace
-  #     result = frame.ns[e.name]
-  # of SkScope:
-  #   result = frame.scope[e.name]
-  # of SkNamespace:
-  #   result = frame.ns[e.name]
-  # else:
-  #   todo()
+    return frame.ns[cast[ExSymbol](expr).name]
+  else:
+    expr.evaluator = eval_symbol_scope
 
 proc eval_var(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var value = self.eval(frame, cast[ExVar](expr).value)
