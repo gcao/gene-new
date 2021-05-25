@@ -20,8 +20,22 @@ type
     name*: MapKey
     value*: Expr
 
+proc eval_symbol_scope(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  frame.scope[cast[ExSymbol](expr).name]
+
+proc eval_symbol_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  frame.ns[cast[ExSymbol](expr).name]
+
 proc eval_symbol(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  frame[cast[ExSymbol](expr).name]
+  # frame[cast[ExSymbol](expr).name]
+  let name = cast[ExSymbol](expr).name
+  if frame.scope.has_key(name):
+    expr.evaluator = eval_symbol_scope
+    return frame.scope[name]
+  else:
+    expr.evaluator = eval_symbol_ns
+    return frame.ns[name]
+
   # var e = cast[ExSymbol](expr)
   # case e.kind:
   # of SkUnknown:
