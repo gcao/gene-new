@@ -75,5 +75,7 @@ Vagrant.configure(2) do |config|
     echo "cd #{APP_DIR}" >> $HOME/.bashrc
   SHELL
 
-  config.vm.synced_folder "", APP_DIR, type: "nfs"
+  # config.vm.synced_folder "", APP_DIR, type: "nfs"
+  # Run this command instead:
+  # sudo mount 172.28.128.1:/System/Volumes/Data/Users/gcao/proj/gene-new /apps/gene
 end
