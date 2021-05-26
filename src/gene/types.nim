@@ -189,6 +189,7 @@ type
     # Internal types
     VkException = 128
     VkExpr
+    VkGeneProcessor
     VkApplication
     VkPackage
     VkModule
@@ -259,6 +260,8 @@ type
     # Internal types
     of VkExpr:
       expr*: Expr
+    of VkGeneProcessor:
+      gene_processor*: GeneProcessor
     of VkNamespace:
       ns*: Namespace
     of VkFunction:

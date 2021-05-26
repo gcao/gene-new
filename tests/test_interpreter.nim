@@ -135,6 +135,8 @@ test_interpreter """
   )
 """, 2
 
+test_interpreter "(if* true 1)", 1
+
 # test_interpreter "(do 1 2)", 2
 
 # test_interpreter """

@@ -86,9 +86,11 @@ proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: va
 proc invoker(`type`: Value): Invoker =
   case `type`.kind:
   of VkFunction:
-    function_invoker
+    return function_invoker
+  of VkGeneProcessor:
+    return `type`.gene_processor.invoker
   else:
-    default_invoker
+    return default_invoker
 
 proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var `type` = self.eval(frame, cast[ExGene](expr).`type`)
@@ -97,8 +99,12 @@ proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 proc eval_gene_init(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e = cast[ExGene](expr)
   var `type` = self.eval(frame, e.`type`)
+  case `type`.kind:
+  of VkGeneProcessor:
+    e.args_expr = `type`.gene_processor.translator(e.args)
+  else:
+    e.args_expr = `type`.translator()(e.args)
 
-  e.args_expr = `type`.translator()(e.args)
   # For future invocations
   expr.evaluator = eval_gene
 
