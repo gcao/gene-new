@@ -12,6 +12,7 @@ type
 
 proc eval_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var ns = new_namespace(cast[ExNamespace](expr).name)
+  ns.parent = frame.ns
   result = Value(kind: VkNamespace, ns: ns)
   frame.ns[cast[ExNamespace](expr).name] = result
 

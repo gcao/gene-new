@@ -154,5 +154,5 @@ let IF_PROCESSOR* = Value(
   ))
 
 proc init*() =
-  discard
-  # VM.app.ns["if*"] = IF_PROCESSOR
+  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    self.app.ns["if*"] = IF_PROCESSOR

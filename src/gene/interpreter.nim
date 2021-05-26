@@ -33,6 +33,8 @@ proc new_vm*(app: Application): VirtualMachine =
 proc init_app_and_vm*() =
   var app = new_app()
   VM = new_vm(app)
+  for callback in VmCreatedCallbacks:
+    callback(VM)
 
 proc prepare*(self: VirtualMachine, code: string): Value =
   var parsed = read_all(code)

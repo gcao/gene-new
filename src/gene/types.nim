@@ -419,6 +419,8 @@ let
   Call*      = Value(kind: VkSymbol, symbol: "call")
   Do*        = Value(kind: VkSymbol, symbol: "do")
 
+var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
+
 var Ints: array[111, Value]
 for i in 0..110:
   Ints[i] = Value(kind: VkInt, int: i - 10)
