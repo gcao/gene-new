@@ -32,7 +32,7 @@ Vagrant.configure(2) do |config|
     # config.vm.network "forwarded_port", guest: 1234, host: 1234
 
     # Customize the amount of memory on the VM:
-    vb.memory = "2048"
+    vb.memory = "3072"
     # vb.gui = true
   end
 
