@@ -11,10 +11,10 @@ type
     data*: Function
 
 proc eval_fn(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  cast[ExFn](expr).data.ns = frame.ns
+  ExFn(expr).data.ns = frame.ns
   result = Value(
     kind: VkFunction,
-    fn: cast[ExFn](expr).data,
+    fn: ExFn(expr).data,
   )
 
 proc to_function(node: Value): Function =

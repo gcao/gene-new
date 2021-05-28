@@ -4,6 +4,34 @@ import gene/types
 
 import ./helpers
 
+# Keywords:
+# nil, true, false, _, not, NaN
+# if, then, elif, else
+# not, !
+# and, or, xor, xand, &&, ||, ||*(xor: a && !b + !a && b), &&* (xand: a && b + !a && !b)
+# var
+# do
+# loop, while, repeat, next, break
+# for, in
+# module, import, from, of, as
+# ns
+# class, mixin, method, new, super
+# cast
+# self
+# fn, fnx, fnxx, return
+# macro
+# match
+# enum
+# try, catch, ensure, throw
+# async, await
+# global
+# gene, genex
+# #...
+# $... (e.g. $app, $pkg, $ns, $module, $args)
+# +, -, *, /, =, ...
+# ==, !=, > >= < <=
+# ->, =>
+
 test_interpreter "nil", Nil
 test_interpreter "1", 1
 test_interpreter "true", true
@@ -136,6 +164,10 @@ test_interpreter """
 """, 2
 
 test_interpreter "(if* true 1)", 1
+test_interpreter """
+  (var a if*)
+  (a true 1)
+""", 1
 
 # test_interpreter "(do 1 2)", 2
 

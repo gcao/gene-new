@@ -22,7 +22,7 @@ converter str_to_key*(s: string): MapKey {.inline.} =
     result = add_key(s)
 
 converter key_to_s*(self: MapKey): string {.inline.} =
-  result = Keys[cast[int](self)]
+  result = Keys[int(self)]
 
 converter seq_to_gene*(self: seq[int]): seq[Value] =
   for item in self:
@@ -174,4 +174,4 @@ proc test_parse_document*(code: string, callback: proc(result: Document)) =
 #     else:
 #       let ext = lib.sym_addr(name)
 #       if ext != nil:
-#         callback cast[NativeFn](ext)
+#         callback NativeFn(ext)

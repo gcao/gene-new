@@ -7,7 +7,7 @@ var Keys*: seq[string] = @[]
 var KeyMapping* = Table[string, MapKey]()
 
 converter to_key*(i: int): MapKey {.inline.} =
-  result = cast[MapKey](i)
+  result = MapKey(i)
 
 proc add_key*(s: string): MapKey {.inline.} =
   if KeyMapping.has_key(s):
@@ -24,10 +24,10 @@ proc to_key*(s: string): MapKey {.inline.} =
     result = add_key(s) 
 
 proc to_s*(self: MapKey): string {.inline.} =
-  result = Keys[cast[int](self)]
+  result = Keys[int(self)]
 
 proc `%`*(self: MapKey): string =
-  result = Keys[cast[int](self)]
+  result = Keys[int(self)]
 
 converter to_strings*(self: seq[MapKey]): seq[string] {.inline.} =
   for k in self:
@@ -38,10 +38,10 @@ converter to_keys*(self: seq[string]): seq[MapKey] {.inline.} =
     result.add(item.to_key)
 
 proc `==`*(this, that: MapKey): bool {.inline.} =
-  result = cast[int](this) == cast[int](that)
+  result = int(this) == int(that)
 
 proc hash*(self: MapKey): Hash {.inline.} =
-  result = cast[int](self)
+  result = int(self)
 
 let EMPTY_STRING_KEY*         = add_key("")
 let SELF_KEY*                 = add_key("self")

@@ -15,7 +15,7 @@ type
     data*: Value
 
 proc eval_literal(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  cast[ExLiteral](expr).data
+  ExLiteral(expr).data
 
 proc new_ex_literal*(v: Value): ExLiteral =
   ExLiteral(
@@ -30,7 +30,7 @@ type
     data*: seq[Expr]
 
 proc eval_group(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  for item in cast[ExGroup](expr).data.mitems:
+  for item in ExGroup(expr).data.mitems:
     result = item.evaluator(self, frame, item)
 
 proc new_ex_group*(): ExGroup =
@@ -46,7 +46,7 @@ type
     value*: Expr
 
 proc eval_ns_def(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var e = cast[ExNsDef](expr)
+  var e = ExNsDef(expr)
   result = e.value.evaluator(self, frame, e.value)
   frame.ns[e.name] = result
 

@@ -481,7 +481,7 @@ proc date*(self: Value): DateTime =
 
 converter int_to_gene*(v: int): Value = new_gene_int(v)
 converter int_to_gene*(v: int64): Value = new_gene_int(v)
-converter biggest_to_int*(v: BiggestInt): int = cast[int](v)
+converter biggest_to_int*(v: BiggestInt): int = int(v)
 
 converter seq_to_gene*(v: seq[Value]): Value {.gcsafe.} = new_gene_vec(v)
 converter str_to_gene*(v: string): Value {.gcsafe.} = new_gene_string(v)
@@ -494,8 +494,8 @@ converter to_string_map*(self: OrderedTable[MapKey, Value]): OrderedTable[string
   for k, v in self:
     result[k.to_s] = v
 
-converter int_to_scope_index*(v: int): NameIndexScope = cast[NameIndexScope](v)
-converter scope_index_to_int*(v: NameIndexScope): int = cast[int](v)
+converter int_to_scope_index*(v: int): NameIndexScope = NameIndexScope(v)
+converter scope_index_to_int*(v: NameIndexScope): int = int(v)
 
 converter gene_to_ns*(v: Value): Namespace = todo()
 
@@ -1144,7 +1144,7 @@ proc new_gene_range*(rstart: Value, rend: Value): Value =
 proc new_gene_date*(year, month, day: int): Value =
   return Value(
     kind: VkDate,
-    date_internal: DateTimeInternal(data: init_date_time(day, cast[Month](month), year, 0, 0, 0, utc())),
+    date_internal: DateTimeInternal(data: init_date_time(day, Month(month), year, 0, 0, 0, utc())),
   )
 
 proc new_gene_date*(date: DateTime): Value =

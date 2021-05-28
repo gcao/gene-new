@@ -9,7 +9,7 @@ type
     data*: Value
 
 proc eval_quote(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  cast[ExQuote](expr).data
+  ExQuote(expr).data
 
 proc init*() =
   GeneTranslators["quote"] = proc(value: Value): Expr =

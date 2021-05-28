@@ -10,7 +10,7 @@ type
 
 proc eval_array(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   result = new_gene_vec()
-  for e in cast[ExArray](expr).data.mitems:
+  for e in ExArray(expr).data.mitems:
     result.vec.add(self.eval(frame, e))
 
 proc init*() =
@@ -19,4 +19,4 @@ proc init*() =
       evaluator: eval_array,
     )
     for v in value.vec:
-      cast[ExArray](result).data.add(translate(v))
+      ExArray(result).data.add(translate(v))

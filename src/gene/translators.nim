@@ -35,7 +35,7 @@ proc translate*(stmts: seq[Value]): Expr =
   else:
     result = new_ex_group()
     for stmt in stmts:
-      cast[ExGroup](result).data.add(translate(stmt))
+      ExGroup(result).data.add(translate(stmt))
 
 proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()

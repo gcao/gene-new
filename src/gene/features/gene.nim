@@ -32,7 +32,7 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
   new_frame.parent = frame
   new_frame.self = target
 
-  var args = cast[ExArguments](cast[ExGene](expr).args_expr)
+  var args = ExArguments(ExGene(expr).args_expr)
   case target.fn.matching_hint.mode:
   of MhSimpleData:
     for _, v in args.props.mpairs:
@@ -71,7 +71,7 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   todo()
   # result = new_gene_gene(target)
-  # var e = cast[ExGene](expr)
+  # var e = ExGene(expr)
   # for k, v in e.args.mpairs:
   #   result.gene_props[k] = self.eval(frame, v)
   # for v in expr.ex_arg_data.mitems:
@@ -87,11 +87,11 @@ proc invoker(`type`: Value): Invoker =
     return default_invoker
 
 proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var `type` = self.eval(frame, cast[ExGene](expr).`type`)
+  var `type` = self.eval(frame, ExGene(expr).`type`)
   `type`.invoker()(self, frame, `type`, expr)
 
 proc eval_gene_init(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var e = cast[ExGene](expr)
+  var e = ExGene(expr)
   var `type` = self.eval(frame, e.`type`)
   case `type`.kind:
   of VkGeneProcessor:

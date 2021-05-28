@@ -14,22 +14,22 @@ type
     value*: Expr
 
 proc eval_symbol_scope(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  frame.scope[cast[ExSymbol](expr).name]
+  frame.scope[ExSymbol(expr).name]
 
 proc eval_symbol_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  frame.ns[cast[ExSymbol](expr).name]
+  frame.ns[ExSymbol(expr).name]
 
 proc eval_symbol(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  result = frame.scope[cast[ExSymbol](expr).name]
+  result = frame.scope[ExSymbol(expr).name]
   if result == nil:
     expr.evaluator = eval_symbol_ns
-    return frame.ns[cast[ExSymbol](expr).name]
+    return frame.ns[ExSymbol(expr).name]
   else:
     expr.evaluator = eval_symbol_scope
 
 proc eval_var(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var value = self.eval(frame, cast[ExVar](expr).value)
-  frame.scope.def_member(cast[ExVar](expr).name, value)
+  var value = self.eval(frame, ExVar(expr).value)
+  frame.scope.def_member(ExVar(expr).name, value)
 
 proc init*() =
   Translators[VkSymbol] = proc(value: Value): Expr =

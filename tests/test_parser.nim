@@ -56,7 +56,7 @@ test_parser "#/b/i", proc(r: Value) =
 
 test_parser "2020-12-02", new_gene_date(2020, 12, 02)
 test_parser "2020-12-02T10:11:12Z",
-  new_gene_datetime(init_date_time(02, cast[Month](12), 2020, 10, 11, 12, utc()))
+  new_gene_datetime(init_date_time(02, Month(12), 2020, 10, 11, 12, utc()))
 test_parser "10:11:12", new_gene_time(10, 11, 12)
 
 test_parser "{}", OrderedTable[string, Value]()

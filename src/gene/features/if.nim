@@ -18,7 +18,7 @@ let ELIF_KEY* = add_key("elif")
 let ELSE_KEY* = add_key("else")
 
 proc eval_if(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var expr = cast[ExIf](expr)
+  var expr = ExIf(expr)
   var v = self.eval(frame, expr.cond)
   if v:
     result = self.eval(frame, expr.`then`)

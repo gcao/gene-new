@@ -25,9 +25,9 @@ type
     op2*: Expr
 
 proc eval_bin(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var first = self.eval(frame, cast[ExBinOp](expr).op1)
-  var second = self.eval(frame, cast[ExBinOp](expr).op2)
-  case cast[ExBinOp](expr).op:
+  var first = self.eval(frame, ExBinOp(expr).op1)
+  var second = self.eval(frame, ExBinOp(expr).op2)
+  case ExBinOp(expr).op:
   of BinAdd:
     result = new_gene_int(first.int + second.int)
   of BinSub:
@@ -84,8 +84,8 @@ proc translate_arithmetic(value: Value): Expr =
   of "||":
     result = new_ex_bin(BinOr)
 
-  cast[ExBinOp](result).op1 = translate(value.gene_data[0])
-  cast[ExBinOp](result).op2 = translate(value.gene_data[1])
+  ExBinOp(result).op1 = translate(value.gene_data[0])
+  ExBinOp(result).op2 = translate(value.gene_data[1])
 
 proc init*() =
   GeneTranslators["+"] = translate_arithmetic

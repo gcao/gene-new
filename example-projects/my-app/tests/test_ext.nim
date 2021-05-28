@@ -10,7 +10,7 @@ proc test_plugin(path:string) =
   if lib != nil:
     let test = lib.symAddr("test")
     if test != nil:
-      let test_impl = cast[test_dynamic](test)
+      let test_impl = test_dynamic(test)
       test_impl("Dynamic")
     unloadLib(lib)
 

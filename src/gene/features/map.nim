@@ -11,7 +11,7 @@ type
 
 proc eval_map(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   result = new_gene_map()
-  for k, v in cast[ExMap](expr).data.mpairs:
+  for k, v in ExMap(expr).data.mpairs:
     result.map[k] = self.eval(frame, v)
 
 proc init*() =
@@ -20,4 +20,4 @@ proc init*() =
       evaluator: eval_map,
     )
     for k, v in value.map:
-      cast[ExMap](result).data[k] = translate(v)
+      ExMap(result).data[k] = translate(v)

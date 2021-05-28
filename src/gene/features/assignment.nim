@@ -11,8 +11,8 @@ type
     value*: Expr
 
 proc eval_assignment(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var name = cast[ExAssignment](expr).name
-  var value = cast[ExAssignment](expr).value
+  var name = ExAssignment(expr).name
+  var value = ExAssignment(expr).value
   if frame.scope.has_key(name):
     frame.scope[name] = self.eval(frame, value)
   else:
