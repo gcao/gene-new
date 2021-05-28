@@ -55,6 +55,14 @@ proc new_ex_ns_def*(): ExNsDef =
     evaluator: eval_ns_def,
   )
 
+#################### ExGene ######################
+
+type
+  ExGene* = ref object of Expr
+    `type`*: Expr
+    args*: Value        # The unprocessed args
+    args_expr*: Expr    # The translated args
+
 #################### ExArguments #################
 
 type

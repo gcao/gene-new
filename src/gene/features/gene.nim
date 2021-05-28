@@ -7,12 +7,6 @@ import ../normalizers
 import ../translators
 import ../interpreter
 
-type
-  ExGene* = ref object of Expr
-    `type`*: Expr
-    args*: Value        # The unprocessed args
-    args_expr*: Expr    # The translated args
-
 proc translator*(value: Value): Translator =
   arg_translator
 
