@@ -29,7 +29,7 @@ type
   ExGroup* = ref object of Expr
     data*: seq[Expr]
 
-proc eval_group(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_group*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   for item in cast[ExGroup](expr).data.mitems:
     result = item.evaluator(self, frame, item)
 

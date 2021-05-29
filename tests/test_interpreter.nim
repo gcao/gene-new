@@ -62,7 +62,7 @@ test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 
 # test_interpreter """
 #   :(test
-#     %_(var a 1)
+#     %%(var a 1)
 #     %a
 #     2
 #   )
@@ -169,7 +169,7 @@ test_interpreter """
   (a true 1)
 """, 1
 
-# test_interpreter "(do 1 2)", 2
+test_interpreter "(do 1 2)", 2
 
 # test_interpreter """
 #   (do ^self 1
