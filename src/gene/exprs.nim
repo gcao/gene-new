@@ -77,3 +77,18 @@ proc new_ex_arg*(): ExArguments =
   result = ExArguments(
     evaluator: eval_args,
   )
+
+#################### ExBreak #####################
+
+type
+  ExBreak* = ref object of Expr
+
+proc eval_break*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  var e: Break
+  e.new
+  raise e
+
+proc new_ex_break*(): ExBreak =
+  result = ExBreak(
+    evaluator: eval_break,
+  )

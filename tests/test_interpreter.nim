@@ -177,14 +177,14 @@ test_interpreter """
 #   )
 # """, 1
 
-# test_interpreter """
-#   (var i 0)
-#   (loop
-#     (i += 1)
-#     (break)
-#   )
-#   i
-# """, 1
+test_interpreter """
+  (var i 0)
+  (loop
+    (i = (i + 1))
+    (break)
+  )
+  i
+""", 1
 
 # test_interpreter """
 #   (var i 0)

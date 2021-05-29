@@ -39,7 +39,7 @@ type
     name*: string                 # E.g. Object Oriented Programming
     description*: string          # E.g. More descriptive information about the feature
     props*: Table[string, Value]  # Additional properties
-    children*: seq[Feature]
+    children*: Table[string, Feature]
 
   ## This is the root of a running application
   Application* = ref object

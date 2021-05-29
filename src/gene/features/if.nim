@@ -45,4 +45,4 @@ proc init*() =
         r.elifs.add((cond, logic))
         i += 2
     r.`else` = translate(value.gene_props[ELSE_KEY])
-    return r
+    result = r

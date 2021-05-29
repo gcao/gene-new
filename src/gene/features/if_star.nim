@@ -142,7 +142,7 @@ proc translate_if(value: Value): Expr =
       r.elifs.add((cond, logic))
       i += 2
   r.`else` = translate(value.gene_props[ELSE_KEY])
-  return r
+  result = r
 
 proc invoke_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   self.eval_if(frame, cast[ExGene](expr).args_expr)

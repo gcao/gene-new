@@ -1,4 +1,5 @@
 import strutils, tables, strutils, os
+# import macros
 
 import ./map_key
 import ./types
@@ -57,7 +58,17 @@ proc eval*(self: VirtualMachine, code: string): Value =
   var expr = translate(self.prepare(code))
   result = self.eval(frame, expr)
 
-# import "./features/core" as core_feature; core_feature.init()
+# macro import_folder(s: string): untyped =
+#   let s = staticExec "find " & s.toStrLit.strVal & " -name '*.nim' -maxdepth 1"
+#   let files = s.splitLines
+#   result = newStmtList()
+#   for file in files:
+#     result.add(parseStmt("import " & file[0..^5] & " as feature"))
+
+# # Below code doesn't work for some reason
+# import_folder "features"
+
+import "./features/core" as core_feature; core_feature.init()
 import "./features/array" as array_feature; array_feature.init()
 import "./features/map" as map_feature; map_feature.init()
 import "./features/gene" as gene_feature; gene_feature.init()
@@ -69,3 +80,4 @@ import "./features/if" as if_feature; if_feature.init()
 import "./features/if_star" as if_star_feature; if_star_feature.init()
 import "./features/fp" as fp_feature; fp_feature.init()
 import "./features/namespace" as namespace_feature; namespace_feature.init()
+import "./features/loop" as loop_feature; loop_feature.init()
