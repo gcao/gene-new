@@ -22,14 +22,14 @@ test_interpreter """
 """, proc(r: Value) =
   check r.instance.class.name == "A"
 
-# test_interpreter """
-#   (class A
-#     (method test _
-#       1
-#     )
-#   )
-#   ((new A).test)
-# """, 1
+test_interpreter """
+  (class A
+    (method test _
+      1
+    )
+  )
+  ((new A).test)
+""", 1
 
 # test_interpreter """
 #   (class A
