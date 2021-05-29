@@ -266,6 +266,8 @@ type
       ns*: Namespace
     of VkFunction:
       fn*: Function
+    of VkClass:
+      class*: Class
     else:
       discard
 
