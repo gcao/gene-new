@@ -16,11 +16,20 @@ import ./helpers
 test_interpreter "(class A)", proc(r: Value) =
   check r.class.name == "A"
 
+test_interpreter """
+  (class A)
+  (new A)
+""", proc(r: Value) =
+  check r.instance.class.name == "A"
+
 # test_interpreter """
-#   (class A)
-#   (new A)
-# """, proc(r: Value) =
-#   check r.internal.instance.class.name == "A"
+#   (class A
+#     (method test _
+#       1
+#     )
+#   )
+#   ((new A).test)
+# """, 1
 
 # test_interpreter """
 #   (class A

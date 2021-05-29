@@ -268,6 +268,8 @@ type
       fn*: Function
     of VkClass:
       class*: Class
+    of VkInstance:
+      instance*: Instance
     else:
       discard
 
