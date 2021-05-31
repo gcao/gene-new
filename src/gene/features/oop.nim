@@ -5,6 +5,10 @@ import ../types
 import ../translators
 import ../interpreter
 
+let SELF_KEY*                 = add_key("self")
+let METHOD_KEY*               = add_key("method")
+let ARGS_KEY*                 = add_key("args")
+
 type
   ExClass* = ref object of Expr
     name*: string
@@ -17,6 +21,11 @@ type
   ExMethod* = ref object of Expr
     name*: string
     fn*: Function
+
+  ExInvoke* = ref object of Expr
+    self*: Expr
+    meth*: MapKey
+    args*: Expr
 
 proc eval_class(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var class = new_class(cast[ExClass](expr).name)
@@ -68,7 +77,16 @@ proc to_function(node: Value): Function =
   result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
 
 proc eval_method(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  todo()
+  var m = Method(
+    class: frame.self.class,
+    name: cast[ExMethod](expr).name,
+    fn: cast[ExMethod](expr).fn,
+  )
+  frame.self.class.methods[m.name.to_key] = m
+  Value(
+    kind: VkMethod,
+    `method`: m,
+  )
 
 proc translate_method(value: Value): Expr =
   var fn = to_function(value)
@@ -78,7 +96,51 @@ proc translate_method(value: Value): Expr =
     fn: fn,
   )
 
+proc eval_invoke(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  var instance: Value
+  var e = cast[ExInvoke](expr).self
+  if e == nil:
+    instance = frame.self
+  else:
+    instance = self.eval(frame, e)
+  var class = instance.instance.class
+  var meth = class.methods[cast[ExInvoke](expr).meth]
+  # var args = self.eval(frame, cast[ExInvoke](expr).args)
+
+  var fn_scope = new_scope()
+  var new_frame = Frame(ns: meth.fn.ns, scope: fn_scope)
+  new_frame.parent = frame
+  new_frame.self = instance
+
+  if meth.fn.body_compiled == nil:
+    meth.fn.body_compiled = translate(meth.fn.body)
+
+  try:
+    result = self.eval(new_frame, meth.fn.body_compiled)
+  except Return as r:
+    # return's frame is the same as new_frame(current function's frame)
+    if r.frame == new_frame:
+      result = r.val
+    else:
+      raise
+  # except CatchableError as e:
+  #   if self.repl_on_error:
+  #     result = repl_on_error(self, frame, e)
+  #     discard
+  #   else:
+  #     raise
+
+proc translate_invoke(value: Value): Expr =
+  var r = ExInvoke(
+    evaluator: eval_invoke,
+  )
+  r.self = translate(value.gene_props.get_or_default(SELF_KEY, nil))
+  r.meth = value.gene_props[METHOD_KEY].str.to_key
+  # r.args = translate(value.gene_props[ARGS_KEY])
+  result = r
+
 proc init*() =
   GeneTranslators["class"] = translate_class
   GeneTranslators["new"] = translate_new
   GeneTranslators["method"] = translate_method
+  GeneTranslators["$invoke_method"] = translate_invoke
