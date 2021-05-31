@@ -88,12 +88,20 @@ Normalizers.add proc(self: Value): bool =
     return false
   var `type` = self.gene_type
   var first = self.gene_data[0]
-  if first.kind == VkSymbol and first.symbol[0] == '.' and first.symbol != "...":
-    self.gene_props[SELF_KEY] = `type`
-    self.gene_props[METHOD_KEY] = new_gene_string_move(first.symbol.substr(1))
-    self.gene_data.delete 0
-    self.gene_type = new_gene_symbol("$invoke_method")
-    return true
+  if first.kind == VkSymbol:
+    if first.symbol == ".":
+      self.gene_props[SELF_KEY] = `type`
+      self.gene_data.delete 0
+      self.gene_props[METHOD_KEY] = self.gene_data[0]
+      self.gene_data.delete 0
+      self.gene_type = new_gene_symbol("$invoke_dynamic")
+      return true
+    elif first.symbol[0] == '.' and first.symbol != "...":
+      self.gene_props[SELF_KEY] = `type`
+      self.gene_props[METHOD_KEY] = new_gene_string_move(first.symbol.substr(1))
+      self.gene_data.delete 0
+      self.gene_type = new_gene_symbol("$invoke_method")
+      return true
 
 Normalizers.add proc(self: Value): bool =
   if self.gene_data.len < 1:

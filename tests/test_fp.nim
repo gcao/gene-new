@@ -55,10 +55,10 @@ test_interpreter """
   (f 1)
 """, 2
 
-# test_interpreter """
-#   (fn f _ self)
-#   (1 . f)
-# """, 1
+test_interpreter """
+  (fn f _ self)
+  (1 . f)
+""", 1
 
 # test_interpreter """
 #   (fn f [a = 1] a)

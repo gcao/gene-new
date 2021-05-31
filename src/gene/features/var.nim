@@ -33,10 +33,14 @@ proc eval_var(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 
 proc init*() =
   Translators[VkSymbol] = proc(value: Value): Expr =
-    ExSymbol(
-      evaluator: eval_symbol,
-      name: value.symbol.to_key,
-    )
+    case value.symbol:
+    of "self":
+      result = new_ex_self()
+    else:
+      result = ExSymbol(
+        evaluator: eval_symbol,
+        name: value.symbol.to_key,
+      )
 
   GeneTranslators["var"] = proc(value: Value): Expr =
     var name = value.gene_data[0]

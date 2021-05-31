@@ -27,6 +27,11 @@ type
     meth*: MapKey
     args*: Expr
 
+  ExInvokeDynamic* = ref object of Expr
+    self*: Expr
+    target*: Expr
+    args*: Expr
+
 proc eval_class(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var class = new_class(cast[ExClass](expr).name)
   class.ns.parent = frame.ns
@@ -139,8 +144,57 @@ proc translate_invoke(value: Value): Expr =
   # r.args = translate(value.gene_props[ARGS_KEY])
   result = r
 
+proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  var instance: Value
+  var e = cast[ExInvokeDynamic](expr).self
+  if e == nil:
+    instance = frame.self
+  else:
+    instance = self.eval(frame, e)
+  var target = self.eval(frame, cast[ExInvokeDynamic](expr).target)
+  var fn: Function
+  case target.kind:
+  of VkFunction:
+    fn = target.fn
+  else:
+    todo()
+  # var args = self.eval(frame, cast[ExInvoke](expr).args)
+
+  var fn_scope = new_scope()
+  var new_frame = Frame(ns: fn.ns, scope: fn_scope)
+  new_frame.parent = frame
+  new_frame.self = instance
+
+  if fn.body_compiled == nil:
+    fn.body_compiled = translate(fn.body)
+
+  try:
+    result = self.eval(new_frame, fn.body_compiled)
+  except Return as r:
+    # return's frame is the same as new_frame(current function's frame)
+    if r.frame == new_frame:
+      result = r.val
+    else:
+      raise
+  # except CatchableError as e:
+  #   if self.repl_on_error:
+  #     result = repl_on_error(self, frame, e)
+  #     discard
+  #   else:
+  #     raise
+
+proc translate_invoke_dynamic(value: Value): Expr =
+  var r = ExInvokeDynamic(
+    evaluator: eval_invoke_dynamic,
+  )
+  r.self = translate(value.gene_props.get_or_default(SELF_KEY, nil))
+  r.target = translate(value.gene_props[METHOD_KEY])
+  # r.args = translate(value.gene_props[ARGS_KEY])
+  result = r
+
 proc init*() =
   GeneTranslators["class"] = translate_class
   GeneTranslators["new"] = translate_new
   GeneTranslators["method"] = translate_method
   GeneTranslators["$invoke_method"] = translate_invoke
+  GeneTranslators["$invoke_dynamic"] = translate_invoke_dynamic

@@ -38,6 +38,19 @@ proc new_ex_group*(): ExGroup =
     evaluator: eval_group,
   )
 
+#################### ExSelf ######################
+
+type
+  ExSelf* = ref object of Expr
+
+proc eval_self(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  frame.self
+
+proc new_ex_self*(): ExSelf =
+  ExSelf(
+    evaluator: eval_self,
+  )
+
 #################### ExNsDef #####################
 
 type
