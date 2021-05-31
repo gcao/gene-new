@@ -43,7 +43,9 @@ proc `==`*(this, that: MapKey): bool {.inline.} =
 proc hash*(self: MapKey): Hash {.inline.} =
   result = cast[int](self)
 
-let EMPTY_STRING_KEY*         = add_key("")
+discard add_key("")
+const EMPTY_STRING_KEY*       = 0
+
 let SELF_KEY*                 = add_key("self")
 let METHOD_KEY*               = add_key("method")
 let NAME_KEY*                 = add_key("name")

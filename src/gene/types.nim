@@ -231,7 +231,7 @@ type
     of VkSymbol:
       symbol*: string
     of VkComplexSymbol:
-      csymbol*: seq[string]
+      csymbol*: ComplexSymbol
     of VkRegex:
       regex*: Regex
     of VkRange:
@@ -725,23 +725,23 @@ proc `[]`*(self: Frame, name: Value): Value {.inline.} =
   case name.kind:
   of VkSymbol:
     result = self[name.symbol.to_key]
-  of VkComplexSymbol:
-    var csymbol = name.csymbol
-    if csymbol[0] == "global":
-      # result = VM.app.ns
-      todo()
-    elif csymbol[0] == "gene":
-      result = VM.gene_ns
-    elif csymbol[0] == "genex":
-      result = VM.genex_ns
-    elif csymbol[0] == "":
-      # result = self.ns
-      todo()
-    else:
-      result = self[csymbol[0].to_key]
-    for csymbol in csymbol[1..^1]:
-      # result = result.get_member(csymbol)
-      todo()
+  # of VkComplexSymbol:
+  #   var csymbol = name.csymbol
+  #   if csymbol[0] == "global":
+  #     # result = VM.app.ns
+  #     todo()
+  #   elif csymbol[0] == "gene":
+  #     result = VM.gene_ns
+  #   elif csymbol[0] == "genex":
+  #     result = VM.genex_ns
+  #   elif csymbol[0] == "":
+  #     # result = self.ns
+  #     todo()
+  #   else:
+  #     result = self[csymbol[0].to_key]
+  #   for csymbol in csymbol[1..^1]:
+  #     # result = result.get_member(csymbol)
+  #     todo()
   else:
     todo()
 
@@ -951,7 +951,7 @@ proc hash*(node: Value): Hash =
   of VkSymbol:
     h = h !& hash(node.symbol)
   of VkComplexSymbol:
-    h = h !& hash(node.csymbol[0] & "/" & node.csymbol[0].join("/"))
+    h = h !& hash(node.csymbol.first & "/" & node.csymbol.rest.join("/"))
   of VkDate, VkDateTime:
     todo($node.kind)
   of VkTimeKind:
@@ -1004,10 +1004,7 @@ proc `$`*(node: Value): string =
   of VkSymbol:
     result = node.symbol
   of VkComplexSymbol:
-    if node.csymbol[0] == "":
-      result = "/" & node.csymbol[1..^1].join("/")
-    else:
-      result = node.csymbol[0] & "/" & node.csymbol[1..^1].join("/")
+    result = node.csymbol.first & "/" & node.csymbol.rest.join("/")
   of VkDate:
     result = node.date.format("yyyy-MM-dd")
   of VkDateTime:
@@ -1133,7 +1130,10 @@ proc new_gene_symbol*(name: string): Value =
   return Value(kind: VkSymbol, symbol: name)
 
 proc new_gene_complex_symbol*(strs: seq[string]): Value =
-  return Value(kind: VkComplexSymbol, csymbol: strs)
+  Value(
+    kind: VkComplexSymbol,
+    csymbol: ComplexSymbol(first: strs[0], rest: strs[1..^1]),
+  )
 
 proc new_gene_regex*(regex: string, flags: set[RegexFlag] = {reStudy}): Value =
   return Value(kind: VkRegex, regex: re(regex, flags))
@@ -1338,7 +1338,7 @@ converter to_macro*(node: Value): Macro =
   if first.kind == VkSymbol:
     name = first.symbol
   elif first.kind == VkComplexSymbol:
-    name = first.csymbol[^1]
+    name = first.csymbol.rest[^1]
 
   var matcher = new_arg_matcher()
   matcher.parse(node.gene_data[1])

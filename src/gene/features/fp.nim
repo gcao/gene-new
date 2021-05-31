@@ -23,7 +23,7 @@ proc to_function(node: Value): Function =
   if first.kind == VkSymbol:
     name = first.symbol
   elif first.kind == VkComplexSymbol:
-    name = first.csymbol[^1]
+    name = first.csymbol.rest[^1]
 
   var matcher = new_arg_matcher()
   matcher.parse(node.gene_data[1])
