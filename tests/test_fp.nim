@@ -45,8 +45,20 @@ test_interpreter "(fn f a a)", proc(r: Value) =
 # test_interpreter "(fn f _)", proc(r: Value) =
 #   check r.fn.matcher.children.len == 0
 
-test_interpreter "(fn f [] 1) (f)", 1
-test_interpreter "(fn f a (a + 1)) (f 1)", 2
+test_interpreter """
+  (fn f [] 1)
+  (f)
+""", 1
+
+test_interpreter """
+  (fn f a (a + 1))
+  (f 1)
+""", 2
+
+# test_interpreter """
+#   (fn f _ self)
+#   (1 . f)
+# """, 1
 
 # test_interpreter """
 #   (fn f [a = 1] a)

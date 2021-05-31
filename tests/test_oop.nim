@@ -39,7 +39,7 @@ test_interpreter """
 #   )
 #   (new A)
 # """, proc(r: Value) =
-#   check r.internal.instance.value.gene.props["description"] == "Class A"
+#   check r.instance.value.gene_props["description"] == "Class A"
 
 # test_interpreter """
 #   (class A
@@ -48,8 +48,7 @@ test_interpreter """
 #     )
 #   )
 #   ((new A) .@description)
-# """, proc(r: Value) =
-#   check r.str == "Class A"
+# """, "Class A"
 
 # test_interpreter """
 #   (class A
@@ -59,16 +58,19 @@ test_interpreter """
 #   )
 #   (new A "test")
 # """, proc(r: Value) =
-#   check r.internal.instance.value.gene.props["description"] == "test"
+#   check r.instance.value.gene_props["description"] == "test"
 
 # test_interpreter """
 #   (class A
-#     (method test []
-#       "test"
+#     (method new _
+#       (@description = 1)
+#     )
+#     (method test _
+#       @description
 #     )
 #   )
-#   ((new A) .test)
-# """, "test"
+#   ((new A).test)
+# """, 1
 
 # test_interpreter """
 #   (class A
