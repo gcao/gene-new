@@ -31,6 +31,31 @@ test_interpreter """
   ((new A).test)
 """, 1
 
+test_interpreter """
+  (class A
+    (method test _
+      (f)
+    )
+    (fn f _
+      1
+    )
+  )
+  ((new A).test)
+""", 1
+
+test_interpreter """
+  (class A
+    (method test _
+      (. f)
+    )
+    (fn f _
+      self
+    )
+  )
+  ((new A).test)
+""", proc(r: Value) =
+  check r.instance.class.name == "A"
+
 # test_interpreter """
 #   (class A
 #     (method new []

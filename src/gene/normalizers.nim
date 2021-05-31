@@ -23,7 +23,12 @@ var Normalizers: seq[Normalizer]
 Normalizers.add proc(self: Value): bool =
   var `type` = self.gene_type
   if `type`.kind == VkSymbol:
-    if `type`.symbol[0] == '.' and `type`.symbol != "...":  # (.method x y z)
+    if `type`.symbol == ".":
+      self.gene_props[SELF_KEY] = new_gene_symbol("self")
+      self.gene_props[METHOD_KEY] = self.gene_data[0]
+      self.gene_data.delete 0
+      self.gene_type = new_gene_symbol("$invoke_dynamic")
+    elif `type`.symbol[0] == '.' and `type`.symbol != "...":  # (.method x y z)
       self.gene_props[SELF_KEY] = new_gene_symbol("self")
       self.gene_props[METHOD_KEY] = new_gene_string_move(`type`.symbol.substr(1))
       self.gene_type = new_gene_symbol("$invoke_method")

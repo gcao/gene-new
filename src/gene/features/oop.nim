@@ -87,6 +87,7 @@ proc eval_method(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     name: cast[ExMethod](expr).name,
     fn: cast[ExMethod](expr).fn,
   )
+  m.fn.ns = frame.ns
   frame.self.class.methods[m.name.to_key] = m
   Value(
     kind: VkMethod,
