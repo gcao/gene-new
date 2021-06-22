@@ -142,13 +142,27 @@ test_interpreter """
   check r.map["a"] == 1
   check r.map["b"] == 2
 
-# test_interpreter """
-#   (var a 1)
-#   (var b 2)
-#   (:test ^a a b)
-# """, proc(r: Value) =
-#   check r.gene_props["a"] == 1
-#   check r.gene_data[0] == 2
+test_interpreter """
+  (:test)
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type == new_gene_symbol("test")
+
+test_interpreter """
+  (var a 1)
+  (var b 2)
+  (:test ^a a b)
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type == new_gene_symbol("test")
+  check r.gene_props["a"] == 1
+  check r.gene_data[0] == 2
+
+test_interpreter """
+  :(test)
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type == new_gene_symbol("test")
 
 test_interpreter "(if true 1)", 1
 # test_interpreter "(if not false 1)", 1

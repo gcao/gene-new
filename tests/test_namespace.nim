@@ -8,13 +8,13 @@ import ./helpers
 test_interpreter "(ns test)", proc(r: Value) =
   check r.ns.name == "test"
 
-# test_interpreter """
-#   (ns n
-#     (class A)
-#   )
-#   n/A
-# """, proc(r: Value) =
-#   check r.internal.class.name == "A"
+test_interpreter """
+  (ns n
+    (class A)
+  )
+  n/A
+""", proc(r: Value) =
+  check r.class.name == "A"
 
 # test_interpreter """
 #   (ns n)
@@ -23,7 +23,7 @@ test_interpreter "(ns test)", proc(r: Value) =
 #   )
 #   n/m/A
 # """, proc(r: Value) =
-#   check r.internal.class.name == "A"
+#   check r.class.name == "A"
 
 test_interpreter """
   (ns n)
