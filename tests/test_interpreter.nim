@@ -282,11 +282,16 @@ test_interpreter """
 # #   (call_native "str_size" "test")
 # # """, 4
 
-# test_interpreter """
-#   (var a 1)
-#   (var b 2)
-#   (eval :a :b)
-# """, 2
+test_interpreter """
+  (var a 1)
+  (eval :a)
+""", 1
+
+test_interpreter """
+  (var a 1)
+  (var b 2)
+  (eval :a :b)
+""", 2
 
 # test_interpreter """
 #   (eval ^self 1 self)
