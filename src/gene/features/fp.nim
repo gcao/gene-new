@@ -11,11 +11,13 @@ type
     data*: Function
 
 proc eval_fn(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  cast[ExFn](expr).data.ns = frame.ns
   result = Value(
     kind: VkFunction,
     fn: cast[ExFn](expr).data,
   )
+  result.fn.ns = frame.ns
+  result.fn.parent_scope = frame.scope
+  result.fn.parent_scope_max = frame.scope.max
 
 proc to_function(node: Value): Function =
   var first = node.gene_data[0]

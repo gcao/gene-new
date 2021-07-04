@@ -392,9 +392,13 @@ test_interpreter """
 #   a
 # """, 1
 
-# test_interpreter """
-#   (eval ($parse "1"))
-# """, 1
+test_interpreter """
+  ($parse "true")
+""", true
+
+test_interpreter """
+  (eval ($parse "(1 + 2)"))
+""", 3
 
 # test_interpreter """
 #   ($include "tests/fixtures/include_example.gene")
