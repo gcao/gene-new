@@ -641,6 +641,7 @@ proc def_member*(self: var Scope, key: MapKey, val: Value) {.inline.} =
       self.mappings[key] = cur and 0b1111111100000000 + index
     else:
       var history_index = self.mapping_history.len
+      self.mapping_history.add(@[NameIndexScope(cur)])
       self.mappings[key] = (history_index + 1).shl(8) + index
 
 proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
