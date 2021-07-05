@@ -7,13 +7,6 @@ import ../translators
 import ../interpreter
 
 type
-  ExSymbol* = ref object of Expr
-    name*: MapKey
-
-  ExComplexSymbol* = ref object of Expr
-    first*: MapKey
-    rest*: seq[MapKey]
-
   ExVar* = ref object of Expr
     name*: MapKey
     value*: Expr

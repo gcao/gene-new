@@ -103,6 +103,18 @@ test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 test_interpreter "(1 + 2)", 3
 test_interpreter "(1 - 2)", -1
 
+test_interpreter """
+  (var i 1)
+  (i += 2)
+  i
+""", 3
+
+test_interpreter """
+  (var i 3)
+  (i -= 2)
+  i
+""", 1
+
 test_interpreter "(1 == 1)", true
 test_interpreter "(1 == 2)", false
 test_interpreter "(1 < 0)", false

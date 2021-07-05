@@ -1,6 +1,7 @@
 import tables
 
 import ../types
+import ../exprs
 import ../translators
 import ../interpreter
 
@@ -18,6 +19,8 @@ type
     BinGe
     BinAnd
     BinOr
+    BinAddEq
+    BinSubEq
 
   ExBinOp* = ref object of Expr
     op*: BinOp
@@ -30,8 +33,30 @@ proc eval_bin(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   case cast[ExBinOp](expr).op:
   of BinAdd:
     result = new_gene_int(first.int + second.int)
+  of BinAddEq:
+    result = new_gene_int(first.int + second.int)
+    var op1 = cast[ExBinOp](expr).op1
+    if op1 of ExSymbol:
+      var name = cast[ExSymbol](op1).name
+      if frame.scope.has_key(name):
+        frame.scope[name] = result
+      else:
+        frame.ns[name] = result
+    else:
+      todo()
   of BinSub:
     result = new_gene_int(first.int - second.int)
+  of BinSubEq:
+    result = new_gene_int(first.int - second.int)
+    var op1 = cast[ExBinOp](expr).op1
+    if op1 of ExSymbol:
+      var name = cast[ExSymbol](op1).name
+      if frame.scope.has_key(name):
+        frame.scope[name] = result
+      else:
+        frame.ns[name] = result
+    else:
+      todo()
   of BinEq:
     result = new_gene_bool(first == second)
   of BinNeq:
@@ -61,6 +86,10 @@ proc translate_arithmetic(value: Value): Expr =
   case value.gene_type.symbol:
   of "+":
     result = new_ex_bin(BinAdd)
+  of "+=":
+    result = new_ex_bin(BinAddEq)
+  of "-=":
+    result = new_ex_bin(BinSubEq)
   of "-":
     result = new_ex_bin(BinSub)
   of "*":
@@ -99,3 +128,6 @@ proc init*() =
   GeneTranslators[">="] = translate_arithmetic
   GeneTranslators["&&"] = translate_arithmetic
   GeneTranslators["||"] = translate_arithmetic
+
+  GeneTranslators["+="] = translate_arithmetic
+  GeneTranslators["-="] = translate_arithmetic

@@ -105,3 +105,13 @@ proc new_ex_break*(): ExBreak =
   result = ExBreak(
     evaluator: eval_break,
   )
+
+##################################################
+
+type
+  ExSymbol* = ref object of Expr
+    name*: MapKey
+
+  ExComplexSymbol* = ref object of Expr
+    first*: MapKey
+    rest*: seq[MapKey]
