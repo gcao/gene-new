@@ -1,3 +1,5 @@
+import tables
+
 import ../map_key
 import ../types
 import ../exprs
@@ -7,6 +9,8 @@ type
   ExLoop* = ref object of Expr
     data: seq[Expr]
 
+  ExContinue* = ref object of Expr
+
 let LOOP_KEY* = add_key("loop")
 
 proc eval_loop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
@@ -14,6 +18,8 @@ proc eval_loop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     try:
       for item in cast[ExLoop](expr).data.mitems:
         result = item.evaluator(self, frame, item)
+    except Continue:
+      discard
     except Break as b:
       result = b.val
       break
@@ -49,7 +55,19 @@ let BREAK_PROCESSOR* = Value(
     invoker: invoke_break,
   ))
 
+proc eval_continue(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  var e: Continue
+  e.new
+  raise e
+
+proc translate_continue(value: Value): Expr =
+  result = ExContinue(
+    evaluator: eval_continue,
+  )
+
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     self.app.ns["loop"] = LOOP_PROCESSOR
     self.app.ns["break"] = BREAK_PROCESSOR
+
+  GeneTranslators["continue"] = translate_continue

@@ -206,19 +206,19 @@ test_interpreter """
 #   )
 # """, 1
 
-# test_interpreter """
-#   (var i 0)
-#   (loop
-#     (i += 1)
-#     (if (i < 5)
-#       (continue)
-#     else
-#       (break)
-#     )
-#     (i = 10000)  # should not reach here
-#   )
-#   i
-# """, 5
+test_interpreter """
+  (var i 0)
+  (loop
+    (i += 1)
+    (if (i < 5)
+      (continue)
+    else
+      (break)
+    )
+    (i = 10000)  # should not reach here
+  )
+  i
+""", 5
 
 # test_interpreter """
 #   (var i 0)
