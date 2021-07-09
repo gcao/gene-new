@@ -220,27 +220,27 @@ test_interpreter """
   i
 """, 5
 
-# test_interpreter """
-#   (var i 0)
-#   (while (i < 3)
-#     (i += 1)
-#   )
-#   i
-# """, 3
+test_interpreter """
+  (var i 0)
+  (while (i < 3)
+    (i += 1)
+  )
+  i
+""", 3
 
-# test_interpreter """
-#   (var i 0)
-#   (while true
-#     (i += 1)
-#     (if (i < 3)
-#       (continue)
-#     else
-#       (break)
-#     )
-#     (i = 10000)  # should not reach here
-#   )
-#   i
-# """, 3
+test_interpreter """
+  (var i 0)
+  (while true
+    (i += 1)
+    (if (i < 3)
+      (continue)
+    else
+      (break)
+    )
+    (i = 10000)  # should not reach here
+  )
+  i
+""", 3
 
 # test_interpreter """
 #   (var sum 0)
