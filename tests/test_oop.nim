@@ -23,6 +23,13 @@ test_interpreter """
   check r.instance.class.name == "A"
 
 test_interpreter """
+  (ns n)
+  (class n/A)
+  n/A
+""", proc(r: Value) =
+  check r.class.name == "A"
+
+test_interpreter """
   (class A
     (method test _
       1

@@ -2,6 +2,7 @@ import tables
 
 import ../map_key
 import ../types
+import ../exprs
 import ../translators
 import ../interpreter
 
@@ -11,6 +12,7 @@ let ARGS_KEY*                 = add_key("args")
 
 type
   ExClass* = ref object of Expr
+    container*: Expr
     name*: string
     body*: Expr
 
@@ -33,23 +35,36 @@ type
     args*: Expr
 
 proc eval_class(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var class = new_class(cast[ExClass](expr).name)
+  var e = cast[ExClass](expr)
+  var class = new_class(e.name)
   class.ns.parent = frame.ns
   result = Value(kind: VkClass, class: class)
-  frame.ns[cast[ExClass](expr).name] = result
+  var container = frame.ns
+  if e.container != nil:
+    container = self.eval(frame, e.container).ns
+  container[e.name] = result
 
   var new_frame = new_frame()
   new_frame.ns = class.ns
   new_frame.scope = new_scope()
   new_frame.self = result
-  discard self.eval(new_frame, cast[ExClass](expr).body)
+  discard self.eval(new_frame, e.body)
 
 proc translate_class(value: Value): Expr =
-  ExClass(
+  var e = ExClass(
     evaluator: eval_class,
-    name: value.gene_data[0].symbol,
     body: translate(value.gene_data[1..^1]),
   )
+  var first = value.gene_data[0]
+  case first.kind
+  of VkSymbol:
+    e.name = first.symbol
+  of VkComplexSymbol:
+    e.container = new_ex_names(first.csymbol)
+    e.name = first.csymbol.rest[^1]
+  else:
+    todo()
+  result = e
 
 proc eval_new(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var instance = Instance()

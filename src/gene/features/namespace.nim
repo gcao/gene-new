@@ -21,15 +21,12 @@ proc eval_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   if e.container != nil:
     container = self.eval(frame, e.container).ns
   container[e.name] = result
-  var old_self = frame.self
-  var old_ns = frame.ns
-  try:
-    frame.self = result
-    frame.ns = ns
-    discard self.eval(frame, e.body)
-  finally:
-    frame.self = old_self
-    frame.ns = old_ns
+
+  var new_frame = new_frame()
+  new_frame.ns = ns
+  new_frame.scope = new_scope()
+  new_frame.self = result
+  discard self.eval(frame, e.body)
 
 proc translate_ns(value: Value): Expr =
   var e = ExNamespace(

@@ -23,14 +23,14 @@ test_interpreter """
 """, proc(r: Value) =
   check r.ns.name == "m"
 
-# test_interpreter """
-#   (ns n)
-#   (ns n/m
-#     (class A)
-#   )
-#   n/m/A
-# """, proc(r: Value) =
-#   check r.internal.class.name == "A"
+test_interpreter """
+  (ns n)
+  (ns n/m
+    (class A)
+  )
+  n/m/A
+""", proc(r: Value) =
+  check r.class.name == "A"
 
 test_interpreter """
   (ns n)
