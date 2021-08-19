@@ -8,6 +8,9 @@ import ./types
 proc eval_todo*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   todo()
 
+proc eval_never*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  raise new_exception(types.Exception, "eval_never should never be called.")
+
 #################### ExLiteral ###################
 
 type

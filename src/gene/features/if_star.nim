@@ -129,7 +129,7 @@ proc translate_if(value: Value): Expr =
   var value = value
   normalize_if_star(value)
   var r = ExIf(
-    evaluator: eval_if,
+    evaluator: eval_never,
   )
   r.cond = translate(value.gene_props[COND_KEY])
   r.then = translate(value.gene_props[THEN_KEY])
