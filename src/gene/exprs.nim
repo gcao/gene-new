@@ -118,3 +118,27 @@ type
   ExComplexSymbol* = ref object of Expr
     first*: MapKey
     rest*: seq[MapKey]
+
+  # Special case
+  # ExName* = ref object of Expr
+  #   name*: MapKey
+
+  ExNames* = ref object of Expr
+    names*: seq[MapKey]
+
+proc eval_names*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  var e = cast[ExNames](expr)
+  result = frame.scope[e.names[0]]
+  if result == nil:
+    result = frame.ns[e.names[0]]
+  # for name in e.names[1..^1]:
+  #   result = result.get_member(name)
+
+proc new_ex_names*(self: ComplexSymbol): ExNames =
+  var e = ExNames(
+    evaluator: eval_names,
+  )
+  e.names.add(self.first.to_key)
+  for s in self.rest[0..^2]:
+    e.names.add(s.to_key)
+  result = e

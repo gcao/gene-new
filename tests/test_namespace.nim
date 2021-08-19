@@ -16,6 +16,13 @@ test_interpreter """
 """, proc(r: Value) =
   check r.class.name == "A"
 
+test_interpreter """
+  (ns n)
+  (ns n/m)
+  n/m
+""", proc(r: Value) =
+  check r.ns.name == "m"
+
 # test_interpreter """
 #   (ns n)
 #   (ns n/m
