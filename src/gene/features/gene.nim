@@ -69,13 +69,12 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
   #     raise
 
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  todo()
-  # result = new_gene_gene(target)
-  # var e = cast[ExGene](expr)
-  # for k, v in e.args.mpairs:
-  #   result.gene_props[k] = self.eval(frame, v)
-  # for v in expr.ex_arg_data.mitems:
-  #   result.gene_data.add(self.eval(frame, v))
+  result = new_gene_gene(target)
+  var args_expr = cast[ExArguments](arg_translator(cast[ExGene](expr).args))
+  for k, v in args_expr.props.mpairs:
+    result.gene_props[k] = self.eval(frame, v)
+  for v in args_expr.data.mitems:
+    result.gene_data.add(self.eval(frame, v))
 
 proc invoker(`type`: Value): Invoker =
   case `type`.kind:

@@ -36,6 +36,7 @@ test_interpreter "nil", Nil
 test_interpreter "1", 1
 test_interpreter "true", true
 test_interpreter "false", false
+test_interpreter "_", Placeholder
 test_interpreter "\"string\"", "string"
 test_interpreter ":a", new_gene_symbol("a")
 

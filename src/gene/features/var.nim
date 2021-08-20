@@ -38,6 +38,8 @@ proc translate_symbol(value: Value): Expr =
   case value.symbol:
   of "self":
     result = new_ex_self()
+  of "_":
+    result = new_ex_literal(Placeholder)
   else:
     result = ExSymbol(
       evaluator: eval_symbol,
