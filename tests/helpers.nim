@@ -120,17 +120,6 @@ proc test_parse_document*(code: string, callback: proc(result: Document)) =
 #     VM.load_genex_module()
 #     callback VM.eval(code)
 
-# proc test_arg_matching*(pattern: string, input: string, callback: proc(result: MatchResult)) =
-#   var pattern = cleanup(pattern)
-#   var input = cleanup(input)
-#   test "Pattern Matching: \n" & pattern & "\n" & input:
-#     var p = read(pattern)
-#     var i = read(input)
-#     var m = new_arg_matcher()
-#     m.parse(p)
-#     var result = m.match(i)
-#     callback(result)
-
 # proc test_match*(pattern: string, input: string, callback: proc(result: MatchResult)) =
 #   var pattern = cleanup(pattern)
 #   var input = cleanup(input)

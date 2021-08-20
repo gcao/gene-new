@@ -1,6 +1,7 @@
 import unittest, tables
 
 import gene/types
+import gene/parser
 
 import ./helpers
 
@@ -48,6 +49,17 @@ import ./helpers
 #    [*: [...]] "*:" or "*name:" will signify that next item matches gene_type's internal structure
 #
 
+proc test_arg_matching*(pattern: string, input: string, callback: proc(result: MatchResult)) =
+  var pattern = cleanup(pattern)
+  var input = cleanup(input)
+  test "Pattern Matching: \n" & pattern & "\n" & input:
+    var p = read(pattern)
+    var i = read(input)
+    var m = new_arg_matcher()
+    m.parse(p)
+    var result = m.match(i)
+    callback(result)
+
 test_interpreter """
   (fn f a
     a
@@ -73,11 +85,11 @@ test_interpreter """
   (a + b)
 """, 3
 
-# test_interpreter """
-#   (var x (:test 1))
-#   (match [a b] x)
-#   b
-# """, GeneNil
+test_interpreter """
+  (var x (_ 1))
+  (match [a b] x)
+  b
+""", Nil
 
 # # test_interpreter """
 # #   (match
@@ -93,153 +105,133 @@ test_interpreter """
 # #   cond
 # # """, true
 
-# test_arg_matching "a", "[1]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 1
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
+test_arg_matching "a", "[1]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 1
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
 
-# test_arg_matching "_", "[]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 0
+test_arg_matching "_", "[]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 0
 
-# test_arg_matching "a", "[]", proc(r: MatchResult) =
-#   check r.kind == MatchMissingFields
-#   check r.missing[0] == "a"
+test_arg_matching "a", "[]", proc(r: MatchResult) =
+  check r.kind == MatchMissingFields
+  check r.missing[0] == "a"
 
-# test_arg_matching "a", "(_ 1)", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 1
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
+test_arg_matching "a", "(_ 1)", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 1
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
 
-# test_arg_matching "[a b]", "[1 2]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 2
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-#   check r.fields[1].name == "b"
-#   check r.fields[1].value == 2
+test_arg_matching "[a b]", "[1 2]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 2
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+  check r.fields[1].name == "b"
+  check r.fields[1].value == 2
 
-# test_arg_matching "[_ b]", "(_ 1 2)", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 1
-#   check r.fields[0].name == "b"
-#   check r.fields[0].value == 2
+test_arg_matching "[_ b]", "(_ 1 2)", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 1
+  check r.fields[0].name == "b"
+  check r.fields[0].value == 2
 
-# test_arg_matching "[[a] b]", "[[1] 2]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 2
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-#   check r.fields[1].name == "b"
-#   check r.fields[1].value == 2
+test_arg_matching "[[a] b]", "[[1] 2]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 2
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+  check r.fields[1].name == "b"
+  check r.fields[1].value == 2
 
-# test_arg_matching "[[[a] [b]] c]", "[[[1] [2]] 3]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 3
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-#   check r.fields[1].name == "b"
-#   check r.fields[1].value == 2
-#   check r.fields[2].name == "c"
-#   check r.fields[2].value == 3
+test_arg_matching "[[[a] [b]] c]", "[[[1] [2]] 3]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 3
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+  check r.fields[1].name == "b"
+  check r.fields[1].value == 2
+  check r.fields[2].name == "c"
+  check r.fields[2].value == 3
 
-# test_arg_matching "[a = 1]", "[]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 1
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
+test_arg_matching "[a = 1]", "[]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 1
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
 
-# test_arg_matching "[a b = 2]", "[1]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 2
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-#   check r.fields[1].name == "b"
-#   check r.fields[1].value == 2
+test_arg_matching "[a b = 2]", "[1]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 2
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+  check r.fields[1].name == "b"
+  check r.fields[1].value == 2
 
-# test_arg_matching "[a = 1 b]", "[2]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 2
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-#   check r.fields[1].name == "b"
-#   check r.fields[1].value == 2
+test_arg_matching "[a = 1 b]", "[2]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 2
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+  check r.fields[1].name == "b"
+  check r.fields[1].value == 2
 
-# test_arg_matching "[a b = 2 c]", "[1 3]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 3
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-#   check r.fields[1].name == "b"
-#   check r.fields[1].value == 2
-#   check r.fields[2].name == "c"
-#   check r.fields[2].value == 3
+test_arg_matching "[a b = 2 c]", "[1 3]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 3
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+  check r.fields[1].name == "b"
+  check r.fields[1].value == 2
+  check r.fields[2].name == "c"
+  check r.fields[2].value == 3
 
-# test_arg_matching "[a...]", "[1 2]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 1
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == new_gene_vec(new_gene_int(1), new_gene_int(2))
+test_arg_matching "[a...]", "[1 2]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 1
+  check r.fields[0].name == "a"
+  check r.fields[0].value == new_gene_vec(new_gene_int(1), new_gene_int(2))
 
-# test_arg_matching "[a b...]", "[1 2 3]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 2
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-#   check r.fields[1].name == "b"
-#   check r.fields[1].value == new_gene_vec(new_gene_int(2), new_gene_int(3))
+test_arg_matching "[a b...]", "[1 2 3]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 2
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+  check r.fields[1].name == "b"
+  check r.fields[1].value == new_gene_vec(new_gene_int(2), new_gene_int(3))
 
-# test_arg_matching "[a... b]", "[1 2 3]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 2
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == new_gene_vec(new_gene_int(1), new_gene_int(2))
-#   check r.fields[1].name == "b"
-#   check r.fields[1].value == 3
+test_arg_matching "[a... b]", "[1 2 3]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 2
+  check r.fields[0].name == "a"
+  check r.fields[0].value == new_gene_vec(new_gene_int(1), new_gene_int(2))
+  check r.fields[1].name == "b"
+  check r.fields[1].value == 3
 
-# test_arg_matching "[a b... c]", "[1 2 3 4]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 3
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-#   check r.fields[1].name == "b"
-#   check r.fields[1].value == new_gene_vec(new_gene_int(2), new_gene_int(3))
-#   check r.fields[2].name == "c"
-#   check r.fields[2].value == 4
+test_arg_matching "[a b... c]", "[1 2 3 4]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 3
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+  check r.fields[1].name == "b"
+  check r.fields[1].value == new_gene_vec(new_gene_int(2), new_gene_int(3))
+  check r.fields[2].name == "c"
+  check r.fields[2].value == 4
 
-# test_arg_matching "[a [b... c]]", "[1 [2 3 4]]", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 3
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-#   check r.fields[1].name == "b"
-#   check r.fields[1].value == new_gene_vec(new_gene_int(2), new_gene_int(3))
-#   check r.fields[2].name == "c"
-#   check r.fields[2].value == 4
+test_arg_matching "[a [b... c]]", "[1 [2 3 4]]", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 3
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+  check r.fields[1].name == "b"
+  check r.fields[1].value == new_gene_vec(new_gene_int(2), new_gene_int(3))
+  check r.fields[2].name == "c"
+  check r.fields[2].value == 4
 
-# # test_arg_matching "[a :do b]", "[1 do 2]", proc(r: MatchResult) =
-# #   check r.kind == MatchSuccess
-# #   check r.fields.len == 2
-# #   check r.fields[0].name == "a"
-# #   check r.fields[0].value == 1
-# #   check r.fields[1].name == "b"
-# #   check r.fields[1].value == 2
-
-# test_arg_matching "[^a]", "(_ ^a 1)", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 1
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-
-# test_arg_matching "[^a = 1]", "(_)", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 1
-#   check r.fields[0].name == "a"
-#   check r.fields[0].value == 1
-
-# test_arg_matching "[^a = 1 b]", "(_ 2)", proc(r: MatchResult) =
+# test_arg_matching "[a :do b]", "[1 do 2]", proc(r: MatchResult) =
 #   check r.kind == MatchSuccess
 #   check r.fields.len == 2
 #   check r.fields[0].name == "a"
@@ -247,13 +239,33 @@ test_interpreter """
 #   check r.fields[1].name == "b"
 #   check r.fields[1].value == 2
 
-# test_arg_matching "[^a]", "()", proc(r: MatchResult) =
-#   check r.kind == MatchMissingFields
-#   check r.missing[0] == "a"
+test_arg_matching "[^a]", "(_ ^a 1)", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 1
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
 
-# test_arg_matching "[^props...]", "(_ ^a 1 ^b 2)", proc(r: MatchResult) =
-#   check r.kind == MatchSuccess
-#   check r.fields.len == 1
-#   check r.fields[0].name == "props"
-#   check r.fields[0].value.map["a"] == 1
-#   check r.fields[0].value.map["b"] == 2
+test_arg_matching "[^a = 1]", "(_)", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 1
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+
+test_arg_matching "[^a = 1 b]", "(_ 2)", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 2
+  check r.fields[0].name == "a"
+  check r.fields[0].value == 1
+  check r.fields[1].name == "b"
+  check r.fields[1].value == 2
+
+test_arg_matching "[^a]", "()", proc(r: MatchResult) =
+  check r.kind == MatchMissingFields
+  check r.missing[0] == "a"
+
+test_arg_matching "[^props...]", "(_ ^a 1 ^b 2)", proc(r: MatchResult) =
+  check r.kind == MatchSuccess
+  check r.fields.len == 1
+  check r.fields[0].name == "props"
+  check r.fields[0].value.map["a"] == 1
+  check r.fields[0].value.map["b"] == 2
