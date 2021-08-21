@@ -10,6 +10,21 @@ type
   ExFn* = ref object of Expr
     data*: Function
 
+# proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
+#   var match_result = matcher.match(args)
+#   case match_result.kind:
+#   of MatchSuccess:
+#     for field in match_result.fields:
+#       if field.value_expr != nil:
+#         frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
+#       else:
+#         frame.scope.def_member(field.name, field.value)
+#   of MatchMissingFields:
+#     for field in match_result.missing:
+#       not_allowed("Argument " & field.to_s & " is missing.")
+#   else:
+#     todo()
+
 proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var fn_scope = new_scope()
   fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
@@ -17,18 +32,18 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
   new_frame.parent = frame
   new_frame.self = target
 
-  var args = cast[ExArguments](expr)
+  var expr = cast[ExArguments](expr)
   case target.fn.matching_hint.mode:
   of MhSimpleData:
-    for _, v in args.props.mpairs:
+    for _, v in expr.props.mpairs:
       discard self.eval(frame, v)
-    for i, v in args.data.mpairs:
+    for i, v in expr.data.mpairs:
       let field = target.fn.matcher.children[i]
       new_frame.scope.def_member(field.name, self.eval(frame, v))
   of MhNone:
-    for _, v in args.props.mpairs:
+    for _, v in expr.props.mpairs:
       discard self.eval(frame, v)
-    for i, v in args.data.mpairs:
+    for i, v in expr.data.mpairs:
       # var field = target.fn.matcher.children[i]
       discard self.eval(frame, v)
   else:
