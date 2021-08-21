@@ -36,20 +36,20 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 
 proc translate_match(value: Value): Expr =
   var r = ExMatch(
-    evaluator: eval_never,
+    evaluator: eval_match,
   )
   r.pattern = value.gene_data[0]
   r.value = translate(value.gene_data[1])
   result = r
 
-proc invoke_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_match(frame, nil, cast[ExGene](expr).args_expr)
+# proc invoke_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+#   self.eval_match(frame, nil, cast[ExGene](expr).args_expr)
 
 let MATCH_PROCESSOR* = Value(
   kind: VkGeneProcessor,
   gene_processor: GeneProcessor(
     translator: translate_match,
-    invoker: invoke_match,
+    # invoker: invoke_match,
   ))
 
 proc init*() =

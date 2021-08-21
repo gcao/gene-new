@@ -7,23 +7,23 @@ import ../normalizers
 import ../translators
 import ../interpreter
 
-proc translator*(value: Value): Translator =
-  arg_translator
+# proc translator*(value: Value): Translator =
+#   arg_translator
 
-proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
-  var match_result = matcher.match(args)
-  case match_result.kind:
-  of MatchSuccess:
-    for field in match_result.fields:
-      if field.value_expr != nil:
-        frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
-      else:
-        frame.scope.def_member(field.name, field.value)
-  of MatchMissingFields:
-    for field in match_result.missing:
-      not_allowed("Argument " & field.to_s & " is missing.")
-  else:
-    todo()
+# proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
+#   var match_result = matcher.match(args)
+#   case match_result.kind:
+#   of MatchSuccess:
+#     for field in match_result.fields:
+#       if field.value_expr != nil:
+#         frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
+#       else:
+#         frame.scope.def_member(field.name, field.value)
+#   of MatchMissingFields:
+#     for field in match_result.missing:
+#       not_allowed("Argument " & field.to_s & " is missing.")
+#   else:
+#     todo()
 
 # proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
 #   var fn_scope = new_scope()
@@ -68,13 +68,13 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
 #   #   else:
 #   #     raise
 
-# proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-#   result = new_gene_gene(target)
-#   var args_expr = cast[ExArguments](arg_translator(cast[ExGene](expr).args))
-#   for k, v in args_expr.props.mpairs:
-#     result.gene_props[k] = self.eval(frame, v)
-#   for v in args_expr.data.mitems:
-#     result.gene_data.add(self.eval(frame, v))
+proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  result = new_gene_gene(target)
+  var args_expr = cast[ExArguments](arg_translator(cast[ExGene](expr).args))
+  for k, v in args_expr.props.mpairs:
+    result.gene_props[k] = self.eval(frame, v)
+  for v in args_expr.data.mitems:
+    result.gene_data.add(self.eval(frame, v))
 
 # proc invoker(`type`: Value): Invoker =
 #   case `type`.kind:
@@ -85,9 +85,9 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
 #   else:
 #     return default_invoker
 
-# proc eval_gene(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-#   var `type` = self.eval(frame, cast[ExGene](expr).`type`)
-#   `type`.invoker()(self, frame, `type`, expr)
+proc eval_gene(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var `type` = self.eval(frame, cast[ExGene](expr).`type`)
+  default_invoker(self, frame, `type`, expr)
 
 proc eval_gene2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var `type` = self.eval(frame, cast[ExGene](expr).`type`)
@@ -100,11 +100,17 @@ proc eval_gene_init(self: VirtualMachine, frame: Frame, target: Value, expr: var
   case `type`.kind:
   of VkFunction:
     translator = `type`.fn.translator
+  of VkMacro:
+    translator = `type`.macro.translator
   of VkGeneProcessor:
     translator = `type`.gene_processor.translator
   else:
-    # e.args_expr = `type`.translator()(e.args)
-    todo()
+    e.args_expr = arg_translator(e.args)
+
+    # For future invocations
+    expr.evaluator = eval_gene
+
+    return default_invoker(self, frame, `type`, expr)
 
   e.args_expr = translator(e.args)
   expr.evaluator = eval_gene2
