@@ -266,6 +266,8 @@ type
       ns*: Namespace
     of VkFunction:
       fn*: Function
+    of VkMacro:
+      `macro`*: Macro
     of VkClass:
       class*: Class
     of VkMethod:
