@@ -33,16 +33,6 @@ proc translate_while(value: Value): Expr =
     r.body.add translate(item)
   result = r
 
-proc invoke_while(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_while(frame, nil, cast[ExGene](expr).args_expr)
-
-let WHILE_PROCESSOR* = Value(
-  kind: VkGeneProcessor,
-  gene_processor: GeneProcessor(
-    translator: translate_while,
-    invoker: invoke_while,
-  ))
-
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["while"] = WHILE_PROCESSOR
+    self.app.ns["while"] = new_gene_processor(translate_while)

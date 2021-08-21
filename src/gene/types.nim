@@ -17,11 +17,9 @@ type
 
   Translator* = proc(value: Value): Expr
   Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
-  Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
 
   GeneProcessor* = ref object of RootObj
     translator*: Translator
-    invoker*: Invoker
 
   Runtime* = ref object
     name*: string     # default/...
@@ -481,6 +479,12 @@ proc new_gene_exception*(instance: Value): ref Exception =
 
 proc new_gene_exception*(): ref Exception =
   return new_gene_exception(DEFAULT_ERROR_MESSAGE, nil)
+
+proc new_gene_processor*(translator: Translator): Value =
+  return Value(
+    kind: VkGeneProcessor,
+    gene_processor: GeneProcessor(translator: translator),
+  )
 
 proc date*(self: Value): DateTime =
   self.date_internal.data

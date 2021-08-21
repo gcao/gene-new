@@ -18,22 +18,12 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   todo()
 
 proc translate_for(value: Value): Expr =
-  var r = ExFor(
-    evaluator: eval_for,
-  )
+  # var r = ExFor(
+  #   evaluator: eval_for,
+  # )
+  # result = r
   todo()
-  result = r
-
-proc invoke_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_for(frame, target, cast[ExGene](expr).args_expr)
-
-let FOR_PROCESSOR* = Value(
-  kind: VkGeneProcessor,
-  gene_processor: GeneProcessor(
-    translator: translate_for,
-    invoker: invoke_for,
-  ))
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["for"] = FOR_PROCESSOR
+    self.app.ns["for"] = new_gene_processor(translate_for)

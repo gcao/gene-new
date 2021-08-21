@@ -144,17 +144,6 @@ proc translate_if(value: Value): Expr =
   r.`else` = translate(value.gene_props[ELSE_KEY])
   result = r
 
-proc invoke_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  # self.eval_if(frame, nil, cast[ExGene](expr).args_expr)
-  todo()
-
-let IF_PROCESSOR* = Value(
-  kind: VkGeneProcessor,
-  gene_processor: GeneProcessor(
-    translator: translate_if,
-    invoker: invoke_if,
-  ))
-
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["if*"] = IF_PROCESSOR
+    self.app.ns["if*"] = new_gene_processor(translate_if)

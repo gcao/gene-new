@@ -11,8 +11,6 @@ type
     data*: Function
 
 proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  # var i = 0
-  # i += 1; echo "function_invoker " & $i
   var fn_scope = new_scope()
   fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
   var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)

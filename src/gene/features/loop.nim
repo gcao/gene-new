@@ -32,28 +32,8 @@ proc translate_loop(value: Value): Expr =
     r.data.add translate(item)
   result = r
 
-proc invoke_loop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_loop(frame, nil, cast[ExGene](expr).args_expr)
-
-let LOOP_PROCESSOR* = Value(
-  kind: VkGeneProcessor,
-  gene_processor: GeneProcessor(
-    translator: translate_loop,
-    invoker: invoke_loop,
-  ))
-
 proc translate_break(value: Value): Expr =
   new_ex_break()
-
-proc invoke_break(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_break(frame, nil, cast[ExGene](expr).args_expr)
-
-let BREAK_PROCESSOR* = Value(
-  kind: VkGeneProcessor,
-  gene_processor: GeneProcessor(
-    translator: translate_break,
-    invoker: invoke_break,
-  ))
 
 proc eval_continue(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e: Continue
@@ -67,7 +47,7 @@ proc translate_continue(value: Value): Expr =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["loop"] = LOOP_PROCESSOR
-    self.app.ns["break"] = BREAK_PROCESSOR
+    self.app.ns["loop"] = new_gene_processor(translate_loop)
+    self.app.ns["break"] = new_gene_processor(translate_break)
 
   GeneTranslators["continue"] = translate_continue

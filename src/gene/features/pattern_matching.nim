@@ -42,16 +42,6 @@ proc translate_match(value: Value): Expr =
   r.value = translate(value.gene_data[1])
   result = r
 
-# proc invoke_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-#   self.eval_match(frame, nil, cast[ExGene](expr).args_expr)
-
-let MATCH_PROCESSOR* = Value(
-  kind: VkGeneProcessor,
-  gene_processor: GeneProcessor(
-    translator: translate_match,
-    # invoker: invoke_match,
-  ))
-
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["match"] = MATCH_PROCESSOR
+    self.app.ns["match"] = new_gene_processor(translate_match)
