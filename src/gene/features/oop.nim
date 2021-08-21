@@ -34,7 +34,7 @@ type
     target*: Expr
     args*: Expr
 
-proc eval_class(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExClass](expr)
   var class = new_class(e.name)
   class.ns.parent = frame.ns
@@ -66,7 +66,7 @@ proc translate_class(value: Value): Expr =
     todo()
   result = e
 
-proc eval_new(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var instance = Instance()
   instance.class = self.eval(frame, cast[ExNew](expr).class).class
   result = Value(
@@ -96,7 +96,7 @@ proc to_function(node: Value): Function =
   result = new_fn(name, matcher, body)
   result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
 
-proc eval_method(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var m = Method(
     class: frame.self.class,
     name: cast[ExMethod](expr).name,
@@ -117,7 +117,7 @@ proc translate_method(value: Value): Expr =
     fn: fn,
   )
 
-proc eval_invoke(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_invoke(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var instance: Value
   var e = cast[ExInvoke](expr).self
   if e == nil:
@@ -160,7 +160,7 @@ proc translate_invoke(value: Value): Expr =
   # r.args = translate(value.gene_props[ARGS_KEY])
   result = r
 
-proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var instance: Value
   var e = cast[ExInvokeDynamic](expr).self
   if e == nil:

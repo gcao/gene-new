@@ -13,11 +13,11 @@ type
 
 let LOOP_KEY* = add_key("loop")
 
-proc eval_loop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_loop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   while true:
     try:
       for item in cast[ExLoop](expr).data.mitems:
-        result = item.evaluator(self, frame, item)
+        result = item.evaluator(self, frame, nil, item)
     except Continue:
       discard
     except Break as b:
@@ -33,7 +33,7 @@ proc translate_loop(value: Value): Expr =
   result = r
 
 proc invoke_loop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_loop(frame, cast[ExGene](expr).args_expr)
+  self.eval_loop(frame, nil, cast[ExGene](expr).args_expr)
 
 let LOOP_PROCESSOR* = Value(
   kind: VkGeneProcessor,
@@ -46,7 +46,7 @@ proc translate_break(value: Value): Expr =
   new_ex_break()
 
 proc invoke_break(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_break(frame, cast[ExGene](expr).args_expr)
+  self.eval_break(frame, nil, cast[ExGene](expr).args_expr)
 
 let BREAK_PROCESSOR* = Value(
   kind: VkGeneProcessor,
@@ -55,7 +55,7 @@ let BREAK_PROCESSOR* = Value(
     invoker: invoke_break,
   ))
 
-proc eval_continue(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_continue(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e: Continue
   e.new
   raise e

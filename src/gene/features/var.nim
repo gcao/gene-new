@@ -20,13 +20,13 @@ let GLOBAL_KEY*               = add_key("global")
 let GENE_KEY*                 = add_key("gene")
 let GENEX_KEY*                = add_key("genex")
 
-proc eval_symbol_scope(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_symbol_scope(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   frame.scope[cast[ExSymbol](expr).name]
 
-proc eval_symbol_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_symbol_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   frame.ns[cast[ExSymbol](expr).name]
 
-proc eval_symbol(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_symbol(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = frame.scope[cast[ExSymbol](expr).name]
   if result == nil:
     expr.evaluator = eval_symbol_ns
@@ -46,7 +46,7 @@ proc translate_symbol(value: Value): Expr =
       name: value.symbol.to_key,
     )
 
-proc eval_complex_symbol(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_complex_symbol(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var ns: Namespace
   var first = cast[ExComplexSymbol](expr).first
   case first:
@@ -71,11 +71,11 @@ proc translate_complex_symbol(value: Value): Expr =
     r.rest.add(item.to_key())
   result = r
 
-proc eval_var(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var value = self.eval(frame, cast[ExVar](expr).value)
   frame.scope.def_member(cast[ExVar](expr).name, value)
 
-proc eval_var_complex(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_var_complex(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExVarComplex](expr)
   var ns: Namespace
   case e.first:

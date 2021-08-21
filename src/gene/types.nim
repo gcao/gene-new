@@ -16,7 +16,7 @@ type
   NameIndexScope* = distinct int
 
   Translator* = proc(value: Value): Expr
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
+  Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
   Invoker* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
 
   GeneProcessor* = ref object of RootObj

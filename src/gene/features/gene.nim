@@ -85,11 +85,11 @@ proc invoker(`type`: Value): Invoker =
   else:
     return default_invoker
 
-proc eval_gene(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_gene(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var `type` = self.eval(frame, cast[ExGene](expr).`type`)
   `type`.invoker()(self, frame, `type`, expr)
 
-proc eval_gene_init(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_gene_init(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExGene](expr)
   var `type` = self.eval(frame, e.`type`)
   case `type`.kind:

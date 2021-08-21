@@ -10,7 +10,7 @@ type
   ExFn* = ref object of Expr
     data*: Function
 
-proc eval_fn(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = Value(
     kind: VkFunction,
     fn: cast[ExFn](expr).data,

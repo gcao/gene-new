@@ -27,7 +27,7 @@ type
     op1*: Expr
     op2*: Expr
 
-proc eval_bin(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var first = self.eval(frame, cast[ExBinOp](expr).op1)
   var second = self.eval(frame, cast[ExBinOp](expr).op2)
   case cast[ExBinOp](expr).op:

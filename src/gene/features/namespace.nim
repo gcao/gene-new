@@ -12,7 +12,7 @@ type
     name*: string
     body*: Expr
 
-proc eval_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExNamespace](expr)
   var ns = new_namespace(e.name)
   ns.parent = frame.ns

@@ -5,10 +5,10 @@ import ./types
 
 #################### Expr ########################
 
-proc eval_todo*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_todo*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   todo()
 
-proc eval_never*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_never*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   raise new_exception(types.Exception, "eval_never should never be called.")
 
 #################### ExLiteral ###################
@@ -17,7 +17,7 @@ type
   ExLiteral* = ref object of Expr
     data*: Value
 
-proc eval_literal(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_literal(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   cast[ExLiteral](expr).data
 
 proc new_ex_literal*(v: Value): ExLiteral =
@@ -32,9 +32,9 @@ type
   ExGroup* = ref object of Expr
     data*: seq[Expr]
 
-proc eval_group*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_group*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   for item in cast[ExGroup](expr).data.mitems:
-    result = item.evaluator(self, frame, item)
+    result = item.evaluator(self, frame, nil, item)
 
 proc new_ex_group*(): ExGroup =
   result = ExGroup(
@@ -46,7 +46,7 @@ proc new_ex_group*(): ExGroup =
 type
   ExSelf* = ref object of Expr
 
-proc eval_self(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_self(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   frame.self
 
 proc new_ex_self*(): ExSelf =
@@ -61,9 +61,9 @@ type
     name*: MapKey
     value*: Expr
 
-proc eval_ns_def(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_ns_def(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExNsDef](expr)
-  result = e.value.evaluator(self, frame, e.value)
+  result = e.value.evaluator(self, frame, nil, e.value)
   frame.ns[e.name] = result
 
 proc new_ex_ns_def*(): ExNsDef =
@@ -86,7 +86,7 @@ type
     props*: Table[MapKey, Expr]
     data*: seq[Expr]
 
-proc eval_args(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_args(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   todo()
 
 proc new_ex_arg*(): ExArguments =
@@ -99,7 +99,7 @@ proc new_ex_arg*(): ExArguments =
 type
   ExBreak* = ref object of Expr
 
-proc eval_break*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_break*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e: Break
   e.new
   raise e
@@ -126,7 +126,7 @@ type
   ExNames* = ref object of Expr
     names*: seq[MapKey]
 
-proc eval_names*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_names*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExNames](expr)
   result = frame.scope[e.names[0]]
   if result == nil:

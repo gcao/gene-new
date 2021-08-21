@@ -10,14 +10,14 @@ type
     cond*: Expr
     body: seq[Expr]
 
-proc eval_while(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_while(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   while true:
     var cond = self.eval(frame, cast[ExWhile](expr).cond)
     if not cond.bool:
       break
     try:
       for item in cast[ExWhile](expr).body.mitems:
-        result = item.evaluator(self, frame, item)
+        result = item.evaluator(self, frame, nil, item)
     except Continue:
       discard
     except Break as b:
@@ -34,7 +34,7 @@ proc translate_while(value: Value): Expr =
   result = r
 
 proc invoke_while(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_while(frame, cast[ExGene](expr).args_expr)
+  self.eval_while(frame, nil, cast[ExGene](expr).args_expr)
 
 let WHILE_PROCESSOR* = Value(
   kind: VkGeneProcessor,

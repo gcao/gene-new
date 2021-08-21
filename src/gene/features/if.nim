@@ -114,7 +114,7 @@ proc normalize_if(self: Value) =
 
     self.gene_data.reset  # Clear our gene_data as it's not needed any more
 
-proc eval_if(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExIf](expr)
   var v = self.eval(frame, expr.cond)
   if v:

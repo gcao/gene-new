@@ -9,7 +9,7 @@ type
   ExParse* = ref object of Expr
     data*: Expr
 
-proc eval_parse(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var s = self.eval(frame, cast[ExParse](expr).data).str
   var vals = read_all(s)
   if vals.len == 0:

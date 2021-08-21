@@ -8,7 +8,7 @@ type
   ExArray* = ref object of Expr
     data*: seq[Expr]
 
-proc eval_array(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_array(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = new_gene_vec()
   for e in cast[ExArray](expr).data.mitems:
     result.vec.add(self.eval(frame, e))

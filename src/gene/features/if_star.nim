@@ -113,7 +113,7 @@ proc normalize_if_star(self: Value) =
 
   self.gene_data.reset  # Clear our gene_data as it's not needed any more
 
-proc eval_if(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExIf](expr)
   var v = self.eval(frame, expr.cond)
   if v:
@@ -145,7 +145,7 @@ proc translate_if(value: Value): Expr =
   result = r
 
 proc invoke_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_if(frame, cast[ExGene](expr).args_expr)
+  self.eval_if(frame, nil, cast[ExGene](expr).args_expr)
 
 let IF_PROCESSOR* = Value(
   kind: VkGeneProcessor,

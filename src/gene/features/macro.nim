@@ -10,7 +10,7 @@ type
   ExMacro* = ref object of Expr
     data*: Macro
 
-proc eval_macro(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_macro(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = Value(
     kind: VkMacro,
     `macro`: cast[ExMacro](expr).data,

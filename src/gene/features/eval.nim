@@ -8,7 +8,7 @@ type
   ExEval* = ref object of Expr
     data*: seq[Expr]
 
-proc eval_eval(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_eval(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   for e in cast[ExEval](expr).data.mitems:
     var v = self.eval(frame, e)
     var e2 = translate(v)

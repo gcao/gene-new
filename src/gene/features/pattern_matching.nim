@@ -30,7 +30,7 @@ proc match*(self: VirtualMachine, frame: Frame, pattern: Value, val: Value, mode
   else:
     todo()
 
-proc eval_match(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
   result = self.match(frame, expr.pattern, self.eval(frame, expr.value), MatchDefault)
 
@@ -43,7 +43,7 @@ proc translate_match(value: Value): Expr =
   result = r
 
 proc invoke_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_match(frame, cast[ExGene](expr).args_expr)
+  self.eval_match(frame, nil, cast[ExGene](expr).args_expr)
 
 let MATCH_PROCESSOR* = Value(
   kind: VkGeneProcessor,

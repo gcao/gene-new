@@ -48,7 +48,7 @@ proc prepare*(self: VirtualMachine, code: string): Value =
     new_gene_stream(parsed)
 
 proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.inline.} =
-  expr.evaluator(self, frame, expr)
+  expr.evaluator(self, frame, nil, expr)
 
 proc eval*(self: VirtualMachine, code: string): Value =
   var module = new_module()

@@ -14,7 +14,7 @@ type
     data: Expr
     body: seq[Expr]
 
-proc eval_for(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   todo()
 
 proc translate_for(value: Value): Expr =
@@ -25,7 +25,7 @@ proc translate_for(value: Value): Expr =
   result = r
 
 proc invoke_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_for(frame, cast[ExGene](expr).args_expr)
+  self.eval_for(frame, target, cast[ExGene](expr).args_expr)
 
 let FOR_PROCESSOR* = Value(
   kind: VkGeneProcessor,
