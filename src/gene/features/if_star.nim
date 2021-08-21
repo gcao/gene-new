@@ -129,7 +129,7 @@ proc translate_if(value: Value): Expr =
   var value = value
   normalize_if_star(value)
   var r = ExIf(
-    evaluator: eval_never,
+    evaluator: eval_if,
   )
   r.cond = translate(value.gene_props[COND_KEY])
   r.then = translate(value.gene_props[THEN_KEY])
@@ -145,7 +145,8 @@ proc translate_if(value: Value): Expr =
   result = r
 
 proc invoke_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  self.eval_if(frame, nil, cast[ExGene](expr).args_expr)
+  # self.eval_if(frame, nil, cast[ExGene](expr).args_expr)
+  todo()
 
 let IF_PROCESSOR* = Value(
   kind: VkGeneProcessor,
