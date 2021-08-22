@@ -29,9 +29,6 @@ proc block_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var
   else:
     todo()
 
-  if target.block.body_compiled == nil:
-    target.block.body_compiled = translate(target.block.body)
-
   try:
     result = self.eval(new_frame, target.block.body_compiled)
   except Return as r:
@@ -48,6 +45,10 @@ proc eval_block(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     kind: VkBlock,
     `block`: cast[ExBlock](expr).data,
   )
+  result.block.frame = frame
+  result.block.ns = frame.ns
+  result.block.parent_scope = frame.scope
+  result.block.parent_scope_max = frame.scope.max
 
 proc arg_translator(value: Value): Expr =
   var expr = new_ex_literal(value)
@@ -56,17 +57,14 @@ proc arg_translator(value: Value): Expr =
 
 proc to_block(node: Value): Block =
   var matcher = new_arg_matcher()
-  var body: seq[Value] = @[]
+  var body: seq[Value] = node.gene_data
 
   if node.gene_props.has_key(ARGS_KEY):
     matcher.parse(node.gene_props[ARGS_KEY])
 
-  if node.gene_data.len > 1:
-    for i in 1..<node.gene_data.len:
-        body.add node.gene_data[i]
-
   # body = wrap_with_try(body)
   result = new_block(matcher, body)
+  result.body_compiled = translate(body)
   result.translator = arg_translator
 
 proc translate_block(value: Value): Expr =

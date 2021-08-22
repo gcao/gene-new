@@ -116,6 +116,7 @@ type
 
   Block* = ref object of GeneProcessor
     frame*: Frame
+    ns*: Namespace
     parent_scope*: Scope
     parent_scope_max*: NameIndexScope
     matcher*: RootMatcher

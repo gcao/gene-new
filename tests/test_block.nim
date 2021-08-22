@@ -37,21 +37,21 @@ test_interpreter """
 """, proc(r: Value) =
   check r.kind == VkBlock
 
-# test_interpreter """
-#   (var b (-> 1))
-#   (b)
-# """, 1
+test_interpreter """
+  (var b (-> 1))
+  (b)
+""", 1
 
-# test_interpreter """
-#   (var b (a -> a))
-#   (b 1)
-# """, 1
+test_interpreter """
+  (var b (a -> a))
+  (b 1)
+""", 1
 
-# test_interpreter """
-#   (var a 1)
-#   (var b (-> a))
-#   (b)
-# """, 1
+test_interpreter """
+  (var a 1)
+  (var b (-> a))
+  (b)
+""", 1
 
 # test_interpreter """
 #   (fn f b
