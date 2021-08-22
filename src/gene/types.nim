@@ -122,9 +122,13 @@ type
 
   Macro* = ref object of GeneProcessor
     ns*: Namespace
+    parent_scope*: Scope
+    parent_scope_max*: NameIndexScope
     name*: string
     matcher*: RootMatcher
+    matching_hint*: MatchingHint
     body*: seq[Value]
+    body_compiled*: Expr
 
   Enum* = ref object
     name*: string
@@ -768,6 +772,7 @@ proc new_macro*(name: string, matcher: RootMatcher, body: seq[Value]): Macro =
   return Macro(
     name: name,
     matcher: matcher,
+    matching_hint: matcher.hint,
     body: body,
   )
 

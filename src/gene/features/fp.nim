@@ -30,7 +30,6 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
   fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
   var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
   new_frame.parent = frame
-  new_frame.self = target
 
   var expr = cast[ExArguments](expr)
   case target.fn.matching_hint.mode:

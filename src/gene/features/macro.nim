@@ -4,11 +4,44 @@ import ../map_key
 import ../types
 import ../exprs
 import ../translators
-# import ../interpreter
+import ../interpreter
 
 type
   ExMacro* = ref object of Expr
     data*: Macro
+
+proc macro_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var scope = new_scope()
+  scope.set_parent(target.macro.parent_scope, target.macro.parent_scope_max)
+  var new_frame = Frame(ns: target.macro.ns, scope: scope)
+  new_frame.parent = frame
+
+  var args = cast[ExLiteral](expr).data
+  case target.macro.matching_hint.mode:
+  of MhSimpleData:
+    for _, v in args.gene_props.mpairs:
+      todo()
+    for i, v in args.gene_data.mpairs:
+      let field = target.macro.matcher.children[i]
+      new_frame.scope.def_member(field.name, v)
+  of MhNone:
+    discard
+  else:
+    todo()
+
+  if target.macro.body_compiled == nil:
+    target.macro.body_compiled = translate(target.macro.body)
+
+  try:
+    result = self.eval(new_frame, target.macro.body_compiled)
+  except Return as r:
+    result = r.val
+  # except CatchableError as e:
+  #   if self.repl_on_error:
+  #     result = repl_on_error(self, frame, e)
+  #     discard
+  #   else:
+  #     raise
 
 proc eval_macro(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = Value(
@@ -16,6 +49,11 @@ proc eval_macro(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     `macro`: cast[ExMacro](expr).data,
   )
   result.macro.ns = frame.ns
+
+proc arg_translator(value: Value): Expr =
+  var expr = new_ex_literal(value)
+  expr.evaluator = macro_invoker
+  result = expr
 
 proc to_macro(node: Value): Macro =
   var first = node.gene_data[0]
@@ -34,6 +72,7 @@ proc to_macro(node: Value): Macro =
 
   body = wrap_with_try(body)
   result = new_macro(name, matcher, body)
+  result.translator = arg_translator
 
 proc translate_macro(value: Value): Expr =
   var mac = to_macro(value)

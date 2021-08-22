@@ -7,6 +7,14 @@ import ../normalizers
 import ../translators
 import ../interpreter
 
+proc arg_translator*(value: Value): Expr =
+  var e = new_ex_arg()
+  for k, v in value.gene_props:
+    e.props[k] = translate(v)
+  for v in value.gene_data:
+    e.data.add(translate(v))
+  return e
+
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = new_gene_gene(target)
   var expr = cast[ExArguments](expr)
