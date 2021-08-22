@@ -29,49 +29,49 @@ import ./helpers
 
 test_interpreter """
   (->)
-""", proc(r: GeneValue) =
-  check r.internal.kind == GeneBlock
+""", proc(r: Value) =
+  check r.kind == VkBlock
 
 test_interpreter """
   (a -> a)
-""", proc(r: GeneValue) =
-  check r.internal.kind == GeneBlock
+""", proc(r: Value) =
+  check r.kind == VkBlock
 
-test_interpreter """
-  (var b (-> 1))
-  (b)
-""", 1
+# test_interpreter """
+#   (var b (-> 1))
+#   (b)
+# """, 1
 
-test_interpreter """
-  (var b (a -> a))
-  (b 1)
-""", 1
+# test_interpreter """
+#   (var b (a -> a))
+#   (b 1)
+# """, 1
 
-test_interpreter """
-  (var a 1)
-  (var b (-> a))
-  (b)
-""", 1
+# test_interpreter """
+#   (var a 1)
+#   (var b (-> a))
+#   (b)
+# """, 1
 
-test_interpreter """
-  (fn f b
-    (b 1)
-    0
-  )
-  (fn g _
-    (f (a -> (return a)))
-  )
-  (g)
-""", 1
+# test_interpreter """
+#   (fn f b
+#     (b 1)
+#     0
+#   )
+#   (fn g _
+#     (f (a -> (return a)))
+#   )
+#   (g)
+# """, 1
 
-test_interpreter """
-  (fn f b
-    (b 1)
-    0
-  )
-  (fn g _
-    (f (a -> (return $args)))  # $args is what is passed to the containing function ?
-  )
-  (g 2)
-""", proc(r: GeneValue) =
-  check r.gene.data == @[new_gene_int(2)]
+# test_interpreter """
+#   (fn f b
+#     (b 1)
+#     0
+#   )
+#   (fn g _
+#     (f (a -> (return $args)))  # $args is what is passed to the containing function ?
+#   )
+#   (g 2)
+# """, proc(r: Value) =
+#   check r.gene.data == @[new_gene_int(2)]

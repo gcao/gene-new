@@ -116,9 +116,12 @@ type
 
   Block* = ref object of GeneProcessor
     frame*: Frame
+    parent_scope*: Scope
     parent_scope_max*: NameIndexScope
     matcher*: RootMatcher
+    matching_hint*: MatchingHint
     body*: seq[Value]
+    body_compiled*: Expr
 
   Macro* = ref object of GeneProcessor
     ns*: Namespace
@@ -270,6 +273,8 @@ type
       fn*: Function
     of VkMacro:
       `macro`*: Macro
+    of VkBlock:
+      `block`*: Block
     of VkClass:
       class*: Class
     of VkMethod:
@@ -779,7 +784,11 @@ proc new_macro*(name: string, matcher: RootMatcher, body: seq[Value]): Macro =
 #################### Block #######################
 
 proc new_block*(matcher: RootMatcher,  body: seq[Value]): Block =
-  return Block(matcher: matcher, body: body)
+  return Block(
+    matcher: matcher,
+    matching_hint: matcher.hint,
+    body: body,
+  )
 
 #################### Return ######################
 
@@ -1501,7 +1510,7 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
     todo()
 
 proc parse*(self: var RootMatcher, v: Value) =
-  if v == new_gene_symbol("_"):
+  if v == nil or v == new_gene_symbol("_"):
     return
   self.parse(self.children, v)
   self.calc_min_left

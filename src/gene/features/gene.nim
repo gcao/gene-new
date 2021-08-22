@@ -40,6 +40,8 @@ proc eval_gene_init(self: VirtualMachine, frame: Frame, target: Value, expr: var
     translator = `type`.fn.translator
   of VkMacro:
     translator = `type`.macro.translator
+  of VkBlock:
+    translator = `type`.block.translator
   of VkGeneProcessor:
     translator = `type`.gene_processor.translator
   else:
@@ -61,16 +63,19 @@ proc default_translator(value: Value): Expr =
     args: value,
   )
 
+proc translate_gene(value: Value): Expr =
+  value.normalize()
+
+  case value.gene_type.kind:
+  of VkSymbol:
+    var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
+    return translator(value)
+  else:
+    return ExGene(
+      evaluator: eval_gene_init,
+      `type`: translate(value.gene_type),
+      args: value,
+    )
+
 proc init*() =
-  Translators[VkGene] = proc(value: Value): Expr =
-    value.normalize()
-    case value.gene_type.kind:
-    of VkSymbol:
-      var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
-      return translator(value)
-    else:
-      return ExGene(
-        evaluator: eval_gene_init,
-        `type`: translate(value.gene_type),
-        args: value,
-      )
+  Translators[VkGene] = translate_gene
