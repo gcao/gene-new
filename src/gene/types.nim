@@ -1425,8 +1425,8 @@ proc new_matcher(root: RootMatcher, kind: MatcherKind): Matcher =
 proc hint*(self: RootMatcher): MatchingHint =
   if self.children.len == 0:
     result.mode = MhNone
-  else:
-    result.mode = MhSimpleData
+  # else:
+  #   result.mode = MhSimpleData
 
 proc new_matched_field(name: MapKey, value: Value): MatchedField =
   result = MatchedField(

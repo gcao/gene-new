@@ -18,16 +18,20 @@ proc macro_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var
 
   var args = cast[ExLiteral](expr).data
   case target.macro.matching_hint.mode:
+  of MhNone:
+    discard
   of MhSimpleData:
     for _, v in args.gene_props.mpairs:
       todo()
     for i, v in args.gene_data.mpairs:
       let field = target.macro.matcher.children[i]
       new_frame.scope.def_member(field.name, v)
-  of MhNone:
-    discard
   else:
-    todo()
+    for _, v in args.gene_props.mpairs:
+      todo()
+    for i, v in args.gene_data.mpairs:
+      let field = target.macro.matcher.children[i]
+      new_frame.scope.def_member(field.name, v)
 
   if target.macro.body_compiled == nil:
     target.macro.body_compiled = translate(target.macro.body)

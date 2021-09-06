@@ -10,20 +10,20 @@ type
   ExFn* = ref object of Expr
     data*: Function
 
-# proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
-#   var match_result = matcher.match(args)
-#   case match_result.kind:
-#   of MatchSuccess:
-#     for field in match_result.fields:
-#       if field.value_expr != nil:
-#         frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
-#       else:
-#         frame.scope.def_member(field.name, field.value)
-#   of MatchMissingFields:
-#     for field in match_result.missing:
-#       not_allowed("Argument " & field.to_s & " is missing.")
-#   else:
-#     todo()
+proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
+  var match_result = matcher.match(args)
+  case match_result.kind:
+  of MatchSuccess:
+    for field in match_result.fields:
+      if field.value_expr != nil:
+        frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
+      else:
+        frame.scope.def_member(field.name, field.value)
+  of MatchMissingFields:
+    for field in match_result.missing:
+      not_allowed("Argument " & field.to_s & " is missing.")
+  else:
+    todo()
 
 proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var fn_scope = new_scope()
@@ -31,23 +31,27 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
   var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
   new_frame.parent = frame
 
-  var expr = cast[ExArguments](expr)
+  var args_expr = cast[ExArguments](expr)
   case target.fn.matching_hint.mode:
-  of MhSimpleData:
-    for _, v in expr.props.mpairs:
-      discard self.eval(frame, v)
-    for i, v in expr.data.mpairs:
-      let field = target.fn.matcher.children[i]
-      new_frame.scope.def_member(field.name, self.eval(frame, v))
   of MhNone:
-    for _, v in expr.props.mpairs:
+    for _, v in args_expr.props.mpairs:
       discard self.eval(frame, v)
-    for i, v in expr.data.mpairs:
+    for i, v in args_expr.data.mpairs:
       # var field = target.fn.matcher.children[i]
       discard self.eval(frame, v)
+  of MhSimpleData:
+    for _, v in args_expr.props.mpairs:
+      discard self.eval(frame, v)
+    for i, v in args_expr.data.mpairs:
+      let field = target.fn.matcher.children[i]
+      new_frame.scope.def_member(field.name, self.eval(frame, v))
   else:
-    todo()
-    # self.process_args(new_frame, fn.matcher, self.eval(frame, args))
+    var args = new_gene_gene()
+    for k, v in args_expr.props.mpairs:
+      args.gene_props[k] = self.eval(frame, v)
+    for _, v in args_expr.data.mpairs:
+      args.gene_data.add self.eval(frame, v)
+    self.process_args(new_frame, target.fn.matcher, args)
 
   if target.fn.body_compiled == nil:
     target.fn.body_compiled = translate(target.fn.body)
