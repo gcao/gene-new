@@ -11,7 +11,7 @@ type
     data*: Function
 
 proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
-  var match_result = matcher.match(args)
+  var match_result = self.match(frame, matcher, args)
   case match_result.kind:
   of MatchSuccess:
     for field in match_result.fields:

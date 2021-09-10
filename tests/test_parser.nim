@@ -93,8 +93,8 @@ test_parser "(1 2 3)", proc(r: Value) =
 test_parser """
   (_ 1 "test")
 """, proc(r: Value) =
-  check r[0] == 1
-  check r[1] == "test"
+  check r.gene_data[0] == 1
+  check r.gene_data[1] == "test"
 
 test_parser "(1 ^a 2 3 4)", proc(r: Value) =
   check r.gene_type == 1

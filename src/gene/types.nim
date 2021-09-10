@@ -376,7 +376,7 @@ type
     kind*: MatcherKind
     name*: MapKey
     # match_name*: bool # Match symbol to name - useful for (myif true then ... else ...)
-    default_value*: Value
+    # default_value*: Value
     default_value_expr*: Expr
     splat*: bool
     min_left*: int # Minimum number of args following this
@@ -458,7 +458,6 @@ proc new_namespace*(parent: Namespace): Namespace
 proc new_match_matcher*(): RootMatcher
 proc new_arg_matcher*(): RootMatcher
 proc hint*(self: RootMatcher): MatchingHint
-proc parse*(self: var RootMatcher, v: Value)
 
 ##################################################
 
@@ -1354,35 +1353,6 @@ proc wrap_with_try*(body: seq[Value]): seq[Value] =
   else:
     return body
 
-converter to_macro*(node: Value): Macro =
-  var first = node.gene_data[0]
-  var name: string
-  if first.kind == VkSymbol:
-    name = first.symbol
-  elif first.kind == VkComplexSymbol:
-    name = first.csymbol.rest[^1]
-
-  var matcher = new_arg_matcher()
-  matcher.parse(node.gene_data[1])
-
-  var body: seq[Value] = @[]
-  for i in 2..<node.gene_data.len:
-    body.add node.gene_data[i]
-
-  body = wrap_with_try(body)
-  return new_macro(name, matcher, body)
-
-converter to_block*(node: Value): Block =
-  var matcher = new_arg_matcher()
-  if node.gene_props.has_key(ARGS_KEY):
-    matcher.parse(node.gene_props[ARGS_KEY])
-  var body: seq[Value] = @[]
-  for i in 0..<node.gene_data.len:
-    body.add node.gene_data[i]
-
-  body = wrap_with_try(body)
-  return new_block(matcher, body)
-
 converter json_to_gene*(node: JsonNode): Value =
   case node.kind:
   of JNull:
@@ -1416,7 +1386,7 @@ proc new_arg_matcher*(): RootMatcher =
     mode: MatchArgParsing,
   )
 
-proc new_matcher(root: RootMatcher, kind: MatcherKind): Matcher =
+proc new_matcher*(root: RootMatcher, kind: MatcherKind): Matcher =
   result = Matcher(
     root: root,
     kind: kind,
@@ -1428,191 +1398,21 @@ proc hint*(self: RootMatcher): MatchingHint =
   # else:
   #   result.mode = MhSimpleData
 
-proc new_matched_field(name: MapKey, value: Value): MatchedField =
+proc new_matched_field*(name: MapKey, value: Value): MatchedField =
   result = MatchedField(
     name: name,
     value: value,
   )
 
-proc required(self: Matcher): bool =
-  return self.default_value == nil and not self.splat
+proc required*(self: Matcher): bool =
+  return self.default_value_expr == nil and not self.splat
 
-proc props(self: seq[Matcher]): HashSet[MapKey] =
+proc props*(self: seq[Matcher]): HashSet[MapKey] =
   for m in self:
     if m.kind == MatchProp and not m.splat:
       result.incl(m.name)
 
-proc prop_splat(self: seq[Matcher]): MapKey =
+proc prop_splat*(self: seq[Matcher]): MapKey =
   for m in self:
     if m.kind == MatchProp and m.splat:
       return m.name
-
-#################### Parsing #####################
-
-proc calc_min_left*(self: var Matcher) =
-  var min_left = 0
-  var i = self.children.len
-  while i > 0:
-    i -= 1
-    var m = self.children[i]
-    m.min_left = min_left
-    if m.required:
-      min_left += 1
-
-proc calc_min_left*(self: var RootMatcher) =
-  var min_left = 0
-  var i = self.children.len
-  while i > 0:
-    i -= 1
-    var m = self.children[i]
-    m.calc_min_left
-    m.min_left = min_left
-    if m.required:
-      min_left += 1
-
-proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
-  case v.kind:
-  of VkSymbol:
-    if v.symbol[0] == '^':
-      var m = new_matcher(self, MatchProp)
-      if v.symbol.ends_with("..."):
-        m.name = v.symbol[1..^4].to_key
-        m.splat = true
-      else:
-        m.name = v.symbol[1..^1].to_key
-      group.add(m)
-    else:
-      var m = new_matcher(self, MatchData)
-      group.add(m)
-      if v.symbol != "_":
-        if v.symbol.endsWith("..."):
-          m.name = v.symbol[0..^4].to_key
-          m.splat = true
-        else:
-          m.name = v.symbol.to_key
-  of VkVector:
-    var i = 0
-    while i < v.vec.len:
-      var item = v.vec[i]
-      i += 1
-      if item.kind == VkVector:
-        var m = new_matcher(self, MatchData)
-        group.add(m)
-        self.parse(m.children, item)
-      else:
-        self.parse(group, item)
-        if i < v.vec.len and v.vec[i] == new_gene_symbol("="):
-          i += 1
-          var last_matcher = group[^1]
-          var value = v.vec[i]
-          i += 1
-          last_matcher.default_value = value
-  else:
-    todo()
-
-proc parse*(self: var RootMatcher, v: Value) =
-  if v == nil or v == new_gene_symbol("_"):
-    return
-  self.parse(self.children, v)
-  self.calc_min_left
-
-#################### Matching ####################
-
-proc `[]`*(self: Value, i: int): Value =
-  case self.kind:
-  of VkGene:
-    return self.gene_data[i]
-  of VkVector:
-    return self.vec[i]
-  else:
-    not_allowed()
-
-proc `len`(self: Value): int =
-  if self == nil:
-    return 0
-  case self.kind:
-  of VkGene:
-    return self.gene_data.len
-  of VkVector:
-    return self.vec.len
-  else:
-    not_allowed()
-
-proc match_prop_splat*(self: seq[Matcher], input: Value, r: MatchResult) =
-  if input == nil or self.prop_splat == EMPTY_STRING_KEY:
-    return
-
-  var map: OrderedTable[MapKey, Value]
-  case input.kind:
-  of VkMap:
-    map = input.map
-  of VkGene:
-    map = input.gene_props
-  else:
-    return
-
-  var splat = OrderedTable[MapKey, Value]()
-  for k, v in map:
-    if k notin self.props:
-      splat[k] = v
-  r.fields.add(new_matched_field(self.prop_splat, new_gene_map(splat)))
-
-proc match(self: Matcher, input: Value, state: MatchState, r: MatchResult) =
-  case self.kind:
-  of MatchData:
-    var value: Value
-    var value_expr: Expr
-    if self.splat:
-      value = new_gene_vec()
-      for i in state.data_index..<input.len - self.min_left:
-        value.vec.add(input[i])
-        state.data_index += 1
-    elif self.min_left < input.len - state.data_index:
-      value = input[state.data_index]
-      state.data_index += 1
-    else:
-      if self.default_value == nil:
-        r.kind = MatchMissingFields
-        r.missing.add(self.name)
-        return
-      elif self.default_value_expr != nil:
-        value_expr = self.default_value_expr
-      else:
-        value = self.default_value # Default value
-    if self.name != EMPTY_STRING_KEY:
-      var matched_field = new_matched_field(self.name, value)
-      matched_field.value_expr = value_expr
-      r.fields.add(matched_field)
-    var child_state = MatchState()
-    for child in self.children:
-      child.match(value, child_state, r)
-    match_prop_splat(self.children, value, r)
-  of MatchProp:
-    var value: Value
-    var value_expr: Expr
-    if self.splat:
-      return
-    elif input.gene_props.has_key(self.name):
-      value = input.gene_props[self.name]
-    else:
-      if self.default_value == nil:
-        r.kind = MatchMissingFields
-        r.missing.add(self.name)
-        return
-      elif self.default_value_expr != nil:
-        value_expr = self.default_value_expr
-      else:
-        value = self.default_value # Default value
-    var matched_field = new_matched_field(self.name, value)
-    matched_field.value_expr = value_expr
-    r.fields.add(matched_field)
-  else:
-    todo()
-
-proc match*(self: RootMatcher, input: Value): MatchResult =
-  result = MatchResult()
-  var children = self.children
-  var state = MatchState()
-  for child in children:
-    child.match(input, state, result)
-  match_prop_splat(children, input, result)
