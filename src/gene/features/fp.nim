@@ -14,11 +14,11 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
   var match_result = self.match(frame, matcher, args)
   case match_result.kind:
   of MatchSuccess:
-    for field in match_result.fields:
-      if field.value_expr != nil:
-        frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
-      else:
-        frame.scope.def_member(field.name, field.value)
+    discard
+    # for field in match_result.fields:
+    #   if field.value_expr != nil:
+    #     frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
+    #     frame.scope.def_member(field.name, field.value)
   of MatchMissingFields:
     for field in match_result.missing:
       not_allowed("Argument " & field.to_s & " is missing.")

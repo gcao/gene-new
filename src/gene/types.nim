@@ -388,16 +388,16 @@ type
     MatchMissingFields
     MatchWrongType # E.g. map is passed but array or gene is expected
 
-  MatchedField* = ref object
-    name*: MapKey
-    value*: Value # Either value_expr or value must be given
-    value_expr*: Expr
+  # MatchedField* = ref object
+  #   name*: MapKey
+  #   value*: Value # Either value_expr or value must be given
+  #   value_expr*: Expr
 
   MatchResult* = ref object
     message*: string
     kind*: MatchResultKind
     # If success
-    fields*: seq[MatchedField]
+    # fields*: seq[MatchedField]
     assign_only*: bool # If true, no new variables will be defined
     # If missing fields
     missing*: seq[MapKey]
@@ -1398,11 +1398,11 @@ proc hint*(self: RootMatcher): MatchingHint =
   # else:
   #   result.mode = MhSimpleData
 
-proc new_matched_field*(name: MapKey, value: Value): MatchedField =
-  result = MatchedField(
-    name: name,
-    value: value,
-  )
+# proc new_matched_field*(name: MapKey, value: Value): MatchedField =
+#   result = MatchedField(
+#     name: name,
+#     value: value,
+#   )
 
 proc required*(self: Matcher): bool =
   return self.default_value_expr == nil and not self.splat

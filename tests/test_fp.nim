@@ -65,25 +65,25 @@ test_interpreter """
   (f)
 """, 1
 
-# test_interpreter """
-#   (fn f [a = 1] a)
-#   (f 2)
-# """, 2
+test_interpreter """
+  (fn f [a = 1] a)
+  (f 2)
+""", 2
 
-# test_interpreter """
-#   (fn f [a b = a] b)
-#   (f 1)
-# """, 1
+test_interpreter """
+  (fn f [a b = a] b)
+  (f 1)
+""", 1
 
-# test_interpreter """
-#   (fn f [a b = a] b)
-#   (f 1 2)
-# """, 2
+test_interpreter """
+  (fn f [a b = a] b)
+  (f 1 2)
+""", 2
 
-# test_interpreter """
-#   (fn f [a b = (a + 1)] b)
-#   (f 1)
-# """, 2
+test_interpreter """
+  (fn f [a b = (a + 1)] b)
+  (f 1)
+""", 2
 
 # test_interpreter """
 #   (fn f _

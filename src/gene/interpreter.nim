@@ -151,7 +151,7 @@ proc `len`(self: Value): int =
   else:
     not_allowed()
 
-proc match_prop_splat*(self: seq[Matcher], input: Value, r: MatchResult) =
+proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], input: Value, r: MatchResult) =
   if input == nil or self.prop_splat == EMPTY_STRING_KEY:
     return
 
@@ -168,13 +168,14 @@ proc match_prop_splat*(self: seq[Matcher], input: Value, r: MatchResult) =
   for k, v in map:
     if k notin self.props:
       splat[k] = v
-  r.fields.add(new_matched_field(self.prop_splat, new_gene_map(splat)))
+  # r.fields.add(new_matched_field(self.prop_splat, new_gene_map(splat)))
+  frame.scope.def_member(self.prop_splat, new_gene_map(splat))
 
 proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state: MatchState, r: MatchResult) =
   case self.kind:
   of MatchData:
     var value: Value
-    var value_expr: Expr
+    # var value_expr: Expr
     if self.splat:
       value = new_gene_vec()
       for i in state.data_index..<input.len - self.min_left:
@@ -191,16 +192,17 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         r.missing.add(self.name)
         return
     if self.name != EMPTY_STRING_KEY:
-      var matched_field = new_matched_field(self.name, value)
-      matched_field.value_expr = value_expr
-      r.fields.add(matched_field)
+      frame.scope.def_member(self.name, value)
+      # var matched_field = new_matched_field(self.name, value)
+      # matched_field.value_expr = value_expr
+      # r.fields.add(matched_field)
     var child_state = MatchState()
     for child in self.children:
       vm.match(frame, child, value, child_state, r)
-    match_prop_splat(self.children, value, r)
+    vm.match_prop_splat(frame, self.children, value, r)
   of MatchProp:
     var value: Value
-    var value_expr: Expr
+    # var value_expr: Expr
     if self.splat:
       return
     elif input.gene_props.has_key(self.name):
@@ -212,9 +214,10 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         r.kind = MatchMissingFields
         r.missing.add(self.name)
         return
-    var matched_field = new_matched_field(self.name, value)
-    matched_field.value_expr = value_expr
-    r.fields.add(matched_field)
+    frame.scope.def_member(self.name, value)
+    # var matched_field = new_matched_field(self.name, value)
+    # matched_field.value_expr = value_expr
+    # r.fields.add(matched_field)
   else:
     todo()
 
@@ -224,7 +227,7 @@ proc match*(vm: VirtualMachine, frame: Frame, self: RootMatcher, input: Value): 
   var state = MatchState()
   for child in children:
     vm.match(frame, child, input, state, result)
-  match_prop_splat(children, input, result)
+  vm.match_prop_splat(frame, children, input, result)
 
 # macro import_folder(s: string): untyped =
 #   let s = staticExec "find " & s.toStrLit.strVal & " -name '*.nim' -maxdepth 1"
