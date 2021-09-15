@@ -104,19 +104,19 @@ test_interpreter """
   (fib 6)
 """, 8
 
-# test_interpreter """
-#   (fn f _
-#     (fn g a a)
-#   )
-#   ((f) 1)
-# """, 1
+test_interpreter """
+  (fn f _
+    (fn g a a)
+  )
+  ((f) 1)
+""", 1
 
-# test_interpreter """
-#   (fn f a
-#     (fn g _ a)
-#   )
-#   ((f 1))
-# """, 1
+test_interpreter """
+  (fn f a
+    (fn g _ a)
+  )
+  ((f 1))
+""", 1
 
 # test_interpreter """
 #   (fn f _
@@ -196,10 +196,36 @@ test_interpreter """
 #   (f)           # second f
 # """, 2
 
+test_interpreter """
+  (fn f [^a] a)
+  (f ^a 1)
+""", 1
+
+# Should throw MissingArgumentError
 # test_interpreter """
 #   (fn f [^a] a)
-#   (f ^a 1)
-# """, 1
+#   (f)
+# """
+
+# test_interpreter """
+#   (fn f [^?a] a) # ^?a, optional named argument, default to Nil
+#   (f)
+# """, Nil
+
+test_interpreter """
+  (fn f [^a = 1] a)
+  (f)
+""", 1
+
+test_interpreter """
+  (fn f [^a = 1] a)
+  (f ^a 2)
+""", 2
+
+test_interpreter """
+  (fn f [^a = 1 b] b)
+  (f 2)
+""", 2
 
 # test_interpreter """
 #   (fn f _ 1)
