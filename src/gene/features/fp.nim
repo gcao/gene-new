@@ -10,6 +10,9 @@ type
   ExFn* = ref object of Expr
     data*: Function
 
+  ExReturn* = ref object of Expr
+    data*: Expr
+
 proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
   var match_result = self.match(frame, matcher, args)
   case match_result.kind:
@@ -109,13 +112,28 @@ proc to_function(node: Value): Function =
   result.translator = fn_arg_translator
   result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
 
+proc eval_return(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  raise Return(
+    frame: frame,
+    val: self.eval(frame, cast[ExReturn](expr).data),
+  )
+
+proc translate_fn(value: Value): Expr =
+  var fn = to_function(value)
+  var expr = new_ex_ns_def()
+  expr.name = fn.name.to_key
+  expr.value = ExFn(
+    evaluator: eval_fn,
+    data: fn,
+  )
+  return expr
+
+proc translate_return(value: Value): Expr =
+  var expr = ExReturn()
+  expr.evaluator = eval_return
+  expr.data = translate(value.gene_data[0])
+  return expr
+
 proc init*() =
-  GeneTranslators["fn"] = proc(value: Value): Expr =
-    var fn = to_function(value)
-    var expr = new_ex_ns_def()
-    expr.name = fn.name.to_key
-    expr.value = ExFn(
-      evaluator: eval_fn,
-      data: fn,
-    )
-    return expr
+  GeneTranslators["fn"] = translate_fn
+  GeneTranslators["return"] = translate_return

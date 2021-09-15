@@ -85,13 +85,13 @@ test_interpreter """
   (f 1)
 """, 2
 
-# test_interpreter """
-#   (fn f _
-#     (return 1)
-#     2
-#   )
-#   (f)
-# """, 1
+test_interpreter """
+  (fn f _
+    (return 1)
+    2
+  )
+  (f)
+""", 1
 
 test_interpreter """
   (fn fib n
