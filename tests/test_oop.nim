@@ -71,7 +71,7 @@ test_interpreter """
 #   )
 #   (new A)
 # """, proc(r: Value) =
-#   check r.instance.value.gene_props["description"] == "Class A"
+#   check r.instance.props["description"] == "Class A"
 
 # test_interpreter """
 #   (class A

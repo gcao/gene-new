@@ -85,6 +85,7 @@ type
   Class* = ref object
     parent*: Class
     name*: string
+    constructor*: Method
     methods*: Table[MapKey, Method]
     ns*: Namespace # Class can act like a namespace
 
@@ -101,7 +102,8 @@ type
 
   Instance* = ref object
     class*: Class
-    value*: Value
+    # value*: Value
+    props*: Table[MapKey, Value]
 
   Function* = ref object of GeneProcessor
     async*: bool
@@ -1257,7 +1259,7 @@ proc new_mixin*(name: string): Mixin =
   return Mixin(name: name)
 
 proc new_instance*(class: Class): Instance =
-  return Instance(value: new_gene_gene(), class: class)
+  return Instance(class: class)
 
 # Do not allow auto conversion between CatchableError and Value
 # because there are sub-classes of CatchableError that need to be

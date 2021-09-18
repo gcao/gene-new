@@ -2,6 +2,7 @@ import tables
 
 import ../map_key
 import ../types
+# import ../exprs
 import ../translators
 import ../interpreter
 
@@ -18,10 +19,20 @@ proc eval_assignment(self: VirtualMachine, frame: Frame, target: Value, expr: va
   else:
     frame.ns[name] = self.eval(frame, value)
 
+proc translate_assignment(value: Value): Expr =
+  result = ExAssignment(
+    evaluator: eval_assignment,
+    name: value.gene_data[0].symbol.to_key,
+    value: translate(value.gene_data[1]),
+  )
+  # if value.gene_data[0].symbol[0] == "@":
+  #   result = new_ex_set_prop(value.gene_data[0].symbol[1..^1], translate(value.gene_data[1]))
+  # else:
+  #   result = ExAssignment(
+  #     evaluator: eval_assignment,
+  #     name: value.gene_data[0].symbol.to_key,
+  #     value: translate(value.gene_data[1]),
+  #   )
+
 proc init*() =
-  GeneTranslators["="] = proc(value: Value): Expr =
-    ExAssignment(
-      evaluator: eval_assignment,
-      name: value.gene_data[0].symbol.to_key,
-      value: translate(value.gene_data[1]),
-    )
+  GeneTranslators["="] = translate_assignment

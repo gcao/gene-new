@@ -69,6 +69,28 @@ proc translate_class(value: Value): Expr =
 proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var instance = Instance()
   instance.class = self.eval(frame, cast[ExNew](expr).class).class
+  result = Value(kind: VkInstance, instance: instance)
+  var meth = instance.class.constructor
+  if meth == nil:
+    return
+
+  var fn_scope = new_scope()
+  var new_frame = Frame(ns: meth.fn.ns, scope: fn_scope)
+  new_frame.parent = frame
+  new_frame.self = result
+
+  if meth.fn.body_compiled == nil:
+    meth.fn.body_compiled = translate(meth.fn.body)
+
+  try:
+    discard self.eval(new_frame, meth.fn.body_compiled)
+  except Return as r:
+    # return's frame is the same as new_frame(current function's frame)
+    if r.frame == new_frame:
+      return
+    else:
+      raise
+
   result = Value(
     kind: VkInstance,
     instance: instance,
@@ -103,7 +125,10 @@ proc eval_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     fn: cast[ExMethod](expr).fn,
   )
   m.fn.ns = frame.ns
-  frame.self.class.methods[m.name.to_key] = m
+  if m.name == "new":
+    frame.self.class.constructor = m
+  else:
+    frame.self.class.methods[m.name.to_key] = m
   Value(
     kind: VkMethod,
     `method`: m,

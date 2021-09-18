@@ -142,3 +142,28 @@ proc new_ex_names*(self: ComplexSymbol): ExNames =
   for s in self.rest[0..^2]:
     e.names.add(s.to_key)
   result = e
+
+#################### ExSetProp ###################
+
+type
+  ExSetProp* = ref object of Expr
+    name*: MapKey
+    value*: Expr
+
+  ExGetProp* = ref object of Expr
+    name*: MapKey
+
+proc eval_set_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var instance = frame.self.instance
+  var value = cast[ExSetProp](expr).value
+  instance.props[cast[ExSetProp](expr).name] = value.evaluator(self, frame, nil, value)
+
+proc new_ex_set_prop*(name: string, value: Expr): ExSetProp =
+  ExSetProp(
+    evaluator: eval_set_prop,
+    name: name.to_key,
+    value: value,
+  )
+
+proc eval_get_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  todo()
