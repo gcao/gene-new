@@ -108,17 +108,17 @@ test_interpreter """
   ((new A "test") .@description)
 """, "test"
 
-# test_interpreter """
-#   (class A
-#     (method new _
-#       (@description = 1)
-#     )
-#     (method test _
-#       @description
-#     )
-#   )
-#   ((new A).test)
-# """, 1
+test_interpreter """
+  (class A
+    (method new _
+      (@description = 1)
+    )
+    (method test _
+      @description
+    )
+  )
+  ((new A).test)
+""", 1
 
 # test_interpreter """
 #   (class A

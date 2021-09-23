@@ -1,10 +1,10 @@
+import strutils
 import tables
 
 import ../map_key
 import ../types
 import ../exprs
 import ../translators
-import ../interpreter
 
 type
   ExVar* = ref object of Expr
@@ -35,6 +35,9 @@ proc eval_symbol(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     expr.evaluator = eval_symbol_scope
 
 proc translate_symbol(value: Value): Expr =
+  if value.symbol.startsWith("@"):
+    return new_ex_get_prop(value.symbol[1..^1])
+
   case value.symbol:
   of "self":
     result = new_ex_self()
