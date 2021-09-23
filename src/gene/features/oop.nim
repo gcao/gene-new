@@ -34,6 +34,14 @@ type
     target*: Expr
     args*: Expr
 
+proc arg_translator*(value: Value): Expr =
+  var e = new_ex_arg()
+  for k, v in value.gene_props:
+    e.props[k] = translate(v)
+  for v in value.gene_data[1..^1]:
+    e.data.add(translate(v))
+  return e
+
 proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExClass](expr)
   var class = new_class(e.name)
@@ -79,6 +87,9 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   new_frame.parent = frame
   new_frame.self = result
 
+  var args_expr = cast[ExNew](expr).args
+  handle_args(self, frame, new_frame, meth.fn, cast[ExArguments](args_expr))
+
   if meth.fn.body_compiled == nil:
     meth.fn.body_compiled = translate(meth.fn.body)
 
@@ -100,6 +111,7 @@ proc translate_new(value: Value): Expr =
   ExNew(
     evaluator: eval_new,
     class: translate(value.gene_data[0]),
+    args: arg_translator(value),
   )
 
 # TODO: this is almost the same as to_function in fp.nim

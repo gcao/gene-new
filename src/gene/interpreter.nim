@@ -4,6 +4,7 @@ import strutils, tables, strutils, os, sets
 import ./map_key
 import ./types
 import ./parser
+import ./exprs
 import ./translators
 
 let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
@@ -231,6 +232,43 @@ proc match*(vm: VirtualMachine, frame: Frame, self: RootMatcher, input: Value): 
 
 # # Below code doesn't work for some reason
 # import_folder "features"
+
+proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
+  var match_result = self.match(frame, matcher, args)
+  case match_result.kind:
+  of MatchSuccess:
+    discard
+    # for field in match_result.fields:
+    #   if field.value_expr != nil:
+    #     frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
+    #     frame.scope.def_member(field.name, field.value)
+  of MatchMissingFields:
+    for field in match_result.missing:
+      not_allowed("Argument " & field.to_s & " is missing.")
+  else:
+    todo()
+
+template handle_args*(self: VirtualMachine, frame, new_frame: Frame, fn: Function, args_expr: ExArguments) =
+  case fn.matching_hint.mode:
+  of MhNone:
+    for _, v in args_expr.props.mpairs:
+      discard self.eval(frame, v)
+    for i, v in args_expr.data.mpairs:
+      # var field = target.fn.matcher.children[i]
+      discard self.eval(frame, v)
+  of MhSimpleData:
+    for _, v in args_expr.props.mpairs:
+      discard self.eval(frame, v)
+    for i, v in args_expr.data.mpairs:
+      let field = fn.matcher.children[i]
+      new_frame.scope.def_member(field.name, self.eval(frame, v))
+  else:
+    var args = new_gene_gene()
+    for k, v in args_expr.props.mpairs:
+      args.gene_props[k] = self.eval(frame, v)
+    for _, v in args_expr.data.mpairs:
+      args.gene_data.add self.eval(frame, v)
+    self.process_args(new_frame, fn.matcher, args)
 
 import "./features/core" as core_feature; core_feature.init()
 import "./features/array" as array_feature; array_feature.init()

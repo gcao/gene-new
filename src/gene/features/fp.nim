@@ -13,48 +13,13 @@ type
   ExReturn* = ref object of Expr
     data*: Expr
 
-proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
-  var match_result = self.match(frame, matcher, args)
-  case match_result.kind:
-  of MatchSuccess:
-    discard
-    # for field in match_result.fields:
-    #   if field.value_expr != nil:
-    #     frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
-    #     frame.scope.def_member(field.name, field.value)
-  of MatchMissingFields:
-    for field in match_result.missing:
-      not_allowed("Argument " & field.to_s & " is missing.")
-  else:
-    todo()
-
 proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var fn_scope = new_scope()
   fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
   var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
   new_frame.parent = frame
 
-  var args_expr = cast[ExArguments](expr)
-  case target.fn.matching_hint.mode:
-  of MhNone:
-    for _, v in args_expr.props.mpairs:
-      discard self.eval(frame, v)
-    for i, v in args_expr.data.mpairs:
-      # var field = target.fn.matcher.children[i]
-      discard self.eval(frame, v)
-  of MhSimpleData:
-    for _, v in args_expr.props.mpairs:
-      discard self.eval(frame, v)
-    for i, v in args_expr.data.mpairs:
-      let field = target.fn.matcher.children[i]
-      new_frame.scope.def_member(field.name, self.eval(frame, v))
-  else:
-    var args = new_gene_gene()
-    for k, v in args_expr.props.mpairs:
-      args.gene_props[k] = self.eval(frame, v)
-    for _, v in args_expr.data.mpairs:
-      args.gene_data.add self.eval(frame, v)
-    self.process_args(new_frame, target.fn.matcher, args)
+  handle_args(self, frame, new_frame, target.fn, cast[ExArguments](expr))
 
   if target.fn.body_compiled == nil:
     target.fn.body_compiled = translate(target.fn.body)
