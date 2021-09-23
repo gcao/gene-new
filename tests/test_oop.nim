@@ -90,14 +90,14 @@ test_interpreter """
 """, proc(r: Value) =
   check r.instance.props["description"] == "Class A"
 
-# test_interpreter """
-#   (class A
-#     (method new []
-#       (@description = "Class A")
-#     )
-#   )
-#   ((new A) .@description)
-# """, "Class A"
+test_interpreter """
+  (class A
+    (method new []
+      (@description = "Class A")
+    )
+  )
+  ((new A) .@description)
+""", "Class A"
 
 # test_interpreter """
 #   (class A

@@ -41,3 +41,9 @@ proc translate*(stmts: seq[Value]): Expr =
 proc translate_prop_assignment*(value: Value): Expr =
   var name = value.gene_type.symbol[1..^1]
   return new_ex_set_prop(name, translate(value.gene_data[1]))
+
+# (obj .@p)
+proc translate_prop_access*(value: Value): Expr =
+  var obj = translate(value.gene_type)
+  var name = value.gene_data[0].symbol[2..^1]
+  return new_ex_get_prop2(obj, name)

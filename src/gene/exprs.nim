@@ -153,6 +153,10 @@ type
   ExGetProp* = ref object of Expr
     name*: MapKey
 
+  ExGetProp2* = ref object of Expr
+    self*: Expr
+    name*: MapKey
+
 proc eval_set_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var instance = frame.self.instance
   var value = cast[ExSetProp](expr).value
@@ -166,5 +170,21 @@ proc new_ex_set_prop*(name: string, value: Expr): ExSetProp =
   )
 
 proc eval_get_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  result = self.eval(frame, cast[ExSetProp](expr).value)
-  frame.self.instance.props[cast[ExSetProp](expr).name] = result
+  frame.self.instance.props[cast[ExGetProp](expr).name]
+
+proc new_ex_get_prop*(name: string): ExGetProp =
+  ExGetProp(
+    evaluator: eval_get_prop,
+    name: name.to_key,
+  )
+
+proc eval_get_prop2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var obj = self.eval(frame, cast[ExGetProp2](expr).self)
+  obj.instance.props[cast[ExGetProp2](expr).name]
+
+proc new_ex_get_prop2*(obj: Expr, name: string): ExGetProp2 =
+  ExGetProp2(
+    evaluator: eval_get_prop2,
+    self: obj,
+    name: name.to_key,
+  )

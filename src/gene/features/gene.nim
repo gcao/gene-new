@@ -65,6 +65,7 @@ proc default_translator(value: Value): Expr =
   )
 
 proc translate_gene(value: Value): Expr =
+  # normalize is inefficient.
   if value.gene_data.len >= 1:
     var `type` = value.gene_type
     var first = value.gene_data[0]
@@ -72,6 +73,8 @@ proc translate_gene(value: Value): Expr =
       # (@p = 1)
       if first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"):
         return translate_prop_assignment(value)
+      elif first.symbol.len > 2 and first.symbol.startsWith(".@"):
+        return translate_prop_access(value)
 
   value.normalize()
 
