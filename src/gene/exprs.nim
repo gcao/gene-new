@@ -34,7 +34,7 @@ type
 
 proc eval_group*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   for item in cast[ExGroup](expr).data.mitems:
-    result = item.evaluator(self, frame, nil, item)
+    result = self.eval(frame, item)
 
 proc new_ex_group*(): ExGroup =
   result = ExGroup(
@@ -63,7 +63,7 @@ type
 
 proc eval_ns_def(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExNsDef](expr)
-  result = e.value.evaluator(self, frame, nil, e.value)
+  result = self.eval(frame, e.value)
   frame.ns[e.name] = result
 
 proc new_ex_ns_def*(): ExNsDef =
@@ -156,7 +156,7 @@ type
 proc eval_set_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var instance = frame.self.instance
   var value = cast[ExSetProp](expr).value
-  instance.props[cast[ExSetProp](expr).name] = value.evaluator(self, frame, nil, value)
+  instance.props[cast[ExSetProp](expr).name] = self.eval(frame, value)
 
 proc new_ex_set_prop*(name: string, value: Expr): ExSetProp =
   ExSetProp(
@@ -166,4 +166,5 @@ proc new_ex_set_prop*(name: string, value: Expr): ExSetProp =
   )
 
 proc eval_get_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  todo()
+  result = self.eval(frame, cast[ExSetProp](expr).value)
+  frame.self.instance.props[cast[ExSetProp](expr).name] = result

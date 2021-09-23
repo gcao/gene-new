@@ -52,7 +52,7 @@ test_interpreter """
 """, new_gene_string("xy")
 
 # test_interpreter """
-#   (var ns n
+#   (ns n
 #     (fn f target
 #       ("" target "y")
 #     )

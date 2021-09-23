@@ -1418,3 +1418,6 @@ proc prop_splat*(self: seq[Matcher]): MapKey =
   for m in self:
     if m.kind == MatchProp and m.splat:
       return m.name
+
+template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  expr.evaluator(self, frame, nil, expr)

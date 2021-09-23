@@ -1,9 +1,5 @@
-import tables
-
 import ../types
-import ../exprs
 import ../translators
-import ../interpreter
 
 type
   ExWhile* = ref object of Expr
@@ -17,7 +13,7 @@ proc eval_while(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
       break
     try:
       for item in cast[ExWhile](expr).body.mitems:
-        result = item.evaluator(self, frame, nil, item)
+        result = self.eval(frame, item)
     except Continue:
       discard
     except Break as b:

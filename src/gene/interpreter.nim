@@ -13,10 +13,6 @@ let GENE_RUNTIME* = Runtime(
   version: read_file(GENE_HOME & "/VERSION").strip(),
 )
 
-#################### Definitions #################
-
-proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.inline.}
-
 #################### Application #################
 
 proc new_app*(): Application =
@@ -46,9 +42,6 @@ proc prepare*(self: VirtualMachine, code: string): Value =
     parsed[0]
   else:
     new_gene_stream(parsed)
-
-proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.inline.} =
-  expr.evaluator(self, frame, nil, expr)
 
 proc eval*(self: VirtualMachine, code: string): Value =
   var module = new_module()

@@ -17,7 +17,7 @@ proc eval_loop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   while true:
     try:
       for item in cast[ExLoop](expr).data.mitems:
-        result = item.evaluator(self, frame, nil, item)
+        result = self.eval(frame, item)
     except Continue:
       discard
     except Break as b:

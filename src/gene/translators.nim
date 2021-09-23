@@ -36,3 +36,8 @@ proc translate*(stmts: seq[Value]): Expr =
     result = new_ex_group()
     for stmt in stmts:
       cast[ExGroup](result).data.add(translate(stmt))
+
+# (@p = 1)
+proc translate_prop_assignment*(value: Value): Expr =
+  var name = value.gene_type.symbol[1..^1]
+  return new_ex_set_prop(name, translate(value.gene_data[1]))

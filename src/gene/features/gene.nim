@@ -1,3 +1,4 @@
+import strutils
 import tables
 
 import ../map_key
@@ -64,6 +65,14 @@ proc default_translator(value: Value): Expr =
   )
 
 proc translate_gene(value: Value): Expr =
+  if value.gene_data.len >= 1:
+    var `type` = value.gene_type
+    var first = value.gene_data[0]
+    if first.kind == VkSymbol:
+      # (@p = 1)
+      if first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"):
+        return translate_prop_assignment(value)
+
   value.normalize()
 
   case value.gene_type.kind:
