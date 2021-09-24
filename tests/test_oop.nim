@@ -120,27 +120,27 @@ test_interpreter """
   ((new A).test)
 """, 1
 
-# test_interpreter """
-#   (class A
-#     (method test a
-#       a
-#     )
+test_interpreter """
+  (class A
+    (method test a
+      a
+    )
 
-#     (method test2 a
-#       (.test a)
-#     )
-#   )
-#   ((new A) .test2 1)
-# """, 1
+    (method test2 a
+      (.test a)
+    )
+  )
+  ((new A).test2 1)
+""", 1
 
-# test_interpreter """
-#   (class A
-#     (method test [a b]
-#       (a + b)
-#     )
-#   )
-#   ((new A) .test 1 2)
-# """, 3
+test_interpreter """
+  (class A
+    (method test [a b]
+      (a + b)
+    )
+  )
+  ((new A) .test 1 2)
+""", 3
 
 # test_interpreter """
 #   (class A

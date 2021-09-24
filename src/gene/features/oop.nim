@@ -163,12 +163,14 @@ proc eval_invoke(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     instance = self.eval(frame, e)
   var class = instance.instance.class
   var meth = class.methods[cast[ExInvoke](expr).meth]
-  # var args = self.eval(frame, cast[ExInvoke](expr).args)
 
   var fn_scope = new_scope()
   var new_frame = Frame(ns: meth.fn.ns, scope: fn_scope)
   new_frame.parent = frame
   new_frame.self = instance
+
+  var args_expr = cast[ExInvoke](expr).args
+  handle_args(self, frame, new_frame, meth.fn, cast[ExArguments](args_expr))
 
   if meth.fn.body_compiled == nil:
     meth.fn.body_compiled = translate(meth.fn.body)
@@ -194,7 +196,12 @@ proc translate_invoke(value: Value): Expr =
   )
   r.self = translate(value.gene_props.get_or_default(SELF_KEY, nil))
   r.meth = value.gene_props[METHOD_KEY].str.to_key
-  # r.args = translate(value.gene_props[ARGS_KEY])
+
+  var args = new_ex_arg()
+  for v in value.gene_data:
+    args.data.add(translate(v))
+  r.args = args
+
   result = r
 
 proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
