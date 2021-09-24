@@ -6,7 +6,6 @@ import ../types
 import ../exprs
 import ../normalizers
 import ../translators
-import ../interpreter
 
 proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
