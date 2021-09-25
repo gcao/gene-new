@@ -45,6 +45,9 @@ type
     target*: Expr
     args*: Expr
 
+  ExSuper* = ref object of Expr
+    args*: Expr
+
 proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
   for k, v in value.gene_props:
@@ -255,6 +258,7 @@ proc eval_invoke(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   var new_frame = Frame(ns: meth.fn.ns, scope: fn_scope)
   new_frame.parent = frame
   new_frame.self = instance
+  new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
 
   var args_expr = cast[ExInvoke](expr).args
   handle_args(self, frame, new_frame, meth.fn, cast[ExArguments](args_expr))
@@ -339,6 +343,47 @@ proc translate_invoke_dynamic(value: Value): Expr =
   # r.args = translate(value.gene_props[ARGS_KEY])
   result = r
 
+proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var instance = frame.self
+  var m = frame.extra.method
+  var meth = m.class.get_super_method(m.name.to_key)
+
+  var fn_scope = new_scope()
+  var new_frame = Frame(ns: meth.fn.ns, scope: fn_scope)
+  new_frame.parent = frame
+  new_frame.self = instance
+
+  var args_expr = cast[ExSuper](expr).args
+  handle_args(self, frame, new_frame, meth.fn, cast[ExArguments](args_expr))
+
+  if meth.fn.body_compiled == nil:
+    meth.fn.body_compiled = translate(meth.fn.body)
+
+  try:
+    result = self.eval(new_frame, meth.fn.body_compiled)
+  except Return as r:
+    # return's frame is the same as new_frame(current function's frame)
+    if r.frame == new_frame:
+      result = r.val
+    else:
+      raise
+  # except CatchableError as e:
+  #   if self.repl_on_error:
+  #     result = repl_on_error(self, frame, e)
+  #     discard
+  #   else:
+  #     raise
+
+proc translate_super(value: Value): Expr =
+  var r = ExSuper(
+    evaluator: eval_super,
+  )
+  var args = new_ex_arg()
+  for v in value.gene_data:
+    args.data.add(translate(v))
+  r.args = args
+  result = r
+
 proc init*() =
   GeneTranslators["class"] = translate_class
   GeneTranslators["mixin"] = translate_mixin
@@ -347,3 +392,4 @@ proc init*() =
   GeneTranslators["method"] = translate_method
   GeneTranslators["$invoke_method"] = translate_invoke
   GeneTranslators["$invoke_dynamic"] = translate_invoke_dynamic
+  GeneTranslators["super"] = translate_super

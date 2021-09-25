@@ -163,19 +163,19 @@ test_interpreter """
 # """, proc(r: Value) =
 #   todo()
 
-# test_interpreter """
-#   (class A
-#     (method test a
-#       a
-#     )
-#   )
-#   (class B < A
-#     (method test a
-#       (super a)
-#     )
-#   )
-#   ((new B) .test 1)
-# """, 1
+test_interpreter """
+  (class A
+    (method test a
+      a
+    )
+  )
+  (class B < A
+    (method test a
+      (super a)
+    )
+  )
+  ((new B) .test 1)
+""", 1
 
 test_interpreter """
   (mixin M

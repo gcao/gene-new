@@ -333,14 +333,12 @@ type
     of FrFunction:
       fn*: Function
     of FrMacro:
-      mac*: Function
+      `macro`*: Macro
     of FrMethod:
-      class*: Class
-      meth*: Function
-      meth_name*: MapKey
-      # hierarchy*: CallHierarchy # A hierarchy object that tracks where the method is in class hierarchy
+      `method`*: Method
     else:
       discard
+    props*: Table[MapKey, Value]
 
   Frame* = ref object
     parent*: Frame
@@ -824,6 +822,14 @@ proc get_method*(self: Class, name: MapKey): Method =
     return self.methods[name]
   elif self.parent != nil:
     return self.parent.get_method(name)
+  else:
+    not_allowed("No method available: " & name.to_s)
+
+proc get_super_method*(self: Class, name: MapKey): Method =
+  if self.parent != nil:
+    return self.parent.get_method(name)
+  else:
+    not_allowed("No super method available: " & name.to_s)
 
 #################### Method ######################
 
