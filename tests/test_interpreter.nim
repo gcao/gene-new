@@ -246,18 +246,18 @@ test_interpreter """
 # test_interpreter """
 #   (var sum 0)
 #   (repeat 3
-#     (i += 1)
+#     (sum += 1)
 #   )
-#   i
+#   sum
 # """, 3
 
 # test_interpreter """
 #   (var sum 0)
 #   (repeat 3
 #     # "once" make sure the statement is executed at most once in a loop.
-#     (once (i += 1))
+#     (once (sum += 1))
 #   )
-#   i
+#   sum
 # """, 1
 
 # test_interpreter """
@@ -353,47 +353,6 @@ test_interpreter """
 #   [1 (... [2 3]) 4]
 # """, @[new_gene_int(1), new_gene_int(2), new_gene_int(3), new_gene_int(4)]
 
-# test_interpreter """
-#   (enum A first second)
-#   A
-# """, proc(r: Value) =
-#   var e = r.internal.enum
-#   check e.name == "A"
-#   check e.members.len == 2
-#   check e.members["first"].name == "first"
-#   check e.members["first"].value == 0
-#   check e.members["second"].name == "second"
-#   check e.members["second"].value == 1
-
-# test_interpreter """
-#   (enum A
-#     first = 1
-#     second      # value will be 2
-#   )
-#   A/second
-# """, proc(r: Value) =
-#   var m = r.internal.enum_member
-#   check m.parent.name == "A"
-#   check m.name == "second"
-#   check m.value == 2
-
-# test_interpreter """
-#   (enum A first second)
-#   A/second/parent
-# """, proc(r: Value) =
-#   var e = r.internal.enum
-#   check e.name == "A"
-
-# test_interpreter """
-#   (enum A first second)
-#   A/second/name
-# """, "second"
-
-# test_interpreter """
-#   (enum A first second)
-#   A/second/value
-# """, 1
-
 # test "Interpreter / eval: native function (test)":
 #   init_all()
 #   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], data: seq[Value]): Value {.nimcall.} =
@@ -445,16 +404,3 @@ test_interpreter """
 #   $app
 # """, proc(r: Value) =
 #   check r.internal.app.ns.name == "global"
-
-# # HOT RELOAD
-# # Module must be marked as reloadable first
-# # We need symbol table per module
-# # Symbols are referenced by names/keys
-# # Should work for imported symbols, e.g. (import a from "a")
-# # Should work for aliases when a symbol is imported, e.g. (import a as b from "a")
-# # Should not reload `b` if `b` is defined like (import a from "a") (var b a)
-# # Should work for child members of imported symbols, e.g. (import a from "a") a/b
-
-# # Reload occurs in the same thread at controllable interval.
-# # https://github.com/paul-nameless/nim-fswatch
-# # https://github.com/FedericoCeratto/nim-fswatch

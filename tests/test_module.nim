@@ -11,6 +11,7 @@ import ./helpers
 # import a, b # will import from root's parent ns (which
 #    could be the package ns or global ns or a intermediate ns)
 # import from "module" a/[b c], d as my_d
+# import a # will import from parent, and throw error if "a" not available, this can be useful to make sure the required resource is available when the module is initialized.
 
 # test "Interpreter / eval: import":
 #   init_all()
