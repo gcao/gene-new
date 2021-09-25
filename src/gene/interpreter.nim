@@ -11,7 +11,7 @@ let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
 let GENE_RUNTIME* = Runtime(
   home: GENE_HOME,
   name: "default",
-  version: read_file(GENE_HOME & "/VERSION").strip(),
+  # version: read_file(GENE_HOME & "/VERSION").strip(),
 )
 
 #################### Application #################
