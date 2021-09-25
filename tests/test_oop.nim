@@ -155,29 +155,39 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
+#     (method test _
+#       $args
+#     )
+#   )
+#   ((new A) .test 1)
+# """, proc(r: Value) =
+#   todo()
+
+# test_interpreter """
+#   (class A
 #     (method test a
 #       a
 #     )
 #   )
 #   (class B < A
 #     (method test a
-#       (super $args...)
+#       (super a)
 #     )
 #   )
 #   ((new B) .test 1)
 # """, 1
 
-# test_interpreter """
-#   (mixin M
-#     (method test _
-#       1
-#     )
-#   )
-#   (class A
-#     (include M)
-#   )
-#   ((new A) .test)
-# """, 1
+test_interpreter """
+  (mixin M
+    (method test _
+      1
+    )
+  )
+  (class A
+    (include M)
+  )
+  ((new A) .test)
+""", 1
 
 # # # Single inheritance with flexibility of changing class, overwriting methods
 # # test_interpreter """

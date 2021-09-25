@@ -98,7 +98,7 @@ type
   Mixin* = ref object
     name*: string
     methods*: Table[MapKey, Method]
-    # TODO: ns*: Namespace # Mixin can act like a namespace
+    ns*: Namespace # Mixin can act like a namespace
 
   Method* = ref object
     class*: Class
@@ -292,6 +292,8 @@ type
       `block`*: Block
     of VkClass:
       class*: Class
+    of VkMixin:
+      `mixin`*: Mixin
     of VkMethod:
       `method`*: Method
     of VkInstance:
@@ -832,6 +834,9 @@ proc new_method*(class: Class, name: string, fn: Function): Method =
     fn: fn,
   )
 
+proc clone*(self: Method): Method =
+  new_method(self.class, self.name, self.fn)
+
 #################### ComplexSymbol ###############
 
 proc all*(self: ComplexSymbol): seq[string] =
@@ -1268,7 +1273,10 @@ proc new_gene_gene*(`type`: Value, props: OrderedTable[MapKey, Value], data: var
   )
 
 proc new_mixin*(name: string): Mixin =
-  return Mixin(name: name)
+  return Mixin(
+    name: name,
+    ns: new_namespace(nil, name),
+  )
 
 proc new_instance*(class: Class): Instance =
   return Instance(class: class)

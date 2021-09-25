@@ -19,6 +19,14 @@ type
     name*: string
     body*: Expr
 
+  ExMixin* = ref object of Expr
+    container*: Expr
+    name*: string
+    body*: Expr
+
+  ExInclude* = ref object of Expr
+    data*: seq[Expr]
+
   ExNew* = ref object of Expr
     class*: Expr
     args*: Expr
@@ -84,6 +92,58 @@ proc translate_class(value: Value): Expr =
   e.body = translate(value.gene_data[body_start..^1])
   result = e
 
+proc eval_mixin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var e = cast[ExMixin](expr)
+  var m = new_mixin(e.name)
+  m.ns.parent = frame.ns
+  result = Value(kind: VkMixin, `mixin`: m)
+  var container = frame.ns
+  if e.container != nil:
+    container = self.eval(frame, e.container).ns
+  container[e.name] = result
+
+  var new_frame = new_frame()
+  new_frame.ns = m.ns
+  new_frame.scope = new_scope()
+  new_frame.self = result
+  discard self.eval(new_frame, e.body)
+
+proc translate_mixin(value: Value): Expr =
+  var e = ExMixin(
+    evaluator: eval_mixin,
+  )
+  var first = value.gene_data[0]
+  case first.kind
+  of VkSymbol:
+    e.name = first.symbol
+  of VkComplexSymbol:
+    e.container = new_ex_names(first.csymbol)
+    e.name = first.csymbol.rest[^1]
+  else:
+    todo()
+
+  var body_start = 1
+  e.body = translate(value.gene_data[body_start..^1])
+  result = e
+
+proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var class = frame.self.class
+  for e in cast[ExInclude](expr).data.mitems:
+    var m = self.eval(frame, e).mixin
+    for _, meth in m.methods:
+      var new_method = meth.clone
+      new_method.class = class
+      class.methods[new_method.name.to_key] = new_method
+
+proc translate_include(value: Value): Expr =
+  var e = ExInclude(
+    evaluator: eval_include,
+  )
+  for item in value.gene_data:
+    e.data.add(translate(item))
+
+  result = e
+
 proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var instance = Instance()
   instance.class = self.eval(frame, cast[ExNew](expr).class).class
@@ -142,15 +202,26 @@ proc to_function(node: Value): Function =
 
 proc eval_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var m = Method(
-    class: frame.self.class,
     name: cast[ExMethod](expr).name,
     fn: cast[ExMethod](expr).fn,
   )
   m.fn.ns = frame.ns
-  if m.name == "new":
-    frame.self.class.constructor = m
+
+  case frame.self.kind:
+  of VkClass:
+    m.class = frame.self.class
+    if m.name == "new":
+      frame.self.class.constructor = m
+    else:
+      frame.self.class.methods[m.name.to_key] = m
+  of VkMixin:
+    if m.name == "new":
+      not_allowed()
+    else:
+      frame.self.mixin.methods[m.name.to_key] = m
   else:
-    frame.self.class.methods[m.name.to_key] = m
+    not_allowed()
+
   Value(
     kind: VkMethod,
     `method`: m,
@@ -264,6 +335,8 @@ proc translate_invoke_dynamic(value: Value): Expr =
 
 proc init*() =
   GeneTranslators["class"] = translate_class
+  GeneTranslators["mixin"] = translate_mixin
+  GeneTranslators["include"] = translate_include
   GeneTranslators["new"] = translate_new
   GeneTranslators["method"] = translate_method
   GeneTranslators["$invoke_method"] = translate_invoke
