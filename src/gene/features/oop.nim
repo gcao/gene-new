@@ -10,8 +10,11 @@ let SELF_KEY*                 = add_key("self")
 let METHOD_KEY*               = add_key("method")
 let ARGS_KEY*                 = add_key("args")
 
+let LESS_THAN = new_gene_symbol("<")
+
 type
   ExClass* = ref object of Expr
+    parent*: Expr
     container*: Expr
     name*: string
     body*: Expr
@@ -45,6 +48,8 @@ proc arg_translator*(value: Value): Expr =
 proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExClass](expr)
   var class = new_class(e.name)
+  if e.parent != nil:
+    class.parent = self.eval(frame, e.parent).class
   class.ns.parent = frame.ns
   result = Value(kind: VkClass, class: class)
   var container = frame.ns
@@ -61,7 +66,6 @@ proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 proc translate_class(value: Value): Expr =
   var e = ExClass(
     evaluator: eval_class,
-    body: translate(value.gene_data[1..^1]),
   )
   var first = value.gene_data[0]
   case first.kind
@@ -72,6 +76,12 @@ proc translate_class(value: Value): Expr =
     e.name = first.csymbol.rest[^1]
   else:
     todo()
+
+  var body_start = 1
+  if value.gene_data.len >= 3 and value.gene_data[1] == LESS_THAN:
+    body_start = 3
+    e.parent = translate(value.gene_data[2])
+  e.body = translate(value.gene_data[body_start..^1])
   result = e
 
 proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -162,7 +172,7 @@ proc eval_invoke(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   else:
     instance = self.eval(frame, e)
   var class = instance.instance.class
-  var meth = class.methods[cast[ExInvoke](expr).meth]
+  var meth = class.get_method(cast[ExInvoke](expr).meth)
 
   var fn_scope = new_scope()
   var new_frame = Frame(ns: meth.fn.ns, scope: fn_scope)
