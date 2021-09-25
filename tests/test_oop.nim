@@ -189,6 +189,21 @@ test_interpreter """
   ((new A) .test)
 """, 1
 
+test_interpreter """
+  (mixin M1
+    (method test _
+      1
+    )
+  )
+  (mixin M2
+    (include M1)
+  )
+  (class A
+    (include M2)
+  )
+  ((new A) .test)
+""", 1
+
 # # # Single inheritance with flexibility of changing class, overwriting methods
 # # test_interpreter """
 # #   (class A

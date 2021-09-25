@@ -127,13 +127,19 @@ proc translate_mixin(value: Value): Expr =
   result = e
 
 proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var class = frame.self.class
+  var x = frame.self
   for e in cast[ExInclude](expr).data.mitems:
     var m = self.eval(frame, e).mixin
     for _, meth in m.methods:
       var new_method = meth.clone
-      new_method.class = class
-      class.methods[new_method.name.to_key] = new_method
+      case x.kind:
+      of VkClass:
+        new_method.class = x.class
+        x.class.methods[new_method.name.to_key] = new_method
+      of VkMixin:
+        x.mixin.methods[new_method.name.to_key] = new_method
+      else:
+        not_allowed()
 
 proc translate_include(value: Value): Expr =
   var e = ExInclude(
