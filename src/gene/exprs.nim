@@ -41,6 +41,24 @@ proc new_ex_group*(): ExGroup =
     evaluator: eval_group,
   )
 
+#################### ExExplode ###################
+
+type
+  ExExplode* = ref object of Expr
+    data*: Expr
+
+proc eval_explode*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var data = self.eval(frame, cast[ExExplode](expr).data)
+  Value(
+    kind: VkExplode,
+    explode: data,
+  )
+
+proc new_ex_explode*(): ExExplode =
+  result = ExExplode(
+    evaluator: eval_explode,
+  )
+
 #################### ExSelf ######################
 
 type

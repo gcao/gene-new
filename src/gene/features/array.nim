@@ -2,7 +2,6 @@ import tables
 
 import ../types
 import ../translators
-import ../interpreter
 
 type
   ExArray* = ref object of Expr
@@ -11,7 +10,12 @@ type
 proc eval_array(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = new_gene_vec()
   for e in cast[ExArray](expr).data.mitems:
-    result.vec.add(self.eval(frame, e))
+    let v = self.eval(frame, e)
+    if v.kind == VkExplode:
+      for item in v.explode.vec:
+        result.vec.add(item)
+    else:
+      result.vec.add(v)
 
 proc init*() =
   Translators[VkVector] = proc(value: Value): Expr =

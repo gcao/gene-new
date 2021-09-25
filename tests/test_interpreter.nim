@@ -344,10 +344,10 @@ test_interpreter """
 #   (f)
 # """, 1
 
-# test_interpreter """
-#   (var a [2 3])
-#   [1 a... 4]
-# """, @[new_gene_int(1), new_gene_int(2), new_gene_int(3), new_gene_int(4)]
+test_interpreter """
+  (var a [2 3])
+  [1 a... 4]
+""", @[new_gene_int(1), new_gene_int(2), new_gene_int(3), new_gene_int(4)]
 
 # test_interpreter """
 #   [1 (... [2 3]) 4]

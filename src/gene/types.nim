@@ -25,19 +25,25 @@ type
     name*: string     # default/...
     home*: string     # GENE_HOME directory
     version*: string
-    features*: Table[string, Feature]
+    # features*: Table[string, Feature]
     props*: Table[string, Value]  # Additional properties
 
-  # To group functionality like oop, macro, repl
-  # Features should be divided into core features (e.g. if, var, namespace etc)
-  # and non-core features (e.g. repl etc)
-  Feature* = ref object
-    parent*: Feature
-    key*: string                  # E.g. oop
-    name*: string                 # E.g. Object Oriented Programming
-    description*: string          # E.g. More descriptive information about the feature
-    props*: Table[string, Value]  # Additional properties
-    children*: Table[string, Feature]
+  # It might not be very useful to group functionalities by features
+  # because we can not easily disable features.
+  # Instead we should define capabilities, e.g. file system access,
+  # network access, environment access, input/output device access etc.
+  # Capabilities can be enabled/disabled on application, package, module level.
+
+  # # To group functionality like oop, macro, repl
+  # # Features should be divided into core features (e.g. if, var, namespace etc)
+  # # and non-core features (e.g. repl etc)
+  # Feature* = ref object
+  #   parent*: Feature
+  #   key*: string                  # E.g. oop
+  #   name*: string                 # E.g. Object Oriented Programming
+  #   description*: string          # E.g. More descriptive information about the feature
+  #   props*: Table[string, Value]  # Additional properties
+  #   children*: Table[string, Feature]
 
   ## This is the root of a running application
   Application* = ref object
@@ -181,6 +187,7 @@ type
     VkComplexSymbol
     VkRegex
     VkRange
+    VkTyped
     # Time part should be 00:00:00 and timezone should not matter
     VkDate
     # Date + time + timezone
@@ -265,6 +272,11 @@ type
       gene_data*: seq[Value]
     of VkStream:
       stream*: seq[Value]
+    of VkExplode:
+      explode*: Value
+    of VkTyped:
+      ttype*: Value
+      tdata*: Value
     # Internal types
     of VkExpr:
       expr*: Expr

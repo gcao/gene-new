@@ -37,6 +37,10 @@ proc eval_symbol(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 proc translate_symbol(value: Value): Expr =
   if value.symbol.startsWith("@"):
     return new_ex_get_prop(value.symbol[1..^1])
+  if value.symbol.endsWith("..."):
+    var r = new_ex_explode()
+    r.data = translate(new_gene_symbol(value.symbol[0..^4]))
+    return r
 
   case value.symbol:
   of "self":
