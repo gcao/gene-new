@@ -10,6 +10,9 @@ type
   ExMacro* = ref object of Expr
     data*: Macro
 
+  ExCallerEval* = ref object of Expr
+    data*: Expr
+
 proc macro_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var scope = new_scope()
   scope.set_parent(target.macro.parent_scope, target.macro.parent_scope_max)
@@ -88,5 +91,18 @@ proc translate_macro(value: Value): Expr =
   )
   return expr
 
+proc eval_caller_eval(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var v = self.eval(frame, cast[ExCallerEval](expr).data)
+  var e = translate(v)
+  self.eval(frame.parent, e)
+
+proc translate_caller_eval(value: Value): Expr =
+  ExCallerEval(
+    evaluator: eval_caller_eval,
+    data: translate(value.gene_data[0]),
+  )
+
 proc init*() =
   GeneTranslators["macro"] = translate_macro
+  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    self.app.ns["$caller_eval"] = new_gene_processor(translate_caller_eval)
