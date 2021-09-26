@@ -155,13 +155,13 @@ test_interpreter """
   check r.map["a"] == 1
   check r.map["b"] == 2
 
-# test_interpreter """
-#   (var a 1)
-#   (var b 2)
-#   (:test ^a a b)
-# """, proc(r: Value) =
-#   check r.gene_props["a"] == 1
-#   check r.gene_data[0] == 2
+test_interpreter """
+  (var a 1)
+  (var b 2)
+  (:test ^a a b)
+""", proc(r: Value) =
+  check r.gene_props["a"] == 1
+  check r.gene_data[0] == 2
 
 test_interpreter "(if true 1)", 1
 # test_interpreter "(if not false 1)", 1
@@ -198,14 +198,6 @@ test_interpreter """
   )
   i
 """, 1
-
-# test_interpreter """
-#   (var i 0)
-#   (loop
-#     (i += 1)
-#     (break i)
-#   )
-# """, 1
 
 test_interpreter """
   (var i 0)
@@ -254,8 +246,8 @@ test_interpreter """
 # test_interpreter """
 #   (var sum 0)
 #   (repeat 3
-#     # "once" make sure the statement is executed at most once in a loop.
-#     (once (sum += 1))
+#     # "$once" make sure the statement is executed at most once in a loop.
+#     ($once (sum += 1))
 #   )
 #   sum
 # """, 1
@@ -306,7 +298,7 @@ test_interpreter """
 #   sum
 # """, 3
 
-# test_interpreter "self", GeneNil
+test_interpreter "self", Nil
 
 # # test_interpreter """
 # #   (call_native "str_size" "test")
