@@ -44,7 +44,9 @@ proc hash*(self: MapKey): Hash {.inline.} =
   result = cast[int](self)
 
 discard add_key("")
+discard add_key("global")
 const EMPTY_STRING_KEY*       = 0
+const GLOBAL_KEY*             = 1
 
 let SELF_KEY*                 = add_key("self")
 let METHOD_KEY*               = add_key("method")
@@ -139,7 +141,6 @@ let METHOD_OPTION_KEY*        = add_key("$method")
 let TODO_KEY*                 = add_key("todo")
 let NOT_ALLOWED_KEY*          = add_key("not_allowed")
 let CORE_KEY*                 = add_key("core")
-let GLOBAL_KEY*               = add_key("global")
 let GENE_KEY*                 = add_key("gene")
 let GENEX_KEY*                = add_key("genex")
 let NATIVE_KEY*               = add_key("native")

@@ -16,7 +16,6 @@ type
     rest*: seq[MapKey]
     value*: Expr
 
-let GLOBAL_KEY*               = add_key("global")
 let GENE_KEY*                 = add_key("gene")
 let GENEX_KEY*                = add_key("genex")
 
@@ -45,6 +44,8 @@ proc translate_symbol(value: Value): Expr =
   case value.symbol:
   of "self":
     result = new_ex_self()
+  of "global":
+    result = new_ex_literal(GLOBAL_NS)
   of "_":
     result = new_ex_literal(Placeholder)
   else:
@@ -59,8 +60,19 @@ proc eval_complex_symbol(self: VirtualMachine, frame: Frame, target: Value, expr
   case first:
   of EMPTY_STRING_KEY:
     ns = frame.ns
+  of GLOBAL_KEY:
+    ns = GLOBAL_NS.ns
   else:
-    ns = frame[first].ns
+    var v = frame[first]
+    case v.kind:
+    of VkNamespace:
+      ns = v.ns
+    of VkClass:
+      ns = v.class.ns
+    of VkMixin:
+      ns = v.mixin.ns
+    else:
+      todo()
 
   var is_first = true
   for item in cast[ExComplexSymbol](expr).rest:
@@ -88,6 +100,8 @@ proc eval_var_complex(self: VirtualMachine, frame: Frame, target: Value, expr: v
   case e.first:
   of EMPTY_STRING_KEY:
     ns = frame.ns
+  of GLOBAL_KEY:
+    ns = GLOBAL_NS.ns
   else:
     ns = frame[e.first].ns
 

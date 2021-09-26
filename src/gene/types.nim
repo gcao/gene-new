@@ -456,6 +456,7 @@ for i in 0..110:
   Ints[i] = Value(kind: VkInt, int: i - 10)
 
 var VM*: VirtualMachine   # The current virtual machine
+var GLOBAL_NS*: Value
 
 var ObjectClass*   : Value
 var ClassClass*    : Value

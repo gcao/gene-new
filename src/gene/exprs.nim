@@ -146,7 +146,12 @@ type
 
 proc eval_names*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExNames](expr)
-  result = frame.scope[e.names[0]]
+  case e.names[0]:
+  of GLOBAL_KEY:
+    result = GLOBAL_NS
+  else:
+    result = frame.scope[e.names[0]]
+
   if result == nil:
     result = frame.ns[e.names[0]]
   # for name in e.names[1..^1]:
