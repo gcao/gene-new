@@ -211,3 +211,10 @@ proc new_ex_get_prop2*(obj: Expr, name: string): ExGetProp2 =
     self: obj,
     name: name.to_key,
   )
+
+#################### Selector ####################
+
+type
+  ExInvokeSelector* = ref object of Expr
+    self*: Expr
+    data*: seq[Expr]

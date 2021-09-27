@@ -47,3 +47,8 @@ proc translate_prop_access*(value: Value): Expr =
   var obj = translate(value.gene_type)
   var name = value.gene_data[0].symbol[2..^1]
   return new_ex_get_prop2(obj, name)
+
+# (obj .@ "p")
+proc translate_invoke_selector*(value: Value): Expr =
+  todo()
+  # var obj = translate(value.gene_type)

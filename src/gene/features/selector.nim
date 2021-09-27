@@ -230,7 +230,7 @@ proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
     # else:
     #   raise
 
-proc arg_translator*(value: Value): Expr =
+proc selector_arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
   e.evaluator = selector_invoker
   for v in value.gene_data:
@@ -239,10 +239,10 @@ proc arg_translator*(value: Value): Expr =
 
 proc eval_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var selector = new_selector()
+  selector.translator = selector_arg_translator
   var v = self.eval(frame, cast[ExSelector](expr).data)
   selector.children.add(gene_to_selector_item(v))
-  result = new_gene_selector(selector)
-  result.selector.translator = arg_translator
+  new_gene_selector(selector)
 
 proc translate_selector(value: Value): Expr =
   ExSelector(
