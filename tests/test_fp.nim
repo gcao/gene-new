@@ -42,8 +42,8 @@ import ./helpers
 test_interpreter "(fn f a a)", proc(r: Value) =
   check r.fn.name == "f"
 
-# test_interpreter "(fn f _)", proc(r: Value) =
-#   check r.fn.matcher.children.len == 0
+test_interpreter "(fn f _)", proc(r: Value) =
+  check r.fn.matcher.children.len == 0
 
 test_interpreter """
   (fn f [] 1)
@@ -162,39 +162,39 @@ test_interpreter """
 #   (fn f _ $args)
 #   (f 1)
 # """, proc(r: Value) =
-#   check r.gene.data[0] == 1
+#   check r.gene_data[0] == 1
 
 # test_interpreter """
 #   (fn f [a b] (a + b))
 #   (fn g _
-#     (f ...)
+#     (f $args...)
 #   )
 #   (g 1 2)
 # """, 3
 
-# test_interpreter """
-#   (var f
-#     (fnx a a)
-#   )
-#   (f 1)
-# """, 1
+test_interpreter """
+  (var f
+    (fnx a a)
+  )
+  (f 1)
+""", 1
 
-# test_interpreter """
-#   (var f
-#     (fnxx 1)
-#   )
-#   (f)
-# """, 1
+test_interpreter """
+  (var f
+    (fnxx 1)
+  )
+  (f)
+""", 1
 
-# test_interpreter """
-#   (fn f _ 1)    # first f in namespace
-#   (var f        # second f in scope
-#     (fnx _
-#       ((f) + 1) # reference to first f because second f is defined after the anonymous function
-#     )
-#   )
-#   (f)           # second f
-# """, 2
+test_interpreter """
+  (fn f _ 1)    # first f in namespace
+  (var f        # second f in scope
+    (fnx _
+      ((f) + 1) # reference to first f because second f is defined after the anonymous function
+    )
+  )
+  (f)           # second f
+""", 2
 
 test_interpreter """
   (fn f [^a] a)

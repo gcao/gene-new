@@ -58,18 +58,28 @@ proc eval_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr):
   result.fn.parent_scope_max = frame.scope.max
 
 proc to_function(node: Value): Function =
-  var first = node.gene_data[0]
   var name: string
-  if first.kind == VkSymbol:
-    name = first.symbol
-  elif first.kind == VkComplexSymbol:
-    name = first.csymbol.rest[^1]
-
   var matcher = new_arg_matcher()
-  matcher.parse(node.gene_data[1])
+  var body_start: int
+  case node.gene_type.symbol:
+  of "fnx":
+    matcher.parse(node.gene_data[0])
+    name = "<unnamed>"
+    body_start = 1
+  of "fnxx":
+    name = "<unnamed>"
+    body_start = 0
+  else:
+    var first = node.gene_data[0]
+    if first.kind == VkSymbol:
+      name = first.symbol
+    elif first.kind == VkComplexSymbol:
+      name = first.csymbol.rest[^1]
+    matcher.parse(node.gene_data[1])
+    body_start = 2
 
   var body: seq[Value] = @[]
-  for i in 2..<node.gene_data.len:
+  for i in body_start..<node.gene_data.len:
     body.add node.gene_data[i]
 
   body = wrap_with_try(body)
@@ -93,6 +103,13 @@ proc translate_fn(value: Value): Expr =
   )
   return expr
 
+proc translate_fnx(value: Value): Expr =
+  var fn = to_function(value)
+  ExFn(
+    evaluator: eval_fn,
+    data: fn,
+  )
+
 proc translate_return(value: Value): Expr =
   var expr = ExReturn()
   expr.evaluator = eval_return
@@ -101,4 +118,6 @@ proc translate_return(value: Value): Expr =
 
 proc init*() =
   GeneTranslators["fn"] = translate_fn
+  GeneTranslators["fnx"] = translate_fnx
+  GeneTranslators["fnxx"] = translate_fnx
   GeneTranslators["return"] = translate_return
