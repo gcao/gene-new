@@ -187,6 +187,7 @@ type
     VkComplexSymbol
     VkRegex
     VkRange
+    VkSelector
     VkTyped
     # Time part should be 00:00:00 and timezone should not matter
     VkDate
@@ -274,6 +275,8 @@ type
       stream*: seq[Value]
     of VkExplode:
       explode*: Value
+    of VkSelector:
+      selector*: Selector
     of VkTyped:
       ttype*: Value
       tdata*: Value
@@ -424,6 +427,67 @@ type
   MatchState* = ref object
     # prop_processed*: seq[MapKey]
     data_index*: int
+
+  SelectorNoResult* = object of Exception
+
+  Selector* {.acyclic.} = ref object of GeneProcessor
+    children*: seq[SelectorItem]  # Each child represents a branch
+    default*: Value
+
+  SelectorItemKind* = enum
+    SiDefault
+    SiSelector
+
+  SelectorItem* {.acyclic.} = ref object
+    case kind*: SelectorItemKind
+    of SiDefault:
+      matchers*: seq[SelectorMatcher]
+      children*: seq[SelectorItem]  # Each child represents a branch
+    of SiSelector:
+      selector*: Selector
+
+  SelectorMatcherKind* = enum
+    SmByIndex
+    SmByIndexList
+    SmByIndexRange
+    SmByName
+    SmByNameList
+    SmByNamePattern
+    SmSymbol
+    SmByType
+    SmType
+    SmProps
+    SmKeys
+    SmValues
+    SmData
+    SmSelfAndDescendants
+    SmDescendants
+    SmCallback
+
+  SelectorMatcher* = ref object
+    root*: Selector
+    case kind*: SelectorMatcherKind
+    of SmByIndex:
+      index*: int
+    of SmByName:
+      name*: MapKey
+    of SmByType:
+      by_type*: Value
+    of SmCallback:
+      callback*: Value
+    else: discard
+
+  SelectResultMode* = enum
+    SrFirst
+    SrAll
+
+  SelectorResult* = ref object
+    done*: bool
+    case mode*: SelectResultMode
+    of SrFirst:
+      first*: Value
+    of SrAll:
+      all*: seq[Value]
 
   # Types related to command line argument parsing
   ArgumentError* = object of Exception
@@ -1402,6 +1466,77 @@ converter json_to_gene*(node: JsonNode): Value =
     result = new_gene_vec()
     for elem in node.elems:
       result.vec.add(elem.json_to_gene)
+
+#################### Selector ####################
+
+proc new_gene_selector*(selector: Selector): Value =
+  Value(kind: VkSelector, selector: selector)
+
+proc new_selector*(): Selector =
+  result = Selector()
+
+proc gene_to_selector_item*(v: Value): SelectorItem =
+  case v.kind:
+  of VkSelector:
+    result = SelectorItem(
+      kind: SiSelector,
+      selector: v.selector,
+    )
+  of VkFunction:
+    result = SelectorItem()
+    result.matchers.add(SelectorMatcher(kind: SmCallback, callback: v))
+  of VkInt:
+    result = SelectorItem()
+    result.matchers.add(SelectorMatcher(kind: SmByIndex, index: v.int))
+  of VkString:
+    result = SelectorItem()
+    result.matchers.add(SelectorMatcher(kind: SmByName, name: v.str.to_key))
+  of VkSymbol:
+    result = SelectorItem()
+    result.matchers.add(SelectorMatcher(kind: SmByType, by_type: v))
+  of VkPlaceholder:
+    result = SelectorItem()
+    result.matchers.add(SelectorMatcher(kind: SmSelfAndDescendants))
+  of VkVector:
+    result = SelectorItem()
+    for item in v.vec:
+      case item.kind:
+      of VkInt:
+        result.matchers.add(SelectorMatcher(kind: SmByIndex, index: item.int))
+      of VkString:
+        result.matchers.add(SelectorMatcher(kind: SmByName, name: item.str.to_key))
+      of VkSymbol:
+        result.matchers.add(SelectorMatcher(kind: SmByType, by_type: item))
+      else:
+        todo()
+  else:
+    todo($v.kind)
+
+# Definition
+proc is_singular*(self: Selector): bool
+
+proc is_singular*(self: SelectorItem): bool =
+  case self.kind:
+  of SiDefault:
+    if self.matchers.len > 1:
+      return false
+    if self.matchers[0].kind notin [SmByIndex, SmByName]:
+      return false
+    case self.children.len:
+    of 0:
+      return true
+    of 1:
+      return self.children[0].is_singular()
+    else:
+      return false
+  of SiSelector:
+    result = self.selector.is_singular()
+
+proc is_singular*(self: Selector): bool =
+  result = self.children.len == 1 and self.children[0].is_singular()
+
+proc is_last*(self: SelectorItem): bool =
+  result = self.children.len == 0
 
 #################### Pattern Matching ############
 

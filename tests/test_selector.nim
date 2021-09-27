@@ -76,152 +76,152 @@ import ./helpers
 # * Update
 # * Remove
 
-test_interpreter """
-  ({^a "A"} .@ "a")
-""", "A"
+# test_interpreter """
+#   ({^a "A"} .@ "a")
+# """, "A"
 
-test_interpreter """
-  ({^a "A"} .@a)
-""", "A"
+# test_interpreter """
+#   ({^a "A"} .@a)
+# """, "A"
 
-test_interpreter """
-  ((_ ^a "A") .@ "a")
-""", "A"
+# test_interpreter """
+#   ((_ ^a "A") .@ "a")
+# """, "A"
 
-test_interpreter """
-  ([1 2] .@ 0)
-""", 1
+# test_interpreter """
+#   ([1 2] .@ 0)
+# """, 1
 
-test_interpreter """
-  ([1 2] .@0)
-""", 1
+# test_interpreter """
+#   ([1 2] .@0)
+# """, 1
 
 test_interpreter """
   ((@ "test") {^test 1})
 """, 1
 
-test_interpreter """
-  (@test {^test 1})
-""", 1
+# test_interpreter """
+#   (@test {^test 1})
+# """, 1
 
-test_interpreter """
-  (@test/0 {^test [1]})
-""", 1
+# test_interpreter """
+#   (@test/0 {^test [1]})
+# """, 1
 
-test_interpreter """
-  (@0/test [{^test 1}])
-""", 1
+# test_interpreter """
+#   (@0/test [{^test 1}])
+# """, 1
 
-test_interpreter """
-  ([{^test 1}] .@ 0 "test")
-""", 1
+# test_interpreter """
+#   ([{^test 1}] .@ 0 "test")
+# """, 1
 
-test_interpreter """
-  ([{^test 1}] .@0/test)
-""", 1
+# test_interpreter """
+#   ([{^test 1}] .@0/test)
+# """, 1
 
-test_interpreter """
-  (do ^self [{^test 1}]
-    (.@ 0 "test")
-  )
-""", 1
+# test_interpreter """
+#   (do ^self [{^test 1}]
+#     (.@ 0 "test")
+#   )
+# """, 1
 
-test_interpreter """
-  (do ^self [{^test 1}]
-    (.@0/test)
-  )
-""", 1
+# test_interpreter """
+#   (do ^self [{^test 1}]
+#     (.@0/test)
+#   )
+# """, 1
 
-test_interpreter """
-  (var a {})
-  ($set a @test 1)
-  (@test a)
-""", 1
+# test_interpreter """
+#   (var a {})
+#   ($set a @test 1)
+#   (@test a)
+# """, 1
 
-test_interpreter """
-  (var a [0])
-  ($set a @0 1)
-  a
-""", @[new_gene_int(1)]
+# test_interpreter """
+#   (var a [0])
+#   ($set a @0 1)
+#   a
+# """, @[new_gene_int(1)]
 
-test_interpreter """
-  (class A)
-  (var a (new A))
-  ($set a @test 1)
-  (@test a)
-""", 1
+# test_interpreter """
+#   (class A)
+#   (var a (new A))
+#   ($set a @test 1)
+#   (@test a)
+# """, 1
 
-test_interpreter """
-  (class A
-    (method new []
-      (@description = "Class A")
-    )
-  )
-  (new A)
-""", proc(r: GeneValue) =
-  check r.internal.instance.value.gene.props["description"] == "Class A"
+# test_interpreter """
+#   (class A
+#     (method new []
+#       (@description = "Class A")
+#     )
+#   )
+#   (new A)
+# """, proc(r: GeneValue) =
+#   check r.internal.instance.value.gene.props["description"] == "Class A"
 
-test_interpreter """
-  ((@ 0) [1 2])
-""", 1
+# test_interpreter """
+#   ((@ 0) [1 2])
+# """, 1
 
-test_interpreter """
-  ((@ 0 "test") [{^test 1}])
-""", 1
+# test_interpreter """
+#   ((@ 0 "test") [{^test 1}])
+# """, 1
 
-test_interpreter """
-  ((@ (@ 0)) [1 2])
-""", 1
+# test_interpreter """
+#   ((@ (@ 0)) [1 2])
+# """, 1
 
-test_interpreter """
-  ((@ [0 1]) [1 2])
-""", @[new_gene_int(1), new_gene_int(2)]
+# test_interpreter """
+#   ((@ [0 1]) [1 2])
+# """, @[new_gene_int(1), new_gene_int(2)]
 
-test_interpreter """
-  ((@ ["a" "b"]) {^a 1 ^b 2 ^c 3})
-""", @[new_gene_int(1), new_gene_int(2)]
+# test_interpreter """
+#   ((@ ["a" "b"]) {^a 1 ^b 2 ^c 3})
+# """, @[new_gene_int(1), new_gene_int(2)]
 
-test_interpreter """
-  ((@* 0 1) [1 2])
-""", @[new_gene_int(1), new_gene_int(2)]
+# test_interpreter """
+#   ((@* 0 1) [1 2])
+# """, @[new_gene_int(1), new_gene_int(2)]
 
-test_interpreter """
-  ((@ :TEST 0)
-    (_ (:TEST 1))
-  )
-""", @[new_gene_int(1)]
+# test_interpreter """
+#   ((@ :TEST 0)
+#     (_ (:TEST 1))
+#   )
+# """, @[new_gene_int(1)]
 
-test_core """
-  (((@ _)
-    (_ (:TEST 1))
-    # Matches
-    # self: (_ (:TEST 1))
-    # descendants: (:TEST 1), 1
-  ).size)
-""", 3
+# test_core """
+#   (((@ _)
+#     (_ (:TEST 1))
+#     # Matches
+#     # self: (_ (:TEST 1))
+#     # descendants: (:TEST 1), 1
+#   ).size)
+# """, 3
 
-test_interpreter """
-  (var a)
-  (fn f v
-    (a = v)
-    (:void)
-  )
-  ((@ 0 f) [123])
-  a
-""", 123
+# test_interpreter """
+#   (var a)
+#   (fn f v
+#     (a = v)
+#     (:void)
+#   )
+#   ((@ 0 f) [123])
+#   a
+# """, 123
 
-test_core """
-  ((@ 0 gene/inc) [1])
-""", @[new_gene_int(2)]
+# test_core """
+#   ((@ 0 gene/inc) [1])
+# """, @[new_gene_int(2)]
 
-test_interpreter """
-  ([] .@ 0 ^default 123)
-""", 123
+# test_interpreter """
+#   ([] .@ 0 ^default 123)
+# """, 123
 
-test_interpreter """
-  ([] .@0 ^default 123)
-""", 123
+# test_interpreter """
+#   ([] .@0 ^default 123)
+# """, 123
 
-test_interpreter """
-  (@0 [] ^default 123)
-""", 123
+# test_interpreter """
+#   (@0 [] ^default 123)
+# """, 123

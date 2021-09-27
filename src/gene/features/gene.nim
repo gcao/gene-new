@@ -42,6 +42,8 @@ proc eval_gene_init(self: VirtualMachine, frame: Frame, target: Value, expr: var
     translator = `type`.macro.translator
   of VkBlock:
     translator = `type`.block.translator
+  of VkSelector:
+    translator = `type`.selector.translator
   of VkGeneProcessor:
     translator = `type`.gene_processor.translator
   else:
