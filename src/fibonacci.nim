@@ -19,7 +19,7 @@ when isMainModule:
   """
   var e = translate(VM.prepare(code))
   let module = new_module()
-  var frame = Frame(ns: module.root_ns, scope: new_scope(), self: Nil)
+  var frame = Frame(ns: module.ns, scope: new_scope(), self: Nil)
   let start = cpuTime()
   let result = VM.eval(frame, e)
   echo "Time: " & $(cpuTime() - start)

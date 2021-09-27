@@ -69,7 +69,7 @@ type
   Module* = ref object
     pkg*: Package         # Package in which the module belongs, or stdlib if not set
     name*: string
-    root_ns*: Namespace
+    ns*: Namespace
     props*: Table[string, Value]  # Additional properties
 
   Namespace* = ref object
@@ -168,6 +168,7 @@ type
     hour*: int
     minute*: int
     second*: int
+    nanosec*: int
     timezone*: Timezone
 
   DateTimeInternal = ref object
@@ -604,7 +605,7 @@ converter gene_to_ns*(v: Value): Namespace = todo()
 proc new_module*(name: string): Module =
   result = Module(
     name: name,
-    root_ns: new_namespace(VM.app.ns),
+    ns: new_namespace(VM.app.ns),
   )
 
 proc new_module*(): Module =
@@ -613,7 +614,7 @@ proc new_module*(): Module =
 proc new_module*(ns: Namespace, name: string): Module =
   result = Module(
     name: name,
-    root_ns: new_namespace(ns),
+    ns: new_namespace(ns),
   )
 
 proc new_module*(ns: Namespace): Module =

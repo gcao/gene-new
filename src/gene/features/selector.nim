@@ -3,7 +3,6 @@ import tables
 import ../types
 import ../exprs
 import ../translators
-# import ../interpreter
 
 type
   ExSelector* = ref object of Expr
