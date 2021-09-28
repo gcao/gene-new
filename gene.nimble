@@ -28,3 +28,6 @@ task test, "Runs the test suite":
   exec "nim c -r tests/test_scope.nim"
   exec "nim c -r tests/test_pattern_matching.nim"
   exec "nim c -r tests/test_macro.nim"
+  exec "nim c -r tests/test_block.nim"
+  exec "nim c -r tests/test_module.nim"
+  exec "nim c -r tests/test_selector.nim"

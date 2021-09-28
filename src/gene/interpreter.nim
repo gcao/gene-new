@@ -45,13 +45,28 @@ proc prepare*(self: VirtualMachine, code: string): Value =
   else:
     new_gene_stream(parsed)
 
+proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
+  var expr = translate(self.prepare(code))
+  result = self.eval(frame, expr)
+
 proc eval*(self: VirtualMachine, code: string): Value =
   var module = new_module()
   var frame = new_frame()
   frame.ns = module.ns
   frame.scope = new_scope()
-  var expr = translate(self.prepare(code))
-  result = self.eval(frame, expr)
+  self.eval(frame, code)
+
+proc import_module*(self: VirtualMachine, name: MapKey, code: string): Namespace =
+  if self.modules.has_key(name):
+    return self.modules[name]
+
+  var module = new_module(name.to_s)
+  var frame = new_frame()
+  frame.ns = module.ns
+  frame.scope = new_scope()
+  discard self.eval(frame, code)
+  result = module.ns
+  self.modules[name] = result
 
 #################### Parsing #####################
 
@@ -294,3 +309,4 @@ import "./features/oop" as oop_feature; oop_feature.init()
 import "./features/eval" as eval_feature; eval_feature.init()
 import "./features/parse" as parse_feature; parse_feature.init()
 import "./features/pattern_matching" as pattern_matching_feature; pattern_matching_feature.init()
+import "./features/module" as module_feature; module_feature.init()

@@ -202,10 +202,14 @@ test_interpreter """
 """, 1
 
 # Should throw MissingArgumentError
-# test_interpreter """
-#   (fn f [^a] a)
-#   (f)
-# """
+# try:
+#   test_interpreter """
+#     (fn f [^a] a)
+#     (f)
+#   """, Nil
+#   fail()
+# except types.Exception:
+#   discard
 
 # test_interpreter """
 #   (fn f [^?a] a) # ^?a, optional named argument, default to Nil

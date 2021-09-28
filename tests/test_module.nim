@@ -13,6 +13,11 @@ import ./helpers
 # import from "module" a/[b c], d as my_d
 # import a # will import from parent, and throw error if "a" not available, this can be useful to make sure the required resource is available when the module is initialized.
 
+test_interpreter """
+  (import a from "tests/fixtures/mod1")
+  (a)
+""", 1
+
 # test "Interpreter / eval: import":
 #   init_all()
 #   discard VM.import_module("file1", """
