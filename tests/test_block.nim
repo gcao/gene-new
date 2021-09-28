@@ -42,10 +42,10 @@ test_interpreter """
   (b)
 """, 1
 
-test_interpreter """
-  (var b (a -> a))
-  (b 1)
-""", 1
+# test_interpreter """
+#   (var b (a -> a))
+#   (b 1)
+# """, 1
 
 test_interpreter """
   (var a 1)
