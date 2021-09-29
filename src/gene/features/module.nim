@@ -6,11 +6,14 @@ import ../map_key
 import ../translators
 import ../interpreter
 
+let INHERIT_KEY*               = add_key("inherit")
+
 type
   ExImport* = ref object of Expr
     matcher*: ImportMatcherRoot
     `from`*: Expr
     pkg*: Expr
+    inherit*: Expr
     native*: bool
 
   ImportMatcherRoot* = ref object
@@ -71,6 +74,26 @@ proc new_import_matcher*(v: Value): ImportMatcherRoot =
   result = ImportMatcherRoot()
   result.parse(v, result.children.addr)
 
+proc import_module*(self: VirtualMachine, name: MapKey, code: string): Namespace =
+  if self.modules.has_key(name):
+    return self.modules[name]
+
+  var module = new_module(name.to_s)
+  var frame = new_frame()
+  frame.ns = module.ns
+  frame.scope = new_scope()
+  discard self.eval(frame, code)
+  result = module.ns
+  self.modules[name] = result
+
+proc import_module*(self: VirtualMachine, name: MapKey, code: string, inherit: Namespace): Namespace =
+  var module = new_module(inherit, name.to_s)
+  var frame = new_frame()
+  frame.ns = module.ns
+  frame.scope = new_scope()
+  discard self.eval(frame, code)
+  result = module.ns
+
 proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, group: seq[ImportMatcher]) =
   for m in group:
     if m.name == MUL_KEY:
@@ -124,7 +147,11 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     ns = frame.ns.root.parent
   else:
     var `from` = self.eval(frame, `from`).str
-    if self.modules.has_key(`from`.to_key):
+    if expr.inherit != nil:
+      var inherit = self.eval(frame, expr.inherit).ns
+      var code = read_file(dir & `from` & ".gene")
+      ns = self.import_module(`from`.to_key, code, inherit)
+    elif self.modules.has_key(`from`.to_key):
       ns = self.modules[`from`.to_key]
     else:
       var code = read_file(dir & `from` & ".gene")
@@ -143,6 +170,8 @@ proc translate_import(value: Value): Expr =
     e.from = translate(matcher.from)
   if value.gene_props.has_key(PKG_KEY):
     e.pkg = translate(value.gene_props[PKG_KEY])
+  if value.gene_props.has_key(INHERIT_KEY):
+    e.inherit = translate(value.gene_props[INHERIT_KEY])
   return e
 
 proc init*() =

@@ -56,18 +56,6 @@ proc eval*(self: VirtualMachine, code: string): Value =
   frame.scope = new_scope()
   self.eval(frame, code)
 
-proc import_module*(self: VirtualMachine, name: MapKey, code: string): Namespace =
-  if self.modules.has_key(name):
-    return self.modules[name]
-
-  var module = new_module(name.to_s)
-  var frame = new_frame()
-  frame.ns = module.ns
-  frame.scope = new_scope()
-  discard self.eval(frame, code)
-  result = module.ns
-  self.modules[name] = result
-
 #################### Parsing #####################
 
 proc parse*(self: var RootMatcher, v: Value)
