@@ -10,19 +10,19 @@ import ./parser
 # Ctrl-C to cancel current input
 
 type
-  KeyboardInterrupt = object of CatchableError
+  # KeyboardInterrupt = object of CatchableError
 
   Eval = proc(self: VirtualMachine, frame: Frame, code: string): Value
 
-# https://rosettacode.org/wiki/Handle_a_signal#Nim
-proc handler() {.noconv.} =
-  var nmask, omask: Sigset
-  discard sigemptyset(nmask)
-  discard sigemptyset(omask)
-  discard sigaddset(nmask, SIGINT)
-  if sigprocmask(SIG_UNBLOCK, nmask, omask) == -1:
-    raiseOSError(osLastError())
-  raise new_exception(KeyboardInterrupt, "Keyboard Interrupt")
+# # https://rosettacode.org/wiki/Handle_a_signal#Nim
+# proc handler() {.noconv.} =
+#   var nmask, omask: Sigset
+#   discard sigemptyset(nmask)
+#   discard sigemptyset(omask)
+#   discard sigaddset(nmask, SIGINT)
+#   if sigprocmask(SIG_UNBLOCK, nmask, omask) == -1:
+#     raiseOSError(osLastError())
+#   raise new_exception(KeyboardInterrupt, "Keyboard Interrupt")
 
 proc prompt(message: string): string =
   return "\u001B[36m" & message & "\u001B[0m"
@@ -42,7 +42,7 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
   echo "Welcome to interactive Gene!"
   echo "Note: press Ctrl-D to exit."
 
-  set_control_c_hook(handler)
+  # set_control_c_hook(handler)
   try:
     var input = ""
     while true:
@@ -54,8 +54,7 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
         of "":
           continue
         of "help":
-          echo "TODO"
-          input = ""
+          todo()
           continue
         of "exit", "quit":
           quit(0)
@@ -76,21 +75,22 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
           continue
         else:
           input = ""
-      except KeyboardInterrupt:
-        echo()
-        input = ""
+      # except KeyboardInterrupt:
+      #   echo()
+      #   input = ""
       except Return as r:
         result = r.val
         stdout.write_line(result)
         break
-      # except CatchableError as e:
-      #   result = Nil
-      #   input = ""
-      #   var s = e.get_stack_trace()
-      #   s.strip_line_end()
-      #   echo s
-      #   echo error("$#: $#" % [$e.name, $e.msg])
+      except CatchableError as e:
+        result = Nil
+        input = ""
+        var s = e.get_stack_trace()
+        s.strip_line_end()
+        echo s
+        echo error("$#: $#" % [$e.name, $e.msg])
   finally:
-    unset_control_c_hook()
+    # unset_control_c_hook()
+    discard
   if not return_value:
     return Nil
