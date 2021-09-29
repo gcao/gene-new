@@ -87,6 +87,12 @@ proc translate_gene(value: Value): Expr =
   of VkSymbol:
     var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
     return translator(value)
+  of VkFunction:
+    return ExGene(
+      evaluator: eval_gene_init,
+      `type`: new_ex_literal(value.gene_type),
+      args: value,
+    )
   else:
     return ExGene(
       evaluator: eval_gene_init,

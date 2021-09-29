@@ -10,13 +10,13 @@ import ./helpers
 # Interpret: (%a b)
 # Render: ($render :(%a b)) => (<value of a> b)
 
-# test_interpreter """
-#   (var tpl :(%f %b))
-#   (fn f a (a + 1))
-#   (var b 2)
-#   (var x ($render tpl)) # => (<function f> 2)
-#   (eval x)
-# """, 3
+test_interpreter """
+  (var tpl :(%f %b))
+  (fn f a (a + 1))
+  (var b 2)
+  (var x ($render tpl)) # => (<function f> 2)
+  (eval x)
+""", 3
 
 # test_interpreter """
 #   (var a 1)
