@@ -29,6 +29,16 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  (import n/f from "tests/fixtures/mod1")
+  (f 1)
+""", 1
+
+test_interpreter """
+  (import n/[one two] from "tests/fixtures/mod1")
+  (one + two)
+""", 3
+
+test_interpreter """
   (ns n
     (fn f _ 1)
   )
