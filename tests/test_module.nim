@@ -15,34 +15,26 @@ import ./helpers
 
 test_interpreter """
   (import a from "tests/fixtures/mod1")
-  (a)
+  a
 """, 1
 
-# test "Interpreter / eval: import":
-#   init_all()
-#   discard VM.import_module("file1", """
-#     (ns n
-#       (fn f a a)
-#     )
-#   """)
-#   var result = VM.eval """
-#     (import n from "file1")
-#     n/f
-#   """
-#   check result.internal.fn.name == "f"
+test_interpreter """
+  (import a b from "tests/fixtures/mod1")
+  (a + b)
+""", 3
 
-# test "Interpreter / eval: import":
-#   init_all()
-#   discard VM.import_module("file1", """
-#     (ns n
-#       (fn f a a)
-#     )
-#   """)
-#   var result = VM.eval """
-#     (import n/f from "file1")
-#     f
-#   """
-#   check result.internal.fn.name == "f"
+test_interpreter """
+  (import n from "tests/fixtures/mod1")
+  (n/f 1)
+""", 1
+
+# test_interpreter """
+#   (ns n
+#     (fn f _ 1)
+#   )
+#   (import g from "tests/fixtures/mod2" inherit n)
+#   (g)
+# """, 1
 
 # # test "Interpreter / eval: import":
 # #   init_all()
