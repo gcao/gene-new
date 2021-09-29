@@ -21,6 +21,39 @@ proc new_app*(): Application =
   var global = new_namespace("global")
   result.ns = global
 
+#################### Package #####################
+
+proc parse_deps(deps: seq[Value]): Table[string, Package] =
+  for dep in deps:
+    var name = dep.gene_data[0].str
+    var version = dep.gene_data[1]
+    var location = dep.gene_props[LOCATION_KEY]
+    var pkg = Package(name: name, version: version)
+    pkg.dir = location.str
+    result[name] = pkg
+
+proc new_package*(dir: string): Package =
+  result = Package()
+  var d = absolute_path(dir)
+  while d.len > 1:  # not "/"
+    var package_file = d & "/package.gene"
+    if file_exists(package_file):
+      var doc = read_document(read_file(package_file))
+      result.name = doc.props[NAME_KEY].str
+      result.version = doc.props[VERSION_KEY]
+      result.ns = new_namespace(VM.app.ns, "package:" & result.name)
+      result.dir = d
+      result.dependencies = parse_deps(doc.props[DEPS_KEY].vec)
+      # result.ns[CUR_PKG_KEY] = result
+      return result
+    else:
+      d = parent_dir(d)
+
+  result.adhoc = true
+  result.ns = new_namespace(VM.app.ns, "package:<adhoc>")
+  result.dir = d
+  # result.ns[CUR_PKG_KEY] = result
+
 #################### VM ##########################
 
 proc new_vm*(app: Application): VirtualMachine =
@@ -45,6 +78,15 @@ proc prepare*(self: VirtualMachine, code: string): Value =
   else:
     new_gene_stream(parsed)
 
+proc init_package*(self: VirtualMachine, dir: string) =
+  self.app.pkg = new_package(dir)
+
+proc eval_prepare*(self: VirtualMachine): Frame =
+  var module = new_module()
+  result = new_frame()
+  result.ns = module.ns
+  result.scope = new_scope()
+
 proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
   var expr = translate(self.prepare(code))
   result = self.eval(frame, expr)
@@ -55,6 +97,24 @@ proc eval*(self: VirtualMachine, code: string): Value =
   frame.ns = module.ns
   frame.scope = new_scope()
   self.eval(frame, code)
+
+proc run_file*(self: VirtualMachine, file: string): Value =
+  var module = new_module(self.app.pkg.ns, file)
+  var frame = new_frame()
+  frame.ns = module.ns
+  frame.scope = new_scope()
+  var code = read_file(file)
+  result = self.eval(frame, code)
+  # discard self.eval(frame, code)
+  # if frame.ns.has_key(MAIN_KEY):
+  #   var main = frame[MAIN_KEY]
+  #   if main.kind == VkFunction:
+  #     var args = VM.app.ns[CMD_ARGS_KEY]
+  #     var options = Table[FnOption, Value]()
+  #     result = self.call_fn(frame, Nil, main.internal.fn, args, options)
+  #   else:
+  #     raise new_exception(CatchableError, "main is not a function.")
+  # self.wait_for_futures()
 
 #################### Parsing #####################
 

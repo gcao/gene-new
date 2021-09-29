@@ -12,7 +12,7 @@ import ./parser
 type
   KeyboardInterrupt = object of CatchableError
 
-  Eval = proc(self: VirtualMachine, frame: Frame, code: string): GeneValue
+  Eval = proc(self: VirtualMachine, frame: Frame, code: string): Value
 
 # https://rosettacode.org/wiki/Handle_a_signal#Nim
 proc handler() {.noconv.} =
@@ -32,11 +32,13 @@ proc prompt(message: string): string =
 proc error(message: string): string =
   return "\u001B[31m" & message & "\u001B[0m"
 
-proc show_result(v: GeneValue) =
-  if v.kind != GenePlaceholderKind:
+proc show_result(v: Value) =
+  if v == nil:
+    stdout.write_line("nil")
+  elif v.kind != VkPlaceholder:
     stdout.write_line(v)
 
-proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): GeneValue =
+proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): Value =
   echo "Welcome to interactive Gene!"
   echo "Note: press Ctrl-D to exit."
 
@@ -81,14 +83,14 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
         result = r.val
         stdout.write_line(result)
         break
-      except CatchableError as e:
-        result = GeneNil
-        input = ""
-        var s = e.get_stack_trace()
-        s.strip_line_end()
-        echo s
-        echo error("$#: $#" % [$e.name, $e.msg])
+      # except CatchableError as e:
+      #   result = Nil
+      #   input = ""
+      #   var s = e.get_stack_trace()
+      #   s.strip_line_end()
+      #   echo s
+      #   echo error("$#: $#" % [$e.name, $e.msg])
   finally:
     unset_control_c_hook()
   if not return_value:
-    return GeneNil
+    return Nil
