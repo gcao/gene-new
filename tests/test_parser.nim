@@ -153,6 +153,11 @@ test_parser "{^ratio -1/2}", proc(r: Value) =
   check r.kind == VkMap
   check r.map["ratio"] == new_gene_ratio(-1, 2)
 
+test_parser_error """
+  # Gene properties should not be mixed with data like below
+  (a ^b b c ^d d) # b & d are properties but are separated by c
+"""
+
 test_parser_error "{^ratio 1/-2}"
 
 test_read_all """

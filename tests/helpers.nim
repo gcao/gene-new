@@ -53,6 +53,7 @@ proc test_parser_error*(code: string) =
   test "Parser error expected: " & code:
     try:
       discard read(code)
+      fail()
     except ParseError:
       discard
 
