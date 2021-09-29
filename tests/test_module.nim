@@ -28,13 +28,13 @@ test_interpreter """
   (n/f 1)
 """, 1
 
-# test_interpreter """
-#   (ns n
-#     (fn f _ 1)
-#   )
-#   (import g from "tests/fixtures/mod2" inherit n)
-#   (g)
-# """, 1
+test_interpreter """
+  (ns n
+    (fn f _ 1)
+  )
+  (import g from "tests/fixtures/mod2" ^inherit n)
+  (g)
+""", 1
 
 # # test "Interpreter / eval: import":
 # #   init_all()
