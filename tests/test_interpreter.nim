@@ -193,23 +193,6 @@ test_interpreter """
 
 # test_interpreter """
 #   (var sum 0)
-#   (repeat 3
-#     (sum += 1)
-#   )
-#   sum
-# """, 3
-
-# test_interpreter """
-#   (var sum 0)
-#   (repeat 3
-#     # "$once" make sure the statement is executed at most once in a loop.
-#     ($once (sum += 1))
-#   )
-#   sum
-# """, 1
-
-# test_interpreter """
-#   (var sum 0)
 #   (for i in (range 0 4)
 #     (sum += i)
 #   )
