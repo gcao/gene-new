@@ -36,7 +36,7 @@ test_interpreter """
 
 # test_interpreter """
 #   :(test
-#     %%(var a 1)
+#     %_(var a 1)
 #     %a
 #     2
 #   )
