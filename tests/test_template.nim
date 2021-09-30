@@ -10,6 +10,14 @@ import ./helpers
 # Interpret: (%a b)
 # Render: ($render :(%a b)) => (<value of a> b)
 
+# Is this the right behavior?
+# test_interpreter """
+#   (var tpl :(%f b))
+#   (fn f a a)
+#   (var x ($render tpl))
+#   (eval x)
+# """, new_gene_symbol("b")
+
 test_interpreter """
   (var tpl :(%f %b))
   (fn f a (a + 1))

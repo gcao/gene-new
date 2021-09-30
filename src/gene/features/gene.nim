@@ -6,7 +6,6 @@ import ../types
 import ../exprs
 import ../normalizers
 import ../translators
-import ./selectors
 
 proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
@@ -88,6 +87,7 @@ proc translate_gene(value: Value): Expr =
     var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
     return translator(value)
   of VkFunction:
+    # TODO: this can be optimized further
     return ExGene(
       evaluator: eval_gene_init,
       `type`: new_ex_literal(value.gene_type),
