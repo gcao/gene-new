@@ -272,6 +272,10 @@ type
       gene_type*: Value
       gene_props*: OrderedTable[MapKey, Value]
       gene_data*: seq[Value]
+    of VkEnum:
+      `enum`*: Enum
+    of VkEnumMember:
+      `enum_member`*: EnumMember
     of VkStream:
       stream*: seq[Value]
     of VkExplode:
