@@ -733,7 +733,7 @@ proc def_member*(self: var Scope, key: MapKey, val: Value) {.inline.} =
     if cur > 255:
       var history_index = cur.shr(8) - 1
       self.mapping_history[history_index].add(cur and 0xFF)
-      self.mappings[key] = cur and 0b1111111100000000 + index
+      self.mappings[key] = (cur and 0b1111111100000000) + index
     else:
       var history_index = self.mapping_history.len
       self.mapping_history.add(@[NameIndexScope(cur)])
@@ -763,7 +763,10 @@ proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
 
 proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
   if self.mappings.has_key(key):
-    return self.members[self.mappings[key].int]
+    var found = self.mappings[key]
+    if found > 255:
+      found = found and 0xFF
+    return self.members[found]
   elif self.parent != nil:
     return self.parent[key, self.parent_index_max]
 
@@ -786,8 +789,7 @@ proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
     elif found < max:
       self.members[found.int] = val
 
-
-  if self.parent != nil:
+  elif self.parent != nil:
     self.parent.`[]=`(key, val, self.parent_index_max)
   else:
     not_allowed()

@@ -10,6 +10,14 @@ test_interpreter """
   sum
 """, 3
 
+test_interpreter """
+  (var i 0)
+  (repeat 3
+    (var i 1)
+  )
+  i
+""", 0
+
 # test_interpreter """
 #   (var sum 0)
 #   (repeat 4 ^index i
