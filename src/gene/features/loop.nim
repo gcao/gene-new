@@ -7,9 +7,13 @@ import ../translators
 
 type
   ExLoop* = ref object of Expr
-    data: seq[Expr]
+    data*: seq[Expr]
 
   ExContinue* = ref object of Expr
+
+  ExOnce* = ref object of Expr
+    code*: seq[Expr]
+    value*: Value
 
 let LOOP_KEY* = add_key("loop")
 
@@ -45,9 +49,27 @@ proc translate_continue(value: Value): Expr =
     evaluator: eval_continue,
   )
 
+proc eval_once(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  result = cast[ExOnce](expr).value
+  if result == nil:
+    for item in cast[ExOnce](expr).code.mitems:
+      result = self.eval(frame, item)
+    if result == nil:
+      result = Nil
+    cast[ExOnce](expr).value = result
+
+proc translate_once(value: Value): Expr =
+  var r = ExOnce(
+    evaluator: eval_once,
+  )
+  for item in value.gene_data:
+    r.code.add(translate(item))
+  result = r
+
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     self.app.ns["loop"] = new_gene_processor(translate_loop)
     self.app.ns["break"] = new_gene_processor(translate_break)
+    self.app.ns["$once"] = new_gene_processor(translate_once)
 
   GeneTranslators["continue"] = translate_continue
