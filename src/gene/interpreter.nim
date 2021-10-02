@@ -335,6 +335,7 @@ template handle_args*(self: VirtualMachine, frame, new_frame: Frame, fn: Functio
     self.process_args(new_frame, fn.matcher, args)
 
 import "./features/core" as core_feature; core_feature.init()
+import "./features/symbol" as symbol_feature; symbol_feature.init()
 import "./features/array" as array_feature; array_feature.init()
 import "./features/map" as map_feature; map_feature.init()
 import "./features/gene" as gene_feature; gene_feature.init()

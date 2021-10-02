@@ -6,9 +6,9 @@ import ./helpers
 
 # Builtins:
 # global
-# self
 # gene
 # genex
+# self
 # $ns
 # $app
 # $pkg
@@ -17,8 +17,9 @@ import ./helpers
 # $class
 # $method
 # $args
+# $ex
 
-# a       # variable in current scope
+# a       # variable in current scope or namespace
 # /a      # member of namespace
 # @prop   # property of self object
 # @1      # second entry of self.gene_data, or self.vec etc
@@ -32,6 +33,9 @@ import ./helpers
 # x/.meth     # call meth on x  (shortcut for calling method without arguments)
 # self/.meth  # call meth on self
 
+# test_interpreter "(var /a 1) a", 1
+# test_interpreter "(var /a 1) /a", 1
+
 test_interpreter """
   (ns n
     (ns m
@@ -42,14 +46,14 @@ test_interpreter """
 """, proc(r: Value) =
   check r.class.name == "C"
 
-# test_interpreter """
-#   (class C
-#     (mixin M
-#       (fn f _ 1)
-#     )
-#   )
-#   (C/M/f)
-# """, 1
+test_interpreter """
+  (class C
+    (mixin M
+      (fn f _ 1)
+    )
+  )
+  (C/M/f)
+""", 1
 
 # test_interpreter """
 #   (enum A first second)

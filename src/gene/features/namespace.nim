@@ -4,7 +4,6 @@ import tables
 import ../types
 import ../exprs
 import ../translators
-import ../interpreter
 
 type
   ExNamespace* = ref object of Expr
@@ -26,7 +25,7 @@ proc eval_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr):
   new_frame.ns = ns
   new_frame.scope = new_scope()
   new_frame.self = result
-  discard self.eval(frame, e.body)
+  discard self.eval(new_frame, e.body)
 
 proc translate_ns(value: Value): Expr =
   var e = ExNamespace(

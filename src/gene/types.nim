@@ -917,7 +917,7 @@ proc clone*(self: Method): Method =
 
 #################### ComplexSymbol ###############
 
-proc all*(self: ComplexSymbol): seq[string] =
+proc parts*(self: ComplexSymbol): seq[string] =
   result = @[self.first]
   for name in self.rest:
     result.add(name)

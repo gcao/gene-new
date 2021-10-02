@@ -92,9 +92,6 @@ test_interpreter "(var a 1) a", 1
 test_interpreter "(var a 1) (a = 2) a", 2
 test_interpreter "(var a) (a = 2) a", 2
 
-test_interpreter "(var /a 1) a", 1
-test_interpreter "(var /a 1) /a", 1
-
 test_interpreter """
   (var a 1)
   (var b 2)
