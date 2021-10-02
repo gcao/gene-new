@@ -16,9 +16,6 @@ type
     rest*: seq[MapKey]
     value*: Expr
 
-let GENE_KEY*                 = add_key("gene")
-let GENEX_KEY*                = add_key("genex")
-
 proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var value = self.eval(frame, cast[ExVar](expr).value)
   frame.scope.def_member(cast[ExVar](expr).name, value)

@@ -2,9 +2,8 @@ import tables
 
 import ../map_key
 import ../types
-# import ../exprs
 import ../translators
-import ../interpreter
+import ./arithmetic
 
 type
   ExAssignment* = ref object of Expr
@@ -34,5 +33,30 @@ proc translate_assignment(value: Value): Expr =
   #     value: translate(value.gene_data[1]),
   #   )
 
+proc translate_op_eq(value: Value): Expr =
+  var r: ExAssignment
+  case value.gene_type.symbol:
+  of "+=":
+    r = ExAssignment(
+      evaluator: eval_assignment,
+      name: value.gene_data[0].symbol.to_key,
+      value: new_ex_bin(BinAdd),
+    )
+  of "-=":
+    r = ExAssignment(
+      evaluator: eval_assignment,
+      name: value.gene_data[0].symbol.to_key,
+      value: new_ex_bin(BinSub),
+    )
+  else:
+    todo()
+
+  cast[ExBinOp](r.value).op1 = translate(value.gene_data[0])
+  cast[ExBinOp](r.value).op2 = translate(value.gene_data[1])
+  result = r
+
 proc init*() =
   GeneTranslators["="] = translate_assignment
+
+  GeneTranslators["+="] = translate_op_eq
+  GeneTranslators["-="] = translate_op_eq

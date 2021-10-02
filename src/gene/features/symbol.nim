@@ -15,19 +15,23 @@ type
   ExMyMember* = ref object of Expr
     name*: MapKey
 
+let NS_EXPR = Expr()
+NS_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  Value(kind: VkNamespace, ns: frame.ns)
+
 proc eval_symbol_scope(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   frame.scope[cast[ExSymbol](expr).name]
 
 proc eval_symbol_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   frame.ns[cast[ExSymbol](expr).name]
 
-proc eval_symbol(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  result = frame.scope[cast[ExSymbol](expr).name]
-  if result == nil:
-    expr.evaluator = eval_symbol_ns
-    return frame.ns[cast[ExSymbol](expr).name]
-  else:
-    expr.evaluator = eval_symbol_scope
+# proc eval_symbol(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+#   result = frame.scope[cast[ExSymbol](expr).name]
+#   if result == nil:
+#     expr.evaluator = eval_symbol_ns
+#     return frame.ns[cast[ExSymbol](expr).name]
+#   else:
+#     expr.evaluator = eval_symbol_scope
 
 proc eval_my_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = frame.scope[cast[ExMyMember](expr).name]
@@ -42,7 +46,6 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   var key = cast[ExMember](expr).name
   case v.kind:
   of VkNamespace:
-    echo v.ns.name, " ", key.to_s
     return v.ns.members[key]
   of VkClass:
     return v.class.ns.members[key]
@@ -66,6 +69,8 @@ proc translate*(name: string): Expr {.inline.} =
     result = new_ex_literal(GLOBAL_NS)
   of "_":
     result = new_ex_literal(Placeholder)
+  of "$ns":
+    result = NS_EXPR
   else:
     result = ExMyMember(
       evaluator: eval_my_member,
@@ -84,25 +89,7 @@ proc translate*(names: seq[string]): Expr =
     )
 
 proc translate_symbol(value: Value): Expr =
-  if value.symbol.startsWith("@"):
-    return new_ex_get_prop(value.symbol[1..^1])
-  if value.symbol.endsWith("..."):
-    var r = new_ex_explode()
-    r.data = translate(new_gene_symbol(value.symbol[0..^4]))
-    return r
-
-  case value.symbol:
-  of "self":
-    result = new_ex_self()
-  of "global":
-    result = new_ex_literal(GLOBAL_NS)
-  of "_":
-    result = new_ex_literal(Placeholder)
-  else:
-    result = ExSymbol(
-      evaluator: eval_symbol,
-      name: value.symbol.to_key,
-    )
+  translate(value.symbol)
 
 proc translate_complex_symbol(value: Value): Expr =
   translate(value.csymbol.parts)

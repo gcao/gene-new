@@ -37,6 +37,11 @@ import ./helpers
 # test_interpreter "(var /a 1) /a", 1
 
 test_interpreter """
+  $ns
+""", proc(r: Value) =
+  check r.ns.name == "<root>"
+
+test_interpreter """
   (ns n
     (ns m
       (class C)
