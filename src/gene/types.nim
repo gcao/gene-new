@@ -1350,6 +1350,12 @@ proc new_gene_gene*(`type`: Value, props: OrderedTable[MapKey, Value], data: var
     gene_data: @data,
   )
 
+proc new_gene_enum_member*(m: EnumMember): Value =
+  return Value(
+    kind: VkEnumMember,
+    enum_member: m,
+  )
+
 proc new_mixin*(name: string): Mixin =
   return Mixin(
     name: name,

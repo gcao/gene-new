@@ -31,21 +31,11 @@ test_interpreter """
   check e.members["second"].name == "second"
   check e.members["second"].value == 2
 
-# test_interpreter """
-#   (enum A first second)
-#   A/second
-# """, proc(r: Value) =
-#   var m = r.enum_member
-#   check m.parent.name == "A"
-#   check m.name == "second"
-#   check m.value == 1
-
-# test_interpreter """
-#   (enum A first second)
-#   A/second/name
-# """, "second"
-
-# test_interpreter """
-#   (enum A first second)
-#   A/second/value
-# """, 1
+test_interpreter """
+  (enum A first second)
+  A/second
+""", proc(r: Value) =
+  var m = r.enum_member
+  check m.parent.name == "A"
+  check m.name == "second"
+  check m.value == 1

@@ -25,14 +25,6 @@ proc eval_symbol_scope(self: VirtualMachine, frame: Frame, target: Value, expr: 
 proc eval_symbol_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   frame.ns[cast[ExSymbol](expr).name]
 
-# proc eval_symbol(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-#   result = frame.scope[cast[ExSymbol](expr).name]
-#   if result == nil:
-#     expr.evaluator = eval_symbol_ns
-#     return frame.ns[cast[ExSymbol](expr).name]
-#   else:
-#     expr.evaluator = eval_symbol_scope
-
 proc eval_my_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = frame.scope[cast[ExMyMember](expr).name]
   if result == nil:
@@ -51,6 +43,8 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     return v.class.ns.members[key]
   of VkMixin:
     return v.mixin.ns.members[key]
+  of VkEnum:
+    return new_gene_enum_member(v.enum.members[key.to_s])
   else:
     todo()
 

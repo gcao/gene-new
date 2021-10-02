@@ -6,13 +6,13 @@ import ./helpers
 
 # Builtins:
 # global
-# gene
-# genex
+# gene - standard library
+# genex - additional or experimental standard library
 # self
-# $ns
 # $app
 # $pkg
 # $module
+# $ns
 # $fn
 # $class
 # $method
@@ -20,9 +20,9 @@ import ./helpers
 # $ex
 
 # a       # variable in current scope or namespace
-# /a      # member of namespace
+# $ns/a   # member of namespace
 # @prop   # property of self object
-# @1      # second entry of self.gene_data, or self.vec etc
+# @0      # first entry of self.gene_data, or self.vec etc
 # @-1     # last entry of self.gene_data, or self.vec etc
 
 # TODO: Unify @prop, @1 and generic selector feature
@@ -60,11 +60,11 @@ test_interpreter """
   (C/M/f)
 """, 1
 
-# test_interpreter """
-#   (enum A first second)
-#   A/second
-# """, proc(r: Value) =
-#   var m = r.enum_member
-#   check m.parent.name == "A"
-#   check m.name == "second"
-#   check m.value == 1
+test_interpreter """
+  (enum A first second)
+  A/second
+""", proc(r: Value) =
+  var m = r.enum_member
+  check m.parent.name == "A"
+  check m.name == "second"
+  check m.value == 1

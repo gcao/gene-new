@@ -1,4 +1,3 @@
-import strutils
 import tables
 
 import ../map_key
