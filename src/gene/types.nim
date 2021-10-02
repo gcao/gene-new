@@ -157,11 +157,11 @@ type
 
   # applicable to numbers, characters
   Range* = ref object
-    first*: Value
-    last*: Value
+    start*: Value
+    `end`*: Value
     step*: Value # default to 1 if first is greater than last
-    # include_first*: bool # always true
-    include_last*: bool # default to false
+    # include_start*: bool # always true
+    include_end*: bool # default to false
 
   # Non-date specific time object
   Time* = ref object
@@ -252,10 +252,7 @@ type
     of VkRegex:
       regex*: Regex
     of VkRange:
-      range_start*: Value
-      range_end*: Value
-      range_incl_start*: bool
-      range_incl_end*: bool
+      range*: Range
     of VkDate, VkDateTime:
       date_internal: DateTimeInternal
     of VkTimeKind:
@@ -1040,10 +1037,7 @@ proc `==`*(this, that: Value): bool =
     of VkRegex:
       return this.regex == that.regex
     of VkRange:
-      return this.range_start      == that.range_start      and
-             this.range_end        == that.range_end        and
-             this.range_incl_start == that.range_incl_start and
-             this.range_incl_end   == that.range_incl_end
+      return this.range == that.range
     else:
       todo($this.kind)
 
@@ -1093,7 +1087,7 @@ proc hash*(node: Value): Hash =
   of VkRegex:
     todo()
   of VkRange:
-    h = h !& hash(node.range_start) !& hash(node.range_end)
+    h = h !& hash(node.range.start) !& hash(node.range.end)
   else:
     todo($node.kind)
   result = !$h
@@ -1256,13 +1250,10 @@ proc new_gene_complex_symbol*(strs: seq[string]): Value =
 proc new_gene_regex*(regex: string, flags: set[RegexFlag] = {reStudy}): Value =
   return Value(kind: VkRegex, regex: re(regex, flags))
 
-proc new_gene_range*(rstart: Value, rend: Value): Value =
+proc new_gene_range*(start: Value, `end`: Value): Value =
   return Value(
     kind: VkRange,
-    range_start: rstart,
-    range_end: rend,
-    range_incl_start: true,
-    range_incl_end: false,
+    range: Range(start: start, `end`: `end`),
   )
 
 proc new_gene_date*(year, month, day: int): Value =

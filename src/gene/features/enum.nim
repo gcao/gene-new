@@ -2,7 +2,6 @@ import tables
 
 import ../types
 import ../translators
-# import ../interpreter
 
 type
   ExEnum* = ref object of Expr

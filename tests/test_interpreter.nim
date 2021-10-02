@@ -53,9 +53,9 @@ test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 #   check r.gene_data[0] == 1
 #   check r.gene_data[1] == 2
 
-# test_interpreter "(range 0 100)", proc(r: Value) =
-#   check r.range_start == 0
-#   check r.range_end == 100
+test_interpreter "(range 0 100)", proc(r: Value) =
+  check r.range.start == 0
+  check r.range.end == 100
 
 test_interpreter "(1 + 2)", 3
 test_interpreter "(1 - 2)", -1
