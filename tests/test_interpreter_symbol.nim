@@ -33,8 +33,12 @@ import ./helpers
 # x/.meth     # call meth on x  (shortcut for calling method without arguments)
 # self/.meth  # call meth on self
 
-# test_interpreter "(var /a 1) a", 1
-# test_interpreter "(var /a 1) /a", 1
+# test_interpreter "(var $ns/a 1) a", 1
+
+# test_interpreter """
+#   $app
+# """, proc(r: Value) =
+#   check r.app.ns.name == "global"
 
 test_interpreter """
   $ns

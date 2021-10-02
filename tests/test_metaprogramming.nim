@@ -13,6 +13,8 @@
 # * class extended - can not be unextended
 # * mixin included - can not be removed
 
+# * module imported
+
 # * aspect applied
 # * aspect disabled
 # * aspect enabled

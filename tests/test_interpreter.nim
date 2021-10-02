@@ -188,52 +188,6 @@ test_interpreter """
   i
 """, 3
 
-# test_interpreter """
-#   (var sum 0)
-#   (for i in (range 0 4)
-#     (sum += i)
-#   )
-#   sum
-# """, 6 # 0 + 1 + 2 + 3
-
-# test_interpreter """
-#   (var sum 0)
-#   (for i in (range 0 4)
-#     (sum += i)
-#     (if (i < 2)
-#       (continue)
-#     else
-#       (break)
-#     )
-#     (sum = 10000)  # should not reach here
-#   )
-#   sum
-# """, 3 # 0 + 1 + 2
-
-# test_interpreter """
-#   (var sum 0)
-#   (for i in [1 2 3]
-#     (sum += i)
-#   )
-#   sum
-# """, 6
-
-# test_interpreter """
-#   (var sum 0)
-#   (for [k v] in {^a 1 ^b 2}
-#     (sum += v)
-#   )
-#   sum
-# """, 3
-
-# test_interpreter """
-#   (var sum 0)
-#   (for [k _] in [1 2 3]
-#     (sum += k)
-#   )
-#   sum
-# """, 3
-
 test_interpreter "self", Nil
 
 # # test_interpreter """
@@ -327,8 +281,3 @@ test_interpreter """
 #     ($include "tests/fixtures/include_example.gene")
 #   ]
 # """, @[new_gene_int(1), new_gene_int(2), new_gene_int(3)]
-
-# test_interpreter """
-#   $app
-# """, proc(r: Value) =
-#   check r.internal.app.ns.name == "global"
