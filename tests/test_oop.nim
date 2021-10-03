@@ -13,23 +13,6 @@ import ./helpers
 # * Mixin: all stuff in mixin are copied to the target class/mixin
 # * Properties: just a shortcut for defining .prop/.prop= methods
 
-# @p        <=> (@ "p")      <=> (self .@p)
-# (@p)      <=> ((@ "p"))    <=> ((self .@p))
-# (@p = 1)  <=> (@ "p" = 1)  <=> (self .@p = 1)
-# (@p += 1) <=> (@p = (@p + 1)) <=> (@ "p" = ((@ "p") + 1))
-
-# (self .@p)     <=> (self .@ "p")
-# (self .@p = 1) <=> (self .@ "p" = 1)
-
-# Do not allow (self @ ...) (obj @ ...) because they create confusion
-# (self @ p)       <=> (self .@ p)   # p will be evaluated to a property name
-# (self @ "p")     <=> (self .@ "p")
-# (self @ "p" = 1) <=> (self .@ "p" = 1)
-
-# Do not allow (.@p ...) (.@ "p" ...) because they create confusion
-# (.@p)     <=> (self .@p)
-# (@p)      <=> ((self .@p))
-
 test_interpreter "(class A)", proc(r: Value) =
   check r.class.name == "A"
 
@@ -114,7 +97,7 @@ test_interpreter """
       (@description = 1)
     )
     (method test _
-      @description
+      (@description)
     )
   )
   ((new A).test)

@@ -6,6 +6,7 @@ import ../types
 import ../exprs
 import ../translators
 import ./oop
+import ./selector
 
 type
   ExMember* = ref object of Expr
@@ -51,7 +52,8 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 
 proc translate*(name: string): Expr {.inline.} =
   if name.startsWith("@"):
-    return new_ex_get_prop(name[1..^1])
+    # return new_ex_get_prop(name[1..^1])
+    return new_ex_selector(name[1..^1])
   if name.endsWith("..."):
     var r = new_ex_explode()
     r.data = translate(new_gene_symbol(name[0..^4]))
@@ -81,6 +83,7 @@ proc translate*(names: seq[string]): Expr =
     var name = names[^1]
     if name.starts_with("@"):
       return new_ex_get_prop2(translate(names[0..^2]), name[1..^1])
+      # return new_ex_selector(name[1..^1])
     elif name.starts_with("."):
       return ExInvoke(
         evaluator: eval_invoke,

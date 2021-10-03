@@ -53,7 +53,21 @@ import ./helpers
 # Distinguish predicates, transformers and callbacks etc:
 # * Predicates return special list of path=value or value
 # * Callbacks' does not return special list, thus discarded
-#
+
+# @p        <=> (@ "p")
+# (@p)      <=> ((@ "p"))       <=> (self .@p)
+# (@p)      <=> ((@ "p") self)
+# (@p = 1)  <=> ((@ "p") = 1)   <=> (self .@p = 1)
+# (@p += 1) <=> (@p = (@p + 1)) <=> ((@ "p") = ((@ "p") + 1))
+
+# (.@p)     <=> (self .@p)      <=> (self .@ "p")
+# (.@p = 1) <=> (self .@p = 1)  <=> (self .@ "p" = 1)
+
+# Do not allow (self @ ...) (obj @ ...) because they create confusion
+# (self @ p)       <=> (self .@ p)   # p will be evaluated to a property name
+# (self @ "p")     <=> (self .@ "p")
+# (self @ "p" = 1) <=> (self .@ "p" = 1)
+
 # (@ "test")             # target["test"]
 # @test                  # target["test"]
 # (@ 0 "test")           # target[0]["test"]

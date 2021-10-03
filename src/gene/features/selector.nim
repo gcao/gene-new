@@ -215,7 +215,11 @@ proc update*(self: Selector, target: Value, value: Value): bool =
 proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExArguments](expr)
   var selector = target.selector
-  var v = self.eval(frame, expr.data[0])
+  var v: Value
+  if expr.data.len > 0:
+    v = self.eval(frame, expr.data[0])
+  else:
+    v = frame.self
   try:
     result = selector.search(v)
   except SelectorNoResult:
@@ -244,11 +248,20 @@ proc eval_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var 
   selector.children.add(gene_to_selector_item(v))
   new_gene_selector(selector)
 
-proc translate_selector(value: Value): Expr =
-  ExSelector(
+proc new_ex_selector*(name: string): ExSelector =
+  return ExSelector(
     evaluator: eval_selector,
-    data: translate(value.gene_data[0]),
+    data: new_ex_literal(new_gene_string(name)),
   )
+
+proc new_ex_selector*(data: seq[Value]): ExSelector =
+  return ExSelector(
+    evaluator: eval_selector,
+    data: translate(data[0]),
+  )
+
+proc translate_selector(value: Value): Expr =
+  return new_ex_selector(value.gene_data)
 
 proc init*() =
   GeneTranslators["@"] = translate_selector
