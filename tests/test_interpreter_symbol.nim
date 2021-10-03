@@ -35,10 +35,10 @@ import ./helpers
 
 # test_interpreter "(var $ns/a 1) a", 1
 
-# test_interpreter """
-#   $app
-# """, proc(r: Value) =
-#   check r.app.ns.name == "global"
+test_interpreter """
+  $app
+""", proc(r: Value) =
+  check r.app.ns.name == "global"
 
 test_interpreter """
   $ns
@@ -72,3 +72,13 @@ test_interpreter """
   check m.parent.name == "A"
   check m.name == "second"
   check m.value == 1
+
+# test_interpreter """
+#   (class C
+#     (method new _
+#       (@prop = 1)
+#     )
+#   )
+#   (var c (new C))
+#   c/@prop
+# """, 1

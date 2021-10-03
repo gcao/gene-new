@@ -287,6 +287,8 @@ type
       expr*: Expr
     of VkGeneProcessor:
       gene_processor*: GeneProcessor
+    of VkApplication:
+      app*: Application
     of VkNamespace:
       ns*: Namespace
     of VkFunction:
