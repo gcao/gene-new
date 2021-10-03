@@ -4,37 +4,32 @@ import ../map_key
 import ../types
 import ../exprs
 import ../translators
+import ./symbol
 
 type
   ExVar* = ref object of Expr
+    container*: Expr
     name*: MapKey
     value*: Expr
 
-  ExVarComplex* = ref object of Expr
-    first*: MapKey
-    rest*: seq[MapKey]
-    value*: Expr
-
 proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var value = self.eval(frame, cast[ExVar](expr).value)
-  frame.scope.def_member(cast[ExVar](expr).name, value)
-
-proc eval_var_complex(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var e = cast[ExVarComplex](expr)
-  var ns: Namespace
-  case e.first:
-  of EMPTY_STRING_KEY:
-    ns = frame.ns
-  of GLOBAL_KEY:
-    ns = GLOBAL_NS.ns
+  var e = cast[ExVar](expr)
+  if e.container == nil:
+    frame.scope.def_member(e.name, self.eval(frame, e.value))
   else:
-    ns = frame[e.first].ns
+    var container = self.eval(frame, e.container)
+    var ns: Namespace
+    case container.kind:
+    of VkNamespace:
+      ns = container.ns
+    of VkClass:
+      ns = container.class.ns
+    of VkMixin:
+      ns = container.mixin.ns
+    else:
+      todo()
 
-  if e.rest.len > 1:
-    for item in e.rest[0..^2]:
-      ns = ns[item].ns
-
-  ns[e.rest[^1]] = self.eval(frame, cast[ExVarComplex](expr).value)
+    ns[e.name] = self.eval(frame, e.value)
 
 proc translate_var(value: Value): Expr =
   var name = value.gene_data[0]
@@ -51,14 +46,12 @@ proc translate_var(value: Value): Expr =
       value: v,
     )
   of VkComplexSymbol:
-    var r = ExVarComplex(
-      evaluator: eval_var_complex,
-      first: name.csymbol.first.to_key,
+    result = ExVar(
+      evaluator: eval_var,
+      container: translate(name.csymbol.parts[0..^2]),
+      name: name.csymbol.parts[^1].to_key,
       value: v,
     )
-    for item in name.csymbol.rest:
-      r.rest.add(item.to_key())
-    result = r
   else:
     todo($name.kind)
 

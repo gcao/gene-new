@@ -17,6 +17,12 @@ test_interpreter """
 
 test_interpreter """
   (ns n)
+  (var n/test 1)
+  n/test
+""", 1
+
+test_interpreter """
+  (ns n)
   (ns n/m)
   n/m
 """, proc(r: Value) =
