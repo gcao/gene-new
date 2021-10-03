@@ -244,7 +244,7 @@ proc translate_method(value: Value): Expr =
     fn: fn,
   )
 
-proc eval_invoke(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var instance: Value
   var e = cast[ExInvoke](expr).self
   if e == nil:

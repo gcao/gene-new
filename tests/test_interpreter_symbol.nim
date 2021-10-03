@@ -73,12 +73,22 @@ test_interpreter """
   check m.name == "second"
   check m.value == 1
 
-# test_interpreter """
-#   (class C
-#     (method new _
-#       (@prop = 1)
-#     )
-#   )
-#   (var c (new C))
-#   c/@prop
-# """, 1
+test_interpreter """
+  (class C
+    (method new _
+      (@prop = 1)
+    )
+  )
+  (var c (new C))
+  c/@prop
+""", 1
+
+test_interpreter """
+  (class C
+    (method test _
+      1
+    )
+  )
+  (var c (new C))
+  c/.test
+""", 1

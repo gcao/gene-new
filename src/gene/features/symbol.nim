@@ -5,6 +5,7 @@ import ../map_key
 import ../types
 import ../exprs
 import ../translators
+import ./oop
 
 type
   ExMember* = ref object of Expr
@@ -78,11 +79,21 @@ proc translate*(names: seq[string]): Expr =
     return translate(names[0])
   else:
     var name = names[^1]
-    return ExMember(
-      evaluator: eval_member,
-      container: translate(names[0..^2]),
-      name: name.to_key,
-    )
+    if name.starts_with("@"):
+      return new_ex_get_prop2(translate(names[0..^2]), name[1..^1])
+    elif name.starts_with("."):
+      return ExInvoke(
+        evaluator: eval_invoke,
+        self: translate(names[0..^2]),
+        meth: name[1..^1].to_key,
+        args: new_ex_arg(),
+      )
+    else:
+      return ExMember(
+        evaluator: eval_member,
+        container: translate(names[0..^2]),
+        name: name.to_key,
+      )
 
 proc translate_symbol(value: Value): Expr =
   translate(value.symbol)
