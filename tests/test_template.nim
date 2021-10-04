@@ -10,6 +10,10 @@ import ./helpers
 # Interpret: (%a b)
 # Render: ($render :(%a b)) => (<value of a> b)
 
+# [
+#   %(for i in [1 2] i)
+# ] => [1 2]
+
 test_interpreter """
   (var tpl :(%f b))
   (fn f a (a + 1))
@@ -49,16 +53,21 @@ test_interpreter """
 """, proc(r: Value) =
   check r.map["p"] == 2
 
-# test_interpreter """
-#   :(test
-#     %_(var a 1)
-#     %a
-#     2
-#   )
-# """, proc(r: Value) =
-#   check r.gene_type == new_gene_symbol("test")
-#   check r.gene_data[0] == 1
-#   check r.gene_data[1] == 2
+test_interpreter """
+  (var i 1)
+  ($render :[
+    %(var i 2)
+  ])
+  i
+""", 1
+
+test_interpreter """
+  ($render :[
+    1
+    %_(var i 2)
+    2
+  ])
+""", @[new_gene_int(1), new_gene_int(2)]
 
 # # test_interpreter """
 # #   (var a [1 2])
