@@ -11,7 +11,9 @@ proc eval_array(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   result = new_gene_vec()
   for e in cast[ExArray](expr).data.mitems:
     let v = self.eval(frame, e)
-    if v.kind == VkExplode:
+    if v == nil:
+      discard
+    elif v.kind == VkExplode:
       for item in v.explode.vec:
         result.vec.add(item)
     else:

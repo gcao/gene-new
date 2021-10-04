@@ -1370,7 +1370,7 @@ proc error_to_gene*(ex: ref CatchableError): Value =
 proc new_gene_explode*(v: Value): Value =
   return Value(
     kind: VkExplode,
-    # explode: v,
+    explode: v,
   )
 
 #################### Value ###################

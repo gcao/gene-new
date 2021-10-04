@@ -55,3 +55,21 @@ test_interpreter """
   )
   sum
 """, 3
+
+test_interpreter """
+  [(for i in [1 2]
+    ($emit i)
+  )]
+""", @[new_gene_int(1), new_gene_int(2)]
+
+test_interpreter """
+  [(for i in [1 2]
+    ($emit i i)
+  )]
+""", @[new_gene_int(1), new_gene_int(1), new_gene_int(2), new_gene_int(2)]
+
+test_interpreter """
+  [(for i in [1 2]
+    ($once ($emit i)) # $emit will be executed only once
+  )]
+""", @[new_gene_int(1)]

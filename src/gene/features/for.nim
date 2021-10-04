@@ -4,6 +4,8 @@ import ../types
 import ../map_key
 import ../translators
 
+let LOOP_OUTPUT_KEY = add_key("z_loop_output")
+
 type
   ExFor* = ref object of Expr
     name: string
@@ -16,6 +18,9 @@ type
     data: Expr
     body: Expr
 
+  ExEmit* = ref object of Expr
+    data*: seq[Expr]
+
 proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExFor](expr)
   var old_scope = frame.scope
@@ -25,6 +30,8 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     frame.scope = scope
 
     scope.def_member(expr.name.to_key, Nil)
+    var loop_output = new_gene_vec(@[])
+    scope.def_member(LOOP_OUTPUT_KEY, loop_output)
     var data = self.eval(frame, expr.data)
     case data.kind:
     of VkVector:
@@ -37,6 +44,10 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
         discard self.eval(frame, expr.body)
     else:
       todo()
+
+    if loop_output.vec.len > 0:
+      result = new_gene_explode(loop_output)
+
   finally:
     frame.scope = old_scope
 
@@ -50,6 +61,7 @@ proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
 
     scope.def_member(expr.key_name.to_key, Nil)
     scope.def_member(expr.val_name.to_key, Nil)
+    scope.def_member(LOOP_OUTPUT_KEY, @[])
     var data = self.eval(frame, expr.data)
     case data.kind:
     of VkVector:
@@ -84,6 +96,20 @@ proc translate_for(value: Value): Expr =
       body: translate(value.gene_data[3..^1]),
     )
 
+proc eval_emit(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var loop_output = frame.scope[LOOP_OUTPUT_KEY]
+  for item in cast[ExEmit](expr).data.mitems:
+    loop_output.vec.add(self.eval(frame, item))
+
+proc translate_emit(value: Value): Expr =
+  var r = ExEmit(
+    evaluator: eval_emit,
+  )
+  for item in value.gene_data:
+    r.data.add(translate(item))
+  return r
+
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     self.app.ns["for"] = new_gene_processor(translate_for)
+    self.app.ns["$emit"] = new_gene_processor(translate_emit)
