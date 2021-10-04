@@ -8,6 +8,12 @@ type
   ExSelector* = ref object of Expr
     data*: Expr
 
+  ExSelector2* = ref object of Expr
+    data*: seq[Expr]
+
+  ExSelectorInvoker* = ref object of Expr
+    data*: Expr
+
 let NO_RESULT = new_gene_gene(new_gene_symbol("SELECTOR_NO_RESULT"))
 
 proc search*(self: Selector, target: Value, r: SelectorResult)
@@ -213,11 +219,11 @@ proc update*(self: Selector, target: Value, value: Value): bool =
     result = result or child.update(target, value)
 
 proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExArguments](expr)
+  var expr = cast[ExSelectorInvoker](expr)
   var selector = target.selector
   var v: Value
-  if expr.data.len > 0:
-    v = self.eval(frame, expr.data[0])
+  if expr.data != nil:
+    v = self.eval(frame, expr.data)
   else:
     v = frame.self
   try:
@@ -235,11 +241,12 @@ proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
     #   raise
 
 proc selector_arg_translator*(value: Value): Expr =
-  var e = new_ex_arg()
-  e.evaluator = selector_invoker
-  for v in value.gene_data:
-    e.data.add(translate(v))
-  return e
+  var r = ExSelectorInvoker(
+    evaluator: selector_invoker,
+  )
+  if value.gene_data.len > 0:
+    r.data = translate(value.gene_data[0])
+  return r
 
 proc eval_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var selector = new_selector()
@@ -254,11 +261,37 @@ proc new_ex_selector*(name: string): ExSelector =
     data: new_ex_literal(new_gene_string(name)),
   )
 
-proc new_ex_selector*(data: seq[Value]): ExSelector =
-  return ExSelector(
-    evaluator: eval_selector,
-    data: translate(data[0]),
-  )
+proc eval_selector2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExSelector2](expr)
+  var selector = new_selector()
+  selector.translator = selector_arg_translator
+
+  var selector_item = gene_to_selector_item(self.eval(frame, expr.data[0]))
+  selector.children.add(selector_item)
+
+  if expr.data.len > 1:
+    for item in expr.data[1..^1]:
+      var item = item
+      var v = self.eval(frame, item)
+      var s = gene_to_selector_item(v)
+      selector_item.children.add(s)
+      selector_item = s
+
+  new_gene_selector(selector)
+
+proc new_ex_selector*(data: seq[Value]): Expr =
+  if data.len == 1:
+    return ExSelector(
+      evaluator: eval_selector,
+      data: translate(data[0]),
+    )
+  else:
+    var r = ExSelector2(
+      evaluator: eval_selector2,
+    )
+    for item in data:
+      r.data.add(translate(item))
+    return r
 
 proc translate_selector(value: Value): Expr =
   return new_ex_selector(value.gene_data)

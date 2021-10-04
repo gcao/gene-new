@@ -52,7 +52,6 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 
 proc translate*(name: string): Expr {.inline.} =
   if name.startsWith("@"):
-    # return new_ex_get_prop(name[1..^1])
     return new_ex_selector(name[1..^1])
   if name.endsWith("..."):
     var r = new_ex_explode()
@@ -83,7 +82,6 @@ proc translate*(names: seq[string]): Expr =
     var name = names[^1]
     if name.starts_with("@"):
       return new_ex_get_prop2(translate(names[0..^2]), name[1..^1])
-      # return new_ex_selector(name[1..^1])
     elif name.starts_with("."):
       return ExInvoke(
         evaluator: eval_invoke,

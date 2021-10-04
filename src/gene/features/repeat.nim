@@ -23,11 +23,12 @@ proc eval_repeat(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     frame.scope = scope
 
     var times = (int)self.eval(frame, expr.times).int
+    var i = 0
     if expr.total != nil:
       scope.def_member(expr.total.symbol.to_key, new_gene_int(times))
-    var i = 0
     if expr.index != nil:
       scope.def_member(expr.index.symbol.to_key, new_gene_int(i))
+
     while i < times:
       if expr.index != nil:
         scope[expr.index.symbol.to_key] = new_gene_int(i)
