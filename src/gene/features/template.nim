@@ -15,7 +15,12 @@ proc render(self: VirtualMachine, frame: Frame, value: var Value): Value =
       var new_data: seq[Value] = @[]
       for item in value.vec.mitems:
         var v = self.render(frame, item)
-        if v != nil:
+        if v == nil:
+          discard
+        elif v.kind == VkExplode:
+          for item in v.explode.vec:
+            new_data.add(item)
+        else:
           new_data.add(v)
       value.vec = new_data
   of VkMap:
@@ -26,7 +31,12 @@ proc render(self: VirtualMachine, frame: Frame, value: var Value): Value =
       var new_data: seq[Value] = @[]
       for item in value.gene_data.mitems:
         var v = self.render(frame, item)
-        if v != nil:
+        if v == nil:
+          discard
+        elif v.kind == VkExplode:
+          for item in v.explode.vec:
+            new_data.add(item)
+        else:
           new_data.add(v)
       value.gene_data = new_data
     for i, item in value.gene_props.mpairs:
