@@ -27,6 +27,8 @@ proc render(self: VirtualMachine, frame: Frame, value: var Value): Value =
     for i, item in value.map.mpairs:
       value.map[i] = self.render(frame, item)
   of VkGene:
+    if value.gene_type == Quote:
+      return value.gene_data[0]
     if value.gene_data.len > 0:
       var new_data: seq[Value] = @[]
       for item in value.gene_data.mitems:

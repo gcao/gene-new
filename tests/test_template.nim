@@ -83,6 +83,17 @@ test_interpreter """
   check r.gene_data[0] == 1
   check r.gene_data[1] == 2
 
+# test_interpreter """
+#   ($render :[
+#     %(for i in [1 2]
+#       ($emit
+#         :[%i]
+#       )
+#     )
+#   ])
+# """, proc(r: Value) =
+#   r.vec[0] = @[???]
+
 # # test_interpreter """
 # #   (var a [1 2])
 # #   :(test
