@@ -14,10 +14,12 @@ proc eval_map(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   for k, v in cast[ExMap](expr).data.mpairs:
     result.map[k] = self.eval(frame, v)
 
+proc translate_map(value: Value): Expr =
+  result = ExMap(
+    evaluator: eval_map,
+  )
+  for k, v in value.map:
+    cast[ExMap](result).data[k] = translate(v)
+
 proc init*() =
-  Translators[VkMap] = proc(value: Value): Expr =
-    result = ExMap(
-      evaluator: eval_map,
-    )
-    for k, v in value.map:
-      cast[ExMap](result).data[k] = translate(v)
+  Translators[VkMap] = translate_map

@@ -19,10 +19,12 @@ proc eval_array(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     else:
       result.vec.add(v)
 
+proc translate_array(value: Value): Expr =
+  result = ExArray(
+    evaluator: eval_array,
+  )
+  for v in value.vec:
+    cast[ExArray](result).data.add(translate(v))
+
 proc init*() =
-  Translators[VkVector] = proc(value: Value): Expr =
-    result = ExArray(
-      evaluator: eval_array,
-    )
-    for v in value.vec:
-      cast[ExArray](result).data.add(translate(v))
+  Translators[VkVector] = translate_array

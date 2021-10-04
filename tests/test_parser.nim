@@ -120,21 +120,19 @@ test_parser "{^^x ^!y ^^z}", proc(r: Value) =
   check r.kind == VkMap
   check r.map == {"x": True, "y": False, "z": True}.toOrderedTable
 
-test_parser ":foo", proc(r: Value) = # -> (quote foo)
-  check r.kind == VkGene
-  check r.gene_type == new_gene_symbol("quote")
-  check r.gene_data == @[new_gene_symbol("foo")]
+test_parser ":foo", proc(r: Value) =
+  check r.kind == VkQuote
+  check r.quote == new_gene_symbol("foo")
 
-test_parser "%foo", proc(r: Value) = # -> (unquote foo)
-  check r.kind == VkGene
-  check r.gene_type == new_gene_symbol("unquote")
-  check r.gene_data == @[new_gene_symbol("foo")]
+test_parser "%foo", proc(r: Value) =
+  check r.kind == VkUnquote
+  check r.unquote == new_gene_symbol("foo")
+  check r.unquote_discard == false
 
-test_parser "%_foo", proc(r: Value) = # -> (unquote foo)
-  check r.kind == VkGene
-  check r.gene_type == new_gene_symbol("unquote")
-  check r.gene_props["discard"] == True
-  check r.gene_data == @[new_gene_symbol("foo")]
+test_parser "%_foo", proc(r: Value) =
+  check r.kind == VkUnquote
+  check r.unquote == new_gene_symbol("foo")
+  check r.unquote_discard == true
 
 # TODO: %_ is not allowed on gene type and property value
 # (%_foo)         should throw error

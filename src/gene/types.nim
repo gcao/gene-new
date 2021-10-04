@@ -190,6 +190,8 @@ type
     VkRange
     VkSelector
     VkTyped
+    VkQuote
+    VkUnquote
     # Time part should be 00:00:00 and timezone should not matter
     VkDate
     # Date + time + timezone
@@ -275,6 +277,11 @@ type
       `enum_member`*: EnumMember
     of VkStream:
       stream*: seq[Value]
+    of VkQuote:
+      quote*: Value
+    of VkUnquote:
+      unquote*: Value
+      unquote_discard*: bool
     of VkExplode:
       explode*: Value
     of VkSelector:

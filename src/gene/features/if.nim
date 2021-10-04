@@ -126,21 +126,23 @@ proc eval_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr):
   elif expr.`else` != nil:
     result = self.eval(frame, expr.`else`)
 
+proc translate_if(value: Value): Expr =
+  normalize_if(value)
+  var r = ExIf(
+    evaluator: eval_if,
+  )
+  r.cond = translate(value.gene_props[COND_KEY])
+  r.then = translate(value.gene_props[THEN_KEY])
+  if value.gene_props.has_key(ELIF_KEY):
+    var elifs = value.gene_props[ELIF_KEY]
+    var i = 0
+    while i < elifs.vec.len:
+      var cond = translate(elifs.vec[i])
+      var logic = translate(elifs.vec[i + 1])
+      r.elifs.add((cond, logic))
+      i += 2
+  r.`else` = translate(value.gene_props[ELSE_KEY])
+  result = r
+
 proc init*() =
-  GeneTranslators["if"] = proc(value: Value): Expr =
-    normalize_if(value)
-    var r = ExIf(
-      evaluator: eval_if,
-    )
-    r.cond = translate(value.gene_props[COND_KEY])
-    r.then = translate(value.gene_props[THEN_KEY])
-    if value.gene_props.has_key(ELIF_KEY):
-      var elifs = value.gene_props[ELIF_KEY]
-      var i = 0
-      while i < elifs.vec.len:
-        var cond = translate(elifs.vec[i])
-        var logic = translate(elifs.vec[i + 1])
-        r.elifs.add((cond, logic))
-        i += 2
-    r.`else` = translate(value.gene_props[ELSE_KEY])
-    result = r
+  GeneTranslators["if"] = translate_if

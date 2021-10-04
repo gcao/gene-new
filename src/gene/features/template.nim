@@ -10,6 +10,15 @@ type
 
 proc render(self: VirtualMachine, frame: Frame, value: var Value): Value =
   case value.kind:
+  of VkQuote:
+    return value.quote
+  of VkUnquote:
+    var expr = translate(value.unquote)
+    var r = self.eval(frame, expr)
+    if value.unquote_discard:
+      return
+    else:
+      return r
   of VkVector:
     if value.vec.len > 0:
       var new_data: seq[Value] = @[]
@@ -27,8 +36,9 @@ proc render(self: VirtualMachine, frame: Frame, value: var Value): Value =
     for i, item in value.map.mpairs:
       value.map[i] = self.render(frame, item)
   of VkGene:
-    if value.gene_type == Quote:
-      return value.gene_data[0]
+    value.gene_type = self.render(frame, value.gene_type)
+    for i, item in value.gene_props.mpairs:
+      value.gene_props[i] = self.render(frame, item)
     if value.gene_data.len > 0:
       var new_data: seq[Value] = @[]
       for item in value.gene_data.mitems:
@@ -41,17 +51,6 @@ proc render(self: VirtualMachine, frame: Frame, value: var Value): Value =
         else:
           new_data.add(v)
       value.gene_data = new_data
-    for i, item in value.gene_props.mpairs:
-      value.gene_props[i] = self.render(frame, item)
-    if value.gene_type == Unquote:
-      var expr = translate(value.gene_data[0])
-      var r = self.eval(frame, expr)
-      if value.gene_props.has_key(DISCARD_KEY):
-        return
-      else:
-        return r
-    else:
-      value.gene_type = self.render(frame, value.gene_type)
   else:
     discard
 

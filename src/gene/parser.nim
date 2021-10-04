@@ -213,27 +213,19 @@ proc read_string(self: var Parser): Value =
   result = new_gene_string_move(self.str)
   self.str = ""
 
-proc read_quoted_internal(self: var Parser, quote_name: string): Value =
-  # Special logic for %_
-  var unquote_discard = false
-  if quote_name == "unquote" and self.buf[self.bufpos] == '_':
-    self.bufpos.inc()
-    unquote_discard = true
-  let quoted = self.read()
-  result = new_gene_gene()
-  result.gene_type = new_gene_symbol(quote_name)
-  result.gene_data = @[quoted]
-  if unquote_discard:
-    result.gene_props[DISCARD_KEY] = true
-
 proc read_quoted(self: var Parser): Value =
-  return self.read_quoted_internal("quote")
-
-# proc read_quasiquoted(self: var Parser): Value =
-#   return self.read_quoted_internal("quasiquote")
+  result = Value(kind: VkQuote)
+  result.quote = self.read()
 
 proc read_unquoted(self: var Parser): Value =
-  return self.read_quoted_internal("unquote")
+  # Special logic for %_
+  var unquote_discard = false
+  if self.buf[self.bufpos] == '_':
+    self.bufpos.inc()
+    unquote_discard = true
+  result = Value(kind: VkUnquote)
+  result.unquote = self.read()
+  result.unquote_discard = unquote_discard
 
 proc skip_block_comment(self: var Parser) =
   var pos = self.bufpos
