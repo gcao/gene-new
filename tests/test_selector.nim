@@ -183,31 +183,31 @@ test_interpreter """
   ((@ 0) [1 2])
 """, 1
 
-# test_interpreter """
-#   ((@ 0 "test") [{^test 1}])
-# """, 1
+test_interpreter """
+  ((@ 0 "test") [{^test 1}])
+""", 1
 
-# test_interpreter """
-#   ((@ (@ 0)) [1 2])
-# """, 1
+test_interpreter """
+  ((@ (@ 0)) [1 2])
+""", 1
 
-# test_interpreter """
-#   ((@ [0 1]) [1 2])
-# """, @[new_gene_int(1), new_gene_int(2)]
+test_interpreter """
+  ((@ [0 1]) [1 2])
+""", @[new_gene_int(1), new_gene_int(2)]
 
-# test_interpreter """
-#   ((@ ["a" "b"]) {^a 1 ^b 2 ^c 3})
-# """, @[new_gene_int(1), new_gene_int(2)]
+test_interpreter """
+  ((@ ["a" "b"]) {^a 1 ^b 2 ^c 3})
+""", @[new_gene_int(1), new_gene_int(2)]
 
-# test_interpreter """
-#   ((@* 0 1) [1 2])
-# """, @[new_gene_int(1), new_gene_int(2)]
+test_interpreter """
+  ((@* 0 1) [1 2])
+""", @[new_gene_int(1), new_gene_int(2)]
 
-# test_interpreter """
-#   ((@ :TEST 0)
-#     (_ (:TEST 1))
-#   )
-# """, @[new_gene_int(1)]
+test_interpreter """
+  ((@ :TEST 0)
+    (_ (:TEST 1))
+  )
+""", @[new_gene_int(1)]
 
 # test_core """
 #   (((@ _)

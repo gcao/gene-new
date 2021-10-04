@@ -9,6 +9,7 @@ type
     data*: Expr
 
   ExSelector2* = ref object of Expr
+    parallel_mode*: bool
     data*: seq[Expr]
 
   ExSelectorInvoker* = ref object of Expr
@@ -266,20 +267,25 @@ proc eval_selector2(self: VirtualMachine, frame: Frame, target: Value, expr: var
   var selector = new_selector()
   selector.translator = selector_arg_translator
 
-  var selector_item = gene_to_selector_item(self.eval(frame, expr.data[0]))
-  selector.children.add(selector_item)
+  if expr.parallel_mode:
+    for item in expr.data.mitems:
+      var selector_item = gene_to_selector_item(self.eval(frame, item))
+      selector.children.add(selector_item)
+  else:
+    var selector_item = gene_to_selector_item(self.eval(frame, expr.data[0]))
+    selector.children.add(selector_item)
 
-  if expr.data.len > 1:
-    for item in expr.data[1..^1]:
-      var item = item
-      var v = self.eval(frame, item)
-      var s = gene_to_selector_item(v)
-      selector_item.children.add(s)
-      selector_item = s
+    if expr.data.len > 1:
+      for item in expr.data[1..^1]:
+        var item = item
+        var v = self.eval(frame, item)
+        var s = gene_to_selector_item(v)
+        selector_item.children.add(s)
+        selector_item = s
 
   new_gene_selector(selector)
 
-proc new_ex_selector*(data: seq[Value]): Expr =
+proc new_ex_selector*(parallel_mode: bool, data: seq[Value]): Expr =
   if data.len == 1:
     return ExSelector(
       evaluator: eval_selector,
@@ -288,13 +294,16 @@ proc new_ex_selector*(data: seq[Value]): Expr =
   else:
     var r = ExSelector2(
       evaluator: eval_selector2,
+      parallel_mode: parallel_mode,
     )
     for item in data:
       r.data.add(translate(item))
     return r
 
 proc translate_selector(value: Value): Expr =
-  return new_ex_selector(value.gene_data)
+  var parallel_mode = value.gene_type.symbol == "@*"
+  return new_ex_selector(parallel_mode, value.gene_data)
 
 proc init*() =
   GeneTranslators["@"] = translate_selector
+  GeneTranslators["@*"] = translate_selector
