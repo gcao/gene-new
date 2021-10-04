@@ -9,6 +9,12 @@ type
 
 proc render(self: VirtualMachine, frame: Frame, value: var Value): Value =
   case value.kind:
+  of VkVector:
+    for i, item in value.vec.mpairs:
+      value.vec[i] = self.render(frame, item)
+  of VkMap:
+    for i, item in value.map.mpairs:
+      value.map[i] = self.render(frame, item)
   of VkGene:
     for i, item in value.gene_data.mpairs:
       value.gene_data[i] = self.render(frame, item)

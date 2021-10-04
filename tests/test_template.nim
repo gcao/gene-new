@@ -10,13 +10,13 @@ import ./helpers
 # Interpret: (%a b)
 # Render: ($render :(%a b)) => (<value of a> b)
 
-# Is this the right behavior?
-# test_interpreter """
-#   (var tpl :(%f b))
-#   (fn f a a)
-#   (var x ($render tpl))
-#   (eval x)
-# """, new_gene_symbol("b")
+test_interpreter """
+  (var tpl :(%f b))
+  (fn f a (a + 1))
+  (var x ($render tpl)) # => (<function f> b)
+  (var b 2)
+  (eval x)
+""", 3
 
 test_interpreter """
   (var tpl :(%f %b))
@@ -26,13 +26,28 @@ test_interpreter """
   (eval x)
 """, 3
 
-# test_interpreter """
-#   (var a 1)
-#   :(test %a 2)
-# """, proc(r: Value) =
-#   check r.gene_type == new_gene_symbol("test")
-#   check r.gene_data[0] == 1
-#   check r.gene_data[1] == 2
+test_interpreter """
+  (var a 1)
+  ($render :(test %a 2))
+""", proc(r: Value) =
+  check r.gene_type == new_gene_symbol("test")
+  check r.gene_data[0] == 1
+  check r.gene_data[1] == 2
+
+test_interpreter """
+  (var tpl :[%(f b)])
+  (fn f a (a + 1))
+  (var b 1)
+  ($render tpl)
+""", @[new_gene_int(2)]
+
+test_interpreter """
+  (var tpl :{^p %(f b)})
+  (fn f a (a + 1))
+  (var b 1)
+  ($render tpl)
+""", proc(r: Value) =
+  check r.map["p"] == 2
 
 # test_interpreter """
 #   :(test
