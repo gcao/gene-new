@@ -2,9 +2,7 @@ import tables
 
 import ../map_key
 import ../types
-import ../exprs
 import ../translators
-import ../interpreter
 
 type
   IfState = enum

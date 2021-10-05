@@ -3,7 +3,6 @@ import tables
 import ../map_key
 import ../types
 import ../translators
-import ../interpreter
 
 type
   ExIf* = ref object of Expr

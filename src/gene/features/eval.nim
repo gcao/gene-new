@@ -2,7 +2,6 @@ import tables
 
 import ../types
 import ../translators
-import ../interpreter
 
 type
   ExEval* = ref object of Expr

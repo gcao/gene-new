@@ -1,10 +1,6 @@
-import tables
-
 import ../map_key
 import ../types
-import ../exprs
 import ../translators
-import ../interpreter
 
 type
   ExMatch* = ref object of Expr

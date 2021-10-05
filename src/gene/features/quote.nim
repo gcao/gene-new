@@ -2,7 +2,6 @@ import tables
 
 import ../types
 import ../translators
-# import ../interpreter
 
 type
   ExQuote* = ref object of Expr

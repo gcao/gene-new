@@ -83,16 +83,19 @@ test_interpreter """
   check r.gene_data[0] == 1
   check r.gene_data[1] == 2
 
-# test_interpreter """
-#   ($render :[
-#     %(for i in [1 2]
-#       ($emit
-#         :[%i]
-#       )
-#     )
-#   ])
-# """, proc(r: Value) =
-#   r.vec[0] = @[???]
+test_interpreter """
+  ($render :[
+    %(for i in [1 2]
+      ($emit
+        :[a %i]
+      )
+    )
+  ])
+""", proc(r: Value) =
+  # r.vec[0] == [a %i]
+  check r.vec[0].vec[0] == new_gene_symbol("a")
+  check r.vec[0].vec[1].kind == VkUnquote
+  check r.vec[0].vec[1].unquote == new_gene_symbol("i")
 
 # # test_interpreter """
 # #   (var a [1 2])
