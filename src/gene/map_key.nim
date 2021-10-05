@@ -43,10 +43,10 @@ proc `==`*(this, that: MapKey): bool {.inline.} =
 proc hash*(self: MapKey): Hash {.inline.} =
   result = cast[int](self)
 
-discard add_key("")
-discard add_key("global")
-const EMPTY_STRING_KEY*       = 0
-const GLOBAL_KEY*             = 1
+# TODO: automate adding built-in keys as constants, e.g. use a script that takes a csv file of name and string
+
+const EMPTY_STRING_KEY*       = 0; discard add_key("")
+const GLOBAL_KEY*             = 1; discard add_key("global")
 
 let SELF_KEY*                 = add_key("self")
 let METHOD_KEY*               = add_key("method")

@@ -65,6 +65,13 @@ proc init_app_and_vm*() =
   var app = new_app()
   VM = new_vm(app)
   GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
+  GENE_NS = Value(kind: VkNamespace, ns: new_namespace("gene"))
+  GENE_NATIVE_NS = Value(kind: VkNamespace, ns: new_namespace("native"))
+  GENE_NS.ns[GENE_NATIVE_NS.ns.name] = GENE_NATIVE_NS
+  GLOBAL_NS.ns[GENE_NS.ns.name] = GENE_NS
+  GENEX_NS = Value(kind: VkNamespace, ns: new_namespace("genex"))
+  GLOBAL_NS.ns[GENEX_NS.ns.name] = GENEX_NS
+
   for callback in VmCreatedCallbacks:
     callback(VM)
 
@@ -352,6 +359,7 @@ import "./features/macro" as macro_feature; macro_feature.init()
 import "./features/block" as block_feature; block_feature.init()
 import "./features/namespace" as namespace_feature; namespace_feature.init()
 import "./features/selector" as selector_feature; selector_feature.init()
+import "./features/native" as native_feature; native_feature.init()
 import "./features/loop" as loop_feature; loop_feature.init()
 import "./features/while" as while_feature; while_feature.init()
 import "./features/repeat" as repeat_feature; repeat_feature.init()
@@ -362,3 +370,5 @@ import "./features/parse" as parse_feature; parse_feature.init()
 import "./features/pattern_matching" as pattern_matching_feature; pattern_matching_feature.init()
 import "./features/module" as module_feature; module_feature.init()
 import "./features/template" as template_feature; template_feature.init()
+
+import "./libs" as libs; libs.init()

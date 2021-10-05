@@ -18,6 +18,13 @@ type
   Translator* = proc(value: Value): Expr
   Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
 
+  NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
+
+  # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
+  # To distinguish NativeMacro and NativeMethod, we just create Value with different kind
+  # (i.e. VkNativeMacro vs VkNativeMethod)
+  # NativeMacro* = proc(self: Value, args: Value): Value {.nimcall.}
+
   GeneProcessor* = ref object of RootObj
     translator*: Translator
 
@@ -216,6 +223,7 @@ type
     VkClass
     VkMixin
     VkMethod
+    VkNativeMethod
     VkInstance
     VkEnum
     VkEnumMember
@@ -306,6 +314,8 @@ type
       `mixin`*: Mixin
     of VkMethod:
       `method`*: Method
+    of VkNativeMethod:
+      native_method*: NativeMethod
     of VkInstance:
       instance*: Instance
     else:
@@ -528,6 +538,9 @@ for i in 0..110:
 
 var VM*: VirtualMachine   # The current virtual machine
 var GLOBAL_NS*: Value
+var GENE_NS*: Value
+var GENE_NATIVE_NS*: Value
+var GENEX_NS*: Value
 
 var ObjectClass*   : Value
 var ClassClass*    : Value
@@ -1363,6 +1376,11 @@ proc new_gene_explode*(v: Value): Value =
     explode: v,
   )
 
+proc new_gene_native_method*(meth: NativeMethod): Value =
+  return Value(
+    kind: VkNativeMethod,
+    native_method: meth,
+  )
 #################### Value ###################
 
 proc is_truthy*(self: Value): bool =
