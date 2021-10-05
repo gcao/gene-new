@@ -37,8 +37,8 @@ proc translate_ns(value: Value): Expr =
   of VkSymbol:
     e.name = first.symbol
   of VkComplexSymbol:
-    e.container = new_ex_names(first.csymbol)
-    e.name = first.csymbol.rest[^1]
+    e.container = new_ex_names(first)
+    e.name = first.csymbol[^1]
   else:
     todo()
   result = e

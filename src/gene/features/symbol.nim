@@ -100,7 +100,7 @@ proc translate_symbol(value: Value): Expr =
   translate(value.symbol)
 
 proc translate_complex_symbol(value: Value): Expr =
-  translate(value.csymbol.parts)
+  translate(value.csymbol)
 
 proc init*() =
   Translators[VkSymbol] = translate_symbol

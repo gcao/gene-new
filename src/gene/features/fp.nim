@@ -74,7 +74,7 @@ proc to_function(node: Value): Function =
     if first.kind == VkSymbol:
       name = first.symbol
     elif first.kind == VkComplexSymbol:
-      name = first.csymbol.rest[^1]
+      name = first.csymbol[^1]
     matcher.parse(node.gene_data[1])
     body_start = 2
 

@@ -48,8 +48,8 @@ proc translate_var(value: Value): Expr =
   of VkComplexSymbol:
     result = ExVar(
       evaluator: eval_var,
-      container: translate(name.csymbol.parts[0..^2]),
-      name: name.csymbol.parts[^1].to_key,
+      container: translate(name.csymbol[0..^2]),
+      name: name.csymbol[^1].to_key,
       value: v,
     )
   else:

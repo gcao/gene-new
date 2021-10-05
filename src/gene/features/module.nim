@@ -48,8 +48,8 @@ proc parse*(self: ImportMatcherRoot, input: Value, group: ptr seq[ImportMatcher]
         group[].add(ImportMatcher(name: item.symbol.to_key))
     of VkComplexSymbol:
       var names: seq[string] = @[]
-      names.add(item.csymbol.first)
-      for item in item.csymbol.rest:
+      names.add(item.csymbol[0])
+      for item in item.csymbol[1..^1]:
         names.add(item)
 
       var matcher: ImportMatcher

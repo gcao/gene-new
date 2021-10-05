@@ -193,8 +193,8 @@ test_parser """
 """, 1
 
 test_parser "[a/[1 2]]", proc(r: Value) =
-  check r.vec[0].csymbol.first == "a"
-  check r.vec[0].csymbol.rest == @[""]
+  check r.vec[0].csymbol[0] == "a"
+  check r.vec[0].csymbol[1] == ""
   check r.vec[1].vec[0] == 1
   check r.vec[1].vec[1] == 2
 

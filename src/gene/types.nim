@@ -151,10 +151,6 @@ type
     name*: string
     value*: int
 
-  ComplexSymbol* = ref object
-    first*: string
-    rest*: seq[string]
-
   # applicable to numbers, characters
   Range* = ref object
     start*: Value
@@ -250,7 +246,7 @@ type
     of VkSymbol:
       symbol*: string
     of VkComplexSymbol:
-      csymbol*: ComplexSymbol
+      csymbol*: seq[string]
     of VkRegex:
       regex*: Regex
     of VkRange:
@@ -921,19 +917,6 @@ proc new_method*(class: Class, name: string, fn: Function): Method =
 proc clone*(self: Method): Method =
   new_method(self.class, self.name, self.fn)
 
-#################### ComplexSymbol ###############
-
-proc parts*(self: ComplexSymbol): seq[string] =
-  result = @[self.first]
-  for name in self.rest:
-    result.add(name)
-
-proc last*(self: ComplexSymbol): string =
-  return self.rest[^1]
-
-proc `==`*(this, that: ComplexSymbol): bool =
-  return this.first == that.first and this.rest == that.rest
-
 #################### Enum ########################
 
 proc new_enum*(name: string): Enum =
@@ -1072,7 +1055,7 @@ proc hash*(node: Value): Hash =
   of VkSymbol:
     h = h !& hash(node.symbol)
   of VkComplexSymbol:
-    h = h !& hash(node.csymbol.first & "/" & node.csymbol.rest.join("/"))
+    h = h !& hash(node.csymbol.join("/"))
   of VkDate, VkDateTime:
     todo($node.kind)
   of VkTimeKind:
@@ -1125,7 +1108,7 @@ proc `$`*(node: Value): string =
   of VkSymbol:
     result = node.symbol
   of VkComplexSymbol:
-    result = node.csymbol.first & "/" & node.csymbol.rest.join("/")
+    result = node.csymbol.join("/")
   of VkDate:
     result = node.date.format("yyyy-MM-dd")
   of VkDateTime:
@@ -1253,7 +1236,7 @@ proc new_gene_symbol*(name: string): Value =
 proc new_gene_complex_symbol*(strs: seq[string]): Value =
   Value(
     kind: VkComplexSymbol,
-    csymbol: ComplexSymbol(first: strs[0], rest: strs[1..^1]),
+    csymbol: strs,
   )
 
 proc new_gene_regex*(regex: string, flags: set[RegexFlag] = {reStudy}): Value =
