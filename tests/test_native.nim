@@ -4,6 +4,7 @@ import ./helpers
 
 # Native functions / methods
 
-# test_interpreter """
-#   (gene/native/_test_)
-# """, 1
+test_interpreter """
+  # gene/native/test is defined in tests/helpers.nim:init_all()
+  (gene/native/test)
+""", 1

@@ -14,6 +14,25 @@ proc arg_translator*(value: Value): Expr =
     e.data.add(translate(v))
   return e
 
+proc eval_native_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var args = new_gene_gene()
+  var expr = cast[ExArguments](expr)
+  for k, v in expr.props.mpairs:
+    args.gene_props[k] = self.eval(frame, v)
+  for v in expr.data.mitems:
+    args.gene_data.add(self.eval(frame, v))
+
+  target.native_method(frame.self, args)
+
+proc native_method_arg_translator*(value: Value): Expr =
+  var e = new_ex_arg()
+  e.evaluator = eval_native_method
+  for k, v in value.gene_props:
+    e.props[k] = translate(v)
+  for v in value.gene_data:
+    e.data.add(translate(v))
+  return e
+
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = new_gene_gene(target)
   var expr = cast[ExArguments](expr)
@@ -45,12 +64,12 @@ proc eval_gene_init(self: VirtualMachine, frame: Frame, target: Value, expr: var
     translator = `type`.selector.translator
   of VkGeneProcessor:
     translator = `type`.gene_processor.translator
+  of VkNativeMethod:
+    translator = native_method_arg_translator
   else:
     e.args_expr = arg_translator(e.args)
-
     # For future invocations
     expr.evaluator = eval_gene
-
     return default_invoker(self, frame, `type`, e.args_expr)
 
   e.args_expr = translator(e.args)

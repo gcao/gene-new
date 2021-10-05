@@ -11,8 +11,12 @@ import gene/interpreter
 # import logging
 # addHandler(newConsoleLogger())
 
+proc test(self: Value, args: Value): Value {.nimcall.} =
+  1
+
 proc init_all*() =
   init_app_and_vm()
+  GENE_NATIVE_NS.ns["test"] = new_gene_native_method(test)
 
 # This is added to make it easier to write tests
 converter str_to_key*(s: string): MapKey {.inline.} =
