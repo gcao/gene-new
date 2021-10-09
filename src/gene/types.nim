@@ -336,11 +336,6 @@ type
     app*: Application
     modules*: OrderedTable[MapKey, Namespace]
     repl_on_error*: bool
-    gene_ns*: Value
-    genex_ns*: Value
-    object_class*: Value
-    class_class*: Value
-    exception_class*: Value
 
   FrameKind* = enum
     FrFunction

@@ -1,4 +1,5 @@
 import ./types
 
 proc init*() =
-  discard
+  ObjectClass = Value(kind: VkClass, class: new_class("Object"))
+  GENE_NS.ns["Object"] = ObjectClass
