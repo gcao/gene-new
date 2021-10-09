@@ -40,6 +40,13 @@ test_interpreter """
 
 test_interpreter """
   (class A
+    (method test = gene/native/test)
+  )
+  ((new A).test)
+""", 1
+
+test_interpreter """
+  (class A
     (method test _
       (f)
     )

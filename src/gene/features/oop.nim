@@ -35,6 +35,10 @@ type
     name*: string
     fn*: Function
 
+  ExMethodEq* = ref object of Expr
+    name*: string
+    value*: Expr
+
   ExInvoke* = ref object of Expr
     self*: Expr
     meth*: MapKey
@@ -162,18 +166,18 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     return
 
   var fn_scope = new_scope()
-  var new_frame = Frame(ns: meth.fn.ns, scope: fn_scope)
+  var new_frame = Frame(ns: meth.callable.fn.ns, scope: fn_scope)
   new_frame.parent = frame
   new_frame.self = result
 
   var args_expr = cast[ExNew](expr).args
-  handle_args(self, frame, new_frame, meth.fn, cast[ExArguments](args_expr))
+  handle_args(self, frame, new_frame, meth.callable.fn, cast[ExArguments](args_expr))
 
-  if meth.fn.body_compiled == nil:
-    meth.fn.body_compiled = translate(meth.fn.body)
+  if meth.callable.fn.body_compiled == nil:
+    meth.callable.fn.body_compiled = translate(meth.callable.fn.body)
 
   try:
-    discard self.eval(new_frame, meth.fn.body_compiled)
+    discard self.eval(new_frame, meth.callable.fn.body_compiled)
   except Return as r:
     # return's frame is the same as new_frame(current function's frame)
     if r.frame == new_frame:
@@ -209,13 +213,7 @@ proc to_function(node: Value): Function =
   result = new_fn(name, matcher, body)
   result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
 
-proc eval_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var m = Method(
-    name: cast[ExMethod](expr).name,
-    fn: cast[ExMethod](expr).fn,
-  )
-  m.fn.ns = frame.ns
-
+proc assign_method(frame: Frame, m: Method) =
   case frame.self.kind:
   of VkClass:
     m.class = frame.self.class
@@ -231,12 +229,39 @@ proc eval_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   else:
     not_allowed()
 
+proc eval_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var m = Method(
+    name: cast[ExMethod](expr).name,
+    callable: Value(kind: VkFunction, fn: cast[ExMethod](expr).fn),
+  )
+  m.callable.fn.ns = frame.ns
+  assign_method(frame, m)
+
+  Value(
+    kind: VkMethod,
+    `method`: m,
+  )
+
+proc eval_method_eq*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var m = Method(
+    name: cast[ExMethodEq](expr).name,
+    callable: self.eval(frame, cast[ExMethodEq](expr).value),
+  )
+  assign_method(frame, m)
+
   Value(
     kind: VkMethod,
     `method`: m,
   )
 
 proc translate_method(value: Value): Expr =
+  if value.gene_data.len >= 3 and value.gene_data[1] == Equal:
+    return ExMethodEq(
+      evaluator: eval_method_eq,
+      name: value.gene_data[0].symbol,
+      value: translate(value.gene_data[2])
+    )
+
   var fn = to_function(value)
   ExMethod(
     evaluator: eval_method,
@@ -254,32 +279,44 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
   var class = instance.instance.class
   var meth = class.get_method(cast[ExInvoke](expr).meth)
 
-  var fn_scope = new_scope()
-  var new_frame = Frame(ns: meth.fn.ns, scope: fn_scope)
-  new_frame.parent = frame
-  new_frame.self = instance
-  new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
+  case meth.callable.kind:
+  of VkNativeMethod:
+    var args_expr = cast[ExArguments](cast[ExInvoke](expr).args)
+    var args = new_gene_gene()
+    for k, v in args_expr.props.mpairs:
+      args.gene_props[k] = self.eval(frame, v)
+    for _, v in args_expr.data.mpairs:
+      args.gene_data.add self.eval(frame, v)
+    result = meth.callable.native_method(frame.self, args)
+  of VkFunction:
+    var fn_scope = new_scope()
+    var new_frame = Frame(ns: meth.callable.fn.ns, scope: fn_scope)
+    new_frame.parent = frame
+    new_frame.self = instance
+    new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
 
-  var args_expr = cast[ExInvoke](expr).args
-  handle_args(self, frame, new_frame, meth.fn, cast[ExArguments](args_expr))
+    var args_expr = cast[ExInvoke](expr).args
+    handle_args(self, frame, new_frame, meth.callable.fn, cast[ExArguments](args_expr))
 
-  if meth.fn.body_compiled == nil:
-    meth.fn.body_compiled = translate(meth.fn.body)
+    if meth.callable.fn.body_compiled == nil:
+      meth.callable.fn.body_compiled = translate(meth.callable.fn.body)
 
-  try:
-    result = self.eval(new_frame, meth.fn.body_compiled)
-  except Return as r:
-    # return's frame is the same as new_frame(current function's frame)
-    if r.frame == new_frame:
-      result = r.val
-    else:
-      raise
-  # except CatchableError as e:
-  #   if self.repl_on_error:
-  #     result = repl_on_error(self, frame, e)
-  #     discard
-  #   else:
-  #     raise
+    try:
+      result = self.eval(new_frame, meth.callable.fn.body_compiled)
+    except Return as r:
+      # return's frame is the same as new_frame(current function's frame)
+      if r.frame == new_frame:
+        result = r.val
+      else:
+        raise
+    # except CatchableError as e:
+    #   if self.repl_on_error:
+    #     result = repl_on_error(self, frame, e)
+    #     discard
+    #   else:
+    #     raise
+  else:
+    todo()
 
 proc translate_invoke(value: Value): Expr =
   var r = ExInvoke(
@@ -349,18 +386,18 @@ proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var meth = m.class.get_super_method(m.name.to_key)
 
   var fn_scope = new_scope()
-  var new_frame = Frame(ns: meth.fn.ns, scope: fn_scope)
+  var new_frame = Frame(ns: meth.callable.fn.ns, scope: fn_scope)
   new_frame.parent = frame
   new_frame.self = instance
 
   var args_expr = cast[ExSuper](expr).args
-  handle_args(self, frame, new_frame, meth.fn, cast[ExArguments](args_expr))
+  handle_args(self, frame, new_frame, meth.callable.fn, cast[ExArguments](args_expr))
 
-  if meth.fn.body_compiled == nil:
-    meth.fn.body_compiled = translate(meth.fn.body)
+  if meth.callable.fn.body_compiled == nil:
+    meth.callable.fn.body_compiled = translate(meth.callable.fn.body)
 
   try:
-    result = self.eval(new_frame, meth.fn.body_compiled)
+    result = self.eval(new_frame, meth.callable.fn.body_compiled)
   except Return as r:
     # return's frame is the same as new_frame(current function's frame)
     if r.frame == new_frame:

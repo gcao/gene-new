@@ -18,6 +18,7 @@ type
   Translator* = proc(value: Value): Expr
   Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
 
+  # NativeFn* = proc(args: Value): Value {.nimcall.}
   NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
@@ -110,7 +111,7 @@ type
   Method* = ref object
     class*: Class
     name*: string
-    fn*: Function
+    callable*: Value
     # public*: bool
 
   Instance* = ref object
@@ -924,11 +925,15 @@ proc new_method*(class: Class, name: string, fn: Function): Method =
   return Method(
     class: class,
     name: name,
-    fn: fn,
+    callable: Value(kind: VkFunction, fn: fn),
   )
 
 proc clone*(self: Method): Method =
-  new_method(self.class, self.name, self.fn)
+  return Method(
+    class: self.class,
+    name: self.name,
+    callable: self.callable,
+  )
 
 #################### Enum ########################
 
