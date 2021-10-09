@@ -287,7 +287,8 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
       args.gene_props[k] = self.eval(frame, v)
     for _, v in args_expr.data.mpairs:
       args.gene_data.add self.eval(frame, v)
-    result = meth.callable.native_method(frame.self, args)
+    result = meth.callable.native_method(instance, args)
+
   of VkFunction:
     var fn_scope = new_scope()
     var new_frame = Frame(ns: meth.callable.fn.ns, scope: fn_scope)

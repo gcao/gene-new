@@ -14,9 +14,13 @@ import gene/interpreter
 proc test(self: Value, args: Value): Value {.nimcall.} =
   1
 
+proc test2(self: Value, args: Value): Value {.nimcall.} =
+  self.instance.props["a".to_key].int + args.gene_data[0].int + args.gene_data[1].int
+
 proc init_all*() =
   init_app_and_vm()
   GENE_NATIVE_NS.ns["test"] = new_gene_native_method(test)
+  GENE_NATIVE_NS.ns["test2"] = new_gene_native_method(test2)
 
 # This is added to make it easier to write tests
 converter str_to_key*(s: string): MapKey {.inline.} =
