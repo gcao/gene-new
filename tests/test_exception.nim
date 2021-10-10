@@ -1,3 +1,5 @@
+import unittest
+
 import gene/types
 
 import ./helpers
@@ -73,13 +75,14 @@ test_interpreter """
   )
 """, 3
 
-# test_interpreter """
-#   (try
-#     (throw "test")
-#   catch _
-#     ($ex .message)
-#   )
-# """, "test"
+test_interpreter """
+  (try
+    (throw "test")
+  catch _
+    $ex
+  )
+""", proc(r: Value) =
+  check r.exception.msg == "test"
 
 test_interpreter """
   (try

@@ -1450,7 +1450,7 @@ proc new_instance*(class: Class): Instance =
 proc error_to_gene*(ex: ref CatchableError): Value =
   return Value(
     kind: VkException,
-    # exception: ex,
+    exception: ex,
   )
 
 proc new_gene_explode*(v: Value): Value =
