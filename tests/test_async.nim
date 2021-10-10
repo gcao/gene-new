@@ -18,17 +18,17 @@ import ./helpers
 # * await: convert to synchronous call
 #
 
+test_interpreter """
+  (async 1)
+""", proc(r: Value) =
+  check r.kind == VkFuture
+
+test_interpreter """
+  (async (throw))   # Exception will have to be caught by await, or on_failure
+  1
+""", 1
+
 # test_interpreter """
-#   (async 1)
-# """, proc(r: Value) =
-#   check r.kind == VkFuture
-
-# test_core """
-#   (async (throw))   # Exception will have to be caught by await, or on_failure
-#   1
-# """, 1
-
-# test_core """
 #   (var future (async (throw "test")))
 #   (var a 0)
 #   (future .on_success (-> (a = 1)))
@@ -37,7 +37,7 @@ import ./helpers
 #   a
 # """, "test"
 
-# test_core """
+# test_interpreter """
 #   (var future
 #     # async will return the internal future object
 #     (async (gene/sleep_async 50))
@@ -47,7 +47,7 @@ import ./helpers
 #   a   # future has not finished yet
 # """, 0
 
-# test_core """
+# test_interpreter """
 #   (var future
 #     (async (gene/sleep_async 50))
 #   )
@@ -58,7 +58,7 @@ import ./helpers
 #   a   # future should have finished
 # """, 1
 
-# test_core """
+# test_interpreter """
 #   (try
 #     (await
 #       (async (throw AssertionError))
@@ -75,7 +75,7 @@ import ./helpers
 #   (await (async 1))
 # """, 1
 
-# test_core """
+# test_interpreter """
 #   (var a)
 #   (var future (gene/sleep_async 50))
 #   (future .on_success (->
@@ -85,7 +85,7 @@ import ./helpers
 #   a
 # """, 1
 
-# test_core """
+# test_interpreter """
 #   (var a "")
 #   (var f1 (gene/sleep_async 50))
 #   (f1 .on_success (-> (a = (a "1"))))

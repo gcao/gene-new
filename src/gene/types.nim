@@ -595,6 +595,12 @@ proc new_gene_processor*(translator: Translator): Value =
     gene_processor: GeneProcessor(translator: translator),
   )
 
+proc new_gene_future*(f: Future[Value]): Value =
+  return Value(
+    kind: VkFuture,
+    future: f,
+  )
+
 proc date*(self: Value): DateTime =
   self.date_internal.data
 
