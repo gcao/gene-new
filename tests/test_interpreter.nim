@@ -137,11 +137,11 @@ test_interpreter """
 
 test_interpreter "(do 1 2)", 2
 
-# test_interpreter """
-#   (do ^self 1
-#     self
-#   )
-# """, 1
+test_interpreter """
+  ($with 1
+    self
+  )
+""", 1
 
 test_interpreter """
   (var i 0)
