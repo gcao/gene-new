@@ -295,6 +295,8 @@ type
       cast_class*: Class
       cast_value*: Value
     # Internal types
+    of VkException:
+      exception*: ref CatchableError
     of VkExpr:
       expr*: Expr
     of VkGeneProcessor:

@@ -49,29 +49,29 @@ test_interpreter """
   )
 """, 2
 
-# test_interpreter """
-#   (class TestException < Exception)
-#   (try
-#     (throw TestException)
-#     1
-#   catch TestException
-#     2
-#   catch _
-#     3
-#   )
-# """, 2
+test_interpreter """
+  (class TestException < Exception)
+  (try
+    (throw TestException)
+    1
+  catch TestException
+    2
+  catch _
+    3
+  )
+""", 2
 
-# test_interpreter """
-#   (class TestException < Exception)
-#   (try
-#     (throw)
-#     1
-#   catch TestException
-#     2
-#   catch _
-#     3
-#   )
-# """, 3
+test_interpreter """
+  (class TestException < Exception)
+  (try
+    (throw)
+    1
+  catch TestException
+    2
+  catch _
+    3
+  )
+""", 3
 
 # test_interpreter """
 #   (try
@@ -81,16 +81,16 @@ test_interpreter """
 #   )
 # """, "test"
 
-# test_interpreter """
-#   (try
-#     (throw)
-#     1
-#   catch _
-#     2
-#   finally
-#     3   # value is discarded
-#   )
-# """, 2
+test_interpreter """
+  (try
+    (throw)
+    1
+  catch _
+    2
+  finally
+    3   # value is discarded
+  )
+""", 2
 
 # test_interpreter """
 #   (try
@@ -114,18 +114,18 @@ test_interpreter """
 #   )
 # """, 2
 
-# test_interpreter """
-#   (var a 0)
-#   (try
-#     (throw)
-#     (a = 1)
-#   catch _
-#     (a = 2)
-#   finally
-#     (a = 3)
-#   )
-#   a
-# """, 3
+test_interpreter """
+  (var a 0)
+  (try
+    (throw)
+    (a = 1)
+  catch _
+    (a = 2)
+  finally
+    (a = 3)
+  )
+  a
+""", 3
 
 
 # test_interpreter """

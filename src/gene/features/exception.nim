@@ -16,6 +16,10 @@ type
     catches*: seq[(Expr, Expr)]
     `finally`*: Expr
 
+  ExThrow* = ref object of Expr
+    first*: Expr
+    second*: Expr
+
 proc eval_try(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExTry](expr)
   try:
@@ -91,7 +95,46 @@ proc translate_try(value: Value): Expr =
   elif state == TryFinally:
     if catch_exception != nil:
       r.catches.add((translate(catch_exception), translate(catch_body)))
+  if `finally`.len > 0:
+    r.finally = translate(`finally`)
+  return r
+
+proc eval_throw(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExThrow](expr)
+  if expr.first != nil:
+    var class = self.eval(frame, expr.first)
+    if expr.second != nil:
+      var message = self.eval(frame, expr.second)
+      var instance = new_instance(class.class)
+      raise new_gene_exception(message.str, Value(kind: VkInstance, instance: instance))
+    elif class.kind == VkClass:
+      var instance = new_instance(class.class)
+      raise new_gene_exception(Value(kind: VkInstance, instance: instance))
+    elif class.kind == VkException:
+      raise class.exception
+    elif class.kind == VkString:
+      var instance = new_instance(ExceptionClass.class)
+      raise new_gene_exception(class.str, Value(kind: VkInstance, instance: instance))
+    else:
+      todo()
+  else:
+    # Create instance of gene/Exception
+    var class = ExceptionClass
+    var instance = new_instance(class.class)
+    # Create nim exception of GeneException type
+    raise new_gene_exception(Value(kind: VkInstance, instance: instance))
+
+proc translate_throw(value: Value): Expr =
+  var r = ExThrow(
+    evaluator: eval_throw,
+  )
+  if value.gene_data.len > 0:
+    r.first = translate(value.gene_data[0])
+    if value.gene_data.len > 1:
+      r.second = translate(value.gene_data[1])
+
   return r
 
 proc init*() =
   GeneTranslators["try"] = translate_try
+  GeneTranslators["throw"] = translate_throw
