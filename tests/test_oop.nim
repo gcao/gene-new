@@ -70,6 +70,17 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  (class A)
+""", proc(r: Value) =
+  check r.class.parent == ObjectClass.class
+
+test_interpreter """
+  (class A)
+  ((new A).to_s) # inherit to_s from Object
+""", proc(r: Value) =
+  check r.str.len > 0
+
+test_interpreter """
   (class A
     (method test _
       (. f)

@@ -63,7 +63,9 @@ proc arg_translator*(value: Value): Expr =
 proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExClass](expr)
   var class = new_class(e.name)
-  if e.parent != nil:
+  if e.parent == nil:
+    class.parent = ObjectClass.class
+  else:
     class.parent = self.eval(frame, e.parent).class
   class.ns.parent = frame.ns
   result = Value(kind: VkClass, class: class)
