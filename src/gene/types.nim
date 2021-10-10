@@ -946,19 +946,19 @@ proc get_class*(val: Value): Class =
     return FutureClass.class
   # of VkFile:
   #   return VM.gene_ns.ns[FILE_CLASS_KEY].class
-  # of VkExceptionKind:
-  #   var ex = val.exception
-  #   if ex is Exception:
-  #     var ex = cast[Exception](ex)
-  #     if ex.instance != nil:
-  #       return ex.instance.class
-  #     else:
-  #       return ExceptionClass.class
-  #   # elif ex is CatchableError:
-  #   #   var nim = VM.app.ns[NIM_KEY]
-  #   #   return nim.ns[CATCHABLE_ERROR_KEY].class
-  #   else:
-  #     return ExceptionClass.class
+  of VkException:
+    var ex = val.exception
+    if ex is Exception:
+      var ex = cast[Exception](ex)
+      if ex.instance != nil:
+        return ex.instance.class
+      else:
+        return ExceptionClass.class
+    # elif ex is CatchableError:
+    #   var nim = VM.app.ns[NIM_KEY]
+    #   return nim.ns[CATCHABLE_ERROR_KEY].class
+    else:
+      return ExceptionClass.class
   # of VkNilKind:
   #   return VM.gene_ns.ns[NIL_CLASS_KEY].class
   # of VkBool:
@@ -1667,20 +1667,24 @@ proc new_matcher*(root: RootMatcher, kind: MatcherKind): Matcher =
     kind: kind,
   )
 
+proc required*(self: Matcher): bool =
+  return self.default_value_expr == nil and not self.splat
+
 proc hint*(self: RootMatcher): MatchingHint =
   if self.children.len == 0:
     result.mode = MhNone
-  # else:
-  #   result.mode = MhSimpleData
+  else:
+    result.mode = MhSimpleData
+    for item in self.children:
+      if item.kind != MatchData or not item.required:
+        result.mode = MhDefault
+        return
 
 # proc new_matched_field*(name: MapKey, value: Value): MatchedField =
 #   result = MatchedField(
 #     name: name,
 #     value: value,
 #   )
-
-proc required*(self: Matcher): bool =
-  return self.default_value_expr == nil and not self.splat
 
 proc props*(self: seq[Matcher]): HashSet[MapKey] =
   for m in self:

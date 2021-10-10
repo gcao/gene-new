@@ -36,12 +36,12 @@ test_interpreter """
   a
 """, 1
 
-# test_interpreter """
-#   (var future (async 1))
-#   (var a 0)
-#   (future .on_success (x -> (a = x)))
-#   a
-# """, 1
+test_interpreter """
+  (var future (async 1))
+  (var a 0)
+  (future .on_success (x -> (a = x)))
+  a
+""", 1
 
 test_interpreter """
   (var future (async (throw)))
@@ -51,12 +51,12 @@ test_interpreter """
   a
 """, 2
 
-# test_interpreter """
-#   (var future (async (throw "test")))
-#   (var a 0)
-#   (future .on_failure (ex -> (a = ex)))
-#   (a .message)
-# """, "test"
+test_interpreter """
+  (var future (async (throw "test")))
+  (var a 0)
+  (future .on_failure (ex -> (a = ex)))
+  (a .message)
+""", "test"
 
 # test_interpreter """
 #   (var future (async (throw "test")))
