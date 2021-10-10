@@ -193,7 +193,7 @@ type
     VkRegex
     VkRange
     VkSelector
-    VkTyped
+    VkCast
     VkQuote
     VkUnquote
     # Time part should be 00:00:00 and timezone should not matter
@@ -291,9 +291,9 @@ type
       explode*: Value
     of VkSelector:
       selector*: Selector
-    of VkTyped:
-      ttype*: Value
-      tdata*: Value
+    of VkCast:
+      cast_class*: Class
+      cast_value*: Value
     # Internal types
     of VkExpr:
       expr*: Expr

@@ -278,7 +278,14 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
     instance = frame.self
   else:
     instance = self.eval(frame, e)
-  var class = instance.instance.class
+  var class: Class
+  case instance.kind:
+  of VkInstance:
+    class = instance.instance.class
+  of VkCast:
+    class = instance.cast_class
+  else:
+    todo()
   var meth = class.get_method(cast[ExInvoke](expr).meth)
 
   case meth.callable.kind:
