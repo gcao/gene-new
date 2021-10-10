@@ -102,7 +102,7 @@ test_interpreter """
 #   catch _
 #     2
 #   finally
-#     (return 3)  # value is discarded
+#     (return 3)  # not allowed
 #   )
 # """, 2
 
@@ -113,7 +113,7 @@ test_interpreter """
 #   catch _
 #     2
 #   finally
-#     (break)  # value is discarded
+#     (break)  # not allowed
 #   )
 # """, 2
 
