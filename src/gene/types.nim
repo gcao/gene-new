@@ -211,6 +211,7 @@ type
     VkPlaceholder
     # Internal types
     VkException = 128
+    VkFuture
     VkExpr
     VkGeneProcessor
     VkApplication
@@ -297,6 +298,8 @@ type
     # Internal types
     of VkException:
       exception*: ref CatchableError
+    of VkFuture:
+      future*: Future[Value]
     of VkExpr:
       expr*: Expr
     of VkGeneProcessor:
