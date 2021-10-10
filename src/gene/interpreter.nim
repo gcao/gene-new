@@ -341,6 +341,39 @@ template handle_args*(self: VirtualMachine, frame, new_frame: Frame, fn: Functio
       args.gene_data.add self.eval(frame, v)
     self.process_args(new_frame, fn.matcher, args)
 
+proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
+  case target.kind:
+  of VkBlock:
+    var scope = new_scope()
+    scope.set_parent(target.block.parent_scope, target.block.parent_scope_max)
+    var new_frame = Frame(ns: frame.ns, scope: scope)
+    new_frame.parent = frame
+
+    case target.block.matching_hint.mode:
+    of MhSimpleData:
+      for _, v in args.gene_props.mpairs:
+        todo()
+      for i, v in args.gene_data.mpairs:
+        let field = target.block.matcher.children[i]
+        new_frame.scope.def_member(field.name, v)
+    of MhNone:
+      discard
+    else:
+      todo()
+
+    try:
+      result = self.eval(new_frame, target.block.body_compiled)
+    except Return as r:
+      result = r.val
+    # except CatchableError as e:
+    #   if self.repl_on_error:
+    #     result = repl_on_error(self, frame, e)
+    #     discard
+    #   else:
+    #     raise
+  else:
+    todo()
+
 import "./features/core" as core_feature; core_feature.init()
 import "./features/symbol" as symbol_feature; symbol_feature.init()
 import "./features/array" as array_feature; array_feature.init()
