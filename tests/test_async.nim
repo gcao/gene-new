@@ -71,9 +71,9 @@ test_interpreter """
 #   )
 # """, 2
 
-# test_interpreter """
-#   (await (async 1))
-# """, 1
+test_interpreter """
+  (await (async 1))
+""", 1
 
 # test_interpreter """
 #   (var a)

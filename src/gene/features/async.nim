@@ -8,6 +8,9 @@ type
   ExAsync* = ref object of Expr
     data*: Expr
 
+  ExAwait* = ref object of Expr
+    data*: seq[Expr]
+
 proc eval_async(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExAsync](expr)
   try:
@@ -28,5 +31,31 @@ proc translate_async(value: Value): Expr =
     data: translate(value.gene_data),
   )
 
+proc eval_await(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExAwait](expr)
+  if expr.data.len == 1:
+    var r = self.eval(frame, expr.data[0])
+    if r.kind == VkFuture:
+      result = wait_for(r.future)
+    else:
+      todo()
+  else:
+    result = new_gene_vec()
+    for item in expr.data.mitems:
+      var r = self.eval(frame, item)
+      if r.kind == VkFuture:
+        result.vec.add(wait_for(r.future))
+      else:
+        todo()
+
+proc translate_await(value: Value): Expr =
+  var r = ExAwait(
+    evaluator: eval_await,
+  )
+  for item in value.gene_data:
+    r.data.add(translate(item))
+  return r
+
 proc init*() =
   GeneTranslators["async"] = translate_async
+  GeneTranslators["await"] = translate_await
