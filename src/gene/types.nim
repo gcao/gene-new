@@ -300,6 +300,8 @@ type
       exception*: ref CatchableError
     of VkFuture:
       future*: Future[Value]
+      ft_success_callbacks*: seq[Value]
+      ft_failure_callbacks*: seq[Value]
     of VkExpr:
       expr*: Expr
     of VkGeneProcessor:
@@ -546,6 +548,7 @@ var GENEX_NS*: Value
 var ObjectClass*   : Value
 var ClassClass*    : Value
 var ExceptionClass*: Value
+var FutureClass*   : Value
 
 #################### Definitions #################
 
@@ -933,12 +936,14 @@ proc get_class*(val: Value): Class =
   #   return VM.gene_ns.ns[PACKAGE_CLASS_KEY].class
   of VkInstance:
     return val.instance.class
+  of VkCast:
+    return val.cast_class
   # of VkClass:
   #   return VM.gene_ns.ns[CLASS_CLASS_KEY].class
   # of VkNamespace:
   #   return VM.gene_ns.ns[NAMESPACE_CLASS_KEY].class
-  # of VkFuture:
-  #   return VM.gene_ns.ns[FUTURE_CLASS_KEY].class
+  of VkFuture:
+    return FutureClass.class
   # of VkFile:
   #   return VM.gene_ns.ns[FILE_CLASS_KEY].class
   # of VkExceptionKind:

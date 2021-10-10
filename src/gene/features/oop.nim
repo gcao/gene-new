@@ -278,14 +278,7 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
     instance = frame.self
   else:
     instance = self.eval(frame, e)
-  var class: Class
-  case instance.kind:
-  of VkInstance:
-    class = instance.instance.class
-  of VkCast:
-    class = instance.cast_class
-  else:
-    todo()
+  var class = instance.get_class
   var meth = class.get_method(cast[ExInvoke](expr).meth)
 
   case meth.callable.kind:
@@ -432,7 +425,7 @@ proc translate_super(value: Value): Expr =
   result = r
 
 proc def_native_method*(self: Value, name: string, m: NativeMethod) =
-  self.class.methods["to_s".to_key] = Method(
+  self.class.methods[name.to_key] = Method(
     class: self.class,
     name: name,
     callable: Value(kind: VkNativeMethod, native_method: m),

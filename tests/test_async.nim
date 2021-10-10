@@ -75,6 +75,17 @@ test_interpreter """
   (await (async 1))
 """, 1
 
+test_interpreter """
+  (try
+    (await
+      (async (throw))
+    )
+    1
+  catch _
+    2
+  )
+""", 2
+
 # test_interpreter """
 #   (var a)
 #   (var future (gene/sleep_async 50))

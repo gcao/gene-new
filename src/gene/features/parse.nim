@@ -3,7 +3,6 @@ import tables
 import ../types
 import ../translators
 import ../parser
-import ../interpreter
 
 type
   ExParse* = ref object of Expr
