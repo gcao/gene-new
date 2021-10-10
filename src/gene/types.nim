@@ -914,6 +914,87 @@ proc get_super_method*(self: Class, name: MapKey): Method =
   else:
     not_allowed("No super method available: " & name.to_s)
 
+proc get_class*(val: Value): Class =
+  case val.kind:
+  # of VkApplication:
+  #   return VM.gene_ns.ns[APPLICATION_CLASS_KEY].class
+  # of VkPackage:
+  #   return VM.gene_ns.ns[PACKAGE_CLASS_KEY].class
+  of VkInstance:
+    return val.instance.class
+  # of VkClass:
+  #   return VM.gene_ns.ns[CLASS_CLASS_KEY].class
+  # of VkNamespace:
+  #   return VM.gene_ns.ns[NAMESPACE_CLASS_KEY].class
+  # of VkFuture:
+  #   return VM.gene_ns.ns[FUTURE_CLASS_KEY].class
+  # of VkFile:
+  #   return VM.gene_ns.ns[FILE_CLASS_KEY].class
+  # of VkExceptionKind:
+  #   var ex = val.exception
+  #   if ex is Exception:
+  #     var ex = cast[Exception](ex)
+  #     if ex.instance != nil:
+  #       return ex.instance.class
+  #     else:
+  #       return ExceptionClass.class
+  #   # elif ex is CatchableError:
+  #   #   var nim = VM.app.ns[NIM_KEY]
+  #   #   return nim.ns[CATCHABLE_ERROR_KEY].class
+  #   else:
+  #     return ExceptionClass.class
+  # of VkNilKind:
+  #   return VM.gene_ns.ns[NIL_CLASS_KEY].class
+  # of VkBool:
+  #   return VM.gene_ns.ns[BOOL_CLASS_KEY].class
+  # of VkInt:
+  #   return VM.gene_ns.ns[INT_CLASS_KEY].class
+  # of VkChar:
+  #   return VM.gene_ns.ns[CHAR_CLASS_KEY].class
+  # of VkString:
+  #   return VM.gene_ns.ns[STRING_CLASS_KEY].class
+  # of VkSymbol:
+  #   return VM.gene_ns.ns[SYMBOL_CLASS_KEY].class
+  # of VkComplexSymbol:
+  #   return VM.gene_ns.ns[COMPLEX_SYMBOL_CLASS_KEY].class
+  # of VkVector:
+  #   return VM.gene_ns.ns[ARRAY_CLASS_KEY].class
+  # of VkMap:
+  #   return VM.gene_ns.ns[MAP_CLASS_KEY].class
+  # of VkSet:
+  #   return VM.gene_ns.ns[SET_CLASS_KEY].class
+  # of VkGene:
+  #   return VM.gene_ns.ns[GENE_CLASS_KEY].class
+  # of VkRegex:
+  #   return VM.gene_ns.ns[REGEX_CLASS_KEY].class
+  # of VkRange:
+  #   return VM.gene_ns.ns[RANGE_CLASS_KEY].class
+  # of VkDate:
+  #   return VM.gene_ns.ns[DATE_CLASS_KEY].class
+  # of VkDateTime:
+  #   return VM.gene_ns.ns[DATETIME_CLASS_KEY].class
+  # of VkTimeKind:
+  #   return VM.gene_ns.ns[TIME_CLASS_KEY].class
+  # of VkTimezone:
+  #   return VM.gene_ns.ns[TIMEZONE_CLASS_KEY].class
+  # of VkAny:
+  #   if val.any_type == HTTP_REQUEST_KEY:
+  #     return VM.genex_ns.ns[HTTP_KEY].ns[REQUEST_CLASS_KEY].class
+  #   else:
+  #     todo()
+  else:
+    todo()
+
+proc is_a*(self: Value, class: Class): bool =
+  var my_class = self.get_class
+  while true:
+    if my_class == class:
+      return true
+    if my_class.parent == nil:
+      return false
+    else:
+      my_class = my_class.parent
+
 #################### Method ######################
 
 proc new_method*(class: Class, name: string, fn: Function): Method =

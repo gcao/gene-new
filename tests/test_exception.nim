@@ -40,14 +40,14 @@ import ./helpers
 #     # except:
 #     #   discard
 
-# test_interpreter """
-#   (try
-#     (throw)
-#     1
-#   catch _
-#     2
-#   )
-# """, 2
+test_interpreter """
+  (try
+    (throw)
+    1
+  catch _
+    2
+  )
+""", 2
 
 # test_interpreter """
 #   (class TestException < Exception)
