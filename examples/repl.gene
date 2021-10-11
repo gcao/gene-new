@@ -1,0 +1,9 @@
+#!/usr/bin/env gene
+
+(var a (repl))
+(print "a =" a)
+
+(var b (repl))
+(print "b =" b)
+
+(print "a + b =" (a + b))

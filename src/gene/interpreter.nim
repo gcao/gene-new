@@ -406,5 +406,7 @@ import "./features/parse" as parse_feature; parse_feature.init()
 import "./features/pattern_matching" as pattern_matching_feature; pattern_matching_feature.init()
 import "./features/module" as module_feature; module_feature.init()
 import "./features/template" as template_feature; template_feature.init()
+import "./features/print" as print_feature; print_feature.init()
+import "./features/repl" as repl_feature; repl_feature.init()
 
 import "./libs" as libs; libs.init()

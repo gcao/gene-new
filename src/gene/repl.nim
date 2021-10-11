@@ -68,6 +68,8 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
         input = ""
       except EOFError:
         echo()
+        # Rewind to beginning of file
+        stdin.set_file_pos(0)
         break
       except ParseError as e:
         # Incomplete expression
@@ -92,5 +94,8 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
   finally:
     # unset_control_c_hook()
     discard
-  if not return_value:
+  if return_value:
+    if result == nil:
+      result = Nil
+  else:
     return Nil

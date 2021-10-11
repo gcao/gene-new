@@ -9,6 +9,9 @@ type
     self*: Expr
     body*: Expr
 
+  ExDebug* = ref object of Expr
+    data*: Expr
+
 proc translate_do(value: Value): Expr =
   var r = ExGroup(
     evaluator: eval_group,
@@ -32,6 +35,26 @@ proc translate_with(value: Value): Expr =
     body: translate(value.gene_data[1..^1]),
   )
 
+proc eval_debug(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExDebug](expr)
+  if expr.data == nil:
+    echo "Debug output: none"
+  else:
+    result = self.eval(frame, cast[ExDebug](expr).data)
+    echo "Debug output: " & $result
+
+proc translate_debug(value: Value): Expr =
+  var r = ExDebug(
+    evaluator: eval_debug,
+  )
+  if value.gene_data.len > 0:
+    r.data = translate(value.gene_data[0])
+  return r
+
 proc init*() =
   GeneTranslators["do"] = translate_do
   GeneTranslators["$with"] = translate_with
+  # In IDE, a breakpoint should be set in eval_debug and when running in debug
+  # mode, execution should pause and allow the developer to debug the application
+  # from there.
+  GeneTranslators["debug"] = translate_debug
