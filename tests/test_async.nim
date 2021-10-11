@@ -136,21 +136,29 @@ test_interpreter """
 #   a
 # """, "12"
 
-# test_interpreter """
-#   (fn ^^async f _
-#     1
-#   )
-#   (await (f))
-# """, 1
+test_interpreter """
+  (fn ^^async f _
+    1
+  )
+  (f)
+""", proc(r: Value) =
+  check r.kind == VkFuture
 
-# test_interpreter """
-#   (fn ^^async f _
-#     (throw)
-#   )
-#   (try
-#     (await (f))
-#     1
-#   catch _
-#     2
-#   )
-# """, 2
+test_interpreter """
+  (fn ^^async f _
+    1
+  )
+  (await (f))
+""", 1
+
+test_interpreter """
+  (fn ^^async f _
+    (throw)
+  )
+  (try
+    (await (f))
+    1
+  catch _
+    2
+  )
+""", 2

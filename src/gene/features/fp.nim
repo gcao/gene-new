@@ -1,4 +1,5 @@
 import tables
+import asyncdispatch
 
 import ../map_key
 import ../types
@@ -38,6 +39,10 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
   #     discard
   #   else:
   #     raise
+  if target.fn.async and result.kind != VkFuture:
+    var future = new_future[Value]()
+    future.complete(result)
+    result = new_gene_future(future)
 
 proc fn_arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
