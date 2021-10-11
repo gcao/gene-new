@@ -4,6 +4,7 @@ import strutils, tables, strutils, os, sets
 import ./map_key
 import ./types
 import ./parser
+import ./repl
 import ./exprs
 import ./translators
 
@@ -341,6 +342,14 @@ template handle_args*(self: VirtualMachine, frame, new_frame: Frame, fn: Functio
       args.gene_data.add self.eval(frame, v)
     self.process_args(new_frame, fn.matcher, args)
 
+proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
+  echo "An exception was thrown: " & e.msg
+  echo "Opening debug console..."
+  echo "Note: the exception can be accessed as $ex"
+  var ex = error_to_gene(e)
+  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
+  result = repl(self, frame, eval, true)
+
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   case target.kind:
   of VkBlock:
@@ -365,12 +374,12 @@ proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Valu
       result = self.eval(new_frame, target.block.body_compiled)
     except Return as r:
       result = r.val
-    # except CatchableError as e:
-    #   if self.repl_on_error:
-    #     result = repl_on_error(self, frame, e)
-    #     discard
-    #   else:
-    #     raise
+    except CatchableError as e:
+      if self.repl_on_error:
+        result = repl_on_error(self, frame, e)
+        discard
+      else:
+        raise
   else:
     todo()
 

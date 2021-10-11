@@ -33,12 +33,12 @@ proc block_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var
     result = self.eval(new_frame, target.block.body_compiled)
   except Return as r:
     result = r.val
-  # except CatchableError as e:
-  #   if self.repl_on_error:
-  #     result = repl_on_error(self, frame, e)
-  #     discard
-  #   else:
-  #     raise
+  except CatchableError as e:
+    if self.repl_on_error:
+      result = repl_on_error(self, frame, e)
+      discard
+    else:
+      raise
 
 proc eval_block(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = Value(

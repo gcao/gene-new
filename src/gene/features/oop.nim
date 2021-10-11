@@ -312,12 +312,12 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
         result = r.val
       else:
         raise
-    # except CatchableError as e:
-    #   if self.repl_on_error:
-    #     result = repl_on_error(self, frame, e)
-    #     discard
-    #   else:
-    #     raise
+    except CatchableError as e:
+      if self.repl_on_error:
+        result = repl_on_error(self, frame, e)
+        discard
+      else:
+        raise
   else:
     todo()
 
@@ -367,12 +367,12 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr
       result = r.val
     else:
       raise
-  # except CatchableError as e:
-  #   if self.repl_on_error:
-  #     result = repl_on_error(self, frame, e)
-  #     discard
-  #   else:
-  #     raise
+  except CatchableError as e:
+    if self.repl_on_error:
+      result = repl_on_error(self, frame, e)
+      discard
+    else:
+      raise
 
 proc translate_invoke_dynamic(value: Value): Expr =
   var r = ExInvokeDynamic(
@@ -407,12 +407,12 @@ proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
       result = r.val
     else:
       raise
-  # except CatchableError as e:
-  #   if self.repl_on_error:
-  #     result = repl_on_error(self, frame, e)
-  #     discard
-  #   else:
-  #     raise
+  except CatchableError as e:
+    if self.repl_on_error:
+      result = repl_on_error(self, frame, e)
+      discard
+    else:
+      raise
 
 proc translate_super(value: Value): Expr =
   var r = ExSuper(

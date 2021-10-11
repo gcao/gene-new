@@ -5,6 +5,7 @@ author        = "Guoliang Cao"
 description   = "Gene - a general purpose language"
 license       = "MIT"
 srcDir        = "src"
+binDir        = "bin"
 installExt    = @["nim"]
 bin           = @["gene"]
 
@@ -20,6 +21,7 @@ task buildext, "Build the Nim extension":
 #   exec "nim c --app:lib --outdir:tests tests/extension.nim"
 
 task test, "Runs the test suite":
+  requires "build"
   exec "nim c -r tests/test_parser.nim"
   exec "nim c -r tests/test_interpreter.nim"
   exec "nim c -r tests/test_scope.nim"
