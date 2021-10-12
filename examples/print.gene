@@ -1,11 +1,11 @@
 #!/usr/bin/env gene
 
-(println "test", " ", "println")
-(print "test", " ", "print")
-(print " ", "test", " ", "print again")
+(println "test" "println")
+(print "test" "print")
+(print "test" "print again")
 (print "\n")
 (print "\n")
 
-(print ^^stderr "print to stderr")
+(println ^^stderr "print to stderr")
 (println ^^stderr)
 (println ^^stderr "print to stderr")
