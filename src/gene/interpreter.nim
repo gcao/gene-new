@@ -125,7 +125,6 @@ proc run_file*(self: VirtualMachine, file: string): Value =
   frame.scope = new_scope()
   var code = read_file(file)
   result = self.eval(frame, code)
-  discard self.eval(frame, code)
   if frame.ns.has_key(MAIN_KEY):
     var main = frame[MAIN_KEY]
     if main.kind == VkFunction:
