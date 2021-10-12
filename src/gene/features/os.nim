@@ -1,6 +1,7 @@
-import std/os
+import std/os, sequtils
 
 import ../types
+import ../map_key
 import ../translators
 
 type
@@ -44,5 +45,7 @@ proc translate_set_env(value: Value): Expr =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    var cmd_args = command_line_params().map(str_to_gene)
+    self.app.ns[CMD_ARGS_KEY] = cmd_args
     self.app.ns["$env"] = new_gene_processor(translate_env)
     self.app.ns["$set_env"] = new_gene_processor(translate_set_env)
