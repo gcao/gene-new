@@ -18,7 +18,7 @@ type
   Translator* = proc(value: Value): Expr
   Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
 
-  # NativeFn* = proc(args: Value): Value {.nimcall.}
+  NativeFn* = proc(args: Value): Value {.nimcall.}
   NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
@@ -225,6 +225,7 @@ type
     VkClass
     VkMixin
     VkMethod
+    VkNativeFn
     VkNativeMethod
     VkInstance
     VkEnum
@@ -322,6 +323,8 @@ type
       `mixin`*: Mixin
     of VkMethod:
       `method`*: Method
+    of VkNativeFn:
+      native_fn*: NativeFn
     of VkNativeMethod:
       native_method*: NativeMethod
     of VkInstance:
@@ -1478,6 +1481,13 @@ proc new_gene_native_method*(meth: NativeMethod): Value =
     kind: VkNativeMethod,
     native_method: meth,
   )
+
+proc new_gene_native_fn*(fn: NativeFn): Value =
+  return Value(
+    kind: VkNativeFn,
+    native_fn: fn,
+  )
+
 #################### Value ###################
 
 proc is_truthy*(self: Value): bool =

@@ -1,4 +1,5 @@
 import strutils, tables, strutils, os, sets
+import asyncdispatch
 # import macros
 
 import ./map_key
@@ -76,6 +77,15 @@ proc init_app_and_vm*() =
   for callback in VmCreatedCallbacks:
     callback(VM)
 
+proc wait_for_futures*(self: VirtualMachine) =
+  try:
+    run_forever()
+  except ValueError as e:
+    if e.msg == "No handles or timers registered in dispatcher.":
+      discard
+    else:
+      raise
+
 proc prepare*(self: VirtualMachine, code: string): Value =
   var parsed = read_all(code)
   case parsed.len:
@@ -122,7 +132,7 @@ proc run_file*(self: VirtualMachine, file: string): Value =
   #     result = self.call_fn(frame, Nil, main.internal.fn, args, options)
   #   else:
   #     raise new_exception(CatchableError, "main is not a function.")
-  # self.wait_for_futures()
+  self.wait_for_futures()
 
 #################### Parsing #####################
 
@@ -355,7 +365,7 @@ proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Valu
   of VkBlock:
     var scope = new_scope()
     scope.set_parent(target.block.parent_scope, target.block.parent_scope_max)
-    var new_frame = Frame(ns: frame.ns, scope: scope)
+    var new_frame = Frame(ns: target.block.ns, scope: scope)
     new_frame.parent = frame
 
     case target.block.matching_hint.mode:
