@@ -427,5 +427,6 @@ import "./features/module" as module_feature; module_feature.init()
 import "./features/template" as template_feature; template_feature.init()
 import "./features/print" as print_feature; print_feature.init()
 import "./features/repl" as repl_feature; repl_feature.init()
+import "./features/os" as os_feature; os_feature.init()
 
 import "./libs" as libs; libs.init()
