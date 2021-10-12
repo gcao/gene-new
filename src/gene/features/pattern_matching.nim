@@ -1,3 +1,5 @@
+import tables
+
 import ../map_key
 import ../types
 import ../translators
@@ -39,5 +41,4 @@ proc translate_match(value: Value): Expr =
   result = r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["match"] = new_gene_processor(translate_match)
+  GeneTranslators["match"] = translate_match

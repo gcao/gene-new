@@ -67,9 +67,9 @@ proc translate_once(value: Value): Expr =
   result = r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["loop"] = new_gene_processor(translate_loop)
-    self.app.ns["break"] = new_gene_processor(translate_break)
-    self.app.ns["$once"] = new_gene_processor(translate_once)
-
+  GeneTranslators["loop"] = translate_loop
+  GeneTranslators["break"] = translate_break
   GeneTranslators["continue"] = translate_continue
+
+  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    self.app.ns["$once"] = new_gene_processor(translate_once)

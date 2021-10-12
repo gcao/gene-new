@@ -1,3 +1,5 @@
+import tables
+
 import ../types
 import ../translators
 
@@ -30,5 +32,4 @@ proc translate_while(value: Value): Expr =
   result = r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["while"] = new_gene_processor(translate_while)
+  GeneTranslators["while"] = translate_while

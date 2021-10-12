@@ -1,4 +1,4 @@
-import std/os, sequtils
+import std/os, sequtils, tables
 
 import ../types
 import ../map_key
@@ -62,9 +62,10 @@ proc translate_exit(value: Value): Expr =
   return r
 
 proc init*() =
+  GeneTranslators["exit"] = translate_exit
+
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     var cmd_args = command_line_params().map(str_to_gene)
-    self.app.ns[CMD_ARGS_KEY] = cmd_args
-    self.app.ns["$env"] = new_gene_processor(translate_env)
-    self.app.ns["$set_env"] = new_gene_processor(translate_set_env)
-    self.app.ns["exit"] = new_gene_processor(translate_exit)
+    GLOBAL_NS.ns[CMD_ARGS_KEY] = cmd_args
+    GLOBAL_NS.ns["$env"] = new_gene_processor(translate_env)
+    GLOBAL_NS.ns["$set_env"] = new_gene_processor(translate_set_env)

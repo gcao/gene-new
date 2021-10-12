@@ -25,5 +25,7 @@ proc translate_print(value: Value): Expr =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["print"] = new_gene_processor(translate_print)
-    self.app.ns["println"] = new_gene_processor(translate_print)
+    GLOBAL_NS.ns["print"] = new_gene_processor(translate_print)
+    GENE_NS.ns["print"] = GLOBAL_NS.ns["print"]
+    GLOBAL_NS.ns["println"] = new_gene_processor(translate_print)
+    GENE_NS.ns["println"] = GLOBAL_NS.ns["println"]

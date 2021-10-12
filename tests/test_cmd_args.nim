@@ -1,6 +1,8 @@
 import unittest, tables
 
 import gene/types
+import gene/parser
+import gene/features/parse_cmd_args
 
 import ./helpers
 
@@ -32,6 +34,36 @@ import ./helpers
 #   (argument ^^multiple ^type int name)                 # "name" will be used as key
 # ]
 
+# (WIP)
+# ($parse_cmd_args
+#   [
+#     program   # program will be the property that contains the name of the script/program
+#
+#     (toggle -d --debug)
+#
+#     (list -i --include)             # Can contain 0 to many items, "-i 1 -i 2"
+#     (list ^^required -i --include)  # Must contain at least one item
+#
+#     (opt -r --run)                  # Not mandatory option, expect one value
+#     (opt ^^required -r --run)
+#
+#     (arg file)                      # Required by default
+#     (arg ^!required file)
+#
+#     (list files)                    # Can contain 0 to many item
+#   ]
+#   $cmd_args   # The global variable that holds the command line argument array
+# ) # Return a map
+
+proc test_args*(schema, input: string, callback: proc(r: ArgMatchingResult)) =
+  var schema = cleanup(schema)
+  var input = cleanup(input)
+  test schema & "\n" & input:
+    var m = new_cmd_args_matcher()
+    m.parse(read(schema))
+    var r = m.match(input)
+    callback r
+
 test_args """
   [
     (option ^^toggle -t --toggle)
@@ -40,7 +72,7 @@ test_args """
 """, proc(r: ArgMatchingResult) =
   check r.kind == AmSuccess
   check r.options.len == 1
-  check r.options["--toggle"] == GeneFalse
+  check r.options["--toggle"] == False
 
 test_args """
   [
@@ -74,7 +106,7 @@ test_args """
   check r.kind == AmSuccess
   check r.options.len == 2
   check r.options["--long"] == "long-value"
-  check r.options["--toggle"] == GeneFalse
+  check r.options["--toggle"] == False
   check r.args.len == 1
 
 test_args """
@@ -89,7 +121,7 @@ test_args """
   check r.kind == AmSuccess
   check r.fields.len == 3
   check r.fields["--long"] == "long-value"
-  check r.fields["--toggle"] == GeneFalse # use GeneFalse instead of false because "check" does not like bool == bool
+  check r.fields["--toggle"] == False # use False instead of false because "check" does not like bool == bool
   check r.fields["first"] == "one"
 
 test_args """
@@ -151,7 +183,7 @@ test_args """
   check r.args.len == 1
   check r.args["first"] == @[new_gene_int(100), new_gene_int(200)]
 
-test_core """
+test_interpreter """
   ($parse_cmd_args  # parse arguments and define members in current scope
     [
       (option ^type bool -b)
@@ -171,7 +203,7 @@ test_core """
   (assert (third == [2 3]))
 """
 
-test_core """
+test_interpreter """
   ($parse_cmd_args  # parse arguments and define members in current scope
     [
       program

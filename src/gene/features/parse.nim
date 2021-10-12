@@ -26,4 +26,5 @@ proc translate_parse(value: Value): Expr =
   result = r
 
 proc init*() =
-  GeneTranslators["$parse"] = translate_parse
+  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    GLOBAL_NS.ns["$parse"] = new_gene_processor(translate_parse)

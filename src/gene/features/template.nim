@@ -75,4 +75,6 @@ proc translate_render(value: Value): Expr =
   )
 
 proc init*() =
-  GeneTranslators["$render"] = translate_render
+  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    GLOBAL_NS.ns["$render"] = new_gene_processor(translate_render)
+    GENE_NS.ns["$render"] = GLOBAL_NS.ns["$render"]

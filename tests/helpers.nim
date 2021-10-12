@@ -85,6 +85,12 @@ proc test_read_all*(code: string, callback: proc(result: seq[Value])) =
 # proc test_normalize*(code: string, r: string) =
 #   test_normalize(code, read(r))
 
+proc test_interpreter*(code: string) =
+  var code = cleanup(code)
+  test "Interpreter / eval: " & code:
+    init_all()
+    discard VM.eval(code)
+
 proc test_interpreter*(code: string, result: Value) =
   var code = cleanup(code)
   test "Interpreter / eval: " & code:

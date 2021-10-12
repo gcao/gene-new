@@ -15,4 +15,5 @@ proc translate_repl(value: Value): Expr =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["repl"] = new_gene_processor(translate_repl)
+    GLOBAL_NS.ns["repl"] = new_gene_processor(translate_repl)
+    GENE_NS.ns["repl"] = GLOBAL_NS.ns["repl"]

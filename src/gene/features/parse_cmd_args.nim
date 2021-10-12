@@ -4,27 +4,6 @@ import ../types
 import ../map_key
 import ../translators
 
-# Usage:
-# ($parse_cmd_args
-#   [
-#     program   # program will be the property that contains the name of the script/program
-#
-#     (toggle -d --debug)
-#
-#     (list -i --include)             # Can contain 0 to many items, "-i 1 -i 2"
-#     (list ^^required -i --include)  # Must contain at least one item
-#
-#     (opt -r --run)                  # Not mandatory option, expect one value
-#     (opt ^^required -r --run)
-#
-#     (arg file)                      # Required by default
-#     (arg ^!required file)
-#
-#     (list files)                    # Can contain 0 to many item
-#   ]
-#   $cmd_args   # The global variable that holds the command line argument array
-# ) # Return a map
-
 type
   ExParseCmdArgs* = ref object of Expr
     cmd_args_schema*: ArgMatcherRoot
@@ -291,4 +270,6 @@ proc translate_parse(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["$parse_cmd_args"] = translate_parse
+  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    GLOBAL_NS.ns["$parse_cmd_args"] = new_gene_processor(translate_parse)
+    GENE_NS.ns["$parse_cmd_args"] = GLOBAL_NS.ns["$parse_cmd_args"]

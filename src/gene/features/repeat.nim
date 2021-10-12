@@ -56,4 +56,5 @@ proc translate_repeat(value: Value): Expr =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["repeat"] = new_gene_processor(translate_repeat)
+    GLOBAL_NS.ns["repeat"] = new_gene_processor(translate_repeat)
+    GENE_NS.ns["repeat"] = GLOBAL_NS.ns["repeat"]
