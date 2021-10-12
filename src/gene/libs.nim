@@ -1,4 +1,4 @@
-import os
+import os, base64
 import asyncdispatch
 
 import ./types
@@ -45,20 +45,18 @@ proc add_failure_callback(self: Value, args: Value): Value {.nimcall.} =
         var frame = Frame()
         discard VM.call(frame, args.gene_data[0], callback_args)
 
-proc my_sleep(args: Value): Value =
-  sleep(args.gene_data[0].int)
-
-proc my_sleep_async(args: Value): Value =
-  var f = sleep_async(args.gene_data[0].int)
-  var future = new_future[Value]()
-  f.add_callback proc() {.gcsafe.} =
-    future.complete(Nil)
-  result = new_gene_future(future)
-
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GENE_NS.ns["sleep"] = new_gene_native_fn(my_sleep)
-    GENE_NS.ns["sleep_async"] = new_gene_native_fn(my_sleep_async)
+    GENE_NS.ns["sleep"] = new_gene_native_fn proc(args: Value): Value =
+      sleep(args.gene_data[0].int)
+    GENE_NS.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value =
+      var f = sleep_async(args.gene_data[0].int)
+      var future = new_future[Value]()
+      f.add_callback proc() {.gcsafe.} =
+        future.complete(Nil)
+      result = new_gene_future(future)
+    GENE_NS.ns["base64"] = new_gene_native_fn proc(args: Value): Value =
+      encode(args.gene_data[0].str)
 
     ObjectClass = Value(kind: VkClass, class: new_class("Object"))
     ObjectClass.def_native_method("to_s", object_to_s)

@@ -77,6 +77,8 @@ proc init_app_and_vm*() =
   for callback in VmCreatedCallbacks:
     callback(VM)
 
+  VmCreatedCallbacks = @[]
+
 proc wait_for_futures*(self: VirtualMachine) =
   try:
     run_forever()
