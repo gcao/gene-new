@@ -22,27 +22,7 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
 
   handle_args(self, frame, new_frame, target.fn, cast[ExArguments](expr))
 
-  if target.fn.body_compiled == nil:
-    target.fn.body_compiled = translate(target.fn.body)
-
-  try:
-    result = self.eval(new_frame, target.fn.body_compiled)
-  except Return as r:
-    # return's frame is the same as new_frame(current function's frame)
-    if r.frame == new_frame:
-      result = r.val
-    else:
-      raise
-  except CatchableError as e:
-    if self.repl_on_error:
-      result = repl_on_error(self, frame, e)
-      discard
-    else:
-      raise
-  if target.fn.async and result.kind != VkFuture:
-    var future = new_future[Value]()
-    future.complete(result)
-    result = new_gene_future(future)
+  self.call_fn_skip_args(new_frame, target)
 
 proc fn_arg_translator*(value: Value): Expr =
   var e = new_ex_arg()

@@ -5,24 +5,24 @@
 )
 (var global/assert gene/assert)
 
-(macro gene/with [name value body...]
-  (var expr
-    :(do
-      (var %name %value)
-      %body...
-      %name ))
-  (caller_eval expr)
-)
-(var global/with gene/with)
+# (macro gene/with [name value body...]
+#   (var expr
+#     :(do
+#       (var %name %value)
+#       %body...
+#       %name ))
+#   (caller_eval expr)
+# )
+# (var global/with gene/with)
 
-(macro gene/debug expr
-  (var s (expr .to_s))
-  (println s " begin")
-  (var result (caller_eval expr))
-  (println s " end => " result)
-  result
-)
-(var global/debug gene/debug)
+# (macro gene/debug expr
+#   (var s (expr .to_s))
+#   (println s " begin")
+#   (var result (caller_eval expr))
+#   (println s " end => " result)
+#   result
+# )
+# (var global/debug gene/debug)
 
 (var gene/base64 gene/native/base64)
 

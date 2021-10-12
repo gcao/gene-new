@@ -16,6 +16,8 @@ let GENE_RUNTIME* = Runtime(
   # version: read_file(GENE_HOME & "/VERSION").strip(),
 )
 
+proc call_fn*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
+
 #################### Application #################
 
 proc new_app*(): Application =
@@ -123,15 +125,14 @@ proc run_file*(self: VirtualMachine, file: string): Value =
   frame.scope = new_scope()
   var code = read_file(file)
   result = self.eval(frame, code)
-  # discard self.eval(frame, code)
-  # if frame.ns.has_key(MAIN_KEY):
-  #   var main = frame[MAIN_KEY]
-  #   if main.kind == VkFunction:
-  #     var args = VM.app.ns[CMD_ARGS_KEY]
-  #     var options = Table[FnOption, Value]()
-  #     result = self.call_fn(frame, Nil, main.internal.fn, args, options)
-  #   else:
-  #     raise new_exception(CatchableError, "main is not a function.")
+  discard self.eval(frame, code)
+  if frame.ns.has_key(MAIN_KEY):
+    var main = frame[MAIN_KEY]
+    if main.kind == VkFunction:
+      var args = VM.app.ns[CMD_ARGS_KEY]
+      result = self.call_fn(frame, main, args)
+    else:
+      raise new_exception(CatchableError, "main is not a function.")
   self.wait_for_futures()
 
 #################### Parsing #####################
@@ -393,6 +394,38 @@ proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Valu
   else:
     todo()
 
+proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value =
+  if target.fn.body_compiled == nil:
+    target.fn.body_compiled = translate(target.fn.body)
+
+  try:
+    result = self.eval(frame, target.fn.body_compiled)
+  except Return as r:
+    # return's frame is the same as new_frame(current function's frame)
+    if r.frame == frame:
+      result = r.val
+    else:
+      raise
+  except CatchableError as e:
+    if self.repl_on_error:
+      result = repl_on_error(self, frame, e)
+      discard
+    else:
+      raise
+  if target.fn.async and result.kind != VkFuture:
+    var future = new_future[Value]()
+    future.complete(result)
+    result = new_gene_future(future)
+
+proc call_fn*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
+  var fn_scope = new_scope()
+  fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
+  var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
+  new_frame.parent = frame
+
+  self.process_args(new_frame, target.fn.matcher, args)
+  self.call_fn_skip_args(new_frame, target)
+
 import "./features/core" as core_feature; core_feature.init()
 import "./features/symbol" as symbol_feature; symbol_feature.init()
 import "./features/array" as array_feature; array_feature.init()
@@ -427,6 +460,7 @@ import "./features/module" as module_feature; module_feature.init()
 import "./features/template" as template_feature; template_feature.init()
 import "./features/print" as print_feature; print_feature.init()
 import "./features/repl" as repl_feature; repl_feature.init()
+import "./features/parse_cmd_args" as parse_cmd_args_feature; parse_cmd_args_feature.init()
 import "./features/os" as os_feature; os_feature.init()
 
 import "./libs" as libs; libs.init()

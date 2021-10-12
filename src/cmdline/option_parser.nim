@@ -56,9 +56,12 @@ proc parseOptions*(): Options =
     value_name: "v",
   )
   var expect_args = false
+  # Stop parsing options once we see arguments
+  var in_arguments = false
   for kind, key, value in getOpt(commandLineParams(), shortNoVal, longNoVal):
     case kind
     of cmdArgument:
+      in_arguments = true
       if expect_args:
         result.args.add(key)
       else:
@@ -67,6 +70,8 @@ proc parseOptions*(): Options =
         result.file = key
 
     of cmdLongOption, cmdShortOption:
+      if in_arguments:
+        continue
       if expect_args:
         result.args.add(key)
         result.args.add(value)

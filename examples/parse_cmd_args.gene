@@ -1,7 +1,7 @@
 #!/usr/bin/env gene
 
 #< Demo how command line arguments work
-gene examples/cmd-options.gene -d -i first,second test.gene
+gene examples/parse_cmd_args.gene -d -i first -i second test.gene
 #>#
 
 ($parse_cmd_args
