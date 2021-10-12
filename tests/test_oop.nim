@@ -20,7 +20,7 @@ test_interpreter """
   (class A)
   (new A)
 """, proc(r: Value) =
-  check r.instance.class.name == "A"
+  check r.instance_class.name == "A"
 
 test_interpreter """
   (ns n)
@@ -91,7 +91,7 @@ test_interpreter """
   )
   ((new A).test)
 """, proc(r: Value) =
-  check r.instance.class.name == "A"
+  check r.instance_class.name == "A"
 
 test_interpreter """
   (class A
@@ -101,7 +101,7 @@ test_interpreter """
   )
   (new A)
 """, proc(r: Value) =
-  check r.instance.props["description"] == "Class A"
+  check r.instance_props["description"] == "Class A"
 
 test_interpreter """
   (class A
@@ -301,7 +301,7 @@ test_interpreter """
 # test_interpreter """
 #   (object Config)
 # """, proc(r: Value) =
-#   check r.internal.instance.class.name == "ConfigClass"
+#   check r.internal.instance_class.name == "ConfigClass"
 
 # test_interpreter """
 #   (class A

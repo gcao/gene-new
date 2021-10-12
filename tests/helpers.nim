@@ -15,7 +15,7 @@ proc test(self: Value, args: Value): Value {.nimcall.} =
   1
 
 proc test2(self: Value, args: Value): Value {.nimcall.} =
-  self.instance.props["a".to_key].int + args.gene_data[0].int + args.gene_data[1].int
+  self.instance_props["a".to_key].int + args.gene_data[0].int + args.gene_data[1].int
 
 proc init_all*() =
   init_app_and_vm()

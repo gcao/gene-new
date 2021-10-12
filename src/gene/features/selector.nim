@@ -48,7 +48,7 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
       else:
         return NO_RESULT
     of VkInstance:
-      return target.instance.props.get_or_default(self.name, Nil)
+      return target.instance_props.get_or_default(self.name, Nil)
     else:
       todo($target.kind)
   of SmByType:
@@ -205,11 +205,11 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
             result = result or child.update(target.gene_props[m.name], value)
       of VkInstance:
         if self.is_last:
-          target.instance.props[m.name] = value
+          target.instance_props[m.name] = value
           result = true
         else:
           for child in self.children:
-            result = result or child.update(target.instance.props[m.name], value)
+            result = result or child.update(target.instance_props[m.name], value)
       else:
         todo($target.kind)
     else:

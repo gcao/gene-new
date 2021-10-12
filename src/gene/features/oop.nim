@@ -160,10 +160,9 @@ proc translate_include(value: Value): Expr =
   result = e
 
 proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var instance = Instance()
-  instance.class = self.eval(frame, cast[ExNew](expr).class).class
-  result = Value(kind: VkInstance, instance: instance)
-  var meth = instance.class.constructor
+  result = Value(kind: VkInstance)
+  result.instance_class = self.eval(frame, cast[ExNew](expr).class).class
+  var meth = result.instance_class.constructor
   if meth == nil:
     return
 
@@ -186,11 +185,6 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
       return
     else:
       raise
-
-  result = Value(
-    kind: VkInstance,
-    instance: instance,
-  )
 
 proc translate_new(value: Value): Expr =
   ExNew(

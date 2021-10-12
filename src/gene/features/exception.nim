@@ -105,24 +105,17 @@ proc eval_throw(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     var class = self.eval(frame, expr.first)
     if expr.second != nil:
       var message = self.eval(frame, expr.second)
-      var instance = new_instance(class.class)
-      raise new_gene_exception(message.str, Value(kind: VkInstance, instance: instance))
+      raise new_gene_exception(message.str, Value(kind: VkInstance, instance_class: class.class))
     elif class.kind == VkClass:
-      var instance = new_instance(class.class)
-      raise new_gene_exception(Value(kind: VkInstance, instance: instance))
+      raise new_gene_exception(Value(kind: VkInstance, instance_class: class.class))
     elif class.kind == VkException:
       raise class.exception
     elif class.kind == VkString:
-      var instance = new_instance(ExceptionClass.class)
-      raise new_gene_exception(class.str, Value(kind: VkInstance, instance: instance))
+      raise new_gene_exception(class.str, Value(kind: VkInstance, instance_class: ExceptionClass.class))
     else:
       todo()
   else:
-    # Create instance of gene/Exception
-    var class = ExceptionClass
-    var instance = new_instance(class.class)
-    # Create nim exception of GeneException type
-    raise new_gene_exception(Value(kind: VkInstance, instance: instance))
+    raise new_gene_exception(Value(kind: VkInstance, instance_class: ExceptionClass.class))
 
 proc translate_throw(value: Value): Expr =
   var r = ExThrow(

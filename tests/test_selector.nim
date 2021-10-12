@@ -177,7 +177,7 @@ test_interpreter """
 #   )
 #   (new A)
 # """, proc(r: GeneValue) =
-#   check r.internal.instance.value.gene.props["description"] == "Class A"
+#   check r.instance_props["description"] == "Class A"
 
 test_interpreter """
   ((@ 0) [1 2])
