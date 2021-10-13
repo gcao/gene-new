@@ -539,15 +539,36 @@ for i in 0..110:
   Ints[i] = Value(kind: VkInt, int: i - 10)
 
 var VM*: VirtualMachine   # The current virtual machine
-var GLOBAL_NS*: Value
-var GENE_NS*: Value
+
+var GLOBAL_NS*     : Value
+var GENE_NS*       : Value
 var GENE_NATIVE_NS*: Value
-var GENEX_NS*: Value
+var GENEX_NS*      : Value
 
 var ObjectClass*   : Value
 var ClassClass*    : Value
 var ExceptionClass*: Value
 var FutureClass*   : Value
+var NamespaceClass*: Value
+var MixinClass*    : Value
+var FunctionClass* : Value
+var MacroClass*    : Value
+var BlockClass*    : Value
+var NilClass*      : Value
+var BoolClass*     : Value
+var IntClass*      : Value
+var FloatClass*    : Value
+var CharClass*     : Value
+var StringClass*   : Value
+var SymbolClass*   : Value
+var ArrayClass*    : Value
+var StreamClass*   : Value
+var SetClass*      : Value
+var VectorClass*   : Value
+var GeneClass*     : Value
+var DocumentClass* : Value
+var DateClass*     : Value
+var DatetimeClass* : Value
 
 #################### Definitions #################
 

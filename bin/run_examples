@@ -5,7 +5,8 @@ for file in examples/*; do
 
   if [ "$file" = "examples/pipe.gene" ]; then
     echo TEST | $file
-  elif [ "$file" = "examples/repl-on-demand.gene" ] ||
+  elif [ "$file" = "examples/repl.gene" ] ||
+       [ "$file" = "examples/repl-on-demand.gene" ] ||
        [ "$file" = "examples/repl-on-error.gene" ] ||
        [ "$file" = "examples/http_server.gene" ]; then
     echo "SKIPPED!"

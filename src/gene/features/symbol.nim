@@ -40,11 +40,11 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   var key = cast[ExMember](expr).name
   case v.kind:
   of VkNamespace:
-    return v.ns.members[key]
+    return v.ns[key]
   of VkClass:
-    return v.class.ns.members[key]
+    return v.class.ns[key]
   of VkMixin:
-    return v.mixin.ns.members[key]
+    return v.mixin.ns[key]
   of VkEnum:
     return new_gene_enum_member(v.enum.members[key.to_s])
   else:
