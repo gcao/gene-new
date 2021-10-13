@@ -39,6 +39,12 @@ proc object_to_json(self: Value, args: Value): Value {.nimcall.} =
 proc object_to_s(self: Value, args: Value): Value {.nimcall.} =
   "TODO: Object.to_s"
 
+proc class_name(self: Value, args: Value): Value {.nimcall.} =
+  self.class.name
+
+proc class_parent(self: Value, args: Value): Value {.nimcall.} =
+  Value(kind: VkClass, class: self.class.parent)
+
 proc exception_message(self: Value, args: Value): Value {.nimcall.} =
   self.exception.msg
 
@@ -183,6 +189,8 @@ proc init*() =
 
     ClassClass = Value(kind: VkClass, class: new_class("Class"))
     ClassClass.class.parent = ObjectClass.class
+    ClassClass.def_native_method("name", class_name)
+    ClassClass.def_native_method("parent", class_parent)
     GENE_NS.ns["Class"] = ClassClass
     GLOBAL_NS.ns["Class"] = ClassClass
 

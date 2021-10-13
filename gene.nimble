@@ -42,3 +42,7 @@ task test, "Runs the test suite":
   exec "nim c -r tests/test_selector.nim"
   exec "nim c -r tests/test_template.nim"
   exec "nim c -r tests/test_native.nim"
+
+  # exec "nim c -r tests/test_stdlib.nim"
+  exec "nim c -r tests/test_stdlib_class.nim"
+  exec "nim c -r tests/test_stdlib_string.nim"

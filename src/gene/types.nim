@@ -958,8 +958,8 @@ proc get_class*(val: Value): Class =
     return val.instance_class
   of VkCast:
     return val.cast_class
-  # of VkClass:
-  #   return VM.gene_ns.ns[CLASS_CLASS_KEY].class
+  of VkClass:
+    return ClassClass.class
   # of VkNamespace:
   #   return VM.gene_ns.ns[NAMESPACE_CLASS_KEY].class
   of VkFuture:
@@ -987,8 +987,8 @@ proc get_class*(val: Value): Class =
   #   return VM.gene_ns.ns[INT_CLASS_KEY].class
   # of VkChar:
   #   return VM.gene_ns.ns[CHAR_CLASS_KEY].class
-  # of VkString:
-  #   return VM.gene_ns.ns[STRING_CLASS_KEY].class
+  of VkString:
+    return StringClass.class
   # of VkSymbol:
   #   return VM.gene_ns.ns[SYMBOL_CLASS_KEY].class
   # of VkComplexSymbol:
@@ -1019,7 +1019,7 @@ proc get_class*(val: Value): Class =
   #   else:
   #     todo()
   else:
-    todo()
+    todo($val.kind)
 
 proc is_a*(self: Value, class: Class): bool =
   var my_class = self.get_class

@@ -5,10 +5,10 @@ import gene/interpreter
 
 import ./helpers
 
-test_core """
+test_interpreter """
   (gene/Class .name)
 """, "Class"
 
-test_core """
+test_interpreter """
   ((gene/String .parent).name)
 """, "Object"
