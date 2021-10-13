@@ -979,8 +979,8 @@ proc get_class*(val: Value): Class =
     #   return nim.ns[CATCHABLE_ERROR_KEY].class
     else:
       return ExceptionClass.class
-  # of VkNilKind:
-  #   return VM.gene_ns.ns[NIL_CLASS_KEY].class
+  of VkNil:
+    return NilClass.class
   # of VkBool:
   #   return VM.gene_ns.ns[BOOL_CLASS_KEY].class
   # of VkInt:

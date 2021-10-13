@@ -200,7 +200,13 @@ proc init*() =
     GENE_NS.ns["Exception"] = ExceptionClass
     GLOBAL_NS.ns["Exception"] = ExceptionClass
 
+    NilClass = Value(kind: VkClass, class: new_class("Nil"))
+    NilClass.class.parent = ObjectClass.class
+    GENE_NS.ns["Nil"] = NilClass
+    GLOBAL_NS.ns["Nil"] = NilClass
+
     FutureClass = Value(kind: VkClass, class: new_class("Future"))
+    FutureClass.class.parent = ObjectClass.class
     FutureClass.def_native_method("on_success", add_success_callback)
     FutureClass.def_native_method("on_failure", add_failure_callback)
     FutureClass.class.parent = ObjectClass.class
