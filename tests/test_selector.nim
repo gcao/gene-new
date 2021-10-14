@@ -90,25 +90,25 @@ import ./helpers
 # * Update
 # * Remove
 
-# test_interpreter """
-#   ({^a "A"} .@ "a")
-# """, "A"
+test_interpreter """
+  ({^a "A"} .@ "a")
+""", "A"
 
-# test_interpreter """
-#   ({^a "A"} .@a)
-# """, "A"
+test_interpreter """
+  ({^a "A"} .@a)
+""", "A"
 
-# test_interpreter """
-#   ((_ ^a "A") .@ "a")
-# """, "A"
+test_interpreter """
+  ((_ ^a "A") .@ "a")
+""", "A"
 
-# test_interpreter """
-#   ([1 2] .@ 0)
-# """, 1
+test_interpreter """
+  ([1 2] .@ 0)
+""", 1
 
-# test_interpreter """
-#   ([1 2] .@0)
-# """, 1
+test_interpreter """
+  ([1 2] .@0)
+""", 1
 
 test_interpreter """
   ((@ "test") {^test 1})
@@ -130,13 +130,13 @@ test_interpreter """
   (@0/test [{^test 1}])
 """, 1
 
-# test_interpreter """
-#   ([{^test 1}] .@ 0 "test")
-# """, 1
+test_interpreter """
+  ([{^test 1}] .@ 0 "test")
+""", 1
 
-# test_interpreter """
-#   ([{^test 1}] .@0/test)
-# """, 1
+test_interpreter """
+  ([{^test 1}] .@0/test)
+""", 1
 
 # test_interpreter """
 #   ($with [{^test 1}]

@@ -5,6 +5,7 @@ import ../types
 import ../exprs
 import ../normalizers
 import ../translators
+import ./selector
 import ./native
 
 proc arg_translator*(value: Value): Expr =
@@ -72,15 +73,21 @@ proc translate_gene(value: Value): Expr =
   if value.gene_data.len >= 1:
     var `type` = value.gene_type
     var first = value.gene_data[0]
-    if first.kind == VkSymbol:
+    case first.kind:
+    of VkSymbol:
       # (@p = 1)
       if first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"):
         return translate_prop_assignment(value)
       elif first.symbol.startsWith(".@"):
-        if first.symbol.len > 2:
-          return translate_prop_access(value)
+        if first.symbol.len == 2:
+          return translate_invoke_selector(value)
         else:
-          todo()
+          return translate_invoke_selector2(value)
+    of VkComplexSymbol:
+      if first.csymbol[0].startsWith(".@"):
+        return translate_invoke_selector2(value)
+    else:
+      discard
 
   value.normalize()
 

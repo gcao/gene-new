@@ -15,6 +15,10 @@ type
   ExSelectorInvoker* = ref object of Expr
     data*: Expr
 
+  ExSelectorInvoker2* = ref object of Expr
+    selector*: Expr
+    target*: Expr
+
 let NO_RESULT = new_gene_gene(new_gene_symbol("SELECTOR_NO_RESULT"))
 
 proc search*(self: Selector, target: Value, r: SelectorResult)
@@ -317,6 +321,48 @@ proc translate_csymbol_selector*(csymbol: seq[string]): Expr =
   r.data.add(handle_item(csymbol[0][1..^1]))
   for item in csymbol[1..^1]:
     r.data.add(handle_item(item))
+  return r
+
+proc eval_selector_invoker2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExSelectorInvoker2](expr)
+  var value = self.eval(frame, expr.target)
+  var selector = self.eval(frame, expr.selector)
+  selector.selector.search(value)
+
+# (x .@ a b)
+proc translate_invoke_selector*(value: Value): Expr =
+  var r = ExSelectorInvoker2(
+    evaluator: eval_selector_invoker2,
+    target: translate(value.gene_type),
+  )
+  r.selector = ExSelector2(
+    evaluator: eval_selector2,
+    parallel_mode: false,
+  )
+  for item in value.gene_data[1..^1]:
+    cast[ExSelector2](r.selector).data.add(translate(item))
+  return r
+
+# (x .@a)
+# (x .@a/0)
+proc translate_invoke_selector2*(value: Value): Expr =
+  var r = ExSelectorInvoker2(
+    evaluator: eval_selector_invoker2,
+    target: translate(value.gene_type),
+  )
+  r.selector = ExSelector2(
+    evaluator: eval_selector2,
+    parallel_mode: false,
+  )
+  case value.gene_data[0].kind:
+  of VkSymbol:
+    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_data[0].symbol[2..^1]))
+  of VkComplexSymbol:
+    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_data[0].csymbol[0][2..^1]))
+    for item in value.gene_data[0].csymbol[1..^1]:
+      cast[ExSelector2](r.selector).data.add(handle_item(item))
+  else:
+    todo($value.gene_data[0].kind)
   return r
 
 proc init*() =
