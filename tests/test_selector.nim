@@ -138,17 +138,17 @@ test_interpreter """
   ([{^test 1}] .@0/test)
 """, 1
 
-# test_interpreter """
-#   ($with [{^test 1}]
-#     (.@ 0 "test")
-#   )
-# """, 1
+test_interpreter """
+  ($with [{^test 1}]
+    (.@ 0 "test")
+  )
+""", 1
 
-# test_interpreter """
-#   ($with [{^test 1}]
-#     (.@0/test)
-#   )
-# """, 1
+test_interpreter """
+  ($with [{^test 1}]
+    (.@0/test)
+  )
+""", 1
 
 # test_interpreter """
 #   (var a {})
@@ -169,15 +169,15 @@ test_interpreter """
 #   (@test a)
 # """, 1
 
-# test_interpreter """
-#   (class A
-#     (method new []
-#       (@description = "Class A")
-#     )
-#   )
-#   (new A)
-# """, proc(r: GeneValue) =
-#   check r.instance_props["description"] == "Class A"
+test_interpreter """
+  (class A
+    (method new []
+      (@description = "Class A")
+    )
+  )
+  (new A)
+""", proc(r: Value) =
+  check r.instance_props["description"] == "Class A"
 
 test_interpreter """
   ((@ 0) [1 2])
