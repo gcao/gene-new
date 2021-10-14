@@ -133,6 +133,18 @@ proc string_to_uppercase(self: Value, args: Value): Value {.nimcall.} =
 proc string_to_lowercase(self: Value, args: Value): Value {.nimcall.} =
   result = self.str.toLower
 
+proc array_size(self: Value, args: Value): Value =
+  result = self.vec.len
+
+proc array_add(self: Value, args: Value): Value =
+  self.vec.add(args.gene_data[0])
+  result = self
+
+proc array_del(self: Value, args: Value): Value =
+  var index = args.gene_data[0].int
+  result = self.vec[index]
+  self.vec.delete(index)
+
 proc add_success_callback(self: Value, args: Value): Value {.nimcall.} =
   # Register callback to future
   if self.future.finished:
@@ -230,3 +242,11 @@ proc init*() =
     StringClass.def_native_method("to_lowercase", string_to_lowercase)
     GENE_NS.ns["String"] = StringClass
     GLOBAL_NS.ns["String"] = StringClass
+
+    ArrayClass = Value(kind: VkClass, class: new_class("Array"))
+    ArrayClass.class.parent = ObjectClass.class
+    ArrayClass.def_native_method("size", array_size)
+    ArrayClass.def_native_method("add", array_add)
+    ArrayClass.def_native_method("del", array_del)
+    GENE_NS.ns["Array"] = ArrayClass
+    GLOBAL_NS.ns["Array"] = ArrayClass

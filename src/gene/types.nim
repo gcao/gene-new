@@ -562,9 +562,9 @@ var CharClass*     : Value
 var StringClass*   : Value
 var SymbolClass*   : Value
 var ArrayClass*    : Value
+var MapClass*      : Value
 var StreamClass*   : Value
 var SetClass*      : Value
-var VectorClass*   : Value
 var GeneClass*     : Value
 var DocumentClass* : Value
 var DateClass*     : Value
@@ -981,26 +981,26 @@ proc get_class*(val: Value): Class =
       return ExceptionClass.class
   of VkNil:
     return NilClass.class
-  # of VkBool:
-  #   return VM.gene_ns.ns[BOOL_CLASS_KEY].class
-  # of VkInt:
-  #   return VM.gene_ns.ns[INT_CLASS_KEY].class
-  # of VkChar:
-  #   return VM.gene_ns.ns[CHAR_CLASS_KEY].class
+  of VkBool:
+    return BoolClass.class
+  of VkInt:
+    return IntClass.class
+  of VkChar:
+    return CharClass.class
   of VkString:
     return StringClass.class
-  # of VkSymbol:
-  #   return VM.gene_ns.ns[SYMBOL_CLASS_KEY].class
+  of VkSymbol:
+    return SymbolClass.class
   # of VkComplexSymbol:
-  #   return VM.gene_ns.ns[COMPLEX_SYMBOL_CLASS_KEY].class
-  # of VkVector:
-  #   return VM.gene_ns.ns[ARRAY_CLASS_KEY].class
-  # of VkMap:
-  #   return VM.gene_ns.ns[MAP_CLASS_KEY].class
-  # of VkSet:
-  #   return VM.gene_ns.ns[SET_CLASS_KEY].class
-  # of VkGene:
-  #   return VM.gene_ns.ns[GENE_CLASS_KEY].class
+  #   return ComplexSymbolClass.class
+  of VkVector:
+    return ArrayClass.class
+  of VkMap:
+    return MapClass.class
+  of VkSet:
+    return SetClass.class
+  of VkGene:
+    return GeneClass.class
   # of VkRegex:
   #   return VM.gene_ns.ns[REGEX_CLASS_KEY].class
   # of VkRange:
