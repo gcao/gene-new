@@ -1,4 +1,4 @@
-import tables
+import strutils, tables
 
 import ../types
 import ../exprs
@@ -303,6 +303,21 @@ proc new_ex_selector*(parallel_mode: bool, data: seq[Value]): Expr =
 proc translate_selector(value: Value): Expr =
   var parallel_mode = value.gene_type.symbol == "@*"
   return new_ex_selector(parallel_mode, value.gene_data)
+
+proc handle_item(item: string): Expr =
+  try:
+    result = translate(item.parse_int())
+  except ValueError:
+    result = translate(item)
+
+proc translate_csymbol_selector*(csymbol: seq[string]): Expr =
+  var r = ExSelector2(
+    evaluator: eval_selector2,
+  )
+  r.data.add(handle_item(csymbol[0][1..^1]))
+  for item in csymbol[1..^1]:
+    r.data.add(handle_item(item))
+  return r
 
 proc init*() =
   GeneTranslators["@"] = translate_selector

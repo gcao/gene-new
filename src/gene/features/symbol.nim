@@ -100,7 +100,10 @@ proc translate_symbol(value: Value): Expr =
   translate(value.symbol)
 
 proc translate_complex_symbol(value: Value): Expr =
-  translate(value.csymbol)
+  if value.csymbol[0].starts_with("@"):
+    translate_csymbol_selector(value.csymbol)
+  else:
+    translate(value.csymbol)
 
 proc init*() =
   Translators[VkSymbol] = translate_symbol
