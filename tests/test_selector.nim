@@ -150,11 +150,11 @@ test_interpreter """
   )
 """, 1
 
-# test_interpreter """
-#   (var a {})
-#   ($set a @test 1)
-#   (@test a)
-# """, 1
+test_interpreter """
+  (var a {})
+  ($set a @test 1)
+  (@test a)
+""", 1
 
 # test_interpreter """
 #   (var a [0])
@@ -162,12 +162,12 @@ test_interpreter """
 #   a
 # """, @[new_gene_int(1)]
 
-# test_interpreter """
-#   (class A)
-#   (var a (new A))
-#   ($set a @test 1)
-#   (@test a)
-# """, 1
+test_interpreter """
+  (class A)
+  (var a (new A))
+  ($set a @test 1)
+  (@test a)
+""", 1
 
 test_interpreter """
   (class A

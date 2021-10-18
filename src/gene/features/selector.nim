@@ -19,6 +19,11 @@ type
     selector*: Expr
     target*: Expr
 
+  ExSet* = ref object of Expr
+    target*: Expr
+    selector*: Expr
+    value*: Expr
+
 let NO_RESULT = new_gene_gene(new_gene_symbol("SELECTOR_NO_RESULT"))
 
 proc search*(self: Selector, target: Value, r: SelectorResult)
@@ -404,6 +409,31 @@ proc translate_invoke_selector4*(value: Value): Expr =
     todo($value.gene_type.kind)
   return r
 
+proc eval_set(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExSet](expr)
+  var target = self.eval(frame, expr.target)
+  var selector = self.eval(frame, expr.selector)
+  var value = self.eval(frame, expr.value)
+  case selector.kind:
+  of VkSelector:
+    var success = selector.selector.update(target, value)
+    if not success:
+      todo("Update by selector failed.")
+  of VkInt:
+    target.gene_data[selector.int] = value
+  else:
+    todo($selector.kind)
+
+proc translate_set*(value: Value): Expr =
+  ExSet(
+    evaluator: eval_set,
+    target: translate(value.gene_data[0]),
+    selector: translate(value.gene_data[1]),
+    value: translate(value.gene_data[2]),
+  )
+
 proc init*() =
   GeneTranslators["@"] = translate_selector
   GeneTranslators["@*"] = translate_selector
+  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    self.app.ns["$set"] = new_gene_processor(translate_set)
