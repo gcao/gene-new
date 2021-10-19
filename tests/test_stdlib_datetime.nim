@@ -13,10 +13,10 @@ import ./helpers
 # gene/today, gene/yesterday, gene/tomorrow
 #
 
-test_core """
+test_interpreter """
   ((gene/today) .year)
 """, now().year
 
-test_core """
+test_interpreter """
   ((gene/now) .year)
 """, now().year

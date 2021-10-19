@@ -1006,10 +1006,10 @@ proc get_class*(val: Value): Class =
   #   return VM.gene_ns.ns[REGEX_CLASS_KEY].class
   # of VkRange:
   #   return VM.gene_ns.ns[RANGE_CLASS_KEY].class
-  # of VkDate:
-  #   return VM.gene_ns.ns[DATE_CLASS_KEY].class
-  # of VkDateTime:
-  #   return VM.gene_ns.ns[DATETIME_CLASS_KEY].class
+  of VkDate:
+    return DateClass.class
+  of VkDateTime:
+    return DateTimeClass.class
   # of VkTimeKind:
   #   return VM.gene_ns.ns[TIME_CLASS_KEY].class
   # of VkTimezone:

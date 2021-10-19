@@ -51,5 +51,6 @@ task test, "Runs the test suite":
   exec "nim c -r tests/test_stdlib_map.nim"
   exec "nim c -r tests/test_stdlib_gene.nim"
   exec "nim c -r tests/test_stdlib_io.nim"
+  exec "nim c -r tests/test_stdlib_datetime.nim"
   exec "nim c -r tests/test_stdlib_os.nim"
   exec "nim c -r tests/test_stdlib_json.nim"

@@ -1,4 +1,4 @@
-import os, osproc, base64, json, tables, strutils
+import os, osproc, base64, json, tables, strutils, times
 import asyncdispatch
 
 import ./types
@@ -195,6 +195,17 @@ proc file_write(args: Value): Value =
 proc json_parse(args: Value): Value =
   result = args.gene_data[0].str.parse_json
 
+proc today(args: Value): Value =
+  var date = now()
+  result = new_gene_date(date.year, cast[int](date.month), date.monthday)
+
+proc now(args: Value): Value =
+  var date = now()
+  result = new_gene_datetime(date)
+
+proc date_year(self: Value, args: Value): Value =
+  result = self.date.year
+
 proc add_success_callback(self: Value, args: Value): Value {.nimcall.} =
   # Register callback to future
   if self.future.finished:
@@ -330,3 +341,11 @@ proc init*() =
     var json_ns = new_namespace("json")
     json_ns["parse"] = Value(kind: VkNativeFn, native_fn: json_parse)
     GENE_NS.ns["json"] = Value(kind: VkNamespace, ns: json_ns)
+
+    DateClass = Value(kind: VkClass, class: new_class("Date"))
+    DateClass.class.parent = ObjectClass.class
+    DateClass.def_native_method("year", date_year)
+    DateTimeClass = Value(kind: VkClass, class: new_class("DateTime"))
+    DateTimeClass.class.parent = DateClass.class
+    GENE_NS.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
+    GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
