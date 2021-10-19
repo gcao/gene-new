@@ -5,6 +5,7 @@ import ./types
 import ./map_key
 import ./interpreter
 import ./features/oop
+import ./interpreter
 
 proc `%`*(self: Value): JsonNode =
   case self.kind:
@@ -16,6 +17,8 @@ proc `%`*(self: Value): JsonNode =
     return %self.int
   of VkString:
     return %self.str
+  # of VkSymbol:
+  #   return %self.symbol
   of VkVector:
     result = newJArray()
     for item in self.vec:
@@ -25,7 +28,7 @@ proc `%`*(self: Value): JsonNode =
     for k, v in self.map:
       result[k.to_s] = %v
   else:
-    todo()
+    todo($self.kind)
 
 proc to_json*(self: Value): string =
   return $(%self)
@@ -363,3 +366,21 @@ proc init*() =
     DateTimeClass.class.parent = DateClass.class
     GENE_NS.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
     GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
+
+    discard self.eval """
+      ($with gene/String
+        (method lines _
+          (self .split "\n")
+        )
+      )
+
+      ($with gene/Array
+        (method map block
+          (var result [])
+          (for item in self
+            (result .add (block item))
+          )
+          result
+        )
+      )
+    """

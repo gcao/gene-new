@@ -330,19 +330,18 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
   else:
     todo()
 
-template handle_args*(self: VirtualMachine, frame, new_frame: Frame, fn: Function, args_expr: ExArguments) =
-  case fn.matching_hint.mode:
+proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMatcher, args_expr: ExArguments) {.inline.} =
+  case matcher.hint.mode:
   of MhNone:
     for _, v in args_expr.props.mpairs:
       discard self.eval(frame, v)
     for i, v in args_expr.data.mpairs:
-      # var field = target.fn.matcher.children[i]
       discard self.eval(frame, v)
   of MhSimpleData:
     for _, v in args_expr.props.mpairs:
       discard self.eval(frame, v)
     for i, v in args_expr.data.mpairs:
-      let field = fn.matcher.children[i]
+      let field = matcher.children[i]
       new_frame.scope.def_member(field.name, self.eval(frame, v))
   else:
     var args = new_gene_gene()
@@ -350,7 +349,7 @@ template handle_args*(self: VirtualMachine, frame, new_frame: Frame, fn: Functio
       args.gene_props[k] = self.eval(frame, v)
     for _, v in args_expr.data.mpairs:
       args.gene_data.add self.eval(frame, v)
-    self.process_args(new_frame, fn.matcher, args)
+    self.process_args(new_frame, matcher, args)
 
 proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
   echo "An exception was thrown: " & e.msg

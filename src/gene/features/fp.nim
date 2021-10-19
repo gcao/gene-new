@@ -20,7 +20,7 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
   var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
   new_frame.parent = frame
 
-  handle_args(self, frame, new_frame, target.fn, cast[ExArguments](expr))
+  handle_args(self, frame, new_frame, target.fn.matcher, cast[ExArguments](expr))
 
   self.call_fn_skip_args(new_frame, target)
 

@@ -11,23 +11,13 @@ type
     data*: Block
 
 proc block_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExArguments](expr)
   var scope = new_scope()
   scope.set_parent(target.block.parent_scope, target.block.parent_scope_max)
   var new_frame = Frame(ns: frame.ns, scope: scope)
   new_frame.parent = frame
 
-  var args = cast[ExLiteral](expr).data
-  case target.block.matching_hint.mode:
-  of MhSimpleData:
-    for _, v in args.gene_props.mpairs:
-      todo()
-    for i, v in args.gene_data.mpairs:
-      let field = target.block.matcher.children[i]
-      new_frame.scope.def_member(field.name, v)
-  of MhNone:
-    discard
-  else:
-    todo()
+  handle_args(self, frame, new_frame, target.block.matcher, expr)
 
   try:
     result = self.eval(new_frame, target.block.body_compiled)
@@ -51,9 +41,13 @@ proc eval_block(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   result.block.parent_scope_max = frame.scope.max
 
 proc arg_translator(value: Value): Expr =
-  var expr = new_ex_literal(value)
-  expr.evaluator = block_invoker
-  result = expr
+  var e = new_ex_arg()
+  e.evaluator = block_invoker
+  for k, v in value.gene_props:
+    e.props[k] = translate(v)
+  for v in value.gene_data:
+    e.data.add(translate(v))
+  return e
 
 proc to_block(node: Value): Block =
   var matcher = new_arg_matcher()

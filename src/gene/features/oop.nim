@@ -172,7 +172,7 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   new_frame.self = result
 
   var args_expr = cast[ExNew](expr).args
-  handle_args(self, frame, new_frame, meth.callable.fn, cast[ExArguments](args_expr))
+  handle_args(self, frame, new_frame, meth.callable.fn.matcher, cast[ExArguments](args_expr))
 
   if meth.callable.fn.body_compiled == nil:
     meth.callable.fn.body_compiled = translate(meth.callable.fn.body)
@@ -293,7 +293,7 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
     new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
 
     var args_expr = cast[ExInvoke](expr).args
-    handle_args(self, frame, new_frame, meth.callable.fn, cast[ExArguments](args_expr))
+    handle_args(self, frame, new_frame, meth.callable.fn.matcher, cast[ExArguments](args_expr))
 
     if meth.callable.fn.body_compiled == nil:
       meth.callable.fn.body_compiled = translate(meth.callable.fn.body)
@@ -388,7 +388,7 @@ proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   new_frame.self = instance
 
   var args_expr = cast[ExSuper](expr).args
-  handle_args(self, frame, new_frame, meth.callable.fn, cast[ExArguments](args_expr))
+  handle_args(self, frame, new_frame, meth.callable.fn.matcher, cast[ExArguments](args_expr))
 
   if meth.callable.fn.body_compiled == nil:
     meth.callable.fn.body_compiled = translate(meth.callable.fn.body)

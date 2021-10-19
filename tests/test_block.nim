@@ -53,6 +53,14 @@ test_interpreter """
   (b)
 """, 1
 
+test_interpreter """
+  (fn f block
+    (var a 1)
+    (block a)
+  )
+  (f (a -> a))
+""", 1
+
 # test_interpreter """
 #   (fn f b
 #     (b 1)
