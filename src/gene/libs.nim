@@ -1,5 +1,5 @@
 import os, osproc, base64, json, tables, strutils, times
-import asyncdispatch
+import asyncdispatch, asyncfile
 
 import ./types
 import ./map_key
@@ -187,6 +187,19 @@ proc file_read(args: Value): Value =
     # if internal.kind == GeneFile:
     #   result = internal.file.read_all()
 
+proc file_read_async(args: Value): Value =
+  var file = args.gene_data[0]
+  case file.kind:
+  of VkString:
+    var f = open_async(file.str)
+    var future = f.read_all()
+    var future2 = new_future[Value]()
+    future.add_callback proc() {.gcsafe.} =
+      future2.complete(future.read())
+    return new_gene_future(future2)
+  else:
+    todo($file.kind)
+
 proc file_write(args: Value): Value =
   var file = args.gene_data[0]
   var content = args.gene_data[1]
@@ -331,6 +344,7 @@ proc init*() =
     FileClass = Value(kind: VkClass, class: new_class("File"))
     FileClass.class.parent = ObjectClass.class
     FileClass.class.ns["read"] = Value(kind: VkNativeFn, native_fn: file_read)
+    FileClass.class.ns["read_async"] = Value(kind: VkNativeFn, native_fn: file_read_async)
     FileClass.class.ns["write"] = Value(kind: VkNativeFn, native_fn: file_write)
     GENE_NS.ns["File"] = FileClass
 

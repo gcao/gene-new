@@ -11,6 +11,9 @@ type
     elifs*: seq[(Expr, Expr)]
     `else`*: Expr
 
+  ExNot* = ref object of Expr
+    cond*: Expr
+
   IfState = enum
     IsIf, IsIfCond, IsIfLogic,
     IsElif, IsElifCond, IsElifLogic,
@@ -143,5 +146,15 @@ proc translate_if(value: Value): Expr =
   r.`else` = translate(value.gene_props[ELSE_KEY])
   result = r
 
+proc eval_not(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  new_gene_bool(not self.eval(frame, cast[ExNot](expr).cond).to_bool)
+
+proc translate_not(value: Value): Expr =
+  ExNot(
+    evaluator: eval_not,
+    cond: translate(value.gene_data[0]),
+  )
+
 proc init*() =
   GeneTranslators["if"] = translate_if
+  GeneTranslators["not"] = translate_not
