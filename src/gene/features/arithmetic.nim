@@ -30,7 +30,15 @@ proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   of BinAdd:
     result = new_gene_int(first.int + second.int)
   of BinSub:
-    result = new_gene_int(first.int - second.int)
+    case first.kind:
+    of VkInt:
+      result = new_gene_int(first.int - second.int)
+    else:
+      todo($first.kind)
+      # var class = first.get_class()
+      # var args = new_gene_gene(GeneNil)
+      # args.gene_data.add(second)
+      # result = self.call_method(frame, first, class, SUB_KEY, args)
   of BinEq:
     result = new_gene_bool(first == second)
   of BinNeq:
@@ -48,7 +56,7 @@ proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   of BinOr:
     result = new_gene_bool(first.bool or second.bool)
   else:
-    todo()
+    todo($cast[ExBinOp](expr).op)
 
 proc new_ex_bin*(op: BinOp): ExBinOp =
   ExBinOp(
