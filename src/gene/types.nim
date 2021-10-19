@@ -325,6 +325,8 @@ type
     of VkInstance:
       instance_class*: Class
       instance_props*: Table[MapKey, Value]
+    of VkFile:
+      file*: File
     else:
       discard
 
@@ -965,8 +967,8 @@ proc get_class*(val: Value): Class =
   #   return VM.gene_ns.ns[NAMESPACE_CLASS_KEY].class
   of VkFuture:
     return FutureClass.class
-  # of VkFile:
-  #   return VM.gene_ns.ns[FILE_CLASS_KEY].class
+  of VkFile:
+    return FileClass.class
   of VkException:
     var ex = val.exception
     if ex is Exception:
@@ -1477,6 +1479,12 @@ proc new_gene_native_fn*(fn: NativeFn): Value =
   return Value(
     kind: VkNativeFn,
     native_fn: fn,
+  )
+
+converter new_gene_file*(file: File): Value =
+  return Value(
+    kind: VkFile,
+    file: file,
   )
 
 #################### Value ###################

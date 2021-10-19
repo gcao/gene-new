@@ -69,10 +69,15 @@ proc init_app_and_vm*() =
   var app = new_app()
   VM = new_vm(app)
   GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
+  GLOBAL_NS.ns[STDIN_KEY]  = stdin
+  GLOBAL_NS.ns[STDOUT_KEY] = stdout
+  GLOBAL_NS.ns[STDERR_KEY] = stderr
+
   GENE_NS = Value(kind: VkNamespace, ns: new_namespace("gene"))
   GENE_NATIVE_NS = Value(kind: VkNamespace, ns: new_namespace("native"))
   GENE_NS.ns[GENE_NATIVE_NS.ns.name] = GENE_NATIVE_NS
   GLOBAL_NS.ns[GENE_NS.ns.name] = GENE_NS
+
   GENEX_NS = Value(kind: VkNamespace, ns: new_namespace("genex"))
   GLOBAL_NS.ns[GENEX_NS.ns.name] = GENEX_NS
 

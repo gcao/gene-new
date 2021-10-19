@@ -185,10 +185,10 @@ proc file_read(args: Value): Value =
   of VkString:
     result = read_file(file.str)
   else:
-    todo()
-    # var internal = data[0].internal
-    # if internal.kind == GeneFile:
-    #   result = internal.file.read_all()
+    todo($file.kind)
+
+proc file_read(self: Value, args: Value): Value =
+  self.file.read_all()
 
 proc file_read_async(args: Value): Value =
   var file = args.gene_data[0]
@@ -364,6 +364,7 @@ proc init*() =
     FileClass.class.ns["read"] = Value(kind: VkNativeFn, native_fn: file_read)
     FileClass.class.ns["read_async"] = Value(kind: VkNativeFn, native_fn: file_read_async)
     FileClass.class.ns["write"] = Value(kind: VkNativeFn, native_fn: file_write)
+    FileClass.def_native_method("read", file_read)
     GENE_NS.ns["File"] = FileClass
 
     var os_ns = new_namespace("os")
