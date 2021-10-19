@@ -1,4 +1,4 @@
-import os, osproc, base64, json, tables, strutils, times
+import os, osproc, base64, json, tables, sequtils, strutils, times, parsecsv, streams
 import asyncdispatch, asyncfile
 
 import ./types
@@ -211,6 +211,21 @@ proc file_write(args: Value): Value =
 proc json_parse(args: Value): Value =
   result = args.gene_data[0].str.parse_json
 
+proc csv_parse(args: Value): Value =
+  var parser = CsvParser()
+  var sep = ','
+  # Detect whether it's a tsv (Tab Separated Values)
+  if args.gene_data[0].str.contains('\t'):
+    sep = '\t'
+  parser.open(new_string_stream(args.gene_data[0].str), "unknown.csv", sep)
+  if not args.gene_props.get_or_default("skip_headers".to_key, false):
+    parser.read_header_row()
+  result = new_gene_vec()
+  while parser.read_row():
+    var row: seq[Value]
+    row.add(parser.row.map(proc(s: string): Value = new_gene_string(s)))
+    result.vec.add(new_gene_vec(row))
+
 proc today(args: Value): Value =
   var date = now()
   result = new_gene_date(date.year, cast[int](date.month), date.monthday)
@@ -358,6 +373,10 @@ proc init*() =
     var json_ns = new_namespace("json")
     json_ns["parse"] = Value(kind: VkNativeFn, native_fn: json_parse)
     GENE_NS.ns["json"] = Value(kind: VkNamespace, ns: json_ns)
+
+    var csv_ns = new_namespace("csv")
+    csv_ns["parse"] = Value(kind: VkNativeFn, native_fn: csv_parse)
+    GENE_NS.ns["csv"] = Value(kind: VkNamespace, ns: csv_ns)
 
     DateClass = Value(kind: VkClass, class: new_class("Date"))
     DateClass.class.parent = ObjectClass.class

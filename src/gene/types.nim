@@ -1277,30 +1277,6 @@ proc to_s*(self: Value): string =
     of VkString: self.str
     else: $self
 
-# proc `%`*(self: Value): JsonNode =
-#   case self.kind:
-#   of VkNil:
-#     return newJNull()
-#   of VkBool:
-#     return %self.bool
-#   of VkInt:
-#     return %self.int
-#   of VkString:
-#     return %self.str
-#   of VkVector:
-#     result= newJArray()
-#     for item in self.vec:
-#       result.add(%item)
-#   of VkMap:
-#     result = newJObject()
-#     for k, v in self.map:
-#       result[k.to_s] = %v
-#   else:
-#     todo($self.kind)
-
-# proc to_json*(self: Value): string =
-#   return $(%self)
-
 proc `[]`*(self: OrderedTable[MapKey, Value], key: string): Value =
   self[key.to_key]
 
