@@ -567,6 +567,7 @@ var StreamClass*   : Value
 var SetClass*      : Value
 var GeneClass*     : Value
 var DocumentClass* : Value
+var FileClass*     : Value
 var DateClass*     : Value
 var DatetimeClass* : Value
 

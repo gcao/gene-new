@@ -4,14 +4,19 @@ import gene/types
 
 import ./helpers
 
-test_core """
-  (env "HOME")
+test_interpreter """
+  ($env "HOME")
 """, get_env("HOME")
 
-test_core """
-  (env "XXXX" "Not found")
+test_interpreter """
+  ($env "XXXX" "Not found")
 """, "Not found"
 
-test_core """
+test_interpreter """
+  ($set_env "XXXX" "test")
+  ($env "XXXX" "Not found")
+""", "test"
+
+test_interpreter """
   (gene/os/exec "pwd")
 """, execCmdEx("pwd")[0]

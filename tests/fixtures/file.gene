@@ -1,1 +1,1 @@
-(var /file $file)
+(var $ns/file $file)

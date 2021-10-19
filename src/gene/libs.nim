@@ -1,4 +1,4 @@
-import os, base64, json, tables, strutils
+import os, osproc, base64, json, tables, strutils
 import asyncdispatch
 
 import ./types
@@ -171,6 +171,30 @@ proc gene_data(self: Value, args: Value): Value =
   for item in self.gene_data:
     result.vec.add(item)
 
+proc os_exec(args: Value): Value =
+  var cmd = args.gene_data[0].str
+  var (output, _) = execCmdEx(cmd)
+  result = output
+
+proc file_read(args: Value): Value =
+  var file = args.gene_data[0]
+  case file.kind:
+  of VkString:
+    result = read_file(file.str)
+  else:
+    todo()
+    # var internal = data[0].internal
+    # if internal.kind == GeneFile:
+    #   result = internal.file.read_all()
+
+proc file_write(args: Value): Value =
+  var file = args.gene_data[0]
+  var content = args.gene_data[1]
+  write_file(file.str, content.str)
+
+proc json_parse(args: Value): Value =
+  result = args.gene_data[0].str.parse_json
+
 proc add_success_callback(self: Value, args: Value): Value {.nimcall.} =
   # Register callback to future
   if self.future.finished:
@@ -292,3 +316,17 @@ proc init*() =
     GeneClass.def_native_method("data", gene_data)
     GENE_NS.ns["Gene"] = GeneClass
     GLOBAL_NS.ns["Gene"] = GeneClass
+
+    FileClass = Value(kind: VkClass, class: new_class("File"))
+    FileClass.class.parent = ObjectClass.class
+    FileClass.class.ns["read"] = Value(kind: VkNativeFn, native_fn: file_read)
+    FileClass.class.ns["write"] = Value(kind: VkNativeFn, native_fn: file_write)
+    GENE_NS.ns["File"] = FileClass
+
+    var os_ns = new_namespace("os")
+    os_ns["exec"] = Value(kind: VkNativeFn, native_fn: os_exec)
+    GENE_NS.ns["os"] = Value(kind: VkNamespace, ns: os_ns)
+
+    var json_ns = new_namespace("json")
+    json_ns["parse"] = Value(kind: VkNativeFn, native_fn: json_parse)
+    GENE_NS.ns["json"] = Value(kind: VkNamespace, ns: json_ns)

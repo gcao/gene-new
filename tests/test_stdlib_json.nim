@@ -5,12 +5,12 @@ import gene/interpreter
 
 import ./helpers
 
-test_core """
+test_interpreter """
   (gene/json/parse
     "{\"a\": true}"
   )
-""", {"a": GeneTrue}.toOrderedTable
+""", {"a": True}.toOrderedTable
 
-test_core """
+test_interpreter """
   ([1 2].to_json)
 """, "[1,2]"
