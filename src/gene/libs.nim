@@ -145,6 +145,32 @@ proc array_del(self: Value, args: Value): Value =
   result = self.vec[index]
   self.vec.delete(index)
 
+proc map_size(self: Value, args: Value): Value =
+  result = self.map.len
+
+proc map_keys(self: Value, args: Value): Value =
+  result = new_gene_vec()
+  for k, _ in self.map:
+    result.vec.add(k.to_s)
+
+proc map_values(self: Value, args: Value): Value =
+  result = new_gene_vec()
+  for _, v in self.map:
+    result.vec.add(v)
+
+proc gene_type(self: Value, args: Value): Value =
+  self.gene_type
+
+proc gene_props(self: Value, args: Value): Value =
+  result = new_gene_map()
+  for k, v in self.gene_props:
+    result.map[k] = v
+
+proc gene_data(self: Value, args: Value): Value =
+  result = new_gene_vec()
+  for item in self.gene_data:
+    result.vec.add(item)
+
 proc add_success_callback(self: Value, args: Value): Value {.nimcall.} =
   # Register callback to future
   if self.future.finished:
@@ -250,3 +276,19 @@ proc init*() =
     ArrayClass.def_native_method("del", array_del)
     GENE_NS.ns["Array"] = ArrayClass
     GLOBAL_NS.ns["Array"] = ArrayClass
+
+    MapClass = Value(kind: VkClass, class: new_class("Map"))
+    MapClass.class.parent = ObjectClass.class
+    MapClass.def_native_method("size", map_size)
+    MapClass.def_native_method("keys", map_keys)
+    MapClass.def_native_method("values", map_values)
+    GENE_NS.ns["Map"] = MapClass
+    GLOBAL_NS.ns["Map"] = MapClass
+
+    GeneClass = Value(kind: VkClass, class: new_class("Gene"))
+    GeneClass.class.parent = ObjectClass.class
+    GeneClass.def_native_method("type", gene_type)
+    GeneClass.def_native_method("props", gene_props)
+    GeneClass.def_native_method("data", gene_data)
+    GENE_NS.ns["Gene"] = GeneClass
+    GLOBAL_NS.ns["Gene"] = GeneClass

@@ -9,15 +9,15 @@ test_interpreter """
   ([1 2] .size)
 """, 2
 
-# test_interpreter """
-#   ([1 2] .get 0)
-# """, 1
+test_interpreter """
+  ([1 2] .@ 0)
+""", 1
 
-# test_interpreter """
-#   (var v [1 2])
-#   (v .set 0 3)
-#   v
-# """, @[new_gene_int(3), new_gene_int(2)]
+test_interpreter """
+  (var v [1 2])
+  ($set v 0 3)
+  v
+""", @[new_gene_int(3), new_gene_int(2)]
 
 test_interpreter """
   ([1 2] .add 3)

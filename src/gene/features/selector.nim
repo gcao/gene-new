@@ -420,7 +420,13 @@ proc eval_set(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     if not success:
       todo("Update by selector failed.")
   of VkInt:
-    target.gene_data[selector.int] = value
+    case target.kind:
+    of VkGene:
+      target.gene_data[selector.int] = value
+    of VkVector:
+      target.vec[selector.int] = value
+    else:
+      todo($target.kind)
   else:
     todo($selector.kind)
 

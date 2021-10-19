@@ -1,11 +1,17 @@
+import tables
+
 import gene/types
 
 import ./helpers
 
-test_core """
+test_interpreter """
   (:(1 ^a 2 3 4) .type)
 """, 1
 
-test_core """
+test_interpreter """
+  (:(1 ^a 2 3 4) .props)
+""", {"a": new_gene_int(2)}.toOrderedTable
+
+test_interpreter """
   (:(1 ^a 2 3 4) .data)
 """, @[new_gene_int(3), new_gene_int(4)]
