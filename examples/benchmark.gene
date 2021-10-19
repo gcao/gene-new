@@ -1,9 +1,9 @@
 #!/usr/bin/env gene
 
-(var start (gene/now))
-(var elapsed ((gene/now) - start))
+# (var start (gene/now))
+# (var elapsed ((gene/now) - start))
 
-(println "Execution time: " elapsed " seconds.")
+# (println "Execution time: " elapsed " seconds.")
 
 (var start (gene/now))
 (gene/sleep 3000)
