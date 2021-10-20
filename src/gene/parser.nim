@@ -60,7 +60,7 @@ type
     list: seq[Value]
     map: OrderedTable[MapKey, Value]
 
-const non_constituents = ['`']
+const non_constituents: seq[char] = @[]
 
 var macros: MacroArray
 var dispatch_macros: MacroArray
@@ -273,11 +273,17 @@ proc read_token(self: var Parser, lead_constituent: bool, chars_allowed: openarr
   while true:
     inc(pos)
     ch = self.buf[pos]
-    if ch == EndOfFile or is_space_ascii(ch) or ch == ',' or (is_terminating_macro(ch) and ch notin chars_allowed):
+    if ch == '\\':
+      result.add(ch)
+      inc(pos)
+      ch = self.buf[pos]
+      result.add(ch)
+    elif ch == EndOfFile or is_space_ascii(ch) or ch == ',' or (is_terminating_macro(ch) and ch notin chars_allowed):
       break
     elif non_constituent(ch):
       raise new_exception(ParseError, "Invalid constituent character: " & ch)
-    result.add(ch)
+    else:
+      result.add(ch)
   self.bufpos = pos
 
 proc read_token(self: var Parser, lead_constituent: bool): string =
