@@ -338,14 +338,28 @@ proc skip_ws(self: var Parser) =
       break
 
 proc match_symbol(s: string): Value =
-  var s = s
-  if s.startsWith("\\"):
-    s = s[1..^1]
-  let split_sym = s.split('/')
-  if split_sym.len > 1:
-    return new_gene_complex_symbol(split_sym)
+  var parts: seq[string] = @[]
+  var i = 0
+  var part = ""
+  while i < s.len:
+    var ch = s[i]
+    i += 1
+    case ch:
+    of '\\':
+      ch = s[i]
+      part &= ch
+      i += 1
+    of '/':
+      parts.add(part)
+      part = ""
+    else:
+      part &= ch
+  parts.add(part)
+
+  if parts.len > 1:
+    return new_gene_complex_symbol(parts)
   else:
-    return new_gene_symbol(s)
+    return new_gene_symbol(parts[0])
 
 proc interpret_token(token: string): Value =
   case token
@@ -356,9 +370,7 @@ proc interpret_token(token: string): Value =
   of "false":
     return new_gene_bool(token)
   else:
-    result = match_symbol(token)
-    if result == nil:
-      raise new_exception(ParseError, "Invalid token: " & token)
+    return match_symbol(token)
 
 proc read_gene_type(self: var Parser): Value =
   var delimiter = ')'
