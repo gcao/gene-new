@@ -237,7 +237,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native function (test)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], data: seq[Value]): Value {.nimcall.} =
+#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], data: seq[Value]): Value =
 #     1
 #   var code = cleanup """
 #     (test)
@@ -246,7 +246,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native function (test 1 2)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], data: seq[Value]): Value {.nimcall.} =
+#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], data: seq[Value]): Value =
 #     data[0].int + data[1].int
 #   var code = cleanup """
 #     (test 1 2)

@@ -1,5 +1,3 @@
-import tables
-
 import ../types
 import ../translators
 import ../parser

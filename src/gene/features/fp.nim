@@ -1,5 +1,4 @@
 import tables
-import asyncdispatch
 
 import ../map_key
 import ../types

@@ -33,36 +33,36 @@ proc `%`*(self: Value): JsonNode =
 proc to_json*(self: Value): string =
   return $(%self)
 
-proc object_class(self: Value, args: Value): Value {.nimcall.} =
+proc object_class(self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.get_class())
 
-proc object_to_json(self: Value, args: Value): Value {.nimcall.} =
+proc object_to_json(self: Value, args: Value): Value =
   self.to_json()
 
-proc object_to_s(self: Value, args: Value): Value {.nimcall.} =
+proc object_to_s(self: Value, args: Value): Value =
   "TODO: Object.to_s"
 
-proc class_name(self: Value, args: Value): Value {.nimcall.} =
+proc class_name(self: Value, args: Value): Value =
   self.class.name
 
-proc class_parent(self: Value, args: Value): Value {.nimcall.} =
+proc class_parent(self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.class.parent)
 
-proc exception_message(self: Value, args: Value): Value {.nimcall.} =
+proc exception_message(self: Value, args: Value): Value =
   self.exception.msg
 
-proc string_size(self: Value, args: Value): Value {.nimcall.} =
+proc string_size(self: Value, args: Value): Value =
   self.str.len
 
-proc string_to_i(self: Value, args: Value): Value {.nimcall.} =
+proc string_to_i(self: Value, args: Value): Value =
   self.str.parse_int
 
-proc string_append(self: Value, args: Value): Value {.nimcall.} =
+proc string_append(self: Value, args: Value): Value =
   result = self
   for i in 0..<args.gene_data.len:
     self.str.add(args[i].to_s)
 
-proc string_substr(self: Value, args: Value): Value {.nimcall.} =
+proc string_substr(self: Value, args: Value): Value =
   case args.gene_data.len:
   of 1:
     var start = args.gene_data[0].int
@@ -86,7 +86,7 @@ proc string_substr(self: Value, args: Value): Value {.nimcall.} =
   else:
     not_allowed("substr expects 1 or 2 arguments")
 
-proc string_split(self: Value, args: Value): Value {.nimcall.} =
+proc string_split(self: Value, args: Value): Value =
   var separator = args.gene_data[0].str
   case args.gene_data.len:
   of 1:
@@ -103,37 +103,37 @@ proc string_split(self: Value, args: Value): Value {.nimcall.} =
   else:
     not_allowed("split expects 1 or 2 arguments")
 
-proc string_contains(self: Value, args: Value): Value {.nimcall.} =
+proc string_contains(self: Value, args: Value): Value =
   var substr = args.gene_data[0].str
   result = self.str.find(substr) >= 0
 
-proc string_index(self: Value, args: Value): Value {.nimcall.} =
+proc string_index(self: Value, args: Value): Value =
   var substr = args.gene_data[0].str
   result = self.str.find(substr)
 
-proc string_rindex(self: Value, args: Value): Value {.nimcall.} =
+proc string_rindex(self: Value, args: Value): Value =
   var substr = args.gene_data[0].str
   result = self.str.rfind(substr)
 
-proc string_char_at(self: Value, args: Value): Value {.nimcall.} =
+proc string_char_at(self: Value, args: Value): Value =
   var i = args.gene_data[0].int
   result = self.str[i]
 
-proc string_trim(self: Value, args: Value): Value {.nimcall.} =
+proc string_trim(self: Value, args: Value): Value =
   result = self.str.strip
 
-proc string_starts_with(self: Value, args: Value): Value {.nimcall.} =
+proc string_starts_with(self: Value, args: Value): Value =
   var substr = args.gene_data[0].str
   result = self.str.startsWith(substr)
 
-proc string_ends_with(self: Value, args: Value): Value {.nimcall.} =
+proc string_ends_with(self: Value, args: Value): Value =
   var substr = args.gene_data[0].str
   result = self.str.endsWith(substr)
 
-proc string_to_uppercase(self: Value, args: Value): Value {.nimcall.} =
+proc string_to_uppercase(self: Value, args: Value): Value =
   result = self.str.toUpper
 
-proc string_to_lowercase(self: Value, args: Value): Value {.nimcall.} =
+proc string_to_lowercase(self: Value, args: Value): Value =
   result = self.str.toLower
 
 proc array_size(self: Value, args: Value): Value =
@@ -244,7 +244,7 @@ proc time_elapsed(self: Value, args: Value): Value =
 proc time_hour(self: Value, args: Value): Value =
   result = self.time.hour
 
-proc add_success_callback(self: Value, args: Value): Value {.nimcall.} =
+proc add_success_callback(self: Value, args: Value): Value =
   # Register callback to future
   if self.future.finished:
     if not self.future.failed:
@@ -260,7 +260,7 @@ proc add_success_callback(self: Value, args: Value): Value {.nimcall.} =
         var frame = Frame()
         discard VM.call(frame, args.gene_data[0], callback_args)
 
-proc add_failure_callback(self: Value, args: Value): Value {.nimcall.} =
+proc add_failure_callback(self: Value, args: Value): Value =
   # Register callback to future
   if self.future.finished:
     if self.future.failed:

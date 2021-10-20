@@ -3,7 +3,7 @@ import dynlib
 import ../src/my_app
 
 type
-  test_dynamic = proc(s: string) {.nimcall.}
+  test_dynamic = proc(s: string)
 
 proc test_plugin(path:string) =
   let lib = loadLib(path)

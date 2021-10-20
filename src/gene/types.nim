@@ -1,4 +1,5 @@
 import os, re, strutils, tables, unicode, hashes, sets, json, asyncdispatch, times, strformat
+import macros
 
 import ./map_key
 
@@ -18,13 +19,13 @@ type
   Translator* = proc(value: Value): Expr
   Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
 
-  NativeFn* = proc(args: Value): Value {.nimcall.}
-  NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
+  NativeFn* = proc(args: Value): Value
+  NativeMethod* = proc(self: Value, args: Value): Value
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
   # To distinguish NativeMacro and NativeMethod, we just create Value with different kind
   # (i.e. VkNativeMacro vs VkNativeMethod)
-  # NativeMacro* = proc(self: Value, args: Value): Value {.nimcall.}
+  # NativeMacro* = proc(self: Value, args: Value): Value
 
   GeneProcessor* = ref object of RootObj
     translator*: Translator
@@ -630,6 +631,18 @@ proc new_gene_future*(f: Future[Value]): Value =
 
 proc date*(self: Value): DateTime =
   self.date_internal.data
+
+# https://forum.nim-lang.org/t/8516#55153
+macro named*(name:static string, f:proc): untyped =
+  f.expectKind(nnkLambda)
+  result = nnkProcDef.newNimNode()
+  f.copyChildrenTo(result)
+  let id = ident(name)
+  result[0] = id
+  result = quote do:
+    block:
+      `result`
+      `id`
 
 #################### Converters ##################
 
