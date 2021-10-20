@@ -281,7 +281,7 @@ proc read_token(self: var Parser, lead_constituent: bool, chars_allowed: openarr
   self.bufpos = pos
 
 proc read_token(self: var Parser, lead_constituent: bool): string =
-  return self.read_token(lead_constituent, [])
+  return self.read_token(lead_constituent, [':'])
 
 proc read_character(self: var Parser): Value =
   var pos = self.bufpos
