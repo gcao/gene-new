@@ -195,7 +195,7 @@ type
     VkDate
     # Date + time + timezone
     VkDateTime
-    VkTimeKind
+    VkTime
     VkTimezone
     VkMap
     VkVector
@@ -259,7 +259,7 @@ type
       range*: Range
     of VkDate, VkDateTime:
       date_internal: DateTimeInternal
-    of VkTimeKind:
+    of VkTime:
       time*: Time
     of VkTimezone:
       timezone*: Timezone
@@ -572,6 +572,7 @@ var DocumentClass* : Value
 var FileClass*     : Value
 var DateClass*     : Value
 var DatetimeClass* : Value
+var TimeClass*     : Value
 
 #################### Definitions #################
 
@@ -1012,8 +1013,8 @@ proc get_class*(val: Value): Class =
     return DateClass.class
   of VkDateTime:
     return DateTimeClass.class
-  # of VkTimeKind:
-  #   return VM.gene_ns.ns[TIME_CLASS_KEY].class
+  of VkTime:
+    return TimeClass.class
   # of VkTimezone:
   #   return VM.gene_ns.ns[TIMEZONE_CLASS_KEY].class
   # of VkAny:
@@ -1143,7 +1144,7 @@ proc `==`*(this, that: Value): bool =
       return this.csymbol == that.csymbol
     of VkDate, VkDateTime:
       return this.date == that.date
-    of VkTimeKind:
+    of VkTime:
       return this.time == that.time
     of VkTimezone:
       return this.timezone == that.timezone
@@ -1191,7 +1192,7 @@ proc hash*(node: Value): Hash =
     h = h !& hash(node.csymbol.join("/"))
   of VkDate, VkDateTime:
     todo($node.kind)
-  of VkTimeKind:
+  of VkTime:
     todo($node.kind)
   of VkTimezone:
     todo($node.kind)
@@ -1246,7 +1247,7 @@ proc `$`*(node: Value): string =
     result = node.date.format("yyyy-MM-dd")
   of VkDateTime:
     result = node.date.format("yyyy-MM-dd'T'HH:mm:sszzz")
-  of VkTimeKind:
+  of VkTime:
     result = &"{node.time.hour:02}:{node.time.minute:02}:{node.time.second:02}"
   of VkVector:
     result = "["
@@ -1377,7 +1378,7 @@ proc new_gene_datetime*(date: DateTime): Value =
 
 proc new_gene_time*(hour, min, sec: int): Value =
   return Value(
-    kind: VkTimeKind,
+    kind: VkTime,
     time: Time(hour: hour, minute: min, second: sec, timezone: utc()),
   )
 

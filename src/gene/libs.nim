@@ -241,6 +241,9 @@ proc time_elapsed(self: Value, args: Value): Value =
   var duration = now().toTime() - self.date.toTime()
   result = duration.inMicroseconds / 1000_000
 
+proc time_hour(self: Value, args: Value): Value =
+  result = self.time.hour
+
 proc add_success_callback(self: Value, args: Value): Value {.nimcall.} =
   # Register callback to future
   if self.future.finished:
@@ -386,9 +389,15 @@ proc init*() =
     DateClass = Value(kind: VkClass, class: new_class("Date"))
     DateClass.class.parent = ObjectClass.class
     DateClass.def_native_method("year", date_year)
+
     DateTimeClass = Value(kind: VkClass, class: new_class("DateTime"))
     DateTimeClass.class.parent = DateClass.class
     DateTimeClass.def_native_method("elapsed", time_elapsed)
+
+    TimeClass = Value(kind: VkClass, class: new_class("Time"))
+    TimeClass.class.parent = ObjectClass.class
+    TimeClass.def_native_method("hour", time_hour)
+
     GENE_NS.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
     GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
 

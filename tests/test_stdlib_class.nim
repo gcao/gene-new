@@ -10,5 +10,13 @@ test_interpreter """
 """, "Class"
 
 test_interpreter """
+  gene/Class/.name
+""", "Class"
+
+test_interpreter """
   ((gene/String .parent).name)
+""", "Object"
+
+test_interpreter """
+  gene/String/.parent/.name
 """, "Object"
