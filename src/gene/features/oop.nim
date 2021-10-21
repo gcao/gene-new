@@ -266,14 +266,18 @@ proc translate_method(value: Value): Expr =
   )
 
 proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExInvoke](expr)
   var instance: Value
   var e = cast[ExInvoke](expr).self
   if e == nil:
     instance = frame.self
   else:
     instance = self.eval(frame, e)
+  if instance == nil:
+    raise new_exception(types.Exception, "Invoking " & expr.meth.to_s & " on nil.")
+
   var class = instance.get_class
-  var meth = class.get_method(cast[ExInvoke](expr).meth)
+  var meth = class.get_method(expr.meth)
 
   case meth.callable.kind:
   of VkNativeMethod:

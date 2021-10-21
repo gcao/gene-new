@@ -3,6 +3,7 @@ import strutils, tables
 import ../types
 import ../exprs
 import ../translators
+import ../interpreter
 
 type
   ExSelector* = ref object of Expr
@@ -113,18 +114,18 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
       discard
   of SmSelfAndDescendants:
     result.add_self_and_descendants(target)
-  # of SmCallback:
-  #   var args = new_gene_gene(Nil)
-  #   args.gene_data.add(target)
-  #   var v = VM.call_fn(Nil, self.callback.fn, args)
-  #   if v.kind == VkGene and v.gene_type.kind == VkSymbol:
-  #     case v.gene_type.symbol:
-  #     of "void":
-  #       discard
-  #     else:
-  #       result.add(v)
-  #   else:
-  #     result.add(v)
+  of SmCallback:
+    var args = new_gene_gene(Nil)
+    args.gene_data.add(target)
+    var v = VM.call_fn(nil, self.callback, args)
+    if v.kind == VkGene and v.gene_type.kind == VkSymbol:
+      case v.gene_type.symbol:
+      of "void":
+        discard
+      else:
+        result.add(v)
+    else:
+      result.add(v)
   else:
     todo($self.kind)
 

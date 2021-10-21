@@ -1266,6 +1266,18 @@ proc `$`*(node: Value): string =
     result = "["
     result &= node.vec.join(" ")
     result &= "]"
+  of VkMap:
+    result = "{"
+    var is_first = true
+    for k, v in node.map:
+      if is_first:
+        is_first = false
+      else:
+        result &= " "
+      result &= k.to_s
+      result &= " "
+      result &= $v
+    result &= "}"
   of VkGene:
     result = "(" & $node.gene_type
     if node.gene_props.len > 0:

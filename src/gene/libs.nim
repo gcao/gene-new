@@ -376,6 +376,10 @@ proc init*() =
     GeneClass.def_native_method("type", gene_type)
     GeneClass.def_native_method("props", gene_props)
     GeneClass.def_native_method("data", gene_data)
+    GeneClass.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"gene_contains".} =
+      var s = args.gene_data[0].str
+      result = self.gene_props.has_key(s.to_key)
+
     GENE_NS.ns["Gene"] = GeneClass
     GLOBAL_NS.ns["Gene"] = GeneClass
 
@@ -435,6 +439,7 @@ proc init*() =
         (for [i item] in self
           (s .append (item .to_s) (if (i < (.size)) with))
         )
+        s
       )
     )
 
@@ -494,7 +499,7 @@ proc init*() =
 
       (fn style [^props...]
         (fnx node
-          (if (node .contain "style")
+          (if (node .contains "style")
             ((node .@style).merge props)
           else
             ($set node @style props)
