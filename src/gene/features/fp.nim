@@ -55,10 +55,16 @@ proc to_function(node: Value): Function =
     body_start = 0
   else:
     var first = node.gene_data[0]
-    if first.kind == VkSymbol:
+    case first.kind:
+    of VkSymbol:
       name = first.symbol
-    elif first.kind == VkComplexSymbol:
+    of VkComplexSymbol:
       name = first.csymbol[^1]
+    of VkString:
+      name = first.str
+    else:
+      todo($first.kind)
+
     matcher.parse(node.gene_data[1])
     body_start = 2
 

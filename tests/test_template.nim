@@ -97,6 +97,32 @@ test_interpreter """
   check r.vec[0].vec[1].kind == VkUnquote
   check r.vec[0].vec[1].unquote == new_gene_symbol("i")
 
+test_interpreter """
+  (var tpl :[%a])
+  (var a 1)
+  ($render tpl)
+  (a = 2)
+  ($render tpl)
+""", @[new_gene_int(2)]
+
+test_interpreter """
+  (var tpl :{^a %a})
+  (var a 1)
+  ($render tpl)
+  (a = 2)
+  ($render tpl)
+""", proc(r: Value) =
+  check r.map["a"] == 2
+
+test_interpreter """
+  (var tpl :(_ %a))
+  (var a 1)
+  ($render tpl)
+  (a = 2)
+  ($render tpl)
+""", proc(r: Value) =
+  check r.gene_data[0] == 2
+
 # # test_interpreter """
 # #   (var a [1 2])
 # #   :(test

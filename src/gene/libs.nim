@@ -415,21 +415,38 @@ proc init*() =
     GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
 
     discard self.eval """
-      ($with gene/String
-        (method lines _
-          (self .split "\n")
+    ($with gene/String
+      (method lines _
+        (self .split "\n")
+      )
+    )
+
+    ($with gene/Array
+      (method map block
+        (var result [])
+        (for item in self
+          (result .add (block item))
         )
+        result
       )
 
-      ($with gene/Array
-        (method map block
-          (var result [])
-          (for item in self
-            (result .add (block item))
-          )
-          result
+      (method join [with = ""]
+        (var s "")
+        (for [i item] in self
+          (s .append (item .to_s) (if (i < (.size)) with))
         )
       )
+    )
+
+    ($with gene/Map
+      (method map block
+        (var result [])
+        (for [k v] in self
+          (result .add (block k v))
+        )
+        result
+      )
+    )
 
     (ns genex/html
       (class Tag

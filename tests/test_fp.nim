@@ -44,6 +44,9 @@ import ./helpers
 test_interpreter "(fn f a a)", proc(r: Value) =
   check r.fn.name == "f"
 
+test_interpreter "(fn \"f\" a a)", proc(r: Value) =
+  check r.fn.name == "f"
+
 test_interpreter "(fn f _)", proc(r: Value) =
   check r.fn.matcher.children.len == 0
 

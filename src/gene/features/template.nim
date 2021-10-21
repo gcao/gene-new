@@ -20,37 +20,39 @@ proc render(self: VirtualMachine, frame: Frame, value: var Value): Value =
     else:
       return r
   of VkVector:
+    result = new_gene_vec()
     if value.vec.len > 0:
-      var new_data: seq[Value] = @[]
       for item in value.vec.mitems:
         var v = self.render(frame, item)
         if v == nil:
           discard
         elif v.kind == VkExplode:
           for item in v.explode.vec:
-            new_data.add(item)
+            result.vec.add(item)
         else:
-          new_data.add(v)
-      value.vec = new_data
+          result.vec.add(v)
+    return result
   of VkMap:
+    result = new_gene_map()
     for i, item in value.map.mpairs:
-      value.map[i] = self.render(frame, item)
+      result.map[i] = self.render(frame, item)
+    return result
   of VkGene:
-    value.gene_type = self.render(frame, value.gene_type)
-    for i, item in value.gene_props.mpairs:
-      value.gene_props[i] = self.render(frame, item)
+    result = new_gene_gene()
+    result.gene_type = self.render(frame, value.gene_type)
+    for key, val in value.gene_props.mpairs:
+      result.gene_props[key] = self.render(frame, val)
     if value.gene_data.len > 0:
-      var new_data: seq[Value] = @[]
       for item in value.gene_data.mitems:
         var v = self.render(frame, item)
         if v == nil:
           discard
         elif v.kind == VkExplode:
           for item in v.explode.vec:
-            new_data.add(item)
+            result.gene_data.add(item)
         else:
-          new_data.add(v)
-      value.gene_data = new_data
+          result.gene_data.add(v)
+    return result
   else:
     discard
 
