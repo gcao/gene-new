@@ -40,7 +40,7 @@ proc object_to_json(self: Value, args: Value): Value =
   self.to_json()
 
 proc object_to_s(self: Value, args: Value): Value =
-  "TODO: Object.to_s"
+  self.to_s
 
 proc class_name(self: Value, args: Value): Value =
   self.class.name
@@ -310,6 +310,14 @@ proc init*() =
     ExceptionClass.def_native_method("message", exception_message)
     GENE_NS.ns["Exception"] = ExceptionClass
     GLOBAL_NS.ns["Exception"] = ExceptionClass
+
+    NamespaceClass = Value(kind: VkClass, class: new_class("Namespace"))
+    NamespaceClass.class.parent = ObjectClass.class
+    NamespaceClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =
+      self.ns.name
+
+    GENE_NS.ns["Namespace"] = NamespaceClass
+    GLOBAL_NS.ns["Namespace"] = NamespaceClass
 
     NilClass = Value(kind: VkClass, class: new_class("Nil"))
     NilClass.class.parent = ObjectClass.class

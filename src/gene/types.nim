@@ -977,8 +977,8 @@ proc get_class*(val: Value): Class =
     return val.cast_class
   of VkClass:
     return ClassClass.class
-  # of VkNamespace:
-  #   return VM.gene_ns.ns[NAMESPACE_CLASS_KEY].class
+  of VkNamespace:
+    return NamespaceClass.class
   of VkFuture:
     return FutureClass.class
   of VkFile:
