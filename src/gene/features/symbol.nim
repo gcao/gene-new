@@ -79,6 +79,10 @@ proc translate*(names: seq[string]): Expr =
   if names.len == 1:
     return translate(names[0])
   else:
+    # TODO: this will copy the sequence and is an expensive operation
+    var names = names
+    if names[0] == "":
+      names[0] = "self"
     var name = names[^1]
     if name.starts_with("@"):
       return new_ex_get_prop2(translate(names[0..^2]), name[1..^1])

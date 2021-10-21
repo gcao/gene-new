@@ -85,10 +85,30 @@ test_interpreter """
 
 test_interpreter """
   (class C
+    (method new _
+      (@prop = 1)
+    )
+  )
+  (var c (new C))
+  ($with c /@prop)
+""", 1
+
+test_interpreter """
+  (class C
     (method test _
       1
     )
   )
   (var c (new C))
   c/.test
+""", 1
+
+test_interpreter """
+  (class C
+    (method test _
+      1
+    )
+  )
+  (var c (new C))
+  ($with c /.test)
 """, 1
