@@ -10,7 +10,7 @@ import ./helpers
 # import from "module" a, b
 # import a, b # will import from root's parent ns (which
 #    could be the package ns or global ns or a intermediate ns)
-# import from "module" a/[b c], d as my_d
+# import from "module" a/[b c], d:my_d
 # import a # will import from parent, and throw error if "a" not available, this can be useful to make sure the required resource is available when the module is initialized.
 
 test_interpreter """
@@ -19,7 +19,7 @@ test_interpreter """
 """, 1
 
 # test_interpreter """
-#   (import a as b from "tests/fixtures/mod1")
+#   (import a:b from "tests/fixtures/mod1")
 #   b
 # """, 1
 
@@ -29,7 +29,7 @@ test_interpreter """
 """, 3
 
 # test_interpreter """
-#   (import a b as c from "tests/fixtures/mod1")
+#   (import a b:c from "tests/fixtures/mod1")
 #   (a + c)
 # """, 3
 
@@ -44,7 +44,7 @@ test_interpreter """
 """, 1
 
 # test_interpreter """
-#   (import n/f as g from "tests/fixtures/mod1")
+#   (import n/f:g from "tests/fixtures/mod1")
 #   (g 1)
 # """, 1
 
@@ -54,7 +54,7 @@ test_interpreter """
 """, 3
 
 # test_interpreter """
-#   (import n/[one two as x] from "tests/fixtures/mod1")
+#   (import n/[one two:x] from "tests/fixtures/mod1")
 #   (one + x)
 # """, 3
 

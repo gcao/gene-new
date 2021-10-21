@@ -280,9 +280,9 @@ proc add_failure_callback(self: Value, args: Value): Value =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GENE_NS.ns["sleep"] = new_gene_native_fn proc(args: Value): Value =
+    GENE_NS.ns["sleep"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep".} =
       sleep(args.gene_data[0].int)
-    GENE_NS.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value =
+    GENE_NS.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep_async".} =
       var f = sleep_async(args.gene_data[0].int)
       var future = new_future[Value]()
       f.add_callback proc() {.gcsafe.} =
@@ -341,6 +341,11 @@ proc init*() =
     StringClass.def_native_method("to_lowercase", string_to_lowercase)
     GENE_NS.ns["String"] = StringClass
     GLOBAL_NS.ns["String"] = StringClass
+
+    SymbolClass = Value(kind: VkClass, class: new_class("Symbol"))
+    SymbolClass.class.parent = ObjectClass.class
+    GENE_NS.ns["Symbol"] = SymbolClass
+    GLOBAL_NS.ns["Symbol"] = SymbolClass
 
     ArrayClass = Value(kind: VkClass, class: new_class("Array"))
     ArrayClass.class.parent = ObjectClass.class
@@ -417,4 +422,60 @@ proc init*() =
           result
         )
       )
+
+    (ns genex/html
+      (class Tag
+        (method new [name attrs = {} children = []]
+          (@name     = name)
+          (@attrs    = attrs)
+          (@children = children)
+        )
+
+        (method to_s _
+          ("<" (.@name)
+            (((.@attrs).map
+              ([k v] ->
+                (" " k "=\""
+                  (if (k == "style")
+                    ((v .map ([name value] -> ("" name ":" value ";"))).join)
+                  else
+                    v
+                  )
+                  "\""
+                )
+              )).join)
+          ">\n"
+            (((.@children).join "\n").trim)
+          "\n</" (.@name) ">")
+        )
+      )
+
+      # TODO: leaf tags
+      (ns tags
+        # HTML, BODY, DIV etc are part of this namespace
+        (var tags :[
+          HTML HEAD TITLE BODY DIV HEADER
+          SVG RECT
+        ])
+        (for tag in tags
+          (tag = (tag .to_s))
+          (eval
+            ($render :(fn %tag [^attrs... children...]
+              (new Tag %tag attrs children)
+            ))
+          )
+        )
+      )
+
+      (fn style [^props...]
+        (fnx node
+          (if (node .contain "style")
+            ((node .@style).merge props)
+          else
+            ($set node @style props)
+          )
+          (:void)
+        )
+      )
+    )
     """

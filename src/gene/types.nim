@@ -633,7 +633,7 @@ proc date*(self: Value): DateTime =
   self.date_internal.data
 
 # https://forum.nim-lang.org/t/8516#55153
-macro named*(name:static string, f:proc): untyped =
+macro name*(name: static string, f: untyped): untyped =
   f.expectKind(nnkLambda)
   result = nnkProcDef.newNimNode()
   f.copyChildrenTo(result)

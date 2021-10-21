@@ -116,8 +116,8 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
   # of SmCallback:
   #   var args = new_gene_gene(Nil)
   #   args.gene_data.add(target)
-  #   var v = VM.call_fn(Nil, self.callback.internal.fn, args)
-  #   if v.kind == VkGene and v.gene_type.kind == Symbol:
+  #   var v = VM.call_fn(Nil, self.callback.fn, args)
+  #   if v.kind == VkGene and v.gene_type.kind == VkSymbol:
   #     case v.gene_type.symbol:
   #     of "void":
   #       discard
@@ -126,7 +126,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
   #   else:
   #     result.add(v)
   else:
-    todo()
+    todo($self.kind)
 
 proc search(self: SelectorItem, target: Value, r: SelectorResult) =
   case self.kind:
