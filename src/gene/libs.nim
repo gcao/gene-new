@@ -1,5 +1,6 @@
 import os, osproc, base64, json, tables, sequtils, strutils, times, parsecsv, streams
-import asyncdispatch, asyncfile
+import httpclient
+import asyncdispatch, asyncfile, asynchttpserver
 
 import ./types
 import ./map_key
@@ -418,6 +419,28 @@ proc init*() =
     GENE_NS.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
     GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
 
+    GENE_NATIVE_NS.ns["http_get"] = new_gene_native_fn proc(args: Value): Value {.name:"http_get".} =
+      var url = args.gene_data[0].str
+      var headers = newHttpHeaders()
+      for k, v in args.gene_data[2].map:
+        headers.add(k.to_s, v.str)
+      var client = newHttpClient()
+      client.headers = headers
+      result = client.get_content(url)
+
+    GENE_NATIVE_NS.ns["http_get_async"] = new_gene_native_fn proc(args: Value): Value {.name:"http_get_async".} =
+      var url = args.gene_data[0].str
+      var headers = newHttpHeaders()
+      for k, v in args.gene_data[2].map:
+        headers.add(k.to_s, v.str)
+      var client = newAsyncHttpClient()
+      client.headers = headers
+      var f = client.get_content(url)
+      var future = new_future[Value]()
+      f.add_callback proc() {.gcsafe.} =
+        future.complete(f.read())
+      result = new_gene_future(future)
+
     discard self.eval """
     ($with gene/String
       (method lines _
@@ -507,5 +530,60 @@ proc init*() =
           (:void)
         )
       )
+    )
+
+    (ns genex/http
+      # Support:
+      # HTTP
+      # HTTPS
+      # Get
+      # Post
+      # Put
+      # Basic auth
+      # Headers
+      # Cookies
+      # Query parameter
+      # Post body - application/x-www-form
+      # Post body - JSON
+      # Response code
+      # Response body
+      # Response body - JSON
+
+      (fn get [url params = {} headers = {}]
+        (gene/native/http_get url params headers)
+      )
+
+      (fn ^^async get_async [url params = {} headers = {}]
+        (gene/native/http_get_async url params headers)
+      )
+
+      (fn get_json [url params = {} headers = {}]
+        (gene/json/parse (get url params headers))
+      )
+
+      # (var /parse_uri gene/native/http_parse_uri)
+
+      (class Uri
+      )
+
+      (class Request
+        # (method method gene/native/http_req_method)
+        # (method url gene/native/http_req_url)
+        # (method params gene/native/http_req_params)
+      )
+
+      (class Response
+        (method new [code body]
+          (@code = code)
+          (@body = body)
+        )
+
+        (method json _
+          ((gene/json/parse @body) .to_json)
+        )
+      )
+
+      # (var /start_server start_http_server)
+      # (var /start_server gene/native/http_start_server)
     )
     """
