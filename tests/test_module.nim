@@ -18,20 +18,20 @@ test_interpreter """
   a
 """, 1
 
-# test_interpreter """
-#   (import a:b from "tests/fixtures/mod1")
-#   b
-# """, 1
+test_interpreter """
+  (import a:b from "tests/fixtures/mod1")
+  b
+""", 1
 
 test_interpreter """
   (import a b from "tests/fixtures/mod1")
   (a + b)
 """, 3
 
-# test_interpreter """
-#   (import a b:c from "tests/fixtures/mod1")
-#   (a + c)
-# """, 3
+test_interpreter """
+  (import a b:c from "tests/fixtures/mod1")
+  (a + c)
+""", 3
 
 test_interpreter """
   (import n from "tests/fixtures/mod1")
@@ -43,20 +43,20 @@ test_interpreter """
   (f 1)
 """, 1
 
-# test_interpreter """
-#   (import n/f:g from "tests/fixtures/mod1")
-#   (g 1)
-# """, 1
+test_interpreter """
+  (import n/f:g from "tests/fixtures/mod1")
+  (g 1)
+""", 1
 
 test_interpreter """
   (import n/[one two] from "tests/fixtures/mod1")
   (one + two)
 """, 3
 
-# test_interpreter """
-#   (import n/[one two:x] from "tests/fixtures/mod1")
-#   (one + x)
-# """, 3
+test_interpreter """
+  (import n/[one two:x] from "tests/fixtures/mod1")
+  (one + x)
+""", 3
 
 test_interpreter """
   (ns n

@@ -574,6 +574,7 @@ var FileClass*     : Value
 var DateClass*     : Value
 var DatetimeClass* : Value
 var TimeClass*     : Value
+var SelectorClass* : Value
 
 #################### Definitions #################
 

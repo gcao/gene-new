@@ -1,4 +1,4 @@
-import tables
+import strutils, tables
 
 import ../types
 import ../map_key
@@ -25,6 +25,16 @@ type
     children*: seq[ImportMatcher]
     children_only*: bool # true if self should not be imported
 
+proc new_import_matcher(s: string): ImportMatcher =
+  var parts = s.split(":")
+  case parts.len:
+  of 1:
+    return ImportMatcher(name: parts[0].to_key)
+  of 2:
+    return ImportMatcher(name: parts[0].to_key, `as`: parts[1].to_key)
+  else:
+    todo("new_import_matcher " & s)
+
 proc parse*(self: ImportMatcherRoot, input: Value, group: ptr seq[ImportMatcher]) =
   var data: seq[Value]
   case input.kind:
@@ -45,7 +55,7 @@ proc parse*(self: ImportMatcherRoot, input: Value, group: ptr seq[ImportMatcher]
         self.from = data[i]
         i += 1
       else:
-        group[].add(ImportMatcher(name: item.symbol.to_key))
+        group[].add(new_import_matcher(item.symbol))
     of VkComplexSymbol:
       var names: seq[string] = @[]
       names.add(item.csymbol[0])
@@ -62,7 +72,7 @@ proc parse*(self: ImportMatcherRoot, input: Value, group: ptr seq[ImportMatcher]
           self.parse(data[i], matcher.children.addr)
           i += 1
         else:
-          matcher = ImportMatcher(name: name.to_key)
+          matcher = new_import_matcher(name)
           matcher.children_only = j < names.len
           my_group[].add(matcher)
           my_group = matcher.children.addr
@@ -103,7 +113,10 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
       if m.children_only:
         self.import_from_ns(frame, value.ns, m.children)
       else:
-        frame.ns.members[m.name] = value
+        var name = m.name
+        if m.as != 0:
+          name = m.as
+        frame.ns.members[name] = value
 
 proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExImport](expr)

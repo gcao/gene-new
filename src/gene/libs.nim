@@ -420,6 +420,10 @@ proc init*() =
     TimeClass.class.parent = ObjectClass.class
     TimeClass.def_native_method("hour", time_hour)
 
+    SelectorClass = Value(kind: VkClass, class: new_class("Selector"))
+    SelectorClass.class.parent = ObjectClass.class
+    # SelectorClass.ns["descendants"] = ...
+
     GENE_NS.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
     GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
 
