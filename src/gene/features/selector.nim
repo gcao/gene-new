@@ -6,6 +6,8 @@ import ../translators
 import ../interpreter
 
 type
+  NoResult* = ref object of Catchable
+
   ExSelector* = ref object of Expr
     data*: Expr
 
@@ -25,8 +27,6 @@ type
     selector*: Expr
     value*: Expr
 
-let NO_RESULT = new_gene_gene(new_gene_symbol("SELECTOR_NO_RESULT"))
-
 proc search*(self: Selector, target: Value, r: SelectorResult)
 
 proc search_first(self: SelectorMatcher, target: Value): Value =
@@ -35,12 +35,12 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
     case target.kind:
     of VkVector:
       if self.index >= target.vec.len:
-        return NO_RESULT
+        raise NoResult.new
       else:
         return target.vec[self.index]
     of VkGene:
       if self.index >= target.gene_data.len:
-        return NO_RESULT
+        raise NoResult.new
       else:
         return target.gene_data[self.index]
     else:
@@ -51,12 +51,12 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
       if target.map.has_key(self.name):
         return target.map[self.name]
       else:
-        return NO_RESULT
+        raise NoResult.new
     of VkGene:
       if target.gene_props.has_key(self.name):
         return target.gene_props[self.name]
       else:
-        return NO_RESULT
+        raise NoResult.new
     of VkInstance:
       return target.instance_props.get_or_default(self.name, Nil)
     else:
@@ -136,11 +136,9 @@ proc search(self: SelectorItem, target: Value, r: SelectorResult) =
       case r.mode:
       of SrFirst:
         for m in self.matchers:
-          var v = m.search_first(target)
-          if v != NO_RESULT:
-            r.done = true
-            r.first = v
-            break
+          r.first = m.search_first(target)
+          r.done = true
+          break
       of SrAll:
         for m in self.matchers:
           r.all.add(m.search(target))
@@ -169,19 +167,22 @@ proc search(self: Selector, target: Value, r: SelectorResult) =
       child.search(target, r)
 
 proc search*(self: Selector, target: Value): Value =
-  if self.is_singular():
-    var r = SelectorResult(mode: SrFirst)
-    self.search(target, r)
-    if r.done:
-      result = r.first
-      # TODO: invoke callbacks
+  try:
+    if self.is_singular():
+      var r = SelectorResult(mode: SrFirst)
+      self.search(target, r)
+      if r.done:
+        result = r.first
+        # TODO: invoke callbacks
+      else:
+        raise new_exception(SelectorNoResult, "No result is found for the selector.")
     else:
-      raise new_exception(SelectorNoResult, "No result is found for the selector.")
-  else:
-    var r = SelectorResult(mode: SrAll)
-    self.search(target, r)
-    result = new_gene_vec(r.all)
-    # TODO: invoke callbacks
+      var r = SelectorResult(mode: SrAll)
+      self.search(target, r)
+      result = new_gene_vec(r.all)
+      # TODO: invoke callbacks
+  except NoResult:
+    result = Nil
 
 proc update(self: SelectorItem, target: Value, value: Value): bool =
   for m in self.matchers:

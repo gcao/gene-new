@@ -94,9 +94,9 @@ test_interpreter """
   ({^a "A"} .@ "a")
 """, "A"
 
-# test_interpreter """
-#   ({} .@ "a")
-# """, Nil
+test_interpreter """
+  ({} .@ "a")
+""", Nil
 
 test_interpreter """
   ({^a "A"} .@a)
