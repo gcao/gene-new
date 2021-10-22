@@ -485,8 +485,8 @@ proc init*() =
         )
 
         (method to_s _
-          ("<" (.@name)
-            (((.@attrs).map
+          ("<" /@name
+            ((/@attrs .map
               ([k v] ->
                 (" " k "=\""
                   (if (k == "style")
@@ -497,9 +497,14 @@ proc init*() =
                   "\""
                 )
               )).join)
-          ">\n"
-            (((.@children).join "\n").trim)
-          "\n</" (.@name) ">")
+            ">"
+            (if (/@children/.size > 0)
+              ("\n"
+                ((/@children .join "\n").trim)
+              "\n")
+            )
+            "</" /@name ">"
+          )
         )
       )
 
