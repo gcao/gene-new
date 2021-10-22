@@ -272,7 +272,7 @@ proc new_ex_selector*(name: string): ExSelector =
     data: new_ex_literal(new_gene_string(name)),
   )
 
-proc eval_selector2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_selector2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExSelector2](expr)
   var selector = new_selector()
   selector.translator = selector_arg_translator
@@ -314,7 +314,7 @@ proc translate_selector(value: Value): Expr =
   var parallel_mode = value.gene_type.symbol == "@*"
   return new_ex_selector(parallel_mode, value.gene_data)
 
-proc handle_item(item: string): Expr =
+proc handle_item*(item: string): Expr =
   try:
     result = translate(item.parse_int())
   except ValueError:
@@ -330,7 +330,7 @@ proc translate_csymbol_selector*(csymbol: seq[string]): Expr =
     r.data.add(handle_item(item))
   return r
 
-proc eval_selector_invoker2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_selector_invoker2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExSelectorInvoker2](expr)
   var value: Value
   if expr.target == nil:

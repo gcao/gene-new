@@ -183,12 +183,8 @@ type
     name*: MapKey
     value*: Expr
 
-  ExGetProp* = ref object of Expr
-    name*: MapKey
-
-  ExGetProp2* = ref object of Expr
-    self*: Expr
-    name*: MapKey
+  # ExGetProp* = ref object of Expr
+  #   name*: MapKey
 
 proc eval_set_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var value = cast[ExSetProp](expr).value
@@ -201,32 +197,14 @@ proc new_ex_set_prop*(name: string, value: Expr): ExSetProp =
     value: value,
   )
 
-proc eval_get_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  frame.self.instance_props[cast[ExGetProp](expr).name]
+# proc eval_get_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+#   frame.self.instance_props[cast[ExGetProp](expr).name]
 
-proc new_ex_get_prop*(name: string): ExGetProp =
-  ExGetProp(
-    evaluator: eval_get_prop,
-    name: name.to_key,
-  )
-
-proc eval_get_prop2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExGetProp2](expr)
-  var obj = self.eval(frame, expr.self)
-  case obj.kind:
-  of VkInstance:
-    return obj.instance_props[expr.name]
-  of VkMap:
-    return obj.map[expr.name]
-  else:
-    todo("eval_get_prop2 " & $obj.kind)
-
-proc new_ex_get_prop2*(obj: Expr, name: string): ExGetProp2 =
-  ExGetProp2(
-    evaluator: eval_get_prop2,
-    self: obj,
-    name: name.to_key,
-  )
+# proc new_ex_get_prop*(name: string): ExGetProp =
+#   ExGetProp(
+#     evaluator: eval_get_prop,
+#     name: name.to_key,
+#   )
 
 #################### Selector ####################
 

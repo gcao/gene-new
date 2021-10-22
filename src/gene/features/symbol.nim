@@ -79,13 +79,18 @@ proc translate*(names: seq[string]): Expr =
   if names.len == 1:
     return translate(names[0])
   else:
-    # TODO: this will copy the sequence and is an expensive operation
-    var names = names
-    if names[0] == "":
-      names[0] = "self"
     var name = names[^1]
     if name.starts_with("@"):
-      return new_ex_get_prop2(translate(names[0..^2]), name[1..^1])
+      var r = ExSelectorInvoker2(
+        evaluator: eval_selector_invoker2,
+      )
+      r.selector = ExSelector2(
+        evaluator: eval_selector2,
+        parallel_mode: false,
+      )
+      cast[ExSelector2](r.selector).data.add(handle_item(name[1..^1]))
+      r.target = translate(names[0..^2])
+      return r
     elif name.starts_with("."):
       return ExInvoke(
         evaluator: eval_invoke,
