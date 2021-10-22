@@ -16,6 +16,13 @@ test_interpreter """
   check r.class.name == "A"
 
 test_interpreter """
+  (ns n
+    (var /a 1)
+  )
+  n/a
+""", 1
+
+test_interpreter """
   (ns n)
   (class n/A)
   n/A

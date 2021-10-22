@@ -33,9 +33,9 @@
 (var docroot "examples/www")
 
 (fn hello req
-  (var name ((req .params).@name))
-  (if name
-    ("Hello " name)
+  (var params req/.params)
+  (if (params .contains "name")
+    ("Hello " params/@name)
   else
     "Hello world!"
   )
@@ -47,7 +47,7 @@
   (var result)
   (for h in handlers
     (result = (h req))
-    (if result break)
+    (if result (break))
   )
   (println "200 " (req .method) " " (req .url))
   result

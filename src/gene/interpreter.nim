@@ -202,7 +202,7 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
           i += 1
           last_matcher.default_value_expr = translate(value)
   else:
-    todo()
+    todo("parse " & $v.kind)
 
 proc parse*(self: var RootMatcher, v: Value) =
   if v == nil or v == new_gene_symbol("_"):

@@ -59,7 +59,7 @@ proc translate*(name: string): Expr {.inline.} =
     return r
 
   case name:
-  of "self":
+  of "", "self":
     result = new_ex_self()
   of "global":
     result = new_ex_literal(GLOBAL_NS)

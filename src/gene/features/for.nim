@@ -36,12 +36,22 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     case data.kind:
     of VkVector:
       for item in data.vec:
-        scope[expr.name.to_key] = item
-        discard self.eval(frame, expr.body)
+        try:
+          scope[expr.name.to_key] = item
+          discard self.eval(frame, expr.body)
+        except Continue:
+          continue
+        except Break:
+          break
     of VkMap:
       for _, v in data.map:
-        scope[expr.name.to_key] = v
-        discard self.eval(frame, expr.body)
+        try:
+          scope[expr.name.to_key] = v
+          discard self.eval(frame, expr.body)
+        except Continue:
+          continue
+        except Break:
+          break
     else:
       todo()
 

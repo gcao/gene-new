@@ -1030,13 +1030,13 @@ proc get_class*(val: Value): Class =
     return TimeClass.class
   # of VkTimezone:
   #   return VM.gene_ns.ns[TIMEZONE_CLASS_KEY].class
-  # of VkAny:
-  #   if val.any_type == HTTP_REQUEST_KEY:
-  #     return VM.genex_ns.ns[HTTP_KEY].ns[REQUEST_CLASS_KEY].class
-  #   else:
-  #     todo()
+  of VkAny:
+    if val.any_type == HTTP_REQUEST_KEY:
+      return GENEX_NS.ns[HTTP_KEY].ns[REQUEST_CLASS_KEY].class
+    else:
+      todo("get_class " & $val.kind)
   else:
-    todo($val.kind)
+    todo("get_class " & $val.kind)
 
 proc is_a*(self: Value, class: Class): bool =
   var my_class = self.get_class

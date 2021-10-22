@@ -211,8 +211,15 @@ proc new_ex_get_prop*(name: string): ExGetProp =
   )
 
 proc eval_get_prop2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var obj = self.eval(frame, cast[ExGetProp2](expr).self)
-  obj.instance_props[cast[ExGetProp2](expr).name]
+  var expr = cast[ExGetProp2](expr)
+  var obj = self.eval(frame, expr.self)
+  case obj.kind:
+  of VkInstance:
+    return obj.instance_props[expr.name]
+  of VkMap:
+    return obj.map[expr.name]
+  else:
+    todo("eval_get_prop2 " & $obj.kind)
 
 proc new_ex_get_prop2*(obj: Expr, name: string): ExGetProp2 =
   ExGetProp2(
