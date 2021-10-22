@@ -9,6 +9,30 @@ test_interpreter """
   ((nil .class).name)
 """, "Nil"
 
+test_interpreter """
+  (nil .to_s)
+""", ""
+
+test_interpreter """
+  (:a .to_s)
+""", "a"
+
+test_interpreter """
+  ("a" .to_s)
+""", "a"
+
+test_interpreter """
+  ([1 "a"] .to_s)
+""", "[1 \"a\"]"
+
+test_interpreter """
+  ({^a "a"} .to_s)
+""", "{^a \"a\"}"
+
+test_interpreter """
+  ((1 ^a "a" "b") .to_s)
+""", "(1 ^a \"a\" \"b\")"
+
 # test_interpreter """
 #   (var sum 0)
 #   (4 .times (i -> (sum += i)))

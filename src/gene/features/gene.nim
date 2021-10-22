@@ -8,6 +8,11 @@ import ../translators
 import ./selector
 import ./native
 
+type
+  ExStrings* = ref object of Expr
+    first*: string
+    rest*: seq[Expr]
+
 proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
   for k, v in value.gene_props:
@@ -68,6 +73,23 @@ proc default_translator(value: Value): Expr =
     args: value,
   )
 
+proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExStrings](expr)
+  var s = ""
+  s &= expr.first
+  for item in expr.rest.mitems:
+    s &= self.eval(frame, item).to_s
+  return s
+
+proc translate_string(value: Value): Expr =
+  var e = ExStrings(
+    evaluator: eval_string,
+    first: value.gene_type.str,
+  )
+  for item in value.gene_data:
+    e.rest.add(translate(item))
+  return e
+
 proc translate_gene(value: Value): Expr =
   # normalize is inefficient.
   if value.gene_type.kind == VkSymbol and value.gene_type.symbol.starts_with(".@"):
@@ -102,6 +124,8 @@ proc translate_gene(value: Value): Expr =
   of VkSymbol:
     var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
     return translator(value)
+  of VkString:
+    return translate_string(value)
   of VkFunction:
     # TODO: this can be optimized further
     return ExGene(

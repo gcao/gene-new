@@ -26,6 +26,21 @@ proc new_ex_literal*(v: Value): ExLiteral =
     data: v,
   )
 
+#################### ExLiteral ###################
+
+type
+  ExString* = ref object of Expr
+    data*: string
+
+proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  return "" & cast[ExString](expr).data
+
+proc new_ex_string*(v: Value): ExString =
+  ExString(
+    evaluator: eval_string,
+    data: v.str,
+  )
+
 #################### ExGroup #####################
 
 type

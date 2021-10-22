@@ -1274,6 +1274,7 @@ proc `$`*(node: Value): string =
         is_first = false
       else:
         result &= " "
+      result &= "^"
       result &= k.to_s
       result &= " "
       result &= $v
