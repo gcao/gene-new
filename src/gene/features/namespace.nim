@@ -13,8 +13,7 @@ type
 
 proc eval_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExNamespace](expr)
-  var ns = new_namespace(e.name)
-  ns.parent = frame.ns
+  var ns = new_namespace(frame.ns, e.name)
   result = Value(kind: VkNamespace, ns: ns)
   var container = frame.ns
   if e.container != nil:

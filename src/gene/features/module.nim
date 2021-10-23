@@ -5,7 +5,9 @@ import ../map_key
 import ../translators
 import ../interpreter
 
-let INHERIT_KEY*               = add_key("inherit")
+let SOURCE_KEY*  = add_key("source")
+let RELOAD_KEY*  = add_key("reload")
+let INHERIT_KEY* = add_key("inherit")
 
 type
   ExImport* = ref object of Expr
@@ -13,7 +15,9 @@ type
     `from`*: Expr
     pkg*: Expr
     inherit*: Expr
-    native*: bool
+    source*: Expr   # if source is not provided, use heuristic method to find where the source is
+    reload*: Expr   # if set to true, if the module is imported already, re-import and update namespaces and members
+    # native*: bool
 
   ImportMatcherRoot* = ref object
     children*: seq[ImportMatcher]
@@ -129,7 +133,7 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   # # Set dir to import_pkg's root directory
 
   var `from` = expr.from
-  # if expr.import_native:
+  # if expr.native:
   #   var path = self.eval(frame, `from`).str
   #   let lib = load_dynlib(dir & path)
   #   if lib == nil:
@@ -159,7 +163,11 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     ns = frame.ns.root.parent
   else:
     var `from` = self.eval(frame, `from`).str
-    if expr.inherit != nil:
+    if expr.source != nil:
+      var code = self.eval(frame, expr.source).str
+      ns = self.import_module(`from`.to_key, code)
+      self.modules[`from`.to_key] = ns
+    elif expr.inherit != nil:
       var inherit = self.eval(frame, expr.inherit).ns
       var code = read_file(dir & `from` & ".gene")
       ns = self.import_module(`from`.to_key, code, inherit)
@@ -176,14 +184,19 @@ proc translate_import(value: Value): Expr =
   var e = ExImport(
     evaluator: eval_import,
     matcher: matcher,
-    native: value.gene_type.symbol == "import_native",
   )
   if matcher.from != nil:
     e.from = translate(matcher.from)
   if value.gene_props.has_key(PKG_KEY):
     e.pkg = translate(value.gene_props[PKG_KEY])
+  # if value.gene_props.has_key(NATIVE_KEY):
+  #   e.native = value.gene_props[NATIVE_KEY]).bool
   if value.gene_props.has_key(INHERIT_KEY):
     e.inherit = translate(value.gene_props[INHERIT_KEY])
+  if value.gene_props.has_key(SOURCE_KEY):
+    e.source = translate(value.gene_props[SOURCE_KEY])
+  if value.gene_props.has_key(RELOAD_KEY):
+    e.reload = translate(value.gene_props[RELOAD_KEY])
   return e
 
 proc init*() =

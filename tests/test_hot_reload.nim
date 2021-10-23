@@ -34,17 +34,33 @@ test "Reloadable":
   init_all()
   var code = """
     (var mod "tests/fixtures/reloadable")
-    (var mod_file ("" mod ".gene"))
-    (import a from mod)
-    (if (a != 1) (throw "Reloadable: precondition failed"))
-    (gene/os/exec ("cp " mod_file " /tmp/reloadable.gene"))
-    (gene/File/write mod_file "
-      (var a 2)
+    (import a from mod ^source "
+      (var $ns/a 1)
     ")
-    (try
-      (if (a != 2) (throw "Reloadable: reload failed"))
-    finally
-      (gene/os/exec ("cp /tmp/reloadable.gene " mod_file))
-    )
+    (if (a != 1) (throw "Reloadable: precondition failed"))
+    (import a from mod ^^reload ^source "
+      (var $ns/a 2)
+    ")
+    (if (a != 2) (throw "Reloadable: reload failed"))
   """
   discard VM.eval(code)
+
+# test "Reloadable":
+#   init_all()
+#   var code = """
+#     (var mod "tests/fixtures/reloadable")
+#     (var mod_file ("" mod ".gene"))
+#     (import a from mod)
+#     (if (a != 1) (throw "Reloadable: precondition failed"))
+#     (gene/os/exec ("cp " mod_file " /tmp/reloadable.gene"))
+#     (gene/File/write mod_file "
+#       (var a 2)
+#     ")
+#     (gene/sleep 100) # wait 0.1 second
+#     (try
+#       (if (a != 2) (throw "Reloadable: reload failed"))
+#     finally
+#       (gene/os/exec ("cp /tmp/reloadable.gene " mod_file))
+#     )
+#   """
+#   discard VM.eval(code)

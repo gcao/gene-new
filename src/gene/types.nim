@@ -85,6 +85,7 @@ type
   Namespace* = ref object
     module*: Module
     parent*: Namespace
+    is_root*: bool           # is the root namespace of a module
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
     members*: Table[MapKey, Value]
@@ -676,6 +677,8 @@ proc new_module*(name: string): Module =
     name: name,
     ns: new_namespace(VM.app.ns),
   )
+  result.ns.module = result
+  result.ns.is_root = true
 
 proc new_module*(): Module =
   result = new_module("<unknown>")
@@ -685,6 +688,8 @@ proc new_module*(ns: Namespace, name: string): Module =
     name: name,
     ns: new_namespace(ns),
   )
+  result.ns.module = result
+  result.ns.is_root = true
 
 proc new_module*(ns: Namespace): Module =
   result = new_module(ns, "<unknown>")
@@ -697,8 +702,10 @@ proc new_namespace*(): Namespace =
     members: Table[MapKey, Value](),
   )
 
+# assume anonymous namespace is the root, good idea?
 proc new_namespace*(parent: Namespace): Namespace =
   return Namespace(
+    module: parent.module,
     parent: parent,
     name: "<root>",
     members: Table[MapKey, Value](),
@@ -711,17 +718,22 @@ proc new_namespace*(name: string): Namespace =
   )
 
 proc new_namespace*(parent: Namespace, name: string): Namespace =
-  return Namespace(
+  result = Namespace(
     parent: parent,
     name: name,
     members: Table[MapKey, Value](),
   )
+  if parent != nil:
+    result.module = parent.module
 
 proc root*(self: Namespace): Namespace =
-  if self.name == "<root>":
+  if self.is_root:
     return self
   else:
     return self.parent.root
+
+proc is_reloadable*(self: Namespace): bool =
+  self.module != nil and self.module.reloadable
 
 proc has_key*(self: Namespace, key: MapKey): bool {.inline.} =
   return self.members.has_key(key)
