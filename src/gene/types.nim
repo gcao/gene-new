@@ -80,8 +80,10 @@ type
     name*: string
     ns*: Namespace
     props*: Table[string, Value]  # Additional properties
+    reloadable*: bool
 
   Namespace* = ref object
+    module*: Module
     parent*: Namespace
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string

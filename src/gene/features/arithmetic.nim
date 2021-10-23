@@ -100,6 +100,7 @@ proc init*() =
   GeneTranslators["*"] = translate_arithmetic
   GeneTranslators["/"] = translate_arithmetic
   GeneTranslators["=="] = translate_arithmetic
+  GeneTranslators["!="] = translate_arithmetic
   GeneTranslators["<"] = translate_arithmetic
   GeneTranslators["<="] = translate_arithmetic
   GeneTranslators[">"] = translate_arithmetic
