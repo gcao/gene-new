@@ -122,6 +122,22 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
           name = m.as
         frame.ns.members[name] = value
 
+proc sync(self: Namespace, ns: Namespace) =
+  for k, v in self.members:
+    if ns.members.has_key(k):
+      var new_val = ns.members[k]
+      self.members[k] = new_val
+    else:
+      ns.members.del(k)
+
+proc reload_module*(self: VirtualMachine, name: MapKey, code: string, ns: Namespace) =
+  var module = new_module(name.to_s)
+  var frame = new_frame()
+  frame.ns = module.ns
+  frame.scope = new_scope()
+  discard self.eval(frame, code)
+  ns.sync(module.ns)
+
 proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExImport](expr)
   var ns: Namespace
@@ -163,16 +179,20 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     ns = frame.ns.root.parent
   else:
     var `from` = self.eval(frame, `from`).str
-    if expr.source != nil:
-      var code = self.eval(frame, expr.source).str
-      ns = self.import_module(`from`.to_key, code)
-      self.modules[`from`.to_key] = ns
-    elif expr.inherit != nil:
+    if expr.inherit != nil:
       var inherit = self.eval(frame, expr.inherit).ns
       var code = read_file(dir & `from` & ".gene")
       ns = self.import_module(`from`.to_key, code, inherit)
     elif self.modules.has_key(`from`.to_key):
       ns = self.modules[`from`.to_key]
+      if expr.reload != nil and self.eval(frame, expr.reload).bool:
+        var code = ""
+        if expr.source != nil:
+          code = self.eval(frame, expr.source).str
+        else:
+          code = read_file(dir & `from` & ".gene")
+        self.reload_module(`from`.to_key, code, ns)
+        return
     else:
       var code = read_file(dir & `from` & ".gene")
       ns = self.import_module(`from`.to_key, code)
