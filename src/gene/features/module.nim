@@ -6,7 +6,6 @@ import ../translators
 import ../interpreter
 
 let SOURCE_KEY*  = add_key("source")
-let RELOAD_KEY*  = add_key("reload")
 let INHERIT_KEY* = add_key("inherit")
 
 type
@@ -16,7 +15,6 @@ type
     pkg*: Expr
     inherit*: Expr
     source*: Expr   # if source is not provided, use heuristic method to find where the source is
-    reload*: Expr   # if set to true, if the module is imported already, re-import and update namespaces and members
     # native*: bool
 
   ExReload* = ref object of Expr
@@ -193,23 +191,17 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
       var inherit = self.eval(frame, expr.inherit).ns
       var code = read_file(dir & `from` & ".gene")
       ns = self.import_module(`from`.to_key, code, inherit).ns
-    elif self.modules.has_key(`from`.to_key):
-      ns = self.modules[`from`.to_key].ns
-      if expr.reload != nil and self.eval(frame, expr.reload).bool:
-        var code = ""
-        if expr.source != nil:
-          code = self.eval(frame, expr.source).str
-        else:
-          code = read_file(dir & `from` & ".gene")
-        self.reload_module(`from`.to_key, code, ns)
-        return
     else:
-      var code = read_file(dir & `from` & ".gene")
+      var code = ""
+      if expr.source != nil:
+        code = self.eval(frame, expr.source).str
+      else:
+        code = read_file(dir & `from` & ".gene")
       var module = self.import_module(`from`.to_key, code)
       ns = module.ns
       self.modules[`from`.to_key] = module
 
-  if ns.module.reloadable:
+  if ns.module != nil and ns.module.reloadable:
     var path: seq[MapKey] = @[]
     self.import_from_ns(frame, ns, expr.matcher.children, path)
   else:
@@ -231,13 +223,18 @@ proc translate_import(value: Value): Expr =
     e.inherit = translate(value.gene_props[INHERIT_KEY])
   if value.gene_props.has_key(SOURCE_KEY):
     e.source = translate(value.gene_props[SOURCE_KEY])
-  if value.gene_props.has_key(RELOAD_KEY):
-    e.reload = translate(value.gene_props[RELOAD_KEY])
   return e
 
 proc eval_reload(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExReload](expr)
   var module_name = self.eval(frame, expr.module).str
+  var loaded_module = self.modules[module_name.to_key]
+  echo $loaded_module.reloadable
+  if loaded_module.is_nil:
+    not_allowed("eval_reload: " & loaded_module.name & " must be imported before being reloaded.")
+  elif not loaded_module.reloadable:
+    not_allowed("eval_reload: " & loaded_module.name & " is not reloadable.")
+
   var code = self.eval(frame, expr.source).str
 
   var module = new_module(module_name)
@@ -247,7 +244,7 @@ proc eval_reload(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   discard self.eval(new_frame, code)
 
   # Replace root ns attached to the original module object
-  self.modules[module_name.to_key].ns = module.ns
+  loaded_module.ns = module.ns
 
 proc translate_reload(value: Value): Expr =
   ExReload(

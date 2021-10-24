@@ -43,16 +43,16 @@ import ./helpers
 # """
 
 test_interpreter """
-  (var mod "tests/fixtures/reloadable")
+  (var mod "reloadable")
   (import a from mod ^source "
+    ($set_reloadable)
     (var $ns/a 1)
   ")
-  (if (a != 1) (throw "Reloadable: precondition failed"))
-  # (import a from mod ^^reload ^source "
+  (genex/test/check (a == 1) "Reloadable: precondition failed")
   ($reload mod "
     (var $ns/a 2)
   ")
-  (if (a != 2) (throw "Reloadable: reload failed"))
+  (genex/test/check (a == 2) "Reloadable: reload failed")
 """
 
 # test "Reloadable":
