@@ -20,21 +20,15 @@ proc macro_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var
   new_frame.parent = frame
 
   var args = cast[ExLiteral](expr).data
-  case target.macro.matching_hint.mode:
-  of MhNone:
+  var match_result = self.match(new_frame, target.macro.matcher, args)
+  case match_result.kind:
+  of MatchSuccess:
     discard
-  of MhSimpleData:
-    for _, v in args.gene_props.mpairs:
-      todo()
-    for i, v in args.gene_data.mpairs:
-      let field = target.macro.matcher.children[i]
-      new_frame.scope.def_member(field.name, v)
+  of MatchMissingFields:
+    for field in match_result.missing:
+      not_allowed("Argument " & field.to_s & " is missing.")
   else:
-    for _, v in args.gene_props.mpairs:
-      todo()
-    for i, v in args.gene_data.mpairs:
-      let field = target.macro.matcher.children[i]
-      new_frame.scope.def_member(field.name, v)
+    todo()
 
   if target.macro.body_compiled == nil:
     target.macro.body_compiled = translate(target.macro.body)

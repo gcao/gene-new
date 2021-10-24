@@ -24,6 +24,13 @@ test_interpreter """
 """, 3
 
 test_interpreter """
+  (macro m [a = 1]
+    (a + 2)
+  )
+  (m)
+""", 3
+
+test_interpreter """
   (macro m []
     ($caller_eval :a)
   )

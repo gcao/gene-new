@@ -34,6 +34,27 @@ proc `%`*(self: Value): JsonNode =
 proc to_json*(self: Value): string =
   return $(%self)
 
+converter json_to_gene*(node: JsonNode): Value =
+  case node.kind:
+  of JNull:
+    return Nil
+  of JBool:
+    return node.bval
+  of JInt:
+    return node.num
+  of JFloat:
+    return node.fnum
+  of JString:
+    return node.str
+  of JObject:
+    result = new_gene_map()
+    for k, v in node.fields:
+      result.map[k.to_key] = v.json_to_gene
+  of JArray:
+    result = new_gene_vec()
+    for elem in node.elems:
+      result.vec.add(elem.json_to_gene)
+
 proc object_class(self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.get_class())
 
@@ -634,5 +655,18 @@ proc init*() =
       )
 
       (var /start_server gene/native/http_start_server)
+    )
+
+    (ns genex/test
+      (class TestFailure < gene/Exception
+      )
+      (fn fail [message = "Test failed."]
+        (throw TestFailure message)
+      )
+      (macro check [expr message = ("Check " expr " failed.")]
+        (if not ($caller_eval expr)
+          (fail message)
+        )
+      )
     )
     """

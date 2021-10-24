@@ -1,4 +1,4 @@
-import os, re, strutils, tables, unicode, hashes, sets, json, asyncdispatch, times, strformat
+import os, re, strutils, tables, unicode, hashes, sets, asyncdispatch, times, strformat
 import macros
 
 import ./map_key
@@ -340,6 +340,22 @@ type
     `type`: Value
     props*: OrderedTable[MapKey, Value]
     data*: seq[Value]
+
+  # environment: local/unittest/development/staging/production
+  # assertion: enabled/disabled
+  # log level: fatal/error/warning/info/debug/trace
+  # repl on error: true/false
+  # capabilities:
+  #   environment variables: read/write
+  #   stdin/stdout/stderr/pipe: read/write
+  #   gui:
+  #   file system: read/write
+  #   os execution: read/write
+  #   database: read/write
+  #   socket client: read/write
+  #   socket server:
+  #   http: read/write
+  #   custom capabilities provided by libraries
 
   VirtualMachine* = ref object
     app*: Application
@@ -1429,6 +1445,12 @@ proc new_gene_map*(): Value =
     map: OrderedTable[MapKey, Value](),
   )
 
+proc new_gene_map*(map: OrderedTable[MapKey, Value]): Value =
+  return Value(
+    kind: VkMap,
+    map: map,
+  )
+
 converter new_gene_map*(self: OrderedTable[string, Value]): Value =
   return Value(
     kind: VkMap,
@@ -1442,12 +1464,6 @@ proc new_gene_set*(items: varargs[Value]): Value =
   )
   for item in items:
     result.set.incl(item)
-
-proc new_gene_map*(map: OrderedTable[MapKey, Value]): Value =
-  return Value(
-    kind: VkMap,
-    map: map,
-  )
 
 proc new_gene_gene*(): Value =
   return Value(
@@ -1593,27 +1609,6 @@ proc wrap_with_try*(body: seq[Value]): seq[Value] =
     return @[new_gene_gene(Try, body)]
   else:
     return body
-
-converter json_to_gene*(node: JsonNode): Value =
-  case node.kind:
-  of JNull:
-    return Nil
-  of JBool:
-    return node.bval
-  of JInt:
-    return node.num
-  of JFloat:
-    return node.fnum
-  of JString:
-    return node.str
-  of JObject:
-    result = new_gene_map()
-    for k, v in node.fields:
-      result.map[k.to_key] = v.json_to_gene
-  of JArray:
-    result = new_gene_vec()
-    for elem in node.elems:
-      result.vec.add(elem.json_to_gene)
 
 #################### Selector ####################
 

@@ -27,7 +27,7 @@ proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     of VkMixin:
       ns = container.mixin.ns
     else:
-      todo()
+      todo("eval_var " & $container.kind)
 
     ns[e.name] = self.eval(frame, e.value)
 
