@@ -139,6 +139,14 @@ proc run_file*(self: VirtualMachine, file: string): Value =
       raise new_exception(CatchableError, "main is not a function.")
   self.wait_for_futures()
 
+proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
+  echo "An exception was thrown: " & e.msg
+  echo "Opening debug console..."
+  echo "Note: the exception can be accessed as $ex"
+  var ex = error_to_gene(e)
+  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
+  result = repl(self, frame, eval, true)
+
 #################### Parsing #####################
 
 proc parse*(self: var RootMatcher, v: Value)
@@ -355,14 +363,6 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
     for _, v in args_expr.data.mpairs:
       args.gene_data.add self.eval(frame, v)
     self.process_args(new_frame, matcher, args)
-
-proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
-  echo "An exception was thrown: " & e.msg
-  echo "Opening debug console..."
-  echo "Note: the exception can be accessed as $ex"
-  var ex = error_to_gene(e)
-  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
-  result = repl(self, frame, eval, true)
 
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   case target.kind:
