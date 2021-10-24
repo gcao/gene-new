@@ -369,7 +369,7 @@ type
 
   VirtualMachine* = ref object
     app*: Application
-    modules*: OrderedTable[MapKey, Namespace]
+    modules*: OrderedTable[MapKey, Module]
     repl_on_error*: bool
 
   FrameKind* = enum

@@ -19,6 +19,10 @@ type
     reload*: Expr   # if set to true, if the module is imported already, re-import and update namespaces and members
     # native*: bool
 
+  ExReload* = ref object of Expr
+    module*: Expr
+    source*: Expr
+
   ImportMatcherRoot* = ref object
     children*: seq[ImportMatcher]
     `from`*: Value
@@ -87,25 +91,24 @@ proc new_import_matcher*(v: Value): ImportMatcherRoot =
   result = ImportMatcherRoot()
   result.parse(v, result.children.addr)
 
-proc import_module*(self: VirtualMachine, name: MapKey, code: string): Namespace =
+proc import_module*(self: VirtualMachine, name: MapKey, code: string): Module =
   if self.modules.has_key(name):
     return self.modules[name]
 
-  var module = new_module(name.to_s)
+  result = new_module(name.to_s)
   var frame = new_frame()
-  frame.ns = module.ns
+  frame.ns = result.ns
   frame.scope = new_scope()
   discard self.eval(frame, code)
-  result = module.ns
   self.modules[name] = result
 
-proc import_module*(self: VirtualMachine, name: MapKey, code: string, inherit: Namespace): Namespace =
+proc import_module*(self: VirtualMachine, name: MapKey, code: string, inherit: Namespace): Module =
   var module = new_module(inherit, name.to_s)
   var frame = new_frame()
   frame.ns = module.ns
   frame.scope = new_scope()
   discard self.eval(frame, code)
-  result = module.ns
+  result = module
 
 proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, group: seq[ImportMatcher]) =
   for m in group:
@@ -181,18 +184,6 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   #       else:
   #         self.def_member(frame, m.name, new_gene_internal(cast[NativeFn](v)), true)
   # else:
-  #   # If "from" is not given, import from parent of root namespace.
-  #   if `from` == nil:
-  #     ns = frame.ns.root.parent
-  #   else:
-  #     var `from` = self.eval(frame, `from`).str
-  #     if self.modules.has_key(`from`.to_key):
-  #       ns = self.modules[`from`.to_key]
-  #     else:
-  #       var code = read_file(dir & `from` & ".gene")
-  #       ns = self.import_module(`from`.to_key, code)
-  #       self.modules[`from`.to_key] = ns
-  #   self.import_from_ns(frame, ns, expr.import_matcher.children)
   # If "from" is not given, import from parent of root namespace.
   if `from` == nil:
     ns = frame.ns.root.parent
@@ -201,9 +192,9 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     if expr.inherit != nil:
       var inherit = self.eval(frame, expr.inherit).ns
       var code = read_file(dir & `from` & ".gene")
-      ns = self.import_module(`from`.to_key, code, inherit)
+      ns = self.import_module(`from`.to_key, code, inherit).ns
     elif self.modules.has_key(`from`.to_key):
-      ns = self.modules[`from`.to_key]
+      ns = self.modules[`from`.to_key].ns
       if expr.reload != nil and self.eval(frame, expr.reload).bool:
         var code = ""
         if expr.source != nil:
@@ -214,8 +205,10 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
         return
     else:
       var code = read_file(dir & `from` & ".gene")
-      ns = self.import_module(`from`.to_key, code)
-      self.modules[`from`.to_key] = ns
+      var module = self.import_module(`from`.to_key, code)
+      ns = module.ns
+      self.modules[`from`.to_key] = module
+
   if ns.module.reloadable:
     var path: seq[MapKey] = @[]
     self.import_from_ns(frame, ns, expr.matcher.children, path)
@@ -242,5 +235,27 @@ proc translate_import(value: Value): Expr =
     e.reload = translate(value.gene_props[RELOAD_KEY])
   return e
 
+proc eval_reload(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExReload](expr)
+  var module_name = self.eval(frame, expr.module).str
+  var code = self.eval(frame, expr.source).str
+
+  var module = new_module(module_name)
+  var new_frame = new_frame()
+  new_frame.ns = module.ns
+  new_frame.scope = new_scope()
+  discard self.eval(new_frame, code)
+
+  # Replace root ns attached to the original module object
+  self.modules[module_name.to_key].ns = module.ns
+
+proc translate_reload(value: Value): Expr =
+  ExReload(
+    evaluator: eval_reload,
+    module: translate(value.gene_data[0]),
+    source: translate(value.gene_data[1]),
+  )
+
 proc init*() =
   GeneTranslators["import"] = translate_import
+  GeneTranslators["$reload"] = translate_reload

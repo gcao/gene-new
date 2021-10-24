@@ -30,20 +30,30 @@ import ./helpers
 # Run code and validate output is new
 # Make sure module is reverted to old content
 
-test "Reloadable":
-  init_all()
-  var code = """
-    (var mod "tests/fixtures/reloadable")
-    (import a from mod ^source "
-      (var $ns/a 1)
-    ")
-    (if (a != 1) (throw "Reloadable: precondition failed"))
-    (import a from mod ^^reload ^source "
-      (var $ns/a 2)
-    ")
-    (if (a != 2) (throw "Reloadable: reload failed"))
-  """
-  discard VM.eval(code)
+# test_interpreter """
+#   (var mod "tests/fixtures/reloadable")
+#   (import a from mod ^source "
+#     (var $ns/a 1)
+#   ")
+#   (genex/test/check (a == 1) "Reloadable: precondition failed")
+#   (import a from mod ^^reload ^source "
+#     (var $ns/a 2)
+#   ")
+#   (genex/test/check (a == 1))
+# """
+
+test_interpreter """
+  (var mod "tests/fixtures/reloadable")
+  (import a from mod ^source "
+    (var $ns/a 1)
+  ")
+  (if (a != 1) (throw "Reloadable: precondition failed"))
+  # (import a from mod ^^reload ^source "
+  ($reload mod "
+    (var $ns/a 2)
+  ")
+  (if (a != 2) (throw "Reloadable: reload failed"))
+"""
 
 # test "Reloadable":
 #   init_all()
