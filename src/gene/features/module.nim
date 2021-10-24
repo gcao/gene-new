@@ -1,4 +1,4 @@
-import strutils, tables
+import strutils, tables, sugar
 
 import ../types
 import ../map_key
@@ -122,6 +122,25 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
           name = m.as
         frame.ns.members[name] = value
 
+proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, group: seq[ImportMatcher], path: seq[MapKey]) =
+  for m in group:
+    if m.name == MUL_KEY:
+      for k, _ in source.members:
+        var p = path.dup
+        p.add(k)
+        frame.ns.members[k] = new_gene_reloadable(source.module, p)
+    else:
+      var value = source[m.name]
+      var p = path.dup
+      p.add(m.name)
+      if m.children_only:
+        self.import_from_ns(frame, value.ns, m.children, p)
+      else:
+        var name = m.name
+        if m.as != 0:
+          name = m.as
+        frame.ns.members[name] = new_gene_reloadable(source.module, p)
+
 proc sync(self: Namespace, ns: Namespace) =
   for k, v in self.members:
     if ns.members.has_key(k):
@@ -197,7 +216,11 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
       var code = read_file(dir & `from` & ".gene")
       ns = self.import_module(`from`.to_key, code)
       self.modules[`from`.to_key] = ns
-  self.import_from_ns(frame, ns, expr.matcher.children)
+  if ns.module.reloadable:
+    var path: seq[MapKey] = @[]
+    self.import_from_ns(frame, ns, expr.matcher.children, path)
+  else:
+    self.import_from_ns(frame, ns, expr.matcher.children)
 
 proc translate_import(value: Value): Expr =
   var matcher = new_import_matcher(value)

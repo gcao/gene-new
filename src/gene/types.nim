@@ -1,4 +1,4 @@
-import os, re, strutils, tables, unicode, hashes, sets, json, asyncdispatch, times, strformat
+import os, re, strutils, tables, unicode, hashes, sets, asyncdispatch, times, strformat
 import macros
 
 import ./map_key
@@ -89,6 +89,10 @@ type
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
     members*: Table[MapKey, Value]
+
+  Reloadable* = ref object
+    module*: Module
+    path*: seq[MapKey]
 
   Scope* = ref object
     parent*: Scope
@@ -217,6 +221,7 @@ type
     VkPackage
     VkModule
     VkNamespace
+    VkReloadable
     VkFunction
     VkMacro
     VkBlock
@@ -310,6 +315,8 @@ type
       app*: Application
     of VkNamespace:
       ns*: Namespace
+    of VkReloadable:
+      reloadable*: Reloadable
     of VkFunction:
       fn*: Function
     of VkMacro:
@@ -343,6 +350,22 @@ type
     `type`: Value
     props*: OrderedTable[MapKey, Value]
     data*: seq[Value]
+
+  # environment: local/unittest/development/staging/production
+  # assertion: enabled/disabled
+  # log level: fatal/error/warning/info/debug/trace
+  # repl on error: true/false
+  # capabilities:
+  #   environment variables: read/write
+  #   stdin/stdout/stderr/pipe: read/write
+  #   gui:
+  #   file system: read/write
+  #   os execution: read/write
+  #   database: read/write
+  #   socket client: read/write
+  #   socket server:
+  #   http: read/write
+  #   custom capabilities provided by libraries
 
   VirtualMachine* = ref object
     app*: Application
@@ -1102,6 +1125,23 @@ proc `==`*(this, that: Time): bool =
     this.second == that.second and
     this.timezone == that.timezone
 
+#################### Reloadable ##############
+
+proc resolve*(self: Namespace, path: seq[MapKey], pos: int): Value =
+  var key = path[pos]
+  var val = self[key]
+  if pos < path.len - 1:
+    case val.kind:
+    of VkNamespace:
+      return val.ns.resolve(path, pos + 1)
+    else:
+      todo("resolve " & $val.kind)
+  else:
+    return val
+
+proc resolve*(self: Reloadable): Value =
+  self.module.ns.resolve(self.path, 0)
+
 #################### Value ###################
 
 proc symbol_or_str*(self: Value): string =
@@ -1142,10 +1182,18 @@ proc table_equals*(this, that: OrderedTable): bool =
   return this.len == 0 and that.len == 0 or
     this.len > 0 and that.len > 0 and this == that
 
+proc resolve*(self: Value): Value {.inline.} =
+  if not self.is_nil and self.kind == VkReloadable:
+    return self.reloadable.resolve()
+  else:
+    return self
+
 proc `==`*(this, that: Value): bool =
+  var this = this.resolve()
+  var that = that.resolve()
+
   if this.is_nil:
-    if that.is_nil: return true
-    return false
+    return that.is_nil
   elif that.is_nil or this.kind != that.kind:
     return false
   else:
@@ -1443,6 +1491,12 @@ proc new_gene_map*(): Value =
     map: OrderedTable[MapKey, Value](),
   )
 
+proc new_gene_map*(map: OrderedTable[MapKey, Value]): Value =
+  return Value(
+    kind: VkMap,
+    map: map,
+  )
+
 converter new_gene_map*(self: OrderedTable[string, Value]): Value =
   return Value(
     kind: VkMap,
@@ -1456,12 +1510,6 @@ proc new_gene_set*(items: varargs[Value]): Value =
   )
   for item in items:
     result.set.incl(item)
-
-proc new_gene_map*(map: OrderedTable[MapKey, Value]): Value =
-  return Value(
-    kind: VkMap,
-    map: map,
-  )
 
 proc new_gene_gene*(): Value =
   return Value(
@@ -1494,6 +1542,12 @@ proc new_mixin*(name: string): Mixin =
   return Mixin(
     name: name,
     ns: new_namespace(nil, name),
+  )
+
+proc new_gene_reloadable*(module: Module, path: seq[MapKey]): Value =
+  return Value(
+    kind: VkReloadable,
+    reloadable: Reloadable(module: module, path: path),
   )
 
 # Do not allow auto conversion between CatchableError and Value
@@ -1607,27 +1661,6 @@ proc wrap_with_try*(body: seq[Value]): seq[Value] =
     return @[new_gene_gene(Try, body)]
   else:
     return body
-
-converter json_to_gene*(node: JsonNode): Value =
-  case node.kind:
-  of JNull:
-    return Nil
-  of JBool:
-    return node.bval
-  of JInt:
-    return node.num
-  of JFloat:
-    return node.fnum
-  of JString:
-    return node.str
-  of JObject:
-    result = new_gene_map()
-    for k, v in node.fields:
-      result.map[k.to_key] = v.json_to_gene
-  of JArray:
-    result = new_gene_vec()
-    for elem in node.elems:
-      result.vec.add(elem.json_to_gene)
 
 #################### Selector ####################
 
