@@ -656,14 +656,13 @@ proc init*() =
 
       (var /start_server gene/native/http_start_server)
     )
+
     (ns genex/test
       (class TestFailure < gene/Exception
       )
-
       (fn fail [message = "Test failed."]
         (throw TestFailure message)
       )
-
       (macro check [expr message = ("Check " expr " failed.")]
         (if not ($caller_eval expr)
           (fail message)
