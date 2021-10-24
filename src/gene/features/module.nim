@@ -225,19 +225,14 @@ proc translate_import(value: Value): Expr =
     e.source = translate(value.gene_props[SOURCE_KEY])
   return e
 
-proc eval_reload(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExReload](expr)
-  var module_name = self.eval(frame, expr.module).str
-  var loaded_module = self.modules[module_name.to_key]
-  echo $loaded_module.reloadable
+proc reload_module*(self: VirtualMachine, frame: Frame, name: string, code: string) =
+  var loaded_module = self.modules[name.to_key]
   if loaded_module.is_nil:
-    not_allowed("eval_reload: " & loaded_module.name & " must be imported before being reloaded.")
+    not_allowed("reload_module: " & loaded_module.name & " must be imported before being reloaded.")
   elif not loaded_module.reloadable:
-    not_allowed("eval_reload: " & loaded_module.name & " is not reloadable.")
+    not_allowed("reload_module: " & loaded_module.name & " is not reloadable.")
 
-  var code = self.eval(frame, expr.source).str
-
-  var module = new_module(module_name)
+  var module = new_module(name)
   var new_frame = new_frame()
   new_frame.ns = module.ns
   new_frame.scope = new_scope()
@@ -245,6 +240,12 @@ proc eval_reload(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 
   # Replace root ns attached to the original module object
   loaded_module.ns = module.ns
+
+proc eval_reload(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExReload](expr)
+  var name = self.eval(frame, expr.module).str
+  var code = self.eval(frame, expr.source).str
+  self.reload_module(frame, name, code)
 
 proc translate_reload(value: Value): Expr =
   ExReload(

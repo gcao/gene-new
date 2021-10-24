@@ -17,7 +17,10 @@ import ./helpers
 # Should work with the entry module (i.e. the script that is invoked)
 # Should use the reloaded version when a symbol is accessed
 
-# Reload occurs in the same thread at controllable interval.
+# File monitoring should occur in another thread at configured latency
+# Communicate with the main thread thru channels?
+# https://nim-lang.org/docs/channels_builtin.html
+
 # https://github.com/paul-nameless/nim-fswatch
 # https://github.com/FedericoCeratto/nim-fswatch
 
@@ -82,22 +85,21 @@ test_interpreter """
   (genex/test/check ((f) == 2))
 """
 
-# test "Reloadable":
-#   init_all()
-#   var code = """
-#     (var mod "tests/fixtures/reloadable")
-#     (var mod_file ("" mod ".gene"))
-#     (import a from mod)
-#     (if (a != 1) (throw "Reloadable: precondition failed"))
-#     (gene/os/exec ("cp " mod_file " /tmp/reloadable.gene"))
-#     (gene/File/write mod_file "
-#       (var a 2)
-#     ")
-#     (gene/sleep 100) # wait 0.1 second
-#     (try
-#       (if (a != 2) (throw "Reloadable: reload failed"))
-#     finally
-#       (gene/os/exec ("cp /tmp/reloadable.gene " mod_file))
-#     )
-#   """
-#   discard VM.eval(code)
+# test_interpreter """
+#   (var mod "tests/fixtures/reloadable")
+#   (var mod_file ("" mod ".gene"))
+#   (import a from mod)
+#   (genex/test/check (a == 1) "Reloadable: precondition failed")
+#   (gene/os/exec ("cp " mod_file " /tmp/reloadable.gene"))
+#   ($start_monitor)
+#   (gene/File/write mod_file "
+#     (var a 2)
+#   ")
+#   (gene/sleep 200) # wait 0.2 second
+#   (try
+#     (genex/test/check (a == 2) "Reloadable: reload failed")
+#   finally
+#     ($stop_monitor)
+#     (gene/os/exec ("cp /tmp/reloadable.gene " mod_file))
+#   )
+# """
