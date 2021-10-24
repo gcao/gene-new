@@ -39,7 +39,7 @@ proc eval_gene2(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 
 proc eval_gene_init(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExGene](expr)
-  var `type` = self.eval(frame, e.`type`)
+  var `type` = self.eval(frame, e.`type`).resolve()
   var translator: Translator
   case `type`.kind:
   of VkFunction:

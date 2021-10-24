@@ -55,6 +55,33 @@ test_interpreter """
   (genex/test/check (a == 2) "Reloadable: reload failed")
 """
 
+test_interpreter """
+  (var mod "reloadable")
+  (import a from mod ^source "
+    ($set_reloadable)
+    (var $ns/a 1)
+  ")
+  (genex/test/check (a == 1) "Reloadable: precondition failed")
+  ($reload mod "
+    (var $ns/a 2)
+  ")
+  (var b (a + 1))
+  (genex/test/check (b == 3))
+"""
+
+test_interpreter """
+  (var mod "reloadable")
+  (import f from mod ^source "
+    ($set_reloadable)
+    (fn f _ 1)
+  ")
+  (genex/test/check ((f) == 1) "Reloadable: precondition failed")
+  ($reload mod "
+    (fn f _ 2)
+  ")
+  (genex/test/check ((f) == 2))
+"""
+
 # test "Reloadable":
 #   init_all()
 #   var code = """
