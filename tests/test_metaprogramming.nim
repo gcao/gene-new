@@ -57,11 +57,11 @@ test_interpreter """
   C/test
 """, "C/test"
 
-test_interpreter """
-  (class C
-    (method_missing _
-      ("" self/.class/.name "." $method_name)
-    )
-  )
-  ((new C).test)
-""", "C.test"
+# test_interpreter """
+#   (class C
+#     (method_missing _
+#       ("" self/.class/.name "." $method_name)
+#     )
+#   )
+#   ((new C).test)
+# """, "C.test"

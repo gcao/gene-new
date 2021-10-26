@@ -103,7 +103,7 @@ type
     name*: string
     constructor*: Method
     methods*: Table[MapKey, Method]
-    method_missing*: Value
+    # method_missing*: Value
     ns*: Namespace # Class can act like a namespace
 
   Mixin* = ref object
