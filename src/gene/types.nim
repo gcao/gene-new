@@ -86,6 +86,7 @@ type
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
     members*: Table[MapKey, Value]
+    member_missing*: Value
 
   Scope* = ref object
     parent*: Scope

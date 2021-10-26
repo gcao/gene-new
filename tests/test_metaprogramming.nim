@@ -1,7 +1,13 @@
+import unittest
+
+import gene/types
+
+import ./helpers
+
 # Ideas:
 # * Namespace.member_defined (called when a member is defined or re-defined)
 # * Namespace.member_removed
-# * Namespace.member_missing
+# * Namespace.member_missing (invoked only if <some_ns>/something is invoked and something is not defined)
 
 # * object created
 # * object destroyed - how do we know an object is destroyed?
@@ -19,3 +25,16 @@
 # * aspect disabled
 # * aspect enabled
 # * ...
+
+test_interpreter """
+  (ns n
+    (member_missing name
+      (if (name == "test")
+        1
+      else
+        (throw ("Member missing: " name))
+      )
+    )
+  )
+  n/test
+""", 1
