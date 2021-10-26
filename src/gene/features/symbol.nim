@@ -36,13 +36,24 @@ proc eval_my_member(self: VirtualMachine, frame: Frame, target: Value, expr: var
   else:
     expr.evaluator = eval_symbol_scope
 
-proc get(self: Namespace, name: MapKey, vm: VirtualMachine, frame: Frame): Value =
-  if self.members.has_key(name):
-    return self.members[name]
-  elif self.member_missing != nil:
+proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Value =
+  var ns: Namespace
+  case self.kind:
+  of VkNamespace:
+    ns = self.ns
+  of VkClass:
+    ns = self.class.ns
+  of VkMixin:
+    ns = self.mixin.ns
+  else:
+    todo("get_member " & $self.kind)
+
+  if ns.members.has_key(name):
+    return ns.members[name]
+  elif ns.member_missing != nil:
     var args = new_gene_gene()
     args.gene_data.add(name.to_s)
-    return vm.call_fn(frame, self.member_missing, args)
+    return vm.invoke_fn(frame, self, ns.member_missing, args)
   else:
     raise new_exception(NotDefinedException, name.to_s & " is not defined")
 
@@ -50,12 +61,8 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   var v = self.eval(frame, cast[ExMember](expr).container)
   var key = cast[ExMember](expr).name
   case v.kind:
-  of VkNamespace:
-    return v.ns.get(key, self, frame)
-  of VkClass:
-    return v.class.ns.get(key, self, frame)
-  of VkMixin:
-    return v.mixin.ns.get(key, self, frame)
+  of VkNamespace, VkClass, VkMixin:
+    return v.get_member(key, self, frame)
   of VkEnum:
     return new_gene_enum_member(v.enum.members[key.to_s])
   else:

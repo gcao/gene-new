@@ -265,6 +265,32 @@ proc translate_method(value: Value): Expr =
     fn: fn,
   )
 
+proc invoke_fn*(self: VirtualMachine, frame: Frame, obj: Value, target: Value, args: Value): Value =
+  var fn_scope = new_scope()
+  var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
+  new_frame.parent = frame
+  new_frame.self = obj
+
+  self.process_args(new_frame, target.fn.matcher, args)
+
+  if target.fn.body_compiled == nil:
+    target.fn.body_compiled = translate(target.fn.body)
+
+  try:
+    result = self.eval(new_frame, target.fn.body_compiled)
+  except Return as r:
+    # return's frame is the same as new_frame(current function's frame)
+    if r.frame == new_frame:
+      result = r.val
+    else:
+      raise
+  except CatchableError as e:
+    if self.repl_on_error:
+      result = repl_on_error(self, frame, e)
+      discard
+    else:
+      raise
+
 proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExInvoke](expr)
   var instance: Value

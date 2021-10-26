@@ -38,3 +38,12 @@ test_interpreter """
   )
   n/test
 """, 1
+
+test_interpreter """
+  (ns n
+    (member_missing name
+      ("" self/.name "/" name)
+    )
+  )
+  n/test
+""", "n/test"
