@@ -103,6 +103,7 @@ type
     name*: string
     constructor*: Method
     methods*: Table[MapKey, Method]
+    method_missing*: Value
     ns*: Namespace # Class can act like a namespace
 
   Mixin* = ref object
@@ -974,8 +975,8 @@ proc get_method*(self: Class, name: MapKey): Method =
     return self.methods[name]
   elif self.parent != nil:
     return self.parent.get_method(name)
-  else:
-    not_allowed("No method available: " & name.to_s)
+  # else:
+  #   not_allowed("No method available: " & name.to_s)
 
 proc get_super_method*(self: Class, name: MapKey): Method =
   if self.parent != nil:

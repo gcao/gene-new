@@ -52,6 +52,9 @@ type
   ExSuper* = ref object of Expr
     args*: Expr
 
+  ExMethodMissing* = ref object of Expr
+    fn: Function
+
 proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
   for k, v in value.gene_props:
@@ -265,32 +268,6 @@ proc translate_method(value: Value): Expr =
     fn: fn,
   )
 
-proc invoke_fn*(self: VirtualMachine, frame: Frame, obj: Value, target: Value, args: Value): Value =
-  var fn_scope = new_scope()
-  var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
-  new_frame.parent = frame
-  new_frame.self = obj
-
-  self.process_args(new_frame, target.fn.matcher, args)
-
-  if target.fn.body_compiled == nil:
-    target.fn.body_compiled = translate(target.fn.body)
-
-  try:
-    result = self.eval(new_frame, target.fn.body_compiled)
-  except Return as r:
-    # return's frame is the same as new_frame(current function's frame)
-    if r.frame == new_frame:
-      result = r.val
-    else:
-      raise
-  except CatchableError as e:
-    if self.repl_on_error:
-      result = repl_on_error(self, frame, e)
-      discard
-    else:
-      raise
-
 proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExInvoke](expr)
   var instance: Value
@@ -304,6 +281,12 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
 
   var class = instance.get_class
   var meth = class.get_method(expr.meth)
+
+  if meth == nil:
+    if class.method_missing == nil:
+      not_allowed("No method available: " & expr.meth.to_s)
+    else:
+      todo("call method_missing on " & expr.meth.to_s)
 
   case meth.callable.kind:
   of VkNativeMethod:
@@ -448,6 +431,33 @@ proc translate_super(value: Value): Expr =
   r.args = args
   result = r
 
+proc eval_method_missing(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  result = Value(
+    kind: VkFunction,
+    fn: cast[ExMethodMissing](expr).fn,
+  )
+  result.fn.ns = frame.ns
+  result.fn.parent_scope = frame.scope
+  result.fn.parent_scope_max = frame.scope.max
+  frame.self.class.method_missing = result
+
+proc translate_method_missing(value: Value): Expr =
+  var name = "method_missing"
+  var matcher = new_arg_matcher()
+  matcher.parse(value.gene_data[0])
+
+  var body: seq[Value] = @[]
+  for i in 1..<value.gene_data.len:
+    body.add value.gene_data[i]
+
+  body = wrap_with_try(body)
+  var fn = new_fn(name, matcher, body)
+
+  ExMethodMissing(
+    evaluator: eval_method_missing,
+    fn: fn,
+  )
+
 proc def_native_method*(self: Value, name: string, m: NativeMethod) =
   self.class.methods[name.to_key] = Method(
     class: self.class,
@@ -464,3 +474,4 @@ proc init*() =
   GeneTranslators["$invoke_method"] = translate_invoke
   GeneTranslators["$invoke_dynamic"] = translate_invoke_dynamic
   GeneTranslators["super"] = translate_super
+  GeneTranslators["method_missing"] = translate_method_missing
