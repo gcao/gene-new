@@ -282,13 +282,18 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
   var class = instance.get_class
   var meth = class.get_method(expr.meth)
 
+  var is_method_missing = false
+  var callable: Value
   if meth == nil:
     if class.method_missing == nil:
       not_allowed("No method available: " & expr.meth.to_s)
     else:
-      todo("call method_missing on " & expr.meth.to_s)
+      is_method_missing = true
+      callable = class.method_missing
+  else:
+    callable = meth.callable
 
-  case meth.callable.kind:
+  case callable.kind:
   of VkNativeMethod:
     var args_expr = cast[ExArguments](cast[ExInvoke](expr).args)
     var args = new_gene_gene()
@@ -300,19 +305,21 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
 
   of VkFunction:
     var fn_scope = new_scope()
-    var new_frame = Frame(ns: meth.callable.fn.ns, scope: fn_scope)
+    if is_method_missing:
+      fn_scope.def_member("$method_name".to_key, expr.meth.to_s)
+    var new_frame = Frame(ns: callable.fn.ns, scope: fn_scope)
     new_frame.parent = frame
     new_frame.self = instance
     new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
 
     var args_expr = cast[ExInvoke](expr).args
-    handle_args(self, frame, new_frame, meth.callable.fn.matcher, cast[ExArguments](args_expr))
+    handle_args(self, frame, new_frame, callable.fn.matcher, cast[ExArguments](args_expr))
 
-    if meth.callable.fn.body_compiled == nil:
-      meth.callable.fn.body_compiled = translate(meth.callable.fn.body)
+    if callable.fn.body_compiled == nil:
+      callable.fn.body_compiled = translate(callable.fn.body)
 
     try:
-      result = self.eval(new_frame, meth.callable.fn.body_compiled)
+      result = self.eval(new_frame, callable.fn.body_compiled)
     except Return as r:
       # return's frame is the same as new_frame(current function's frame)
       if r.frame == new_frame:
