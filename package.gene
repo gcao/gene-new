@@ -1,0 +1,16 @@
+^name "Gene"
+^version "0.1.0"
+^description "This is the main project of the Gene language."
+^license "MIT"
+^author [
+  "Guoliang Cao"
+]
+^homepage "https://github.com/gcao/gene-new"
+^repository "https://github.com/gcao/gene-new.git"
+^main-module "src/main.gene"
+^src-dirs [
+  "src"
+]
+^test-dirs [
+  "tests"
+]

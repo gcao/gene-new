@@ -12,6 +12,7 @@ import ./helpers
 #    could be the package ns or global ns or a intermediate ns)
 # import from "module" a/[b c], d:my_d
 # import a # will import from parent, and throw error if "a" not available, this can be useful to make sure the required resource is available when the module is initialized.
+# path <=> code mappings can be defined so that we don't need to depend on the file system
 
 test_interpreter """
   (import a from "tests/fixtures/mod1")
