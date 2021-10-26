@@ -47,3 +47,12 @@ test_interpreter """
   )
   n/test
 """, "n/test"
+
+test_interpreter """
+  (class C
+    (member_missing name
+      ("" self/.name "/" name)
+    )
+  )
+  C/test
+""", "C/test"
