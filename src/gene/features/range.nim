@@ -8,17 +8,20 @@ type
     start*: Expr
     `end`*: Expr
 
-proc eval_range(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_range*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var start = self.eval(frame, cast[ExRange](expr).start)
   var `end` = self.eval(frame, cast[ExRange](expr).end)
   new_gene_range(start, `end`)
 
-proc translate_range(value: Value): Expr =
+proc new_ex_range*(start, `end`: Expr): Expr =
   ExRange(
     evaluator: eval_range,
-    start: translate(value.gene_data[0]),
-    `end`: translate(value.gene_data[1]),
+    start: start,
+    `end`: `end`,
   )
+
+proc translate_range(value: Value): Expr =
+  new_ex_range(translate(value.gene_data[0]), translate(value.gene_data[1]))
 
 proc init*() =
   GeneTranslators["range"] = translate_range

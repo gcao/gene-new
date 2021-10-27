@@ -57,6 +57,10 @@ test_interpreter "(range 0 100)", proc(r: Value) =
   check r.range.start == 0
   check r.range.end == 100
 
+test_interpreter "(0 .. 100)", proc(r: Value) =
+  check r.range.start == 0
+  check r.range.end == 100
+
 test_interpreter "(1 + 2)", 3
 test_interpreter "(1 - 2)", -1
 

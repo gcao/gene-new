@@ -32,9 +32,10 @@ converter str_to_key*(s: string): MapKey {.inline.} =
 converter key_to_s*(self: MapKey): string {.inline.} =
   result = Keys[cast[int](self)]
 
-converter seq_to_gene*(self: seq[int]): seq[Value] =
+converter seq_to_gene*(self: seq[int]): Value =
+  result = new_gene_vec()
   for item in self:
-    result.add(item)
+    result.vec.add(item)
 
 converter seq_to_gene*(self: seq[string]): seq[Value] =
   for item in self:

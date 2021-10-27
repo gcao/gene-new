@@ -93,13 +93,39 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
     of VkGene:
       result.add(target.gene_data[self.index])
     else:
-      todo()
+      todo("search SmByIndex " & $target.kind)
+  of SmByIndexRange:
+    case target.kind:
+    of VkVector:
+      var len = target.vec.len
+      var i = self.range.start.int
+      if i < 0:
+        i += len
+      var `end` = self.range.end.int
+      if `end` < 0:
+        `end` += len
+      while cast[int](i) < target.vec.len and i <= `end`:
+        result.add(target.vec[i])
+        i += 1
+    of VkGene:
+      var len = target.gene_data.len
+      var i = self.range.start.int
+      if i < 0:
+        i += len
+      var `end` = self.range.end.int
+      if `end` < 0:
+        `end` += len
+      while cast[int](i) < target.gene_data.len and i <= `end`:
+        result.add(target.gene_data[i])
+        i += 1
+    else:
+      todo("search SmByIndexRange " & $target.kind)
   of SmByName:
     case target.kind:
     of VkMap:
       result.add(target.map[self.name])
     else:
-      todo()
+      todo("search SmByName " & $target.kind)
   of SmByType:
     case target.kind:
     of VkVector:
@@ -127,7 +153,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
     else:
       result.add(v)
   else:
-    todo($self.kind)
+    todo("search " & $self.kind)
 
 proc search(self: SelectorItem, target: Value, r: SelectorResult) =
   case self.kind:

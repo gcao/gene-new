@@ -509,6 +509,8 @@ type
     case kind*: SelectorMatcherKind
     of SmByIndex:
       index*: int
+    of SmByIndexRange:
+      range*: Range
     of SmByName:
       name*: MapKey
     of SmByType:
@@ -1654,6 +1656,9 @@ proc gene_to_selector_item*(v: Value): SelectorItem =
         result.matchers.add(SelectorMatcher(kind: SmByType, by_type: item))
       else:
         todo()
+  of VkRange:
+    result = SelectorItem()
+    result.matchers.add(SelectorMatcher(kind: SmByIndexRange, range: v.range))
   else:
     todo($v.kind)
 

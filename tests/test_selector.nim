@@ -115,6 +115,30 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  ([0 1 2 -2 -1] .@ (0 .. 1))
+""", @[0, 1]
+
+test_interpreter """
+  ([0 1 2 -2 -1] .@ (0 .. -2))
+""", @[0, 1, 2, -2]
+
+test_interpreter """
+  ([0 1 2 -2 -1] .@ (-2 .. -1))
+""", @[-2, -1]
+
+test_interpreter """
+  ([0 1 2 -2 -1] .@ (-1 .. -1))
+""", @[-1]
+
+test_interpreter """
+  ([0 1 2 -2 -1] .@ (6 .. -1))
+""", @[]
+
+test_interpreter """
+  ((_ 0 1 2 -2 -1) .@ (0 .. -2))
+""", @[0, 1, 2, -2]
+
+test_interpreter """
   ((@ "test") {^test 1})
 """, 1
 
