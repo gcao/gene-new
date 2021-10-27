@@ -135,8 +135,32 @@ test_interpreter """
 """, @[]
 
 test_interpreter """
+  ([] .@ (0 .. 1))
+""", @[]
+
+test_interpreter """
+  ([] .@ (-2 .. -1))
+""", @[]
+
+test_interpreter """
+  ([1] .@ (-2 .. -1))
+""", @[1]
+
+test_interpreter """
   ((_ 0 1 2 -2 -1) .@ (0 .. -2))
 """, @[0, 1, 2, -2]
+
+test_interpreter """
+  ((_) .@ (-2 .. -1))
+""", @[]
+
+test_interpreter """
+  ((_) .@ (0 .. -2))
+""", @[]
+
+test_interpreter """
+  ((_ 1) .@ (-2 .. -1))
+""", @[1]
 
 test_interpreter """
   ((@ "test") {^test 1})
