@@ -112,27 +112,18 @@ proc test_parse_document*(code: string, callback: proc(result: Document)) =
 #   var code = cleanup(code)
 #   test "Interpreter / eval: " & code:
 #     init_all()
-#     VM.load_core_module()
-#     VM.load_gene_module()
-#     VM.load_genex_module()
 #     discard VM.eval(code)
 
 # proc test_core*(code: string, result: Value) =
 #   var code = cleanup(code)
 #   test "Interpreter / eval: " & code:
 #     init_all()
-#     VM.load_core_module()
-#     VM.load_gene_module()
-#     VM.load_genex_module()
 #     check VM.eval(code) == result
 
 # proc test_core*(code: string, callback: proc(result: Value)) =
 #   var code = cleanup(code)
 #   test "Interpreter / eval: " & code:
 #     init_all()
-#     VM.load_core_module()
-#     VM.load_gene_module()
-#     VM.load_genex_module()
 #     callback VM.eval(code)
 
 # proc test_match*(pattern: string, input: string, callback: proc(result: MatchResult)) =
@@ -165,9 +156,6 @@ proc test_parse_document*(code: string, callback: proc(result: Document)) =
 # proc test_file*(file: string) =
 #   test "Tests " & file & ":":
 #     init_all()
-#     VM.load_core_module()
-#     VM.load_gene_module()
-#     VM.load_genex_module()
 #     discard VM.eval(read_file(file))
 
 # proc test_extension*(path: string, name: string, callback: proc(r: NativeFn)) =

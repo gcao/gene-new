@@ -139,6 +139,14 @@ proc run_file*(self: VirtualMachine, file: string): Value =
       raise new_exception(CatchableError, "main is not a function.")
   self.wait_for_futures()
 
+proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
+  echo "An exception was thrown: " & e.msg
+  echo "Opening debug console..."
+  echo "Note: the exception can be accessed as $ex"
+  var ex = error_to_gene(e)
+  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
+  result = repl(self, frame, eval, true)
+
 #################### Parsing #####################
 
 proc parse*(self: var RootMatcher, v: Value)
@@ -310,16 +318,6 @@ proc match*(vm: VirtualMachine, frame: Frame, self: RootMatcher, input: Value): 
     vm.match(frame, child, input, state, result)
   vm.match_prop_splat(frame, children, input, result)
 
-# macro import_folder(s: string): untyped =
-#   let s = staticExec "find " & s.toStrLit.strVal & " -name '*.nim' -maxdepth 1"
-#   let files = s.splitLines
-#   result = newStmtList()
-#   for file in files:
-#     result.add(parseStmt("import " & file[0..^5] & " as feature"))
-
-# # Below code doesn't work for some reason
-# import_folder "features"
-
 proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
   var match_result = self.match(frame, matcher, args)
   case match_result.kind:
@@ -355,14 +353,6 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
     for _, v in args_expr.data.mpairs:
       args.gene_data.add self.eval(frame, v)
     self.process_args(new_frame, matcher, args)
-
-proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
-  echo "An exception was thrown: " & e.msg
-  echo "Opening debug console..."
-  echo "Note: the exception can be accessed as $ex"
-  var ex = error_to_gene(e)
-  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
-  result = repl(self, frame, eval, true)
 
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   case target.kind:
@@ -429,6 +419,16 @@ proc call_fn*(self: VirtualMachine, frame: Frame, target: Value, args: Value): V
   self.process_args(new_frame, target.fn.matcher, args)
   self.call_fn_skip_args(new_frame, target)
 
+# macro import_folder(s: string): untyped =
+#   let s = staticExec "find " & s.toStrLit.strVal & " -name '*.nim' -maxdepth 1"
+#   let files = s.splitLines
+#   result = newStmtList()
+#   for file in files:
+#     result.add(parseStmt("import " & file[0..^5] & " as feature"))
+
+# # Below code doesn't work for some reason
+# import_folder "features"
+
 import "./features/core" as core_feature; core_feature.init()
 import "./features/symbol" as symbol_feature; symbol_feature.init()
 import "./features/array" as array_feature; array_feature.init()
@@ -460,6 +460,7 @@ import "./features/eval" as eval_feature; eval_feature.init()
 import "./features/parse" as parse_feature; parse_feature.init()
 import "./features/pattern_matching" as pattern_matching_feature; pattern_matching_feature.init()
 import "./features/module" as module_feature; module_feature.init()
+import "./features/include" as include_feature; include_feature.init()
 import "./features/template" as template_feature; template_feature.init()
 import "./features/print" as print_feature; print_feature.init()
 import "./features/repl" as repl_feature; repl_feature.init()

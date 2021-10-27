@@ -60,6 +60,19 @@ test_interpreter """
   (f 1)
 """, 2
 
+# test_interpreter """
+#   # How do we tell interpreter to pass arguments as $args?
+#   # _  => arguments in $args
+#   # [] => arguments ignored
+#   (fn f _
+#     $args
+#   )
+#   (f ^a "a" 1 2)
+# """, proc(r: Value) =
+#   check r.gene_props["a"] == "a"
+#   check r.gene_data[0] == 1
+#   check r.gene_data[1] == 2
+
 test_interpreter """
   (fn f _ self)
   (1 . f)

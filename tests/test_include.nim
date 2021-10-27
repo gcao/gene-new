@@ -11,9 +11,9 @@ import ./helpers
 # Pros:
 #   Can be used to remove some boilerplate (e.g. imports)
 # Cons:
-#   More indirection, code become harder to understand
+#   More indirection, code becomes harder to understand
 
 test_interpreter """
-  ($include "tests/fixtures/include_example.gene")
+  ($include "tests/fixtures/include_example")
   a
 """, 100
