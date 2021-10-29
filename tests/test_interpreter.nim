@@ -76,17 +76,17 @@ test_interpreter """
   i
 """, 1
 
+test_interpreter """
+  (var i 1)
+""", 1
+
+# test_interpreter """
+#   (var i 1 nil)
+# """, nil
+
 # test_interpreter """
 #   (var i 1 2)
 # """, 2
-
-# test_interpreter """
-#   (var i 1)
-# """, 1
-
-# test_interpreter """
-#   (var i _)
-# """, nil
 
 test_interpreter "(1 == 1)", true
 test_interpreter "(1 == 2)", false
@@ -152,6 +152,11 @@ test_interpreter """
 """, 1
 
 test_interpreter "(do 1 2)", 2
+
+test_interpreter """
+  (void 1 2)
+""", proc(r: Value) =
+  check r == nil
 
 test_interpreter """
   ($with 1

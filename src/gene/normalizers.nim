@@ -80,13 +80,11 @@ Normalizers.add proc(self: Value): bool =
   if self.gene_data.len < 1:
     return false
   var first = self.gene_data[0]
-  if first.kind != VkSymbol or first.symbol notin BINARY_OPS:
-    return false
-
-  self.gene_data.delete 0
-  self.gene_data.insert self.gene_type, 0
-  self.gene_type = first
-  return true
+  if first.kind == VkSymbol and first.symbol in BINARY_OPS:
+    self.gene_data.delete 0
+    self.gene_data.insert self.gene_type, 0
+    self.gene_type = first
+    return true
 
 Normalizers.add proc(self: Value): bool =
   if self.gene_data.len < 1:

@@ -515,10 +515,24 @@ proc init*() =
     )
 
     ($with gene/Array
+      (method each block
+        (for item in self
+          (block item)
+        )
+      )
+
       (method map block
         (var result [])
         (for item in self
           (result .add (block item))
+        )
+        result
+      )
+
+      (method select block
+        (var result [])
+        (for item in self
+          (if (block item) (result .add item))
         )
         result
       )

@@ -1546,6 +1546,19 @@ proc is_truthy*(self: Value): bool =
   else:
     return true
 
+# proc is_empty*(self: Value): bool =
+#   case self.kind:
+#   of VkNil:
+#     return true
+#   of VkVector:
+#     return self.vec.len == 0
+#   of VkMap:
+#     return self.map.len == 0
+#   of VkString:
+#     return self.str.len == 0
+#   else:
+#     return false
+
 proc merge*(self: var Value, value: Value) =
   case self.kind:
   of VkGene:

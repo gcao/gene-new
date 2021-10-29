@@ -188,7 +188,8 @@ type
 
 proc eval_set_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var value = cast[ExSetProp](expr).value
-  frame.self.instance_props[cast[ExSetProp](expr).name] = self.eval(frame, value)
+  result = self.eval(frame, value)
+  frame.self.instance_props[cast[ExSetProp](expr).name] = result
 
 proc new_ex_set_prop*(name: string, value: Expr): ExSetProp =
   ExSetProp(

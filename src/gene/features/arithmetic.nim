@@ -95,9 +95,15 @@ proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   of BinGe:
     result = new_gene_bool(first.int >= second.int)
   of BinAnd:
-    result = new_gene_bool(first.bool and second.bool)
+    if first.is_truthy:
+      result = second
+    else:
+      result = first
   of BinOr:
-    result = new_gene_bool(first.bool or second.bool)
+    if first.is_truthy:
+      result = first
+    else:
+      result = second
   else:
     todo($cast[ExBinOp](expr).op)
 

@@ -38,3 +38,28 @@ test_interpreter """
 test_interpreter """
   (false || false && true || true)  # && > ||
 """, true
+
+test_interpreter """
+  (1 || 2)
+""", 1
+
+test_interpreter """
+  (true && 2)
+""", 2
+
+test_interpreter """
+  (var a)
+  (a = 2)
+""", 2
+
+# Make it work like this?
+# (a = b) => (a = b)
+# (a = b = 2) => (a = (b = 2))
+# (a = b + 2) => (a = (b + 2))
+# (a += b = 2) => (a += (b = 2)) = (a = (a + (b = 2)))
+# test_interpreter """
+#   (var a)
+#   (var b)
+#   (a = b = 2)
+#   (a + b)
+# """, 4

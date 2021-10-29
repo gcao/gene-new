@@ -13,10 +13,11 @@ type
 proc eval_assignment(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var name = cast[ExAssignment](expr).name
   var value = cast[ExAssignment](expr).value
+  result = self.eval(frame, value)
   if frame.scope.has_key(name):
-    frame.scope[name] = self.eval(frame, value)
+    frame.scope[name] = result
   else:
-    frame.ns[name] = self.eval(frame, value)
+    frame.ns[name] = result
 
 proc translate_assignment(value: Value): Expr =
   result = ExAssignment(

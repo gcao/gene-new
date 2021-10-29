@@ -24,6 +24,18 @@ proc translate_do(value: Value): Expr =
     r.data.add translate(item)
   result = r
 
+proc eval_void(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  for item in cast[ExGroup](expr).data.mitems:
+    discard self.eval(frame, item)
+
+proc translate_void(value: Value): Expr =
+  var r = ExGroup(
+    evaluator: eval_void,
+  )
+  for item in value.gene_data:
+    r.data.add translate(item)
+  result = r
+
 proc eval_with(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var old_self = frame.self
   try:
@@ -75,6 +87,7 @@ proc translate_debug(value: Value): Expr =
 
 proc init*() =
   GeneTranslators["do"] = translate_do
+  GeneTranslators["void"] = translate_void
   GeneTranslators["$with"] = translate_with
   # In IDE, a breakpoint should be set in eval_debug and when running in debug
   # mode, execution should pause and allow the developer to debug the application
