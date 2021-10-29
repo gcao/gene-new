@@ -53,13 +53,14 @@ test_interpreter """
 """, 2
 
 # Make it work like this?
-# (a = b) => (a = b)
-# (a = b = 2) => (a = (b = 2))
-# (a = b + 2) => (a = (b + 2))
+# (a = b)      => (a = b)
+# (a = b = 2)  => (a = (b = 2))
+# (@a = b = 2) => (a = (b = 2))
+# (a = b + 2)  => (a = (b + 2)) X  # this is not a good idea
 # (a += b = 2) => (a += (b = 2)) = (a = (a + (b = 2)))
-# test_interpreter """
-#   (var a)
-#   (var b)
-#   (a = b = 2)
-#   (a + b)
-# """, 4
+test_interpreter """
+  (var a)
+  (var b)
+  (a = b = 2)
+  (a + b)
+""", 4

@@ -61,3 +61,8 @@ proc init*() =
 
   GeneTranslators["+="] = translate_op_eq
   GeneTranslators["-="] = translate_op_eq
+  GeneTranslators["*="] = translate_op_eq
+  GeneTranslators["/="] = translate_op_eq
+  GeneTranslators["**="] = translate_op_eq
+  GeneTranslators["&&="] = translate_op_eq
+  GeneTranslators["||="] = translate_op_eq
