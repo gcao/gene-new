@@ -76,6 +76,18 @@ test_interpreter """
   i
 """, 1
 
+# test_interpreter """
+#   (var i 1 2)
+# """, 2
+
+# test_interpreter """
+#   (var i 1)
+# """, 1
+
+# test_interpreter """
+#   (var i _)
+# """, nil
+
 test_interpreter "(1 == 1)", true
 test_interpreter "(1 == 2)", false
 test_interpreter "(1 < 0)", false

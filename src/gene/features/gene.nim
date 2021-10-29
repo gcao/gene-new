@@ -5,6 +5,7 @@ import ../types
 import ../exprs
 import ../normalizers
 import ../translators
+import ./arithmetic
 import ./selector
 import ./native
 import ./range
@@ -105,8 +106,19 @@ proc translate_gene(value: Value): Expr =
     var first = value.gene_data[0]
     case first.kind:
     of VkSymbol:
-      # (@p = 1)
-      if first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"):
+      if arithmetic.COMPARISON_OPS.contains(first.symbol):
+        value.gene_data.insert(value.gene_type)
+        value.gene_type = nil
+        return translate_comparisons(value.gene_data)
+      elif arithmetic.LOGIC_OPS.contains(first.symbol):
+        value.gene_data.insert(value.gene_type)
+        value.gene_type = nil
+        return translate_logic(value.gene_data)
+      elif arithmetic.BINARY_OPS.contains(first.symbol):
+        value.gene_data.insert(value.gene_type)
+        value.gene_type = nil
+        return translate_arithmetic(value.gene_data)
+      elif first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"): # (@p = 1)
         return translate_prop_assignment(value)
       elif first.symbol == "..":
         return new_ex_range(translate(`type`), translate(value.gene_data[1]))

@@ -13,6 +13,8 @@ import ./helpers
 # * Mixin: all stuff in mixin are copied to the target class/mixin
 # * Properties: just a shortcut for defining .prop/.prop= methods
 
+# TODO: test remove_method
+
 test_interpreter "(class A)", proc(r: Value) =
   check r.class.name == "A"
 

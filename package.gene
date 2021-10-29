@@ -5,8 +5,6 @@
 ^author [
   "Guoliang Cao"
 ]
-^homepage "https://github.com/gcao/gene-new"
-^repository "https://github.com/gcao/gene-new.git"
 ^main-module "src/main.gene"
 ^src-dirs [
   "src"
@@ -14,3 +12,5 @@
 ^test-dirs [
   "tests"
 ]
+^homepage "https://github.com/gcao/gene-new"
+^repository "https://github.com/gcao/gene-new.git"
