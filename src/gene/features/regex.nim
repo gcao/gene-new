@@ -1,5 +1,6 @@
 import nre
 
+import ../map_key
 import ../types
 import ../translators
 
@@ -14,10 +15,16 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var expr = cast[ExMatch](expr)
   var input = self.eval(frame, expr.input)
   var pattern = self.eval(frame, expr.pattern)
-  var m = input.str.match(pattern.regex)
-  if m.is_some():
-    # TODO: return match object
-    return True
+  var r = input.str.match(pattern.regex)
+  if r.is_some():
+    var m = r.get()
+    result = Value(kind: VkRegexMatch, regex_match: m)
+    frame.scope.def_member("$~".to_key, result)
+    var i = 0
+    for item in m.captures.to_seq:
+      var name = "$~" & $i
+      frame.scope.def_member(name.to_key, item.get())
+      i += 1
   else:
     return Nil
 
@@ -46,5 +53,6 @@ proc translate_match*(value: Value): Expr =
 
 proc init*() =
   discard
+  # Handled in src/gene/features/gene.nim
   # GeneTranslators["=~"] = translate_match
   # GeneTranslators["!~"] = translate_match

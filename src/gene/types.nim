@@ -195,6 +195,7 @@ type
     VkSymbol
     VkComplexSymbol
     VkRegex
+    VkRegexMatch
     VkRange
     VkSelector
     VkCast
@@ -266,6 +267,8 @@ type
       regex*: Regex
       regex_pattern*: string
       regex_flags: set[RegexFlag]
+    of VkRegexMatch:
+      regex_match*: RegexMatch
     of VkRange:
       range*: Range
     of VkDate, VkDateTime:

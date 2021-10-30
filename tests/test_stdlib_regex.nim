@@ -8,8 +8,13 @@ import ./helpers
 
 test_interpreter """
   (!!("a" =~ #/a/))
-""", true
+""", True
+
+test_interpreter """
+  ("a" =~ #/(a)/)
+  $~0
+""", "a"
 
 test_interpreter """
   ("a" !~ #/a/)
-""", false
+""", False
