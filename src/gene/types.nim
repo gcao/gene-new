@@ -1,4 +1,4 @@
-import os, re, strutils, tables, unicode, hashes, sets, asyncdispatch, times, strformat
+import os, nre, strutils, tables, unicode, hashes, sets, asyncdispatch, times, strformat
 import macros
 
 import ./map_key
@@ -165,6 +165,12 @@ type
     # include_start*: bool # always true
     include_end*: bool # default to false
 
+  RegexFlag* = enum
+    RfIgnoreCase
+    RfMultiLine
+    RfDotAll      # Nim nre: (?s) - . also matches newline (dotall)
+    RfExtended    # Nim nre: (?x) - whitespace and comments (#) are ignored (extended)
+
   # Non-date specific time object
   Time* = ref object
     hour*: int
@@ -258,6 +264,8 @@ type
       csymbol*: seq[string]
     of VkRegex:
       regex*: Regex
+      pattern*: string
+      flags: set[RegexFlag]
     of VkRange:
       range*: Range
     of VkDate, VkDateTime:
@@ -1396,8 +1404,23 @@ proc new_gene_complex_symbol*(strs: seq[string]): Value =
     csymbol: strs,
   )
 
-proc new_gene_regex*(regex: string, flags: set[RegexFlag] = {reStudy}): Value =
-  return Value(kind: VkRegex, regex: re(regex, flags))
+proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
+  var s = ""
+  for flag in flags:
+    case flag:
+    of RfIgnoreCase:
+      s &= "(?i)"
+    of RfMultiLine:
+      s &= "(?m)"
+    else:
+      todo($flag)
+  s &= regex
+  return Value(
+    kind: VkRegex,
+    regex: re(s),
+    pattern: regex,
+    flags: flags,
+  )
 
 proc new_gene_range*(start: Value, `end`: Value): Value =
   return Value(

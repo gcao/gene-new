@@ -3,7 +3,7 @@
 # created by Roland Sadowski.
 # 1. https://github.com/rosado/edn.nim
 
-import lexbase, streams, strutils, unicode, tables, sets, times, re
+import lexbase, streams, strutils, unicode, tables, sets, times, nre
 
 import ./map_key
 import ./types
@@ -550,16 +550,16 @@ proc read_regex(self: var Parser): Value =
       inc(pos)
       if buf[pos] == 'i':
         inc(pos)
-        flags.incl(reIgnoreCase)
+        flags.incl(RfIgnoreCase)
         if buf[pos] == 'm':
           inc(pos)
-          flags.incl(reMultiLine)
+          flags.incl(RfMultiLine)
       elif buf[pos] == 'm':
         inc(pos)
-        flags.incl(reMultiLine)
+        flags.incl(RfMultiLine)
         if buf[pos] == 'i':
           inc(pos)
-          flags.incl(reIgnoreCase)
+          flags.incl(RfIgnoreCase)
       break;
     of '\\':
       case buf[pos+1]

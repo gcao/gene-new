@@ -5,6 +5,7 @@ import ../translators
 
 const BINARY_OPS* = [
   "+", "-", "*", "/", "**",
+  "=~", "!~",
   # "==", "!=", "<", "<=", ">", ">=",
   # "&&", "||",         # TODO: if we support XOR with ||*, what's its precedence against AND and OR?
   # "&",  "|",          # TODO: xor for bit operation

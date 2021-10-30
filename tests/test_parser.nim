@@ -1,6 +1,6 @@
 # To run these tests, simply execute `nimble test` or `nim c -r tests/test_parser.nim`
 
-import unittest, options, tables, unicode, times, re
+import unittest, options, tables, unicode, times, nre
 
 import gene/types
 
@@ -48,15 +48,24 @@ test_parser "+foo+", new_gene_symbol("+foo+")
 
 test_parser "#/b/", proc(r: Value) =
   check r.kind == VkRegex
-  check "ab".find(r.regex) == 1
-  check "AB".find(r.regex) == -1
+  check "ab".find(r.regex).get().captures[-1] == "b"
+  check "AB".find(r.regex).is_none()
+
+test_parser "#/(a|b)/", proc(r: Value) =
+  check r.kind == VkRegex
+  check "ab".find(r.regex).get().captures[-1] == "a"
+  check "AB".find(r.regex).is_none()
+
+test_parser "#/a\\/b/", proc(r: Value) =
+  check r.kind == VkRegex
+  check "a/b".find(r.regex).get().captures[-1] == "a/b"
 
 # i: ignore case
 # m: multi-line mode, ^ and $ matches beginning and end of each line
 test_parser "#/b/i", proc(r: Value) =
   check r.kind == VkRegex
-  check "ab".find(r.regex) == 1
-  check "AB".find(r.regex) == 1
+  check "ab".find(r.regex).get().captures[-1] == "b"
+  check "AB".find(r.regex).get().captures[-1] == "B"
 
 test_parser "2020-12-02", new_gene_date(2020, 12, 02)
 test_parser "2020-12-02T10:11:12Z",
