@@ -6,6 +6,7 @@ import ../exprs
 import ../normalizers
 import ../translators
 import ./arithmetic
+import ./regex
 import ./selector
 import ./native
 import ./range
@@ -106,14 +107,16 @@ proc translate_gene(value: Value): Expr =
     var first = value.gene_data[0]
     case first.kind:
     of VkSymbol:
-      if arithmetic.COMPARISON_OPS.contains(first.symbol):
+      if COMPARISON_OPS.contains(first.symbol):
         value.gene_data.insert(value.gene_type)
         value.gene_type = nil
         return translate_comparisons(value.gene_data)
-      elif arithmetic.LOGIC_OPS.contains(first.symbol):
+      elif LOGIC_OPS.contains(first.symbol):
         value.gene_data.insert(value.gene_type)
         value.gene_type = nil
         return translate_logic(value.gene_data)
+      elif REGEX_OPS.contains(first.symbol):
+        return translate_match(value)
       elif arithmetic.BINARY_OPS.contains(first.symbol):
         value.gene_data.insert(value.gene_type)
         value.gene_type = nil

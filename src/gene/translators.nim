@@ -15,7 +15,7 @@ proc translate*(stmts: seq[Value]): Expr
 
 proc default_translator(value: Value): Expr =
   case value.kind:
-  of VkNil, VkBool, VkInt, VkFloat, VkTime:
+  of VkNil, VkBool, VkInt, VkFloat, VkRegex, VkTime:
     return new_ex_literal(value)
   of VkString:
     return new_ex_string(value)

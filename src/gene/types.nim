@@ -264,8 +264,8 @@ type
       csymbol*: seq[string]
     of VkRegex:
       regex*: Regex
-      pattern*: string
-      flags: set[RegexFlag]
+      regex_pattern*: string
+      regex_flags: set[RegexFlag]
     of VkRange:
       range*: Range
     of VkDate, VkDateTime:
@@ -1418,8 +1418,8 @@ proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
   return Value(
     kind: VkRegex,
     regex: re(s),
-    pattern: regex,
-    flags: flags,
+    regex_pattern: regex,
+    regex_flags: flags,
   )
 
 proc new_gene_range*(start: Value, `end`: Value): Value =

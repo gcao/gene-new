@@ -1,5 +1,3 @@
-import unittest, tables
-
 import gene/types
 
 import ./helpers
@@ -9,9 +7,9 @@ import ./helpers
 # """, "Pattern"
 
 test_interpreter """
-  (("a" =~ #/a/).to_bool)
+  (!!("a" =~ #/a/))
 """, true
 
 test_interpreter """
   ("a" !~ #/a/)
-""", Nil
+""", false

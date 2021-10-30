@@ -64,6 +64,9 @@ proc object_to_json(self: Value, args: Value): Value =
 proc object_to_s(self: Value, args: Value): Value =
   self.to_s
 
+proc object_to_bool(self: Value, args: Value): Value =
+  self.to_bool
+
 proc class_name(self: Value, args: Value): Value =
   self.class.name
 
@@ -319,6 +322,7 @@ proc init*() =
     ObjectClass.def_native_method("class", object_class)
     ObjectClass.def_native_method("to_s", object_to_s)
     ObjectClass.def_native_method("to_json", object_to_json)
+    ObjectClass.def_native_method("to_bool", object_to_bool)
     GENE_NS.ns["Object"] = ObjectClass
     GLOBAL_NS.ns["Object"] = ObjectClass
 
@@ -339,9 +343,13 @@ proc init*() =
     NamespaceClass.class.parent = ObjectClass.class
     NamespaceClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =
       self.ns.name
-
     GENE_NS.ns["Namespace"] = NamespaceClass
     GLOBAL_NS.ns["Namespace"] = NamespaceClass
+
+    BoolClass = Value(kind: VkClass, class: new_class("Bool"))
+    BoolClass.class.parent = ObjectClass.class
+    GENE_NS.ns["Bool"] = BoolClass
+    GLOBAL_NS.ns["Bool"] = BoolClass
 
     NilClass = Value(kind: VkClass, class: new_class("Nil"))
     NilClass.class.parent = ObjectClass.class
