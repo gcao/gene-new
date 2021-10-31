@@ -138,6 +138,7 @@ proc parse_string(self: var Parser): TokenKind =
     case buf[pos]
     of '\0':
       self.error = ErrQuoteExpected
+      break
     of '"':
       if triple_mode:
         if buf[pos + 1] == '"' and buf[pos + 2] == '"':

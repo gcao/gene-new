@@ -47,7 +47,7 @@ proc new_package*(dir: string): Package =
       result.version = doc.props[VERSION_KEY]
       result.ns = new_namespace(VM.app.ns, "package:" & result.name)
       result.dir = d
-      result.dependencies = parse_deps(doc.props[DEPS_KEY].vec)
+      # result.dependencies = parse_deps(doc.props[DEPS_KEY].vec)
       # result.ns[CUR_PKG_KEY] = result
       return result
     else:
