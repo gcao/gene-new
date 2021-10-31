@@ -8,6 +8,9 @@ import lexbase, streams, strutils, unicode, tables, sets, times, nre
 import ./map_key
 import ./types
 
+let SET = new_gene_symbol("#Set")
+let DEBUG = new_gene_symbol("debug")
+
 type
   ParseOptions* = object
     eof_is_error*: bool
@@ -23,6 +26,7 @@ type
     error: ParseErrorKind
     # stored_references: Table[MapKey, Value]
     document_props_done: bool  # flag to tell whether we have read document properties
+    debug*: bool
 
   ParseError* = object of CatchableError
   ParseInfo = tuple[line, col: int]
@@ -49,7 +53,7 @@ type
 
   MapKind = enum
     MkMap
-    Mk
+    MkGene
     MkDocument
 
   PropState = enum
@@ -423,7 +427,7 @@ proc read_map(self: var Parser, mode: MapKind): OrderedTable[MapKey, Value] =
         return result
       else:
         raise new_exception(ParseError, "EOF while reading ")
-    elif ch == ']' or (mode == Mk and ch == '}') or (mode == MkMap and ch == ')'):
+    elif ch == ']' or (mode == MkGene and ch == '}') or (mode == MkMap and ch == ')'):
       raise new_exception(ParseError, "Unmatched delimiter: " & self.buf[self.bufpos])
     case state:
     of PropKey:
@@ -440,7 +444,7 @@ proc read_map(self: var Parser, mode: MapKind): OrderedTable[MapKey, Value] =
         else:
           key = self.read_token(false)
           state = PropState.PropValue
-      elif mode == Mk or mode == MkDocument:
+      elif mode == MkGene or mode == MkDocument:
         # Do not consume ')'
         # if ch == ')':
         #   self.bufPos.inc()
@@ -453,7 +457,7 @@ proc read_map(self: var Parser, mode: MapKind): OrderedTable[MapKey, Value] =
     of PropState.PropValue:
       if ch == EndOfFile or ch == '^':
         raise new_exception(ParseError, "Expect value for " & key)
-      elif mode == Mk:
+      elif mode == MkGene:
         if ch == ')':
           raise new_exception(ParseError, "Expect value for " & key)
       elif ch == '}':
@@ -481,7 +485,7 @@ proc read_delimited_list(self: var Parser, delimiter: char, is_recursive: bool):
         raise new_exception(ParseError, format(msg, delimiter, self.filename, self.line_number))
       else:
         map_found = true
-        result.map = self.read_map(Mk)
+        result.map = self.read_map(MkGene)
         continue
 
     if ch == delimiter:
@@ -496,11 +500,13 @@ proc read_delimited_list(self: var Parser, delimiter: char, is_recursive: bool):
       let node = m(self)
       if node != nil:
         inc(count)
+        if self.debug: echo $node, "\n"
         list.add(node)
     else:
       let node = self.read()
       if node != nil:
         inc(count)
+        if self.debug: echo $node, "\n"
         list.add(node)
 
   result.list = list
@@ -519,6 +525,12 @@ proc read_gene(self: var Parser): Value =
   var result_list = self.read_delimited_list(')', true)
   result.gene_props = result_list.map
   result.gene_data = result_list.list
+  if result.gene_type == SET:
+    if result.gene_data[0] == DEBUG:
+      self.debug = result.gene_data[1].bool
+    else:
+      todo("#Set " & $result.gene_data[0])
+    return
 
 proc read_map(self: var Parser): Value =
   result = Value(kind: VkMap)
