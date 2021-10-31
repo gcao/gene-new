@@ -1,4 +1,4 @@
-import nre
+import nre, tables
 
 import ../map_key
 import ../types
@@ -10,6 +10,10 @@ type
   ExMatch* = ref object of Expr
     input*: Expr
     pattern*: Expr
+
+  ExRegex* = ref object of Expr
+    flags: set[RegexFlag]
+    data*: seq[Expr]
 
 proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
@@ -51,8 +55,27 @@ proc translate_match*(value: Value): Expr =
     pattern: translate(value.gene_data[1]),
   )
 
+proc eval_regex(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExRegex](expr)
+  var s = ""
+  for e in expr.data.mitems:
+    s &= self.eval(frame, e).to_s
+  result = new_gene_regex(s, expr.flags)
+
+proc translate_regex*(value: Value): Expr =
+  var r = ExRegex(
+    evaluator: eval_regex,
+  )
+  if value.gene_props.has_key("i".to_key):
+    r.flags.incl(RfIgnoreCase)
+  if value.gene_props.has_key("m".to_key):
+    r.flags.incl(RfMultiLine)
+  for item in value.gene_data:
+    r.data.add(translate(item))
+  return r
+
 proc init*() =
-  discard
+  GeneTranslators["$regex"] = translate_regex
   # Handled in src/gene/features/gene.nim
   # GeneTranslators["=~"] = translate_match
   # GeneTranslators["!~"] = translate_match

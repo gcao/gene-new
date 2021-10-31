@@ -1,4 +1,4 @@
-import tables
+import tables, nre
 
 import ../map_key
 import ../types
@@ -24,7 +24,15 @@ proc case_equals(input: Value, pattern: Value): bool =
     of VkRange:
       result = input.int >= pattern.range.start.int and input.int < pattern.range.end.int
     else:
-      not_allowed("case_equals " & $pattern.kind)
+      not_allowed("case_equals: int vs " & $pattern.kind)
+  of VkString:
+    case pattern.kind:
+    of VkString:
+      result = input.str == pattern.str
+    of VkRegex:
+      result = input.str.match(pattern.regex).is_some()
+    else:
+      not_allowed("case_equals: string vs " & $pattern.kind)
   else:
     result = input == pattern
 

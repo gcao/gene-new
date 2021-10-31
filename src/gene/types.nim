@@ -1425,6 +1425,13 @@ proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
     regex_flags: flags,
   )
 
+proc new_gene_regex*(regex: string): Value =
+  return Value(
+    kind: VkRegex,
+    regex: re(regex),
+    regex_pattern: regex,
+  )
+
 proc new_gene_range*(start: Value, `end`: Value): Value =
   return Value(
     kind: VkRange,

@@ -18,3 +18,13 @@ test_interpreter """
 test_interpreter """
   ("a" !~ #/a/)
 """, False
+
+test_interpreter """
+  ("ab" =~ ($regex "(a" "b)"))
+  $~0
+""", "ab"
+
+test_interpreter """
+  ("AB" =~ ($regex ^^i "(a" "b)"))
+  $~0
+""", "AB"
