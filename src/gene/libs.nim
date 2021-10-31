@@ -1,4 +1,4 @@
-import os, osproc, base64, json, tables, sequtils, strutils, times, parsecsv, streams, nre
+import os, osproc, random, base64, json, tables, sequtils, strutils, times, parsecsv, streams, nre
 import httpclient
 import asyncdispatch, asyncfile, asynchttpserver
 
@@ -305,6 +305,12 @@ proc add_failure_callback(self: Value, args: Value): Value =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    GENE_NS.ns["rand"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_rand".} =
+      if args.gene_data.len == 0:
+        return new_gene_float(rand(1.0))
+      else:
+        return rand(args.gene_data[0].int)
+
     GENE_NS.ns["sleep"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep".} =
       sleep(args.gene_data[0].int)
     GENE_NS.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep_async".} =
@@ -545,6 +551,14 @@ proc init*() =
           (result .add (block item))
         )
         result
+      )
+
+      (method find block
+        (for item in self
+          (if (block item)
+            (return item)
+          )
+        )
       )
 
       (method select block
