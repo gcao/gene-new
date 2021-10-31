@@ -37,9 +37,10 @@ converter seq_to_gene*(self: seq[int]): Value =
   for item in self:
     result.vec.add(item)
 
-converter seq_to_gene*(self: seq[string]): seq[Value] =
+converter seq_to_gene*(self: seq[string]): Value =
+  result = new_gene_vec()
   for item in self:
-    result.add(item)
+    result.vec.add(item)
 
 proc cleanup*(code: string): string =
   result = code

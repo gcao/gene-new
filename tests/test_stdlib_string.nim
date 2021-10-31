@@ -13,8 +13,8 @@ test_interpreter "(\"abc\" .substr 1)", "bc"
 test_interpreter "(\"abc\" .substr -1)", "c"
 test_interpreter "(\"abc\" .substr -2 -1)", "bc"
 
-test_interpreter "(\"a:b:c\" .split \":\")", @[new_gene_string("a"), new_gene_string("b"), new_gene_string("c")]
-test_interpreter "(\"a:b:c\" .split \":\", 2)", @[new_gene_string("a"), new_gene_string("b:c")]
+test_interpreter "(\"a:b:c\" .split \":\")", @["a", "b", "c"]
+test_interpreter "(\"a:b:c\" .split \":\", 2)", @["a", "b:c"]
 
 test_interpreter "(\"abc\" .index \"b\")", 1
 test_interpreter "(\"abc\" .index \"x\")", -1
@@ -46,3 +46,8 @@ test_interpreter """
   (s .append "c")
   s
 """, "abc"
+
+test_interpreter """
+  # `replace` replaces all occurances ?!
+  ("aabc" .replace "a" "A")
+""", "AAbc"

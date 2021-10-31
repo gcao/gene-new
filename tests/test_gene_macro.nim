@@ -7,4 +7,4 @@
 # test_parser """
 #   (#def a [1])
 #   ##a
-# """, @[new_gene_int(1)]
+# """, @[1]

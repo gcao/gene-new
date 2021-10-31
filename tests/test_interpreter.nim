@@ -250,11 +250,11 @@ test_interpreter """
 test_interpreter """
   (var a [2 3])
   [1 a... 4]
-""", @[new_gene_int(1), new_gene_int(2), new_gene_int(3), new_gene_int(4)]
+""", @[1, 2, 3, 4]
 
 # test_interpreter """
 #   [1 (... [2 3]) 4]
-# """, @[new_gene_int(1), new_gene_int(2), new_gene_int(3), new_gene_int(4)]
+# """, @[1, 2, 3, 4]
 
 # test "Interpreter / eval: native function (test)":
 #   init_all()
@@ -301,4 +301,4 @@ test_interpreter """
 #   [
 #     ($include "tests/fixtures/include_example.gene")
 #   ]
-# """, @[new_gene_int(1), new_gene_int(2), new_gene_int(3)]
+# """, @[1, 2, 3]

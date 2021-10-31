@@ -39,7 +39,7 @@ test_interpreter """
   (fn f a (a + 1))
   (var b 1)
   ($render tpl)
-""", @[new_gene_int(2)]
+""", @[2]
 
 test_interpreter """
   (var tpl :{^p %(f b)})
@@ -63,7 +63,7 @@ test_interpreter """
     %_(var i 2)
     2
   ])
-""", @[new_gene_int(1), new_gene_int(2)]
+""", @[1, 2]
 
 test_interpreter """
   ($render :[
@@ -71,7 +71,7 @@ test_interpreter """
       ($emit i)
     )
   ])
-""", @[new_gene_int(1), new_gene_int(2)]
+""", @[1, 2]
 
 test_interpreter """
   ($render :(_
@@ -103,7 +103,7 @@ test_interpreter """
   ($render tpl)
   (a = 2)
   ($render tpl)
-""", @[new_gene_int(2)]
+""", @[2]
 
 test_interpreter """
   (var tpl :{^a %a})

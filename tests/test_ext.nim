@@ -5,8 +5,8 @@ import gene/types
 import ./helpers
 
 test_extension "tests/libextension", "test", proc(r: NativeFn) =
-  var props = OrderedTable[string, GeneValue]()
-  var data = @[new_gene_int(1), new_gene_int(2)]
+  var props = OrderedTable[string, Value]()
+  var data = @[1, 2]
   check r(props, data) == 3
 
 test_interpreter """

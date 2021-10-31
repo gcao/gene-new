@@ -82,4 +82,4 @@ test_interpreter """
 #   )
 #   (g 2)
 # """, proc(r: Value) =
-#   check r.gene.data == @[new_gene_int(2)]
+#   check r.gene.data == @[2]

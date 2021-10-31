@@ -1,4 +1,4 @@
-import os, osproc, base64, json, tables, sequtils, strutils, times, parsecsv, streams
+import os, osproc, base64, json, tables, sequtils, strutils, times, parsecsv, streams, nre
 import httpclient
 import asyncdispatch, asyncfile, asynchttpserver
 
@@ -365,6 +365,8 @@ proc init*() =
 
     StringClass = Value(kind: VkClass, class: new_class("String"))
     StringClass.class.parent = ObjectClass.class
+    GENE_NS.ns["String"] = StringClass
+    GLOBAL_NS.ns["String"] = StringClass
     StringClass.def_native_method("size", string_size)
     StringClass.def_native_method("to_i", string_to_i)
     StringClass.def_native_method("append", string_append)
@@ -379,8 +381,16 @@ proc init*() =
     StringClass.def_native_method("ends_with", string_ends_with)
     StringClass.def_native_method("to_uppercase", string_to_uppercase)
     StringClass.def_native_method("to_lowercase", string_to_lowercase)
-    GENE_NS.ns["String"] = StringClass
-    GLOBAL_NS.ns["String"] = StringClass
+    StringClass.def_native_method "replace", proc(self: Value, args: Value): Value {.name:"string_replace".} =
+      var first = args.gene_data[0]
+      var second = args.gene_data[1]
+      case first.kind:
+      of VkString:
+        return self.str.replace(first.str, second.str)
+      of VkRegex:
+        return self.str.replace(first.regex, second.str)
+      else:
+        todo("string_replace " & $first.kind)
 
     SymbolClass = Value(kind: VkClass, class: new_class("Symbol"))
     SymbolClass.class.parent = ObjectClass.class

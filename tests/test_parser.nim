@@ -101,7 +101,7 @@ test_parser "(())", proc(r: Value) =
 
 test_parser "(1 2 3)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_data == @[new_gene_int(2), new_gene_int(3)]
+  check r.gene_data == @[2, 3]
 
 test_parser """
   (_ 1 "test")
@@ -112,22 +112,22 @@ test_parser """
 test_parser "(1 ^a 2 3 4)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": new_gene_int(2)}.toOrderedTable
-  check r.gene_data == @[new_gene_int(3), new_gene_int(4)]
+  check r.gene_data == @[3, 4]
 
 test_parser "(1 2 ^a 3 4)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": new_gene_int(3)}.toOrderedTable
-  check r.gene_data == @[new_gene_int(2), new_gene_int(4)]
+  check r.gene_data == @[2, 4]
 
 test_parser "(1 ^^a 2 3)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": True}.toOrderedTable
-  check r.gene_data == @[new_gene_int(2), new_gene_int(3)]
+  check r.gene_data == @[2, 3]
 
 test_parser "(1 ^!a 2 3)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": False}.toOrderedTable
-  check r.gene_data == @[new_gene_int(2), new_gene_int(3)]
+  check r.gene_data == @[2, 3]
 
 test_parser "{^^x ^!y ^^z}", proc(r: Value) =
   check r.kind == VkMap
@@ -195,7 +195,7 @@ test_parser """
   [
     1 # test
   ]
-""", @[new_gene_int(1)]
+""", @[1]
 
 test_parser """
   #
@@ -253,7 +253,7 @@ test_parse_document """
   1 2
 """, proc(r: Document) =
   check r.props["name"] == "Test document"
-  check r.data == @[new_gene_int(1), new_gene_int(2)]
+  check r.data == @[1, 2]
 
 test_parser "\"\"\"a\"\"\"", "a"
 # Trim whitespaces and new line after opening """

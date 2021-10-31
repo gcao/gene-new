@@ -139,10 +139,10 @@ test_args """
   check r.program == "my-script"
   check r.options.len == 2
   check r.options["--long"] == "long-value"
-  check r.options["-m"] == @[new_gene_string("m1"), new_gene_string("m2")]
+  check r.options["-m"] == @["m1", "m2"]
   check r.args.len == 2
   check r.args["first"] == "one"
-  check r.args["second"] == @[new_gene_string("two"), new_gene_string("three")]
+  check r.args["second"] == @["two", "three"]
 
 test_args """
   [
@@ -160,11 +160,11 @@ test_args """
   check r.options.len == 3
   check r.options["-b"]
   check r.options["-i"] == 1
-  check r.options["-m"] == @[new_gene_int(2), new_gene_int(3)]
+  check r.options["-m"] == @[2, 3]
   check r.args.len == 3
   check r.args["first"]
   check r.args["second"] == 1
-  check r.args["third"] == @[new_gene_int(2), new_gene_int(3)]
+  check r.args["third"] == @[2, 3]
 
 test_args """
   # Test default values
@@ -179,9 +179,9 @@ test_args """
   check r.options.len == 3
   check r.options["-b"]
   check r.options["-i"] == 10
-  check r.options["-m"] == @[new_gene_int(20), new_gene_int(30)]
+  check r.options["-m"] == @[20, 30]
   check r.args.len == 1
-  check r.args["first"] == @[new_gene_int(100), new_gene_int(200)]
+  check r.args["first"] == @[100, 200]
 
 test_interpreter """
   ($parse_cmd_args  # parse arguments and define members in current scope

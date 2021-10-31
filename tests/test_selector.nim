@@ -212,7 +212,7 @@ test_interpreter """
 #   (var a [0])
 #   ($set a @0 1)
 #   a
-# """, @[new_gene_int(1)]
+# """, @[1]
 
 test_interpreter """
   (class A)
@@ -245,21 +245,21 @@ test_interpreter """
 
 test_interpreter """
   ((@ [0 1]) [1 2])
-""", @[new_gene_int(1), new_gene_int(2)]
+""", @[1, 2]
 
 test_interpreter """
   ((@ ["a" "b"]) {^a 1 ^b 2 ^c 3})
-""", @[new_gene_int(1), new_gene_int(2)]
+""", @[1, 2]
 
 test_interpreter """
   ((@* 0 1) [1 2])
-""", @[new_gene_int(1), new_gene_int(2)]
+""", @[1, 2]
 
 test_interpreter """
   ((@ :TEST 0)
     (_ (:TEST 1))
   )
-""", @[new_gene_int(1)]
+""", @[1]
 
 # test_core """
 #   (((@ _)
@@ -282,7 +282,7 @@ test_interpreter """
 
 # test_core """
 #   ((@ 0 gene/inc) [1])
-# """, @[new_gene_int(2)]
+# """, @[2]
 
 # test_interpreter """
 #   ([] .@ 0 ^default 123)
