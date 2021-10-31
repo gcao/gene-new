@@ -443,10 +443,11 @@ type
     root*: RootMatcher
     kind*: MatcherKind
     name*: MapKey
+    is_prop*: bool
     # match_name*: bool # Match symbol to name - useful for (myif true then ... else ...)
     # default_value*: Value
     default_value_expr*: Expr
-    splat*: bool
+    is_splat*: bool
     min_left*: int # Minimum number of args following this
     children*: seq[Matcher]
     # required*: bool # computed property: true if splat is false and default value is not given
@@ -457,16 +458,15 @@ type
     MatchWrongType # E.g. map is passed but array or gene is expected
 
   # MatchedField* = ref object
-  #   name*: MapKey
-  #   value*: Value # Either value_expr or value must be given
-  #   value_expr*: Expr
+  #   matcher*: Matcher
+  #   value*: Value
 
   MatchResult* = ref object
     message*: string
     kind*: MatchResultKind
     # If success
     # fields*: seq[MatchedField]
-    assign_only*: bool # If true, no new variables will be defined
+    # assign_only*: bool # If true, no new variables will be defined
     # If missing fields
     missing*: seq[MapKey]
     # If wrong type
@@ -565,6 +565,7 @@ let
   Finally*   = Value(kind: VkSymbol, symbol: "finally")
   Call*      = Value(kind: VkSymbol, symbol: "call")
   Do*        = Value(kind: VkSymbol, symbol: "do")
+  Equals*    = Value(kind: VkSymbol, symbol: "=")
 
 var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
 
@@ -1753,7 +1754,7 @@ proc new_matcher*(root: RootMatcher, kind: MatcherKind): Matcher =
   )
 
 proc required*(self: Matcher): bool =
-  return self.default_value_expr == nil and not self.splat
+  return self.default_value_expr == nil and not self.is_splat
 
 proc hint*(self: RootMatcher): MatchingHint =
   if self.children.len == 0:
@@ -1773,12 +1774,12 @@ proc hint*(self: RootMatcher): MatchingHint =
 
 proc props*(self: seq[Matcher]): HashSet[MapKey] =
   for m in self:
-    if m.kind == MatchProp and not m.splat:
+    if m.kind == MatchProp and not m.is_splat:
       result.incl(m.name)
 
 proc prop_splat*(self: seq[Matcher]): MapKey =
   for m in self:
-    if m.kind == MatchProp and m.splat:
+    if m.kind == MatchProp and m.is_splat:
       return m.name
 
 ##################################################

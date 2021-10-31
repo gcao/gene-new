@@ -178,20 +178,36 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
     if v.symbol[0] == '^':
       var m = new_matcher(self, MatchProp)
       if v.symbol.ends_with("..."):
-        m.name = v.symbol[1..^4].to_key
-        m.splat = true
+        m.is_splat = true
+        if v.symbol[1] == "@":
+          m.name = v.symbol[2..^4].to_key
+          m.is_prop = true
+        else:
+          m.name = v.symbol[1..^4].to_key
       else:
-        m.name = v.symbol[1..^1].to_key
+        if v.symbol[1] == "@":
+          m.name = v.symbol[2..^1].to_key
+          m.is_prop = true
+        else:
+          m.name = v.symbol[1..^1].to_key
       group.add(m)
     else:
       var m = new_matcher(self, MatchData)
       group.add(m)
       if v.symbol != "_":
         if v.symbol.endsWith("..."):
-          m.name = v.symbol[0..^4].to_key
-          m.splat = true
+          m.is_splat = true
+          if v.symbol[0] == "@":
+            m.name = v.symbol[1..^4].to_key
+            m.is_prop = true
+          else:
+            m.name = v.symbol[0..^4].to_key
         else:
-          m.name = v.symbol.to_key
+          if v.symbol[0] == "@":
+            m.name = v.symbol[1..^1].to_key
+            m.is_prop = true
+          else:
+            m.name = v.symbol.to_key
   of VkVector:
     var i = 0
     while i < v.vec.len:
@@ -203,7 +219,7 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
         self.parse(m.children, item)
       else:
         self.parse(group, item)
-        if i < v.vec.len and v.vec[i] == new_gene_symbol("="):
+        if i < v.vec.len and v.vec[i] == Equals:
           i += 1
           var last_matcher = group[^1]
           var value = v.vec[i]
@@ -257,15 +273,15 @@ proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], inp
   for k, v in map:
     if k notin self.props:
       splat[k] = v
-  # r.fields.add(new_matched_field(self.prop_splat, new_gene_map(splat)))
-  frame.scope.def_member(self.prop_splat, new_gene_map(splat))
+  var splat_value = new_gene_map(splat)
+  frame.scope.def_member(self.prop_splat, splat_value)
+  # r.fields.add(new_matched_field(self.prop_splat, splat_value))
 
 proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state: MatchState, r: MatchResult) =
   case self.kind:
   of MatchData:
     var value: Value
-    # var value_expr: Expr
-    if self.splat:
+    if self.is_splat:
       value = new_gene_vec()
       for i in state.data_index..<input.len - self.min_left:
         value.vec.add(input[i])
@@ -282,17 +298,16 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         return
     if self.name != EMPTY_STRING_KEY:
       frame.scope.def_member(self.name, value)
-      # var matched_field = new_matched_field(self.name, value)
-      # matched_field.value_expr = value_expr
+      # var matched_field = new_matched_field(self, value)
       # r.fields.add(matched_field)
     var child_state = MatchState()
     for child in self.children:
       vm.match(frame, child, value, child_state, r)
     vm.match_prop_splat(frame, self.children, value, r)
+
   of MatchProp:
     var value: Value
-    # var value_expr: Expr
-    if self.splat:
+    if self.is_splat:
       return
     elif input.gene_props.has_key(self.name):
       value = input.gene_props[self.name]
@@ -304,9 +319,9 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         r.missing.add(self.name)
         return
     frame.scope.def_member(self.name, value)
-    # var matched_field = new_matched_field(self.name, value)
-    # matched_field.value_expr = value_expr
+    # var matched_field = new_matched_field(self, value)
     # r.fields.add(matched_field)
+
   else:
     todo()
 

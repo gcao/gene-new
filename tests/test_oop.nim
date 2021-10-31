@@ -135,6 +135,48 @@ test_interpreter """
   ((new A).test)
 """, 1
 
+# test_interpreter """
+#   (class A
+#     (method new @name
+#     )
+#   )
+#   ((new A "x").@name)
+# """, "x"
+
+# test_interpreter """
+#   (class A
+#     (method test @name
+#     )
+#   )
+#   (((new A).test "X").@name)
+# """, "x"
+
+# test_interpreter """
+#   (class A
+#     (method new ^@name
+#     )
+#   )
+#   ((new A ^name "x").@name)
+# """, "x"
+
+# test_interpreter """
+#   (class A
+#     (method new ^@name ^@...
+#       # All properties except @name are added to the instance
+#     )
+#   )
+#   ((new A ^prop "x").@prop)
+# """, "x"
+
+# test_interpreter """
+#   (class A
+#     (method new ^@name ^@x...
+#       # All properties except @name are added to the instance as @x
+#     )
+#   )
+#   (((new A ^prop 1).@x).@prop)
+# """, 1
+
 test_interpreter """
   (class A
     (method test a
