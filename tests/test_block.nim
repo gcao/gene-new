@@ -62,6 +62,15 @@ test_interpreter """
 """, 1
 
 # test_interpreter """
+#   (fn f _
+#     (var b (-> (return 1)))
+#     (b)
+#     2
+#   )
+#   (f)
+# """, 1
+
+# test_interpreter """
 #   (fn f b
 #     (b 1)
 #     0

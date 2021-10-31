@@ -135,21 +135,31 @@ test_interpreter """
   ((new A).test)
 """, 1
 
-# test_interpreter """
-#   (class A
-#     (method new @name
-#     )
-#   )
-#   ((new A "x").@name)
-# """, "x"
+test_interpreter """
+  (class A
+    (method new @name
+    )
+  )
+  ((new A 1).@name)
+""", 1
 
-# test_interpreter """
-#   (class A
-#     (method test @name
-#     )
-#   )
-#   (((new A).test "X").@name)
-# """, "x"
+test_interpreter """
+  (class A
+    (method test @name
+    )
+  )
+  (var a (new A))
+  (a .test 1)
+  a/@name
+""", 1
+
+test_interpreter """
+  (class A
+    (method new [@name = 1]
+    )
+  )
+  ((new A).@name)
+""", 1
 
 # test_interpreter """
 #   (class A

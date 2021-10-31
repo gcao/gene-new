@@ -179,13 +179,13 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
       var m = new_matcher(self, MatchProp)
       if v.symbol.ends_with("..."):
         m.is_splat = true
-        if v.symbol[1] == "@":
+        if v.symbol[1] == '@':
           m.name = v.symbol[2..^4].to_key
           m.is_prop = true
         else:
           m.name = v.symbol[1..^4].to_key
       else:
-        if v.symbol[1] == "@":
+        if v.symbol[1] == '@':
           m.name = v.symbol[2..^1].to_key
           m.is_prop = true
         else:
@@ -197,13 +197,13 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
       if v.symbol != "_":
         if v.symbol.endsWith("..."):
           m.is_splat = true
-          if v.symbol[0] == "@":
+          if v.symbol[0] == '@':
             m.name = v.symbol[1..^4].to_key
             m.is_prop = true
           else:
             m.name = v.symbol[0..^4].to_key
         else:
-          if v.symbol[0] == "@":
+          if v.symbol[0] == '@':
             m.name = v.symbol[1..^1].to_key
             m.is_prop = true
           else:
@@ -275,7 +275,7 @@ proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], inp
       splat[k] = v
   var splat_value = new_gene_map(splat)
   frame.scope.def_member(self.prop_splat, splat_value)
-  # r.fields.add(new_matched_field(self.prop_splat, splat_value))
+  # TODO: handle @a... or ^@a...
 
 proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state: MatchState, r: MatchResult) =
   case self.kind:
@@ -298,8 +298,8 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         return
     if self.name != EMPTY_STRING_KEY:
       frame.scope.def_member(self.name, value)
-      # var matched_field = new_matched_field(self, value)
-      # r.fields.add(matched_field)
+      if self.is_prop:
+        frame.self.instance_props[self.name] = value
     var child_state = MatchState()
     for child in self.children:
       vm.match(frame, child, value, child_state, r)
@@ -319,8 +319,8 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         r.missing.add(self.name)
         return
     frame.scope.def_member(self.name, value)
-    # var matched_field = new_matched_field(self, value)
-    # r.fields.add(matched_field)
+    if self.is_prop:
+      frame.self.instance_props[self.name] = value
 
   else:
     todo()
@@ -360,7 +360,10 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
       discard self.eval(frame, v)
     for i, v in args_expr.data.mpairs:
       let field = matcher.children[i]
-      new_frame.scope.def_member(field.name, self.eval(frame, v))
+      let value = self.eval(frame, v)
+      new_frame.scope.def_member(field.name, value)
+      if field.is_prop:
+        new_frame.self.instance_props[field.name] = value
   else:
     var args = new_gene_gene()
     for k, v in args_expr.props.mpairs:

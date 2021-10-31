@@ -138,7 +138,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (fn f _
-#     (var r return)
+#     (var r $return)
 #     (r 1)
 #     2
 #   )
@@ -153,7 +153,7 @@ test_interpreter """
 #     (ret 1)
 #   )
 #   (fn f _
-#     (var r return)
+#     (var r $return)
 #     (loop
 #       (g r)
 #     )
@@ -165,7 +165,7 @@ test_interpreter """
 # # to return from
 # test_interpreter """
 #   (fn f _
-#     (var r return)
+#     (var r $return)
 #     (fn g _
 #       (r 1)
 #     )
