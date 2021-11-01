@@ -191,6 +191,21 @@ test_parser """
   check r.gene_data[0].symbol == "a"
 
 test_parser """
+  #@f #@g a
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type.symbol == "f"
+  check r.gene_data[0].kind == VkGene
+  check r.gene_data[0].gene_type.symbol == "g"
+  check r.gene_data[0].gene_data[0].symbol == "a"
+
+test_parser """
+  #*f
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type.symbol == "f"
+
+test_parser """
   {^p #@f a}
 """, proc(r: Value) =
   check r.map["p"].kind == VkGene
