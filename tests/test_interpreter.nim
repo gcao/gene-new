@@ -133,6 +133,7 @@ test_interpreter """
   check r.gene_data[0] == 2
 
 test_interpreter "(if true 1)", 1
+test_interpreter "(if true then 1)", 1
 test_interpreter "(if not false 1)", 1
 test_interpreter "(if false 1 else 2)", 2
 test_interpreter """
