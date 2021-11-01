@@ -171,6 +171,32 @@ test_parser_error """
 
 test_parser_error "{^ratio 1/-2}"
 
+# Support decorator from the parser. It can appear anywhere except property names.
+# Pros:
+#   Easier to write
+# Cons:
+#   Harder to read ?!
+#
+# #@f a       = (f a)
+# (#@f a)     = ((f a))
+# (#@f #@g a) = ((f (g a)))
+# #@(f a) b   = (((f a) b))
+# {^p #@f a}  = {^p (f a)}
+
+test_parser """
+  #@f a
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type.symbol == "f"
+  check r.gene_data[0].symbol == "a"
+
+test_parser """
+  {^p #@f a}
+""", proc(r: Value) =
+  check r.map["p"].kind == VkGene
+  check r.map["p"].gene_type.symbol == "f"
+  check r.map["p"].gene_data[0].symbol == "a"
+
 test_read_all """
   1 # comment
   2
