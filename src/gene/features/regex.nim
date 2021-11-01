@@ -27,7 +27,10 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     var i = 0
     for item in m.captures.to_seq:
       var name = "$~" & $i
-      frame.scope.def_member(name.to_key, item.get())
+      var value = Nil
+      if item.is_some():
+        value = item.get()
+      frame.scope.def_member(name.to_key, value)
       i += 1
   else:
     return Nil

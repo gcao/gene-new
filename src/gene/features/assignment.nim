@@ -2,8 +2,18 @@ import tables
 
 import ../map_key
 import ../types
+import ../exprs
 import ../translators
 import ./arithmetic
+import ./symbol
+
+# TODO: improve handling of below cases
+# (a = 1)
+# (a += 1)
+# (@a = 1)
+# (@a += 1)
+# (@a/0 = 1)  # should throw error
+# (@a/0 += 1) # should throw error
 
 type
   ExAssignment* = ref object of Expr
@@ -35,26 +45,38 @@ proc translate_assignment(value: Value): Expr =
   #   )
 
 proc translate_op_eq(value: Value): Expr =
-  var r: ExAssignment
+  var name = value.gene_data[0].symbol
+  var value_expr: ExBinOp
   case value.gene_type.symbol:
   of "+=":
-    r = ExAssignment(
-      evaluator: eval_assignment,
-      name: value.gene_data[0].symbol.to_key,
-      value: new_ex_bin(BinAdd),
-    )
+    value_expr = new_ex_bin(BinAdd)
   of "-=":
-    r = ExAssignment(
-      evaluator: eval_assignment,
-      name: value.gene_data[0].symbol.to_key,
-      value: new_ex_bin(BinSub),
-    )
+    value_expr = new_ex_bin(BinSub)
+  of "*=":
+    value_expr = new_ex_bin(BinMul)
+  of "/=":
+    value_expr = new_ex_bin(BinDiv)
+  of "&&=":
+    value_expr = new_ex_bin(BinAnd)
+  of "||=":
+    value_expr = new_ex_bin(BinOr)
   else:
-    todo()
+    todo("translate_op_eq " & $value.gene_type.symbol)
 
-  cast[ExBinOp](r.value).op1 = translate(value.gene_data[0])
-  cast[ExBinOp](r.value).op2 = translate(value.gene_data[1])
-  result = r
+  if value.gene_data[0].symbol[0] == '@':
+    # (@a ||= x)  =>  (@a = (/@a || x))
+    var selector: seq[string] = @["", value.gene_data[0].symbol]
+    value_expr.op1 = translate(selector)
+    value_expr.op2 = translate(value.gene_data[1])
+    return new_ex_set_prop(name[1..^1], value_expr)
+  else:
+    value_expr.op1 = translate(value.gene_data[0])
+    value_expr.op2 = translate(value.gene_data[1])
+    return ExAssignment(
+      evaluator: eval_assignment,
+      name: name.to_key,
+      value: value_expr,
+    )
 
 proc init*() =
   GeneTranslators["="] = translate_assignment

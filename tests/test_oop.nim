@@ -42,6 +42,15 @@ test_interpreter """
 
 test_interpreter """
   (class A
+    (method test _
+      (@a ||= 1)
+    )
+  )
+  ((new A).test)
+""", 1
+
+test_interpreter """
+  (class A
     # gene/native/test is defined in tests/helpers.nim:init_all()
     (method test = gene/native/test)
   )

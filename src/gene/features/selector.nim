@@ -44,7 +44,7 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
       else:
         return target.gene_data[self.index]
     else:
-      todo()
+      todo("search_first " & $target.kind)
   of SmByName:
     case target.kind:
     of VkMap:
