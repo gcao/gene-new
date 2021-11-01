@@ -61,6 +61,18 @@ test_interpreter """
   (f (a -> a))
 """, 1
 
+test_interpreter """
+  (fn f block
+    (block)
+  )
+  (class A
+    (method test _
+      (f (-> /.class/.name))
+    )
+  )
+  ((new A) .test)
+""", "A"
+
 # test_interpreter """
 #   (fn f _
 #     (var b (-> (return 1)))

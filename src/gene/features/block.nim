@@ -16,6 +16,7 @@ proc block_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var
   scope.set_parent(target.block.parent_scope, target.block.parent_scope_max)
   var new_frame = Frame(ns: target.block.ns, scope: scope)
   new_frame.parent = frame
+  new_frame.self = target.block.frame.self
 
   handle_args(self, frame, new_frame, target.block.matcher, expr)
 
