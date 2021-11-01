@@ -10,7 +10,7 @@ type
     body*: Expr
 
   ExDebug* = ref object of Expr
-    data*: Expr
+    data*: Value
 
   ExAssert* = ref object of Expr
     data*: Expr
@@ -71,18 +71,16 @@ proc translate_assert(value: Value): Expr =
 
 proc eval_debug(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExDebug](expr)
-  if expr.data == nil:
-    echo "Debug output: none"
-  else:
-    result = self.eval(frame, cast[ExDebug](expr).data)
-    echo "Debug output: " & $result
+  echo "$debug: " & $expr.data
+  var e = translate(expr.data)
+  result = self.eval(frame, e)
+  echo "$debug: " & $expr.data & " => " & $result
 
 proc translate_debug(value: Value): Expr =
   var r = ExDebug(
     evaluator: eval_debug,
   )
-  if value.gene_data.len > 0:
-    r.data = translate(value.gene_data[0])
+  r.data = value.gene_data[0]
   return r
 
 proc init*() =
