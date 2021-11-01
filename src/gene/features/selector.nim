@@ -37,12 +37,18 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
       if self.index >= target.vec.len:
         raise NoResult.new
       else:
-        return target.vec[self.index]
+        if self.index < 0:
+          return target.vec[self.index + target.vec.len]
+        else:
+          return target.vec[self.index]
     of VkGene:
       if self.index >= target.gene_data.len:
         raise NoResult.new
       else:
-        return target.gene_data[self.index]
+        if self.index < 0:
+          return target.gene_data[self.index + target.gene_data.len]
+        else:
+          return target.gene_data[self.index]
     else:
       todo("search_first " & $target.kind)
   of SmByName:
@@ -126,6 +132,8 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
     case target.kind:
     of VkMap:
       result.add(target.map[self.name])
+    of VkInstance:
+      result.add(target.instance_props[self.name])
     else:
       todo("search SmByName " & $target.kind)
   of SmByType:
@@ -216,6 +224,7 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
   for m in self.matchers:
     case m.kind:
     of SmByIndex:
+      # TODO: handle negative number
       case target.kind:
       of VkVector:
         if self.is_last:
