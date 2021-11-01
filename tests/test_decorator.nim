@@ -10,6 +10,11 @@ import ./helpers
 # * Complex decorator: (+add 2) x   -> (call ^^decorator (add 2) [x])
 # * Support +dec x...               -> (explode (call ^^decorator dec [x]))
 #
+# Support this from the parser, so that it can appear anywhere except property names?
+# (#@f a)     = ((f a))
+# (#@f #@g a) = ((f (g a)))
+# #@(f a) b   = (((f a) b))
+# {^p #@f a}  = {^p (f a)}
 
 test_interpreter """
   (fn f target
