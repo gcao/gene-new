@@ -643,8 +643,8 @@ proc read_decorator(self: var Parser): Value =
   var second = self.read()
   return new_gene_gene(first, second)
 
-proc read_star(self: var Parser): Value =
-  return new_gene_gene(self.read())
+# proc read_star(self: var Parser): Value =
+#   return new_gene_gene(self.read())
 
 proc read_dispatch(self: var Parser): Value =
   let ch = self.buf[self.bufpos]
@@ -676,7 +676,7 @@ proc init_dispatch_macro_array() =
   # dispatch_macros['_'] = read_discard
   dispatch_macros['/'] = read_regex
   dispatch_macros['@'] = read_decorator
-  dispatch_macros['*'] = read_star
+  # dispatch_macros['*'] = read_star
 
 proc init_readers() =
   init_macro_array()
