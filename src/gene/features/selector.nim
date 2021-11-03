@@ -131,9 +131,11 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
   of SmByName:
     case target.kind:
     of VkMap:
-      result.add(target.map[self.name])
+      if target.map.has_key(self.name):
+        result.add(target.map[self.name])
     of VkInstance:
-      result.add(target.instance_props[self.name])
+      if target.instance_props.has_key(self.name):
+        result.add(target.instance_props[self.name])
     else:
       todo("search SmByName " & $target.kind)
   of SmByType:
@@ -211,7 +213,8 @@ proc search*(self: Selector, target: Value): Value =
         result = r.first
         # TODO: invoke callbacks
       else:
-        raise new_exception(SelectorNoResult, "No result is found for the selector.")
+        # raise new_exception(SelectorNoResult, "No result is found for the selector.")
+        result = Nil
     else:
       var r = SelectorResult(mode: SrAll)
       self.search(target, r)

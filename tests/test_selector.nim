@@ -99,6 +99,10 @@ test_interpreter """
 """, Nil
 
 test_interpreter """
+  ({} .@ "a" 1)
+""", Nil
+
+test_interpreter """
   ({^a "A"} .@a)
 """, "A"
 
