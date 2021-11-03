@@ -238,7 +238,28 @@ type
     VkExplode
     VkFile
 
+  SourceKind* = enum
+    SkFile
+    SkString
+    SkVirtualFile
+
+  Source* = ref object
+    case kind*: SourceKind
+    of SkFile, SkVirtualFile:
+      file_path*: string
+      file_content*: string
+    of SkString:
+      string*: string
+
+  Trace* = ref object
+    source*: Source
+    start_line*: int
+    start_col*: int
+    end_line*: int
+    end_col*: int
+
   Value* {.acyclic.} = ref object
+    trace*: Trace
     case kind*: ValueKind
     of VkAny:
       any_type*: MapKey   # Optional type info
@@ -356,11 +377,11 @@ type
 
   # environment: local/unittest/development/staging/production
   # assertion: enabled/disabled
-  # log level: fatal/error/warning/info/debug/trace
+  # log level: error/warning/info/debug/trace
   # repl on error: true/false
   # capabilities:
   #   environment variables: read/write
-  #   stdin/stdout/stderr/pipe: read/write
+  #   stdin/stdout/stderr: read/write
   #   gui:
   #   file system: read/write
   #   os execution: read/write

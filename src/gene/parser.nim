@@ -16,6 +16,7 @@ type
     eof_is_error*: bool
     eof_value*: Value
     suppress_read*: bool
+    trace*: bool
 
   Parser* = object of BaseLexer
     options*: ParseOptions
