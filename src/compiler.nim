@@ -20,6 +20,7 @@ proc generate_nim_file(src_file, dst_file: string): string =
   f.write_line(read_file(src_file))
   f.write_line("\"\"\"")
   f.write_line("discard VM.eval(source)")
+  f.write_line("VM.wait_for_futures()")
   echo "Done. The generated file is " & dst_file
 
 proc main() =
