@@ -563,6 +563,7 @@ let
   Try*       = Value(kind: VkSymbol, symbol: "try")
   Catch*     = Value(kind: VkSymbol, symbol: "catch")
   Finally*   = Value(kind: VkSymbol, symbol: "finally")
+  Import*    = Value(kind: VkSymbol, symbol: "import")
   Call*      = Value(kind: VkSymbol, symbol: "call")
   Do*        = Value(kind: VkSymbol, symbol: "do")
   Equals*    = Value(kind: VkSymbol, symbol: "=")

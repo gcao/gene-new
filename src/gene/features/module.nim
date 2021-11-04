@@ -95,6 +95,9 @@ proc import_module*(self: VirtualMachine, name: MapKey, code: string): Namespace
   result = module.ns
   self.modules[name] = result
 
+proc import_module*(self: VirtualMachine, name: string, code: string): Namespace =
+  self.import_module(name.to_key, code)
+
 proc import_module*(self: VirtualMachine, name: MapKey, code: string, inherit: Namespace): Namespace =
   var module = new_module(inherit, name.to_s)
   var frame = new_frame()
@@ -171,7 +174,7 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
       self.modules[`from`.to_key] = ns
   self.import_from_ns(frame, ns, expr.matcher.children)
 
-proc translate_import(value: Value): Expr =
+proc translate_import*(value: Value): Expr =
   var matcher = new_import_matcher(value)
   var e = ExImport(
     evaluator: eval_import,
