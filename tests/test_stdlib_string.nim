@@ -38,6 +38,10 @@ test_interpreter "(\"ABC\" .to_lowercase)", "abc"
 
 test_interpreter "(\"abc\" .char_at 1)", 'b'
 
+test_interpreter """
+  ($ "a" "b" 1)
+""", "ab1"
+
 # test_interpreter "(\"a\" nil true 1 :symbol)", "(\"a\" nil true 1 :symbol)"
 
 test_interpreter """

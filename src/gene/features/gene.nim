@@ -5,16 +5,12 @@ import ../types
 import ../exprs
 import ../normalizers
 import ../translators
+import ./core
 import ./arithmetic
 import ./regex
 import ./selector
 import ./native
 import ./range
-
-type
-  ExStrings* = ref object of Expr
-    first*: string
-    rest*: seq[Expr]
 
 proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
@@ -75,23 +71,6 @@ proc default_translator(value: Value): Expr =
     `type`: translate(value.gene_type),
     args: value,
   )
-
-proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExStrings](expr)
-  var s = ""
-  s &= expr.first
-  for item in expr.rest.mitems:
-    s &= self.eval(frame, item).to_s
-  return s
-
-proc translate_string(value: Value): Expr =
-  var e = ExStrings(
-    evaluator: eval_string,
-    first: value.gene_type.str,
-  )
-  for item in value.gene_data:
-    e.rest.add(translate(item))
-  return e
 
 proc translate_gene(value: Value): Expr =
   # normalize is inefficient.

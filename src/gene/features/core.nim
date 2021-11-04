@@ -16,6 +16,10 @@ type
     data*: Expr
     message*: Expr
 
+  ExStrings* = ref object of Expr
+    first*: string
+    rest*: seq[Expr]
+
 proc translate_do(value: Value): Expr =
   var r = ExGroup(
     evaluator: eval_group,
@@ -35,6 +39,27 @@ proc translate_void(value: Value): Expr =
   for item in value.gene_data:
     r.data.add translate(item)
   result = r
+
+proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExStrings](expr)
+  var s = ""
+  s &= expr.first
+  for item in expr.rest.mitems:
+    s &= self.eval(frame, item).to_s
+  return s
+
+proc translate_string*(value: Value): Expr =
+  var e = ExStrings(
+    evaluator: eval_string,
+  )
+  if value.gene_type.kind == VkString:
+    e.first = value.gene_type.str
+  else:
+    e.first = ""
+
+  for item in value.gene_data:
+    e.rest.add(translate(item))
+  return e
 
 proc eval_with(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var old_self = frame.self
@@ -86,6 +111,7 @@ proc translate_debug(value: Value): Expr =
 proc init*() =
   GeneTranslators["do"] = translate_do
   GeneTranslators["void"] = translate_void
+  GeneTranslators["$"] = translate_string
   GeneTranslators["$with"] = translate_with
   # In IDE, a breakpoint should be set in eval_debug and when running in debug
   # mode, execution should pause and allow the developer to debug the application
