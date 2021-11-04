@@ -1,0 +1,13 @@
+#<
+gene compile tests/fixtures/compile_mod2.gene build/compile_mod2.nim
+nim -p:src c -r build/compile_mod2.nim
+#>#
+
+(fn f _
+  (println "f from compile_mod2.gene")
+)
+
+(fn main _
+  (println "main from compile_mod2.gene")
+  (f)
+)

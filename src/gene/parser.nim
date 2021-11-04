@@ -238,7 +238,7 @@ proc skip_block_comment(self: var Parser) =
   while true:
     case buf[pos]
     of '#':
-      if buf[pos-1] == '>' and buf[pos-2] != '>':
+      if pos >= 2 and buf[pos-1] == '>' and buf[pos-2] != '>':
         inc(pos)
         break
       else:

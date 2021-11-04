@@ -123,13 +123,12 @@ proc eval*(self: VirtualMachine, code: string): Value =
   frame.scope = new_scope()
   self.eval(frame, code)
 
-proc run_file*(self: VirtualMachine, file: string): Value =
+proc run_file*(self: VirtualMachine, file: string, content: string): Value =
   var module = new_module(self.app.pkg.ns, file)
   var frame = new_frame()
   frame.ns = module.ns
   frame.scope = new_scope()
-  var code = read_file(file)
-  result = self.eval(frame, code)
+  result = self.eval(frame, content)
   if frame.ns.has_key(MAIN_KEY):
     var main = frame[MAIN_KEY]
     if main.kind == VkFunction:
@@ -138,6 +137,9 @@ proc run_file*(self: VirtualMachine, file: string): Value =
     else:
       raise new_exception(CatchableError, "main is not a function.")
   self.wait_for_futures()
+
+proc run_file*(self: VirtualMachine, file: string): Value =
+  self.run_file(file, read_file(file))
 
 proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
   echo "An exception was thrown: " & e.msg

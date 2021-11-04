@@ -12,6 +12,7 @@ import gene/parser
 import gene/interpreter
 import gene/repl
 import cmdline/option_parser
+import compiler
 
 proc setup_logger(debugging: bool) =
   var console_logger = new_console_logger()
@@ -106,13 +107,27 @@ proc main() =
         echo result.to_s
   else:
     var file = options.file
-    VM.init_package(parent_dir(file))
-    let start = cpu_time()
-    let result = VM.run_file(file)
-    if options.print_result:
-      echo result
-    if options.benchmark:
-      echo "Time: " & $(cpu_time() - start)
+    if file == "compile":
+      var args = options.args
+      var src_file: string
+      if args.len > 0:
+        src_file = args[0]
+      else:
+        echo "Usage: gene compile ???.gene [???.nim]"
+        quit(0)
+
+      if args.len > 1:
+        generate_nim_file(src_file, args[1])
+      else:
+        generate_nim_file(src_file)
+    else:
+      VM.init_package(parent_dir(file))
+      let start = cpu_time()
+      let result = VM.run_file(file)
+      if options.print_result:
+        echo result
+      if options.benchmark:
+        echo "Time: " & $(cpu_time() - start)
 
 when isMainModule:
   main()

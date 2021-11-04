@@ -1,0 +1,11 @@
+(import x from "./compile_mod")
+
+#<
+gene compile tests/fixtures/compile_main.gene build/test.nim
+nim -p:src c -r build/test.nim
+#>#
+
+(fn main _
+  (println "main from compile_main.gene")
+  (x)
+)
