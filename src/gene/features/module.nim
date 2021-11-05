@@ -77,7 +77,7 @@ proc parse*(self: ImportMatcherRoot, input: Value, group: ptr seq[ImportMatcher]
           my_group[].add(matcher)
           my_group = matcher.children.addr
     else:
-      todo()
+      todo("parse " & $item.kind)
 
 proc new_import_matcher*(v: Value): ImportMatcherRoot =
   result = ImportMatcherRoot()
@@ -159,6 +159,11 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     ns = frame.ns.root.parent
   else:
     var `from` = self.eval(frame, `from`).str
+    if expr.pkg != nil:
+      var pkg = frame.ns["$pkg"].pkg
+      var dep_name = self.eval(frame, expr.pkg).str
+      var dep = pkg.dependencies[dep_name]
+      `from` = dep.package.module_path(`from`)
     if expr.inherit != nil:
       var inherit = self.eval(frame, expr.inherit).ns
       var code = read_file(dir & `from` & ".gene")

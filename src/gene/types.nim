@@ -61,7 +61,7 @@ type
     ns*: Namespace
     cmd*: string
     args*: seq[string]
-    dependencies*: Table[string, seq[Package]] # Support loading different versions of same package
+    dep_root*: DependencyRoot
     props*: Table[string, Value]  # Additional properties
 
   Package* = ref object
@@ -71,10 +71,30 @@ type
     name*: string
     version*: Value
     license*: Value
-    dependencies*: Table[string, Package]
+    globals*: seq[string] # Global variables defined by this package
+    dependencies*: Table[string, Dependency]
     homepage*: string
     props*: Table[string, Value]  # Additional properties
     doc*: Document        # content of package.gene
+
+  Dependency* = ref object  # A dependency is like a virtual package
+    package*: Package       # The package this is translated to
+    name*: string
+    version*: string
+    `type`*: string         # e.g. git, github, path
+    path*: string
+    repo*: string
+    commit*: string
+
+  DependencyRoot* = ref object
+    package*: Package
+    map*: Table[string, seq[Package]] # Support loading different versions of same package
+    children*: Table[string, DependencyNode]
+
+  DependencyNode* = ref object
+    package*: Package
+    root*: DependencyRoot
+    children*: Table[string, DependencyNode]
 
   Module* = ref object
     pkg*: Package         # Package in which the module belongs, or stdlib if not set
@@ -706,6 +726,11 @@ converter int_to_scope_index*(v: int): NameIndexScope = cast[NameIndexScope](v)
 converter scope_index_to_int*(v: NameIndexScope): int = cast[int](v)
 
 converter gene_to_ns*(v: Value): Namespace = todo()
+
+#################### Package #####################
+
+proc module_path*(self: Package, module: string): string =
+  self.dir & "/src/" & module
 
 #################### Module ######################
 

@@ -1,4 +1,4 @@
-import tables
+import sequtils, tables
 
 import ../types
 import ../map_key
@@ -6,42 +6,32 @@ import ../translators
 import ../interpreter
 
 type
-  Dependency* = ref object
-    name*: string
-    version*: string
-    location*: string
-
-  DependencyRoot* = ref object
-    package*: Package
-    map*: Table[string, seq[Dependency]]
-    children*: Table[string, DependencyNode]
-
-  DependencyNode* = ref object
-    root*: DependencyRoot
-    data*: Dependency
-    children*: Table[string, DependencyNode]
-
   ExDependency* = ref object of Expr
     name*: Expr
     version*: Expr
-    location*: Expr
-
-proc build_dep_tree(self: Package, root: DependencyRoot) =
-  todo()
-
-proc build_dep_tree(self: Package) =
-  var root = DependencyRoot()
-  root.package = self
-  self.build_dep_tree(root)
+    path*: Expr
+    repo*: Expr
+    commit*: Expr # applicable if repo is given
 
 proc eval_dep(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExDependency](expr)
-  var name = self.eval(frame, expr.name)
+  var name = self.eval(frame, expr.name).str
   var version = ""
   if expr.version != nil:
     version = self.eval(frame, expr.version).str
-  var pkg = frame.ns["$pkg"]
-  todo()
+  var dep = Dependency(
+    name: name,
+    version: version,
+  )
+  if expr.path != nil:
+    dep.type = "path"
+    dep.path = self.eval(frame, expr.path).str
+
+  var pkg = frame.ns["$pkg"].pkg
+  pkg.dependencies[name] = dep
+  var node = DependencyNode(root: APP.dep_root)
+  dep.build_dep_tree(node)
+
   # Locate app's root dir
 
   # Search dependencies installed for app     (<APP DIR>/packages)
@@ -63,8 +53,8 @@ proc translate_dep(value: Value): Expr =
   )
   if value.gene_data.len > 1:
     e.version = translate(value.gene_data[1])
-  if value.gene_props.has_key("location".to_key):
-    e.location = translate(value.gene_props["location"])
+  if value.gene_props.has_key("path".to_key):
+    e.path = translate(value.gene_props["path"])
   return e
 
 proc init*() =

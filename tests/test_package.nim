@@ -30,8 +30,8 @@ test_interpreter """
   $pkg/.name
 """, "gene"
 
-# test_interpreter """
-#   ($dep "my-lib" "*" ^location "path:example-projects/my-lib")
-#   (import x from "index" of "my-lib")
-#   (x)
-# """, 1
+test_interpreter """
+  ($dep "my-lib" "*" ^path "example-projects/my-lib")
+  (import x from "index" ^pkg "my-lib")
+  (x)
+""", 1

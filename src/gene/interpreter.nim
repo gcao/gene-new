@@ -20,6 +20,30 @@ proc call_fn*(self: VirtualMachine, frame: Frame, target: Value, args: Value): V
 
 #################### Package #####################
 
+proc init_package*(self: Dependency) =
+  if self.package == nil:
+    var package = Package(
+      name: self.name,
+    )
+    if self.type == "path":
+      package.dir = self.path
+    self.package = package
+
+proc build_dep_tree*(self: Dependency, node: DependencyNode) =
+  self.init_package()
+  for _, dep in self.package.dependencies:
+    var child = DependencyNode(root: node.root)
+    node.children[dep.name] = child
+    dep.build_dep_tree(child)
+
+proc build_dep_tree*(self: Package): DependencyRoot =
+  result = DependencyRoot()
+  result.package = self
+  for _, dep in self.dependencies:
+    var node = DependencyNode(root: result)
+    result.children[dep.name] = node
+    dep.build_dep_tree(node)
+
 proc parse_deps(deps: seq[Value]): Table[string, Package] =
   for dep in deps:
     var name = dep.gene_data[0].str
@@ -90,6 +114,7 @@ proc prepare*(self: VirtualMachine, code: string): Value =
 
 proc init_package*(self: VirtualMachine, dir: string) =
   self.app.pkg = new_package(dir)
+  self.app.dep_root = self.app.pkg.build_dep_tree()
 
 proc eval_prepare*(self: VirtualMachine): Frame =
   var module = new_module()
@@ -465,6 +490,7 @@ import "./features/eval" as eval_feature; eval_feature.init()
 import "./features/parse" as parse_feature; parse_feature.init()
 import "./features/pattern_matching" as pattern_matching_feature; pattern_matching_feature.init()
 import "./features/module" as module_feature; module_feature.init()
+import "./features/package" as package_feature; package_feature.init()
 import "./features/include" as include_feature; include_feature.init()
 import "./features/template" as template_feature; template_feature.init()
 import "./features/print" as print_feature; print_feature.init()
