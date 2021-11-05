@@ -80,13 +80,20 @@ type
     name*: string
     ns*: Namespace
     props*: Table[string, Value]  # Additional properties
+    reloadable*: bool
 
   Namespace* = ref object
+    module*: Module
     parent*: Namespace
+    is_root*: bool           # is the root namespace of a module
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
     members*: Table[MapKey, Value]
     member_missing*: Value
+
+  Reloadable* = ref object
+    module*: Module
+    path*: seq[MapKey]
 
   Scope* = ref object
     parent*: Scope
@@ -223,6 +230,7 @@ type
     VkPackage
     VkModule
     VkNamespace
+    VkReloadable
     VkFunction
     VkMacro
     VkBlock
@@ -320,6 +328,8 @@ type
       app*: Application
     of VkNamespace:
       ns*: Namespace
+    of VkReloadable:
+      reloadable*: Reloadable
     of VkFunction:
       fn*: Function
     of VkMacro:
@@ -372,7 +382,7 @@ type
 
   VirtualMachine* = ref object
     app*: Application
-    modules*: OrderedTable[MapKey, Namespace]
+    modules*: OrderedTable[MapKey, Module]
     repl_on_error*: bool
 
   FrameKind* = enum
@@ -706,6 +716,8 @@ proc new_module*(name: string): Module =
     name: name,
     ns: new_namespace(VM.app.ns),
   )
+  result.ns.module = result
+  result.ns.is_root = true
 
 proc new_module*(): Module =
   result = new_module("<unknown>")
@@ -715,6 +727,8 @@ proc new_module*(ns: Namespace, name: string): Module =
     name: name,
     ns: new_namespace(ns),
   )
+  result.ns.module = result
+  result.ns.is_root = true
 
 proc new_module*(ns: Namespace): Module =
   result = new_module(ns, "<unknown>")
@@ -727,8 +741,10 @@ proc new_namespace*(): Namespace =
     members: Table[MapKey, Value](),
   )
 
+# assume anonymous namespace is the root, good idea?
 proc new_namespace*(parent: Namespace): Namespace =
   return Namespace(
+    module: parent.module,
     parent: parent,
     name: "<root>",
     members: Table[MapKey, Value](),
@@ -741,17 +757,22 @@ proc new_namespace*(name: string): Namespace =
   )
 
 proc new_namespace*(parent: Namespace, name: string): Namespace =
-  return Namespace(
+  result = Namespace(
     parent: parent,
     name: name,
     members: Table[MapKey, Value](),
   )
+  if parent != nil:
+    result.module = parent.module
 
 proc root*(self: Namespace): Namespace =
-  if self.name == "<root>":
+  if self.is_root:
     return self
   else:
     return self.parent.root
+
+proc is_reloadable*(self: Namespace): bool =
+  self.module != nil and self.module.reloadable
 
 proc has_key*(self: Namespace, key: MapKey): bool {.inline.} =
   return self.members.has_key(key)
@@ -1120,6 +1141,23 @@ proc `==`*(this, that: Time): bool =
     this.second == that.second and
     this.timezone == that.timezone
 
+#################### Reloadable ##############
+
+proc resolve*(self: Namespace, path: seq[MapKey], pos: int): Value =
+  var key = path[pos]
+  var val = self[key]
+  if pos < path.len - 1:
+    case val.kind:
+    of VkNamespace:
+      return val.ns.resolve(path, pos + 1)
+    else:
+      todo("resolve " & $val.kind)
+  else:
+    return val
+
+proc resolve*(self: Reloadable): Value =
+  self.module.ns.resolve(self.path, 0)
+
 #################### Value ###################
 
 proc symbol_or_str*(self: Value): string =
@@ -1160,10 +1198,18 @@ proc table_equals*(this, that: OrderedTable): bool =
   return this.len == 0 and that.len == 0 or
     this.len > 0 and that.len > 0 and this == that
 
+proc resolve*(self: Value): Value {.inline.} =
+  if not self.is_nil and self.kind == VkReloadable:
+    return self.reloadable.resolve()
+  else:
+    return self
+
 proc `==`*(this, that: Value): bool =
+  var this = this.resolve()
+  var that = that.resolve()
+
   if this.is_nil:
-    if that.is_nil: return true
-    return false
+    return that.is_nil
   elif that.is_nil or this.kind != that.kind:
     return false
   else:
@@ -1534,6 +1580,12 @@ proc new_mixin*(name: string): Mixin =
   return Mixin(
     name: name,
     ns: new_namespace(nil, name),
+  )
+
+proc new_gene_reloadable*(module: Module, path: seq[MapKey]): Value =
+  return Value(
+    kind: VkReloadable,
+    reloadable: Reloadable(module: module, path: path),
   )
 
 # Do not allow auto conversion between CatchableError and Value

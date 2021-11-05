@@ -64,8 +64,8 @@ type
     data*: seq[Expr]
 
 proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var first = self.eval(frame, cast[ExBinOp](expr).op1)
-  var second = self.eval(frame, cast[ExBinOp](expr).op2)
+  var first = self.eval(frame, cast[ExBinOp](expr).op1).resolve()
+  var second = self.eval(frame, cast[ExBinOp](expr).op2).resolve()
   case cast[ExBinOp](expr).op:
   of BinAdd:
     result = new_gene_int(first.int + second.int)
