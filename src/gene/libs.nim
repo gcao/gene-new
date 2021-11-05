@@ -469,6 +469,12 @@ proc init*() =
     SelectorClass.class.parent = ObjectClass.class
     # SelectorClass.ns["descendants"] = ...
 
+    PackageClass = Value(kind: VkClass, class: new_class("Package"))
+    PackageClass.class.parent = ObjectClass.class
+    PackageClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"package_name".} =
+      self.pkg.name
+    GENE_NS.ns["Package"] = PackageClass
+
     GENE_NS.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
     GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
 

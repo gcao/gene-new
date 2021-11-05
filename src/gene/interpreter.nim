@@ -1,4 +1,4 @@
-import strutils, tables, strutils, os, sets
+import strutils, tables, strutils, os, pathnorm, sets
 import asyncdispatch
 # import macros
 
@@ -18,13 +18,6 @@ let GENE_RUNTIME* = Runtime(
 
 proc call_fn*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 
-#################### Application #################
-
-proc new_app*(): Application =
-  result = Application()
-  var global = new_namespace("global")
-  result.ns = global
-
 #################### Package #####################
 
 proc parse_deps(deps: seq[Value]): Table[string, Package] =
@@ -38,6 +31,7 @@ proc parse_deps(deps: seq[Value]): Table[string, Package] =
 
 proc new_package*(dir: string): Package =
   result = Package()
+  var dir = normalize_path(dir)
   var d = absolute_path(dir)
   while d.len > 1:  # not "/"
     var package_file = d & "/package.gene"
@@ -55,7 +49,7 @@ proc new_package*(dir: string): Package =
 
   result.adhoc = true
   result.ns = new_namespace(VM.app.ns, "package:<adhoc>")
-  result.dir = d
+  result.dir = dir
   # result.ns[CUR_PKG_KEY] = result
 
 #################### VM ##########################
@@ -66,20 +60,10 @@ proc new_vm*(app: Application): VirtualMachine =
   )
 
 proc init_app_and_vm*() =
-  var app = new_app()
-  VM = new_vm(app)
-  GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
+  VM = new_vm(APP)
   GLOBAL_NS.ns[STDIN_KEY]  = stdin
   GLOBAL_NS.ns[STDOUT_KEY] = stdout
   GLOBAL_NS.ns[STDERR_KEY] = stderr
-
-  GENE_NS = Value(kind: VkNamespace, ns: new_namespace("gene"))
-  GENE_NATIVE_NS = Value(kind: VkNamespace, ns: new_namespace("native"))
-  GENE_NS.ns[GENE_NATIVE_NS.ns.name] = GENE_NATIVE_NS
-  GLOBAL_NS.ns[GENE_NS.ns.name] = GENE_NS
-
-  GENEX_NS = Value(kind: VkNamespace, ns: new_namespace("genex"))
-  GLOBAL_NS.ns[GENEX_NS.ns.name] = GENEX_NS
 
   for callback in VmCreatedCallbacks:
     callback(VM)

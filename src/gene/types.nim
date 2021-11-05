@@ -318,6 +318,8 @@ type
       gene_processor*: GeneProcessor
     of VkApplication:
       app*: Application
+    of VkPackage:
+      pkg*: Package
     of VkNamespace:
       ns*: Namespace
     of VkFunction:
@@ -545,6 +547,18 @@ type
   # Types related to command line argument parsing
   ArgumentError* = object of Exception
 
+proc new_gene_int*(val: BiggestInt): Value
+proc new_gene_string*(s: string): Value {.gcsafe.}
+proc new_gene_string_move*(s: string): Value
+proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
+proc new_namespace*(): Namespace
+proc new_namespace*(parent: Namespace): Namespace
+proc new_namespace*(name: string): Namespace
+proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.}
+proc new_match_matcher*(): RootMatcher
+proc new_arg_matcher*(): RootMatcher
+proc hint*(self: RootMatcher): MatchingHint
+
 let
   Nil*   = Value(kind: VkNil)
   True*  = Value(kind: VkBool, bool: true)
@@ -575,10 +589,16 @@ for i in 0..110:
 
 var VM*: VirtualMachine   # The current virtual machine
 
-var GLOBAL_NS*     : Value
-var GENE_NS*       : Value
-var GENE_NATIVE_NS*: Value
-var GENEX_NS*      : Value
+var APP* = Application()
+APP.ns = new_namespace("global")
+var GLOBAL_NS* = Value(kind: VkNamespace, ns: APP.ns)
+
+var GENE_NS* = Value(kind: VkNamespace, ns: new_namespace("gene"))
+GLOBAL_NS.ns[GENE_NS.ns.name] = GENE_NS
+var GENE_NATIVE_NS* = Value(kind: VkNamespace, ns: new_namespace("native"))
+GENE_NS.ns[GENE_NATIVE_NS.ns.name] = GENE_NATIVE_NS
+var GENEX_NS* = Value(kind: VkNamespace, ns: new_namespace("genex"))
+GLOBAL_NS.ns[GENEX_NS.ns.name] = GENEX_NS
 
 var ObjectClass*   : Value
 var ClassClass*    : Value
@@ -607,20 +627,7 @@ var DateClass*     : Value
 var DatetimeClass* : Value
 var TimeClass*     : Value
 var SelectorClass* : Value
-
-#################### Definitions #################
-
-proc new_gene_int*(val: BiggestInt): Value
-proc new_gene_string*(s: string): Value {.gcsafe.}
-proc new_gene_string_move*(s: string): Value
-proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
-proc new_namespace*(): Namespace
-proc new_namespace*(parent: Namespace): Namespace
-proc new_match_matcher*(): RootMatcher
-proc new_arg_matcher*(): RootMatcher
-proc hint*(self: RootMatcher): MatchingHint
-
-##################################################
+var PackageClass*  : Value
 
 proc identity*[T](v: T): T = v
 
@@ -706,6 +713,7 @@ proc new_module*(name: string): Module =
     name: name,
     ns: new_namespace(VM.app.ns),
   )
+  result.ns["$pkg"] = Value(kind: VkPackage, pkg: APP.pkg)
 
 proc new_module*(): Module =
   result = new_module("<unknown>")
@@ -715,6 +723,7 @@ proc new_module*(ns: Namespace, name: string): Module =
     name: name,
     ns: new_namespace(ns),
   )
+  result.ns["$pkg"] = Value(kind: VkPackage, pkg: APP.pkg)
 
 proc new_module*(ns: Namespace): Module =
   result = new_module(ns, "<unknown>")
@@ -1002,8 +1011,8 @@ proc get_class*(val: Value): Class =
   case val.kind:
   # of VkApplication:
   #   return VM.gene_ns.ns[APPLICATION_CLASS_KEY].class
-  # of VkPackage:
-  #   return VM.gene_ns.ns[PACKAGE_CLASS_KEY].class
+  of VkPackage:
+    return PackageClass.class
   of VkInstance:
     return val.instance_class
   of VkCast:
