@@ -1,11 +1,11 @@
-^name "Gene"
+^name "gene"
 ^version "0.1.0"
 ^description "This is the main project of the Gene language."
 ^license "MIT"
 ^author [
   "Guoliang Cao"
 ]
-^main-module "src/main.gene"
+^main-module "gene"
 ^src-dirs [
   "src"
 ]

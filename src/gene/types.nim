@@ -73,7 +73,7 @@ type
     dependencies*: Table[string, Package]
     homepage*: string
     props*: Table[string, Value]  # Additional properties
-    doc*: Document    # content of package.gene
+    doc*: Document        # content of package.gene
 
   Module* = ref object
     pkg*: Package         # Package in which the module belongs, or stdlib if not set

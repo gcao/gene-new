@@ -1,7 +1,13 @@
 ^name "my-app"
 ^version "0.1.0"
+^license "MIT"
+^author [
+  "Guoliang Cao"
+]
+^gene-version "*"
+^main-module "main" # Relative to source dir
 ^deps [
-  (dep "my-lib" ">=0.1.0" ^location "../my-lib")
+  (genex/dep "my-lib" ">=0.1.0" ^location "../my-lib")
   # Same as below
   # (dep
   #   ^name     "my-lib"
@@ -9,3 +15,11 @@
   #   ^location "../my-lib"
   # )
 ]
+^src-dirs [
+  "src"
+]
+^test-dirs [
+  "tests"
+]
+^homepage "https://github.com/gcao/gene-new/example-projects"
+^repository "https://github.com/gcao/gene-new.git" # github:gcao/gene-new
