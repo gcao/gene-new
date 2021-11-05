@@ -61,6 +61,7 @@ type
     ns*: Namespace
     cmd*: string
     args*: seq[string]
+    dependencies*: Table[string, seq[Package]] # Support loading different versions of same package
     props*: Table[string, Value]  # Additional properties
 
   Package* = ref object

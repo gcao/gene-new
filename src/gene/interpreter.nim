@@ -48,6 +48,7 @@ proc new_package*(dir: string): Package =
       d = parent_dir(d)
 
   result.adhoc = true
+  result.name = "<adhoc>"
   result.ns = new_namespace(VM.app.ns, "package:<adhoc>")
   result.dir = dir
   # result.ns[CUR_PKG_KEY] = result
