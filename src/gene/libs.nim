@@ -1,4 +1,4 @@
-import os, osproc, base64, json, tables, sequtils, strutils, times, parsecsv, streams
+import os, osproc, random, base64, json, tables, sequtils, strutils, times, parsecsv, streams, nre
 import httpclient
 import asyncdispatch, asyncfile, asynchttpserver
 
@@ -63,6 +63,9 @@ proc object_to_json(self: Value, args: Value): Value =
 
 proc object_to_s(self: Value, args: Value): Value =
   self.to_s
+
+proc object_to_bool(self: Value, args: Value): Value =
+  self.to_bool
 
 proc class_name(self: Value, args: Value): Value =
   self.class.name
@@ -302,6 +305,12 @@ proc add_failure_callback(self: Value, args: Value): Value =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    GENE_NS.ns["rand"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_rand".} =
+      if args.gene_data.len == 0:
+        return new_gene_float(rand(1.0))
+      else:
+        return rand(args.gene_data[0].int)
+
     GENE_NS.ns["sleep"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep".} =
       sleep(args.gene_data[0].int)
     GENE_NS.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep_async".} =
@@ -319,6 +328,7 @@ proc init*() =
     ObjectClass.def_native_method("class", object_class)
     ObjectClass.def_native_method("to_s", object_to_s)
     ObjectClass.def_native_method("to_json", object_to_json)
+    ObjectClass.def_native_method("to_bool", object_to_bool)
     GENE_NS.ns["Object"] = ObjectClass
     GLOBAL_NS.ns["Object"] = ObjectClass
 
@@ -339,9 +349,13 @@ proc init*() =
     NamespaceClass.class.parent = ObjectClass.class
     NamespaceClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =
       self.ns.name
-
     GENE_NS.ns["Namespace"] = NamespaceClass
     GLOBAL_NS.ns["Namespace"] = NamespaceClass
+
+    BoolClass = Value(kind: VkClass, class: new_class("Bool"))
+    BoolClass.class.parent = ObjectClass.class
+    GENE_NS.ns["Bool"] = BoolClass
+    GLOBAL_NS.ns["Bool"] = BoolClass
 
     NilClass = Value(kind: VkClass, class: new_class("Nil"))
     NilClass.class.parent = ObjectClass.class
@@ -357,6 +371,8 @@ proc init*() =
 
     StringClass = Value(kind: VkClass, class: new_class("String"))
     StringClass.class.parent = ObjectClass.class
+    GENE_NS.ns["String"] = StringClass
+    GLOBAL_NS.ns["String"] = StringClass
     StringClass.def_native_method("size", string_size)
     StringClass.def_native_method("to_i", string_to_i)
     StringClass.def_native_method("append", string_append)
@@ -371,8 +387,16 @@ proc init*() =
     StringClass.def_native_method("ends_with", string_ends_with)
     StringClass.def_native_method("to_uppercase", string_to_uppercase)
     StringClass.def_native_method("to_lowercase", string_to_lowercase)
-    GENE_NS.ns["String"] = StringClass
-    GLOBAL_NS.ns["String"] = StringClass
+    StringClass.def_native_method "replace", proc(self: Value, args: Value): Value {.name:"string_replace".} =
+      var first = args.gene_data[0]
+      var second = args.gene_data[1]
+      case first.kind:
+      of VkString:
+        return self.str.replace(first.str, second.str)
+      of VkRegex:
+        return self.str.replace(first.regex, second.str)
+      else:
+        todo("string_replace " & $first.kind)
 
     SymbolClass = Value(kind: VkClass, class: new_class("Symbol"))
     SymbolClass.class.parent = ObjectClass.class
@@ -515,10 +539,32 @@ proc init*() =
     )
 
     ($with gene/Array
+      (method each block
+        (for item in self
+          (block item)
+        )
+      )
+
       (method map block
         (var result [])
         (for item in self
           (result .add (block item))
+        )
+        result
+      )
+
+      (method find block
+        (for item in self
+          (if (block item)
+            (return item)
+          )
+        )
+      )
+
+      (method select block
+        (var result [])
+        (for item in self
+          (if (block item) (result .add item))
         )
         result
       )

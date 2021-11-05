@@ -37,6 +37,17 @@ test_interpreter """
 """, 200
 
 test_interpreter """
+  (case "b"
+  when #/a/
+    100
+  when #/b/
+    200
+  else
+    300
+  )
+""", 200
+
+test_interpreter """
   (case 2
   when 1
     100

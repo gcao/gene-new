@@ -112,3 +112,12 @@ test_interpreter """
   (var c (new C))
   ($with c /.test)
 """, 1
+
+test_interpreter """
+  (class C
+    (method test _
+      (@p = 1)
+    )
+  )
+  ((new C).test)
+""", 1

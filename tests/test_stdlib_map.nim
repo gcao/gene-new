@@ -12,7 +12,7 @@ test_interpreter """
 
 # test_interpreter """
 #   ({^a 1 ^b 2} .values)
-# """, @[new_gene_int(1), new_gene_int(2)]
+# """, @[1, 2]
 
 # test_interpreter """
 #   (var sum 0)
@@ -26,4 +26,4 @@ test_interpreter """
 #   ({^a 1 ^b 2} .map
 #     ([_ v] -> v)
 #   )
-# """, @[new_gene_int(1), new_gene_int(2)]
+# """, @[1, 2]

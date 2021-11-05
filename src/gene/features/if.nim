@@ -14,6 +14,9 @@ type
   ExNot* = ref object of Expr
     cond*: Expr
 
+  ExBool* = ref object of Expr
+    data*: Expr
+
   IfState = enum
     IsIf, IsIfCond, IsIfLogic,
     IsElif, IsElifCond, IsElifLogic,
@@ -147,7 +150,7 @@ proc translate_if(value: Value): Expr =
   result = r
 
 proc eval_not(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  new_gene_bool(not self.eval(frame, cast[ExNot](expr).cond).to_bool)
+  not self.eval(frame, cast[ExNot](expr).cond).to_bool
 
 proc translate_not(value: Value): Expr =
   ExNot(
@@ -155,6 +158,17 @@ proc translate_not(value: Value): Expr =
     cond: translate(value.gene_data[0]),
   )
 
+proc eval_bool(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  self.eval(frame, cast[ExBool](expr).data).to_bool
+
+proc translate_bool(value: Value): Expr =
+  ExBool(
+    evaluator: eval_bool,
+    data: translate(value.gene_data[0]),
+  )
+
 proc init*() =
   GeneTranslators["if"] = translate_if
   GeneTranslators["not"] = translate_not
+  GeneTranslators["!"] = translate_not
+  GeneTranslators["!!"] = translate_bool

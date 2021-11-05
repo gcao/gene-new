@@ -13,6 +13,8 @@ import ./helpers
 # * Mixin: all stuff in mixin are copied to the target class/mixin
 # * Properties: just a shortcut for defining .prop/.prop= methods
 
+# TODO: test remove_method
+
 test_interpreter "(class A)", proc(r: Value) =
   check r.class.name == "A"
 
@@ -33,6 +35,15 @@ test_interpreter """
   (class A
     (method test _
       1
+    )
+  )
+  ((new A).test)
+""", 1
+
+test_interpreter """
+  (class A
+    (method test _
+      (@a ||= 1)
     )
   )
   ((new A).test)
@@ -132,6 +143,58 @@ test_interpreter """
   )
   ((new A).test)
 """, 1
+
+test_interpreter """
+  (class A
+    (method new @name
+    )
+  )
+  ((new A 1).@name)
+""", 1
+
+test_interpreter """
+  (class A
+    (method test @name
+    )
+  )
+  (var a (new A))
+  (a .test 1)
+  a/@name
+""", 1
+
+test_interpreter """
+  (class A
+    (method new [@name = 1]
+    )
+  )
+  ((new A).@name)
+""", 1
+
+# test_interpreter """
+#   (class A
+#     (method new ^@name
+#     )
+#   )
+#   ((new A ^name "x").@name)
+# """, "x"
+
+# test_interpreter """
+#   (class A
+#     (method new ^@name ^@...
+#       # All properties except @name are added to the instance
+#     )
+#   )
+#   ((new A ^prop "x").@prop)
+# """, "x"
+
+# test_interpreter """
+#   (class A
+#     (method new ^@name ^@x...
+#       # All properties except @name are added to the instance as @x
+#     )
+#   )
+#   (((new A ^prop 1).@x).@prop)
+# """, 1
 
 test_interpreter """
   (class A

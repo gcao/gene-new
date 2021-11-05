@@ -26,23 +26,16 @@ proc quit_with*(errorcode: int, newline = false) =
   echo "Good bye!"
   quit(errorcode)
 
-proc init_vm() =
-  init_app_and_vm()
-  # VM.init_extras()
-  # VM.load_core_module()
-  # VM.load_gene_module()
-  # VM.load_genex_module()
-
 proc eval_includes(vm: VirtualMachine, frame: Frame, options: Options) =
-  if options.include.len > 0:
-    for file in options.include:
+  if options.includes.len > 0:
+    for file in options.includes:
       discard vm.eval(frame, read_file(file))
 
 proc main() =
   var options = parse_options()
   setup_logger(options.debugging)
 
-  init_vm()
+  init_app_and_vm()
   VM.repl_on_error = options.repl_on_error
   if options.repl:
     var frame = VM.eval_prepare()

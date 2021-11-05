@@ -14,4 +14,4 @@ test_interpreter """
 
 test_interpreter """
   (:(1 ^a 2 3 4) .data)
-""", @[new_gene_int(3), new_gene_int(4)]
+""", @[3, 4]

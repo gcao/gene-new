@@ -1,6 +1,6 @@
 # To run these tests, simply execute `nimble test` or `nim c -r tests/test_parser.nim`
 
-import unittest, options, tables, unicode, times, re
+import unittest, options, tables, unicode, times, nre
 
 import gene/types
 
@@ -48,15 +48,24 @@ test_parser "+foo+", new_gene_symbol("+foo+")
 
 test_parser "#/b/", proc(r: Value) =
   check r.kind == VkRegex
-  check "ab".find(r.regex) == 1
-  check "AB".find(r.regex) == -1
+  check "ab".find(r.regex).get().captures[-1] == "b"
+  check "AB".find(r.regex).is_none()
+
+test_parser "#/(a|b)/", proc(r: Value) =
+  check r.kind == VkRegex
+  check "ab".find(r.regex).get().captures[-1] == "a"
+  check "AB".find(r.regex).is_none()
+
+test_parser "#/a\\/b/", proc(r: Value) =
+  check r.kind == VkRegex
+  check "a/b".find(r.regex).get().captures[-1] == "a/b"
 
 # i: ignore case
 # m: multi-line mode, ^ and $ matches beginning and end of each line
 test_parser "#/b/i", proc(r: Value) =
   check r.kind == VkRegex
-  check "ab".find(r.regex) == 1
-  check "AB".find(r.regex) == 1
+  check "ab".find(r.regex).get().captures[-1] == "b"
+  check "AB".find(r.regex).get().captures[-1] == "B"
 
 test_parser "2020-12-02", new_gene_date(2020, 12, 02)
 test_parser "2020-12-02T10:11:12Z",
@@ -92,7 +101,7 @@ test_parser "(())", proc(r: Value) =
 
 test_parser "(1 2 3)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_data == @[new_gene_int(2), new_gene_int(3)]
+  check r.gene_data == @[2, 3]
 
 test_parser """
   (_ 1 "test")
@@ -103,22 +112,22 @@ test_parser """
 test_parser "(1 ^a 2 3 4)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": new_gene_int(2)}.toOrderedTable
-  check r.gene_data == @[new_gene_int(3), new_gene_int(4)]
+  check r.gene_data == @[3, 4]
 
 test_parser "(1 2 ^a 3 4)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": new_gene_int(3)}.toOrderedTable
-  check r.gene_data == @[new_gene_int(2), new_gene_int(4)]
+  check r.gene_data == @[2, 4]
 
 test_parser "(1 ^^a 2 3)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": True}.toOrderedTable
-  check r.gene_data == @[new_gene_int(2), new_gene_int(3)]
+  check r.gene_data == @[2, 3]
 
 test_parser "(1 ^!a 2 3)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": False}.toOrderedTable
-  check r.gene_data == @[new_gene_int(2), new_gene_int(3)]
+  check r.gene_data == @[2, 3]
 
 test_parser "{^^x ^!y ^^z}", proc(r: Value) =
   check r.kind == VkMap
@@ -162,6 +171,47 @@ test_parser_error """
 
 test_parser_error "{^ratio 1/-2}"
 
+# Support decorator from the parser. It can appear anywhere except property names.
+# Pros:
+#   Easier to write
+# Cons:
+#   Harder to read ?!
+#
+# #@f a       = (f a)
+# (#@f a)     = ((f a))
+# (#@f #@g a) = ((f (g a)))
+# #@(f a) b   = (((f a) b))
+# {^p #@f a}  = {^p (f a)}
+
+test_parser """
+  #@f a
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type.symbol == "f"
+  check r.gene_data[0].symbol == "a"
+
+test_parser """
+  #@f #@g a
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type.symbol == "f"
+  check r.gene_data[0].kind == VkGene
+  check r.gene_data[0].gene_type.symbol == "g"
+  check r.gene_data[0].gene_data[0].symbol == "a"
+
+# test_parser """
+#   #*f
+# """, proc(r: Value) =
+#   check r.kind == VkGene
+#   check r.gene_type.symbol == "f"
+
+test_parser """
+  {^p #@f a}
+""", proc(r: Value) =
+  check r.map["p"].kind == VkGene
+  check r.map["p"].gene_type.symbol == "f"
+  check r.map["p"].gene_data[0].symbol == "a"
+
 test_read_all """
   1 # comment
   2
@@ -186,7 +236,7 @@ test_parser """
   [
     1 # test
   ]
-""", @[new_gene_int(1)]
+""", @[1]
 
 test_parser """
   #
@@ -244,7 +294,7 @@ test_parse_document """
   1 2
 """, proc(r: Document) =
   check r.props["name"] == "Test document"
-  check r.data == @[new_gene_int(1), new_gene_int(2)]
+  check r.data == @[1, 2]
 
 test_parser "\"\"\"a\"\"\"", "a"
 # Trim whitespaces and new line after opening """

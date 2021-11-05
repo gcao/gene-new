@@ -14,8 +14,9 @@ proc block_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var
   var expr = cast[ExArguments](expr)
   var scope = new_scope()
   scope.set_parent(target.block.parent_scope, target.block.parent_scope_max)
-  var new_frame = Frame(ns: frame.ns, scope: scope)
+  var new_frame = Frame(ns: target.block.ns, scope: scope)
   new_frame.parent = frame
+  new_frame.self = target.block.frame.self
 
   handle_args(self, frame, new_frame, target.block.matcher, expr)
 

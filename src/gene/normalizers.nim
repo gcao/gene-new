@@ -3,14 +3,9 @@ import strutils, tables
 import ./map_key
 import ./types
 
-const BINARY_OPS* = [
-  "+", "-", "*", "/", "**",
+const ASSIGNMENT_OPS = [
   "=", "+=", "-=", "*=", "/=", "**=",
-  "==", "!=", "<", "<=", ">", ">=",
-  "&&", "||", # TODO: xor
   "&&=", "||=",
-  "&",  "|",  # TODO: xor for bit operation
-  "&=", "|=",
 ]
 
 type
@@ -76,17 +71,28 @@ Normalizers.add proc(self: Value): bool =
       self.gene_data.insert(new_gene_symbol("self"), 0)
       return true
 
+proc handle_assignment_shortcuts(self: seq[Value]): Value =
+  if self.len mod 2 == 0:
+    raise new_gene_exception("Invalid right value for assignment " & $self)
+  if self.len == 1:
+    return self[0]
+  if self[1].kind == VkSymbol and self[1].symbol in ASSIGNMENT_OPS:
+    result = new_gene_gene(self[1])
+    result.gene_data.add(self[0])
+    result.gene_data.add(handle_assignment_shortcuts(self[2..^1]))
+  else:
+    raise new_gene_exception("Invalid right value for assignment " & $self)
+
 Normalizers.add proc(self: Value): bool =
   if self.gene_data.len < 1:
     return false
   var first = self.gene_data[0]
-  if first.kind != VkSymbol or first.symbol notin BINARY_OPS:
-    return false
-
-  self.gene_data.delete 0
-  self.gene_data.insert self.gene_type, 0
-  self.gene_type = first
-  return true
+  if first.kind == VkSymbol and first.symbol in ASSIGNMENT_OPS:
+    self.gene_data.delete 0
+    self.gene_data = @[handle_assignment_shortcuts(self.gene_data)]
+    self.gene_data.insert self.gene_type, 0
+    self.gene_type = first
+    return true
 
 Normalizers.add proc(self: Value): bool =
   if self.gene_data.len < 1:

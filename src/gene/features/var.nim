@@ -15,7 +15,8 @@ type
 proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExVar](expr)
   if e.container == nil:
-    frame.scope.def_member(e.name, self.eval(frame, e.value))
+    result = self.eval(frame, e.value)
+    frame.scope.def_member(e.name, result)
   else:
     var container = self.eval(frame, e.container)
     var ns: Namespace
@@ -29,7 +30,8 @@ proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     else:
       todo("eval_var " & $container.kind)
 
-    ns[e.name] = self.eval(frame, e.value)
+    result = self.eval(frame, e.value)
+    ns[e.name] = result
 
 proc translate_var(value: Value): Expr =
   var name = value.gene_data[0]

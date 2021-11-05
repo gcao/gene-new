@@ -40,6 +40,7 @@ proc eval_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr):
   result.fn.ns = frame.ns
   result.fn.parent_scope = frame.scope
   result.fn.parent_scope_max = frame.scope.max
+  frame.ns.member_missing = result
 
 proc to_function(node: Value): Function =
   var name: string

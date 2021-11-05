@@ -5,13 +5,12 @@ import ../types
 import ../exprs
 import ../normalizers
 import ../translators
+import ./core
+import ./arithmetic
+import ./regex
 import ./selector
 import ./native
-
-type
-  ExStrings* = ref object of Expr
-    first*: string
-    rest*: seq[Expr]
+import ./range
 
 proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
@@ -73,23 +72,6 @@ proc default_translator(value: Value): Expr =
     args: value,
   )
 
-proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExStrings](expr)
-  var s = ""
-  s &= expr.first
-  for item in expr.rest.mitems:
-    s &= self.eval(frame, item).to_s
-  return s
-
-proc translate_string(value: Value): Expr =
-  var e = ExStrings(
-    evaluator: eval_string,
-    first: value.gene_type.str,
-  )
-  for item in value.gene_data:
-    e.rest.add(translate(item))
-  return e
-
 proc translate_gene(value: Value): Expr =
   # normalize is inefficient.
   if value.gene_type.kind == VkSymbol and value.gene_type.symbol.starts_with(".@"):
@@ -104,9 +86,24 @@ proc translate_gene(value: Value): Expr =
     var first = value.gene_data[0]
     case first.kind:
     of VkSymbol:
-      # (@p = 1)
-      if first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"):
+      if COMPARISON_OPS.contains(first.symbol):
+        value.gene_data.insert(value.gene_type)
+        value.gene_type = nil
+        return translate_comparisons(value.gene_data)
+      elif LOGIC_OPS.contains(first.symbol):
+        value.gene_data.insert(value.gene_type)
+        value.gene_type = nil
+        return translate_logic(value.gene_data)
+      elif REGEX_OPS.contains(first.symbol):
+        return translate_match(value)
+      elif arithmetic.BINARY_OPS.contains(first.symbol):
+        value.gene_data.insert(value.gene_type)
+        value.gene_type = nil
+        return translate_arithmetic(value.gene_data)
+      elif first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"): # (@p = 1)
         return translate_prop_assignment(value)
+      elif first.symbol == "..":
+        return new_ex_range(translate(`type`), translate(value.gene_data[1]))
       elif first.symbol.startsWith(".@"):
         if first.symbol.len == 2:
           return translate_invoke_selector(value)

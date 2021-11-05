@@ -61,6 +61,27 @@ test_interpreter """
   (f (a -> a))
 """, 1
 
+test_interpreter """
+  (fn f block
+    (block)
+  )
+  (class A
+    (method test _
+      (f (-> /.class/.name))
+    )
+  )
+  ((new A) .test)
+""", "A"
+
+# test_interpreter """
+#   (fn f _
+#     (var b (-> (return 1)))
+#     (b)
+#     2
+#   )
+#   (f)
+# """, 1
+
 # test_interpreter """
 #   (fn f b
 #     (b 1)
@@ -82,4 +103,4 @@ test_interpreter """
 #   )
 #   (g 2)
 # """, proc(r: Value) =
-#   check r.gene.data == @[new_gene_int(2)]
+#   check r.gene.data == @[2]

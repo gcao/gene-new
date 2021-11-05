@@ -5,6 +5,7 @@ import ../map_key
 import ../types
 import ../exprs
 import ../translators
+import ../interpreter
 import ./oop
 import ./selector
 
@@ -35,16 +36,60 @@ proc eval_my_member(self: VirtualMachine, frame: Frame, target: Value, expr: var
   else:
     expr.evaluator = eval_symbol_scope
 
+proc call_member_missing(self: VirtualMachine, frame: Frame, obj: Value, target: Value, args: Value, name: string): Value =
+  var fn_scope = new_scope()
+  fn_scope.def_member("$member_name".to_key, name)
+  var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
+  new_frame.parent = frame
+  new_frame.self = obj
+
+  self.process_args(new_frame, target.fn.matcher, args)
+
+  if target.fn.body_compiled == nil:
+    target.fn.body_compiled = translate(target.fn.body)
+
+  try:
+    result = self.eval(new_frame, target.fn.body_compiled)
+  except Return as r:
+    # return's frame is the same as new_frame(current function's frame)
+    if r.frame == new_frame:
+      result = r.val
+    else:
+      raise
+  except CatchableError as e:
+    if self.repl_on_error:
+      result = repl_on_error(self, frame, e)
+      discard
+    else:
+      raise
+
+proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Value =
+  var ns: Namespace
+  case self.kind:
+  of VkNamespace:
+    ns = self.ns
+  of VkClass:
+    ns = self.class.ns
+  of VkMixin:
+    ns = self.mixin.ns
+  else:
+    todo("get_member " & $self.kind)
+
+  if ns.members.has_key(name):
+    return ns.members[name]
+  elif ns.member_missing != nil:
+    var args = new_gene_gene()
+    args.gene_data.add(name.to_s)
+    return vm.call_member_missing(frame, self, ns.member_missing, args, name.to_s)
+  else:
+    raise new_exception(NotDefinedException, name.to_s & " is not defined")
+
 proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var v = self.eval(frame, cast[ExMember](expr).container)
   var key = cast[ExMember](expr).name
   case v.kind:
-  of VkNamespace:
-    return v.ns[key]
-  of VkClass:
-    return v.class.ns[key]
-  of VkMixin:
-    return v.mixin.ns[key]
+  of VkNamespace, VkClass, VkMixin:
+    return v.get_member(key, self, frame)
   of VkEnum:
     return new_gene_enum_member(v.enum.members[key.to_s])
   else:

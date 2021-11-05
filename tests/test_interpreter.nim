@@ -57,6 +57,10 @@ test_interpreter "(range 0 100)", proc(r: Value) =
   check r.range.start == 0
   check r.range.end == 100
 
+test_interpreter "(0 .. 100)", proc(r: Value) =
+  check r.range.start == 0
+  check r.range.end == 100
+
 test_interpreter "(1 + 2)", 3
 test_interpreter "(1 - 2)", -1
 
@@ -71,6 +75,18 @@ test_interpreter """
   (i -= 2)
   i
 """, 1
+
+test_interpreter """
+  (var i 1)
+""", 1
+
+# test_interpreter """
+#   (var i 1 nil)
+# """, nil
+
+# test_interpreter """
+#   (var i 1 2)
+# """, 2
 
 test_interpreter "(1 == 1)", true
 test_interpreter "(1 == 2)", false
@@ -117,6 +133,7 @@ test_interpreter """
   check r.gene_data[0] == 2
 
 test_interpreter "(if true 1)", 1
+test_interpreter "(if true then 1)", 1
 test_interpreter "(if not false 1)", 1
 test_interpreter "(if false 1 else 2)", 2
 test_interpreter """
@@ -136,6 +153,11 @@ test_interpreter """
 """, 1
 
 test_interpreter "(do 1 2)", 2
+
+test_interpreter """
+  (void 1 2)
+""", proc(r: Value) =
+  check r == nil
 
 test_interpreter """
   ($with 1
@@ -229,11 +251,11 @@ test_interpreter """
 test_interpreter """
   (var a [2 3])
   [1 a... 4]
-""", @[new_gene_int(1), new_gene_int(2), new_gene_int(3), new_gene_int(4)]
+""", @[1, 2, 3, 4]
 
 # test_interpreter """
 #   [1 (... [2 3]) 4]
-# """, @[new_gene_int(1), new_gene_int(2), new_gene_int(3), new_gene_int(4)]
+# """, @[1, 2, 3, 4]
 
 # test "Interpreter / eval: native function (test)":
 #   init_all()
@@ -280,4 +302,4 @@ test_interpreter """
 #   [
 #     ($include "tests/fixtures/include_example.gene")
 #   ]
-# """, @[new_gene_int(1), new_gene_int(2), new_gene_int(3)]
+# """, @[1, 2, 3]

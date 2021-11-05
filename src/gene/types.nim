@@ -1,4 +1,4 @@
-import os, re, strutils, tables, unicode, hashes, sets, asyncdispatch, times, strformat
+import os, nre, strutils, tables, unicode, hashes, sets, asyncdispatch, times, strformat
 import macros
 
 import ./map_key
@@ -73,7 +73,7 @@ type
     dependencies*: Table[string, Package]
     homepage*: string
     props*: Table[string, Value]  # Additional properties
-    doc*: Document    # content of package.gene
+    doc*: Document        # content of package.gene
 
   Module* = ref object
     pkg*: Package         # Package in which the module belongs, or stdlib if not set
@@ -89,6 +89,7 @@ type
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
     members*: Table[MapKey, Value]
+    member_missing*: Value
 
   Reloadable* = ref object
     module*: Module
@@ -109,6 +110,7 @@ type
     name*: string
     constructor*: Method
     methods*: Table[MapKey, Method]
+    # method_missing*: Value
     ns*: Namespace # Class can act like a namespace
 
   Mixin* = ref object
@@ -170,6 +172,12 @@ type
     # include_start*: bool # always true
     include_end*: bool # default to false
 
+  RegexFlag* = enum
+    RfIgnoreCase
+    RfMultiLine
+    RfDotAll      # Nim nre: (?s) - . also matches newline (dotall)
+    RfExtended    # Nim nre: (?x) - whitespace and comments (#) are ignored (extended)
+
   # Non-date specific time object
   Time* = ref object
     hour*: int
@@ -194,6 +202,7 @@ type
     VkSymbol
     VkComplexSymbol
     VkRegex
+    VkRegexMatch
     VkRange
     VkSelector
     VkCast
@@ -264,6 +273,10 @@ type
       csymbol*: seq[string]
     of VkRegex:
       regex*: Regex
+      regex_pattern*: string
+      regex_flags: set[RegexFlag]
+    of VkRegexMatch:
+      regex_match*: RegexMatch
     of VkRange:
       range*: Range
     of VkDate, VkDateTime:
@@ -440,10 +453,11 @@ type
     root*: RootMatcher
     kind*: MatcherKind
     name*: MapKey
+    is_prop*: bool
     # match_name*: bool # Match symbol to name - useful for (myif true then ... else ...)
     # default_value*: Value
     default_value_expr*: Expr
-    splat*: bool
+    is_splat*: bool
     min_left*: int # Minimum number of args following this
     children*: seq[Matcher]
     # required*: bool # computed property: true if splat is false and default value is not given
@@ -454,16 +468,15 @@ type
     MatchWrongType # E.g. map is passed but array or gene is expected
 
   # MatchedField* = ref object
-  #   name*: MapKey
-  #   value*: Value # Either value_expr or value must be given
-  #   value_expr*: Expr
+  #   matcher*: Matcher
+  #   value*: Value
 
   MatchResult* = ref object
     message*: string
     kind*: MatchResultKind
     # If success
     # fields*: seq[MatchedField]
-    assign_only*: bool # If true, no new variables will be defined
+    # assign_only*: bool # If true, no new variables will be defined
     # If missing fields
     missing*: seq[MapKey]
     # If wrong type
@@ -517,6 +530,8 @@ type
     case kind*: SelectorMatcherKind
     of SmByIndex:
       index*: int
+    of SmByIndexRange:
+      range*: Range
     of SmByName:
       name*: MapKey
     of SmByType:
@@ -560,6 +575,7 @@ let
   Finally*   = Value(kind: VkSymbol, symbol: "finally")
   Call*      = Value(kind: VkSymbol, symbol: "call")
   Do*        = Value(kind: VkSymbol, symbol: "do")
+  Equals*    = Value(kind: VkSymbol, symbol: "=")
 
 var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
 
@@ -994,8 +1010,8 @@ proc get_method*(self: Class, name: MapKey): Method =
     return self.methods[name]
   elif self.parent != nil:
     return self.parent.get_method(name)
-  else:
-    not_allowed("No method available: " & name.to_s)
+  # else:
+  #   not_allowed("No method available: " & name.to_s)
 
 proc get_super_method*(self: Class, name: MapKey): Method =
   if self.parent != nil:
@@ -1438,8 +1454,30 @@ proc new_gene_complex_symbol*(strs: seq[string]): Value =
     csymbol: strs,
   )
 
-proc new_gene_regex*(regex: string, flags: set[RegexFlag] = {reStudy}): Value =
-  return Value(kind: VkRegex, regex: re(regex, flags))
+proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
+  var s = ""
+  for flag in flags:
+    case flag:
+    of RfIgnoreCase:
+      s &= "(?i)"
+    of RfMultiLine:
+      s &= "(?m)"
+    else:
+      todo($flag)
+  s &= regex
+  return Value(
+    kind: VkRegex,
+    regex: re(s),
+    regex_pattern: regex,
+    regex_flags: flags,
+  )
+
+proc new_gene_regex*(regex: string): Value =
+  return Value(
+    kind: VkRegex,
+    regex: re(regex),
+    regex_pattern: regex,
+  )
 
 proc new_gene_range*(start: Value, `end`: Value): Value =
   return Value(
@@ -1594,6 +1632,19 @@ proc is_truthy*(self: Value): bool =
   else:
     return true
 
+# proc is_empty*(self: Value): bool =
+#   case self.kind:
+#   of VkNil:
+#     return true
+#   of VkVector:
+#     return self.vec.len == 0
+#   of VkMap:
+#     return self.map.len == 0
+#   of VkString:
+#     return self.str.len == 0
+#   else:
+#     return false
+
 proc merge*(self: var Value, value: Value) =
   case self.kind:
   of VkGene:
@@ -1704,6 +1755,9 @@ proc gene_to_selector_item*(v: Value): SelectorItem =
         result.matchers.add(SelectorMatcher(kind: SmByType, by_type: item))
       else:
         todo()
+  of VkRange:
+    result = SelectorItem()
+    result.matchers.add(SelectorMatcher(kind: SmByIndexRange, range: v.range))
   else:
     todo($v.kind)
 
@@ -1752,7 +1806,7 @@ proc new_matcher*(root: RootMatcher, kind: MatcherKind): Matcher =
   )
 
 proc required*(self: Matcher): bool =
-  return self.default_value_expr == nil and not self.splat
+  return self.default_value_expr == nil and not self.is_splat
 
 proc hint*(self: RootMatcher): MatchingHint =
   if self.children.len == 0:
@@ -1772,12 +1826,12 @@ proc hint*(self: RootMatcher): MatchingHint =
 
 proc props*(self: seq[Matcher]): HashSet[MapKey] =
   for m in self:
-    if m.kind == MatchProp and not m.splat:
+    if m.kind == MatchProp and not m.is_splat:
       result.incl(m.name)
 
 proc prop_splat*(self: seq[Matcher]): MapKey =
   for m in self:
-    if m.kind == MatchProp and m.splat:
+    if m.kind == MatchProp and m.is_splat:
       return m.name
 
 ##################################################

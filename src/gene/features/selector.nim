@@ -37,14 +37,20 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
       if self.index >= target.vec.len:
         raise NoResult.new
       else:
-        return target.vec[self.index]
+        if self.index < 0:
+          return target.vec[self.index + target.vec.len]
+        else:
+          return target.vec[self.index]
     of VkGene:
       if self.index >= target.gene_data.len:
         raise NoResult.new
       else:
-        return target.gene_data[self.index]
+        if self.index < 0:
+          return target.gene_data[self.index + target.gene_data.len]
+        else:
+          return target.gene_data[self.index]
     else:
-      todo()
+      todo("search_first " & $target.kind)
   of SmByName:
     case target.kind:
     of VkMap:
@@ -93,13 +99,45 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
     of VkGene:
       result.add(target.gene_data[self.index])
     else:
-      todo()
+      todo("search SmByIndex " & $target.kind)
+  of SmByIndexRange:
+    case target.kind:
+    of VkVector:
+      var len = target.vec.len
+      var i = cast[int](self.range.start.int)
+      if i < 0:
+        i += len
+      var `end` = cast[int](self.range.end.int)
+      if `end` < 0:
+        `end` += len
+      while i < len and i <= `end`:
+        if i >= 0:
+          result.add(target.vec[i])
+        i += 1
+    of VkGene:
+      var len = target.gene_data.len
+      var i = cast[int](self.range.start.int)
+      if i < 0:
+        i += len
+      var `end` = cast[int](self.range.end.int)
+      if `end` < 0:
+        `end` += len
+      while i < len and i <= `end`:
+        if i >= 0:
+          result.add(target.gene_data[i])
+        i += 1
+    else:
+      todo("search SmByIndexRange " & $target.kind)
   of SmByName:
     case target.kind:
     of VkMap:
-      result.add(target.map[self.name])
+      if target.map.has_key(self.name):
+        result.add(target.map[self.name])
+    of VkInstance:
+      if target.instance_props.has_key(self.name):
+        result.add(target.instance_props[self.name])
     else:
-      todo()
+      todo("search SmByName " & $target.kind)
   of SmByType:
     case target.kind:
     of VkVector:
@@ -127,7 +165,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
     else:
       result.add(v)
   else:
-    todo($self.kind)
+    todo("search " & $self.kind)
 
 proc search(self: SelectorItem, target: Value, r: SelectorResult) =
   case self.kind:
@@ -175,7 +213,8 @@ proc search*(self: Selector, target: Value): Value =
         result = r.first
         # TODO: invoke callbacks
       else:
-        raise new_exception(SelectorNoResult, "No result is found for the selector.")
+        # raise new_exception(SelectorNoResult, "No result is found for the selector.")
+        result = Nil
     else:
       var r = SelectorResult(mode: SrAll)
       self.search(target, r)
@@ -188,6 +227,7 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
   for m in self.matchers:
     case m.kind:
     of SmByIndex:
+      # TODO: handle negative number
       case target.kind:
       of VkVector:
         if self.is_last:

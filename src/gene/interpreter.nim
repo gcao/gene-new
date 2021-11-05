@@ -47,7 +47,7 @@ proc new_package*(dir: string): Package =
       result.version = doc.props[VERSION_KEY]
       result.ns = new_namespace(VM.app.ns, "package:" & result.name)
       result.dir = d
-      result.dependencies = parse_deps(doc.props[DEPS_KEY].vec)
+      # result.dependencies = parse_deps(doc.props[DEPS_KEY].vec)
       # result.ns[CUR_PKG_KEY] = result
       return result
     else:
@@ -139,6 +139,14 @@ proc run_file*(self: VirtualMachine, file: string): Value =
       raise new_exception(CatchableError, "main is not a function.")
   self.wait_for_futures()
 
+proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
+  echo "An exception was thrown: " & e.msg
+  echo "Opening debug console..."
+  echo "Note: the exception can be accessed as $ex"
+  var ex = error_to_gene(e)
+  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
+  result = repl(self, frame, eval, true)
+
 #################### Parsing #####################
 
 proc parse*(self: var RootMatcher, v: Value)
@@ -170,20 +178,36 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
     if v.symbol[0] == '^':
       var m = new_matcher(self, MatchProp)
       if v.symbol.ends_with("..."):
-        m.name = v.symbol[1..^4].to_key
-        m.splat = true
+        m.is_splat = true
+        if v.symbol[1] == '@':
+          m.name = v.symbol[2..^4].to_key
+          m.is_prop = true
+        else:
+          m.name = v.symbol[1..^4].to_key
       else:
-        m.name = v.symbol[1..^1].to_key
+        if v.symbol[1] == '@':
+          m.name = v.symbol[2..^1].to_key
+          m.is_prop = true
+        else:
+          m.name = v.symbol[1..^1].to_key
       group.add(m)
     else:
       var m = new_matcher(self, MatchData)
       group.add(m)
       if v.symbol != "_":
         if v.symbol.endsWith("..."):
-          m.name = v.symbol[0..^4].to_key
-          m.splat = true
+          m.is_splat = true
+          if v.symbol[0] == '@':
+            m.name = v.symbol[1..^4].to_key
+            m.is_prop = true
+          else:
+            m.name = v.symbol[0..^4].to_key
         else:
-          m.name = v.symbol.to_key
+          if v.symbol[0] == '@':
+            m.name = v.symbol[1..^1].to_key
+            m.is_prop = true
+          else:
+            m.name = v.symbol.to_key
   of VkVector:
     var i = 0
     while i < v.vec.len:
@@ -195,7 +219,7 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
         self.parse(m.children, item)
       else:
         self.parse(group, item)
-        if i < v.vec.len and v.vec[i] == new_gene_symbol("="):
+        if i < v.vec.len and v.vec[i] == Equals:
           i += 1
           var last_matcher = group[^1]
           var value = v.vec[i]
@@ -249,15 +273,15 @@ proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], inp
   for k, v in map:
     if k notin self.props:
       splat[k] = v
-  # r.fields.add(new_matched_field(self.prop_splat, new_gene_map(splat)))
-  frame.scope.def_member(self.prop_splat, new_gene_map(splat))
+  var splat_value = new_gene_map(splat)
+  frame.scope.def_member(self.prop_splat, splat_value)
+  # TODO: handle @a... or ^@a...
 
 proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state: MatchState, r: MatchResult) =
   case self.kind:
   of MatchData:
     var value: Value
-    # var value_expr: Expr
-    if self.splat:
+    if self.is_splat:
       value = new_gene_vec()
       for i in state.data_index..<input.len - self.min_left:
         value.vec.add(input[i])
@@ -274,17 +298,16 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         return
     if self.name != EMPTY_STRING_KEY:
       frame.scope.def_member(self.name, value)
-      # var matched_field = new_matched_field(self.name, value)
-      # matched_field.value_expr = value_expr
-      # r.fields.add(matched_field)
+      if self.is_prop:
+        frame.self.instance_props[self.name] = value
     var child_state = MatchState()
     for child in self.children:
       vm.match(frame, child, value, child_state, r)
     vm.match_prop_splat(frame, self.children, value, r)
+
   of MatchProp:
     var value: Value
-    # var value_expr: Expr
-    if self.splat:
+    if self.is_splat:
       return
     elif input.gene_props.has_key(self.name):
       value = input.gene_props[self.name]
@@ -296,9 +319,9 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         r.missing.add(self.name)
         return
     frame.scope.def_member(self.name, value)
-    # var matched_field = new_matched_field(self.name, value)
-    # matched_field.value_expr = value_expr
-    # r.fields.add(matched_field)
+    if self.is_prop:
+      frame.self.instance_props[self.name] = value
+
   else:
     todo()
 
@@ -309,16 +332,6 @@ proc match*(vm: VirtualMachine, frame: Frame, self: RootMatcher, input: Value): 
   for child in children:
     vm.match(frame, child, input, state, result)
   vm.match_prop_splat(frame, children, input, result)
-
-# macro import_folder(s: string): untyped =
-#   let s = staticExec "find " & s.toStrLit.strVal & " -name '*.nim' -maxdepth 1"
-#   let files = s.splitLines
-#   result = newStmtList()
-#   for file in files:
-#     result.add(parseStmt("import " & file[0..^5] & " as feature"))
-
-# # Below code doesn't work for some reason
-# import_folder "features"
 
 proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
   var match_result = self.match(frame, matcher, args)
@@ -347,7 +360,10 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
       discard self.eval(frame, v)
     for i, v in args_expr.data.mpairs:
       let field = matcher.children[i]
-      new_frame.scope.def_member(field.name, self.eval(frame, v))
+      let value = self.eval(frame, v)
+      new_frame.scope.def_member(field.name, value)
+      if field.is_prop:
+        new_frame.self.instance_props[field.name] = value
   else:
     var args = new_gene_gene()
     for k, v in args_expr.props.mpairs:
@@ -355,14 +371,6 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
     for _, v in args_expr.data.mpairs:
       args.gene_data.add self.eval(frame, v)
     self.process_args(new_frame, matcher, args)
-
-proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
-  echo "An exception was thrown: " & e.msg
-  echo "Opening debug console..."
-  echo "Note: the exception can be accessed as $ex"
-  var ex = error_to_gene(e)
-  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
-  result = repl(self, frame, eval, true)
 
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   case target.kind:
@@ -429,6 +437,16 @@ proc call_fn*(self: VirtualMachine, frame: Frame, target: Value, args: Value): V
   self.process_args(new_frame, target.fn.matcher, args)
   self.call_fn_skip_args(new_frame, target)
 
+# macro import_folder(s: string): untyped =
+#   let s = staticExec "find " & s.toStrLit.strVal & " -name '*.nim' -maxdepth 1"
+#   let files = s.splitLines
+#   result = newStmtList()
+#   for file in files:
+#     result.add(parseStmt("import " & file[0..^5] & " as feature"))
+
+# # Below code doesn't work for some reason
+# import_folder "features"
+
 import "./features/core" as core_feature; core_feature.init()
 import "./features/symbol" as symbol_feature; symbol_feature.init()
 import "./features/array" as array_feature; array_feature.init()
@@ -440,6 +458,7 @@ import "./features/arithmetic" as arithmetic_feature; arithmetic_feature.init()
 import "./features/var" as var_feature; var_feature.init()
 import "./features/assignment" as assignment_feature; assignment_feature.init()
 import "./features/enum" as enum_feature; enum_feature.init()
+import "./features/regex" as regex_feature; regex_feature.init()
 import "./features/exception" as exception_feature; exception_feature.init()
 import "./features/if" as if_feature; if_feature.init()
 import "./features/if_star" as if_star_feature; if_star_feature.init()
@@ -454,6 +473,7 @@ import "./features/loop" as loop_feature; loop_feature.init()
 import "./features/while" as while_feature; while_feature.init()
 import "./features/repeat" as repeat_feature; repeat_feature.init()
 import "./features/for" as for_feature; for_feature.init()
+import "./features/case" as case_feature; case_feature.init()
 import "./features/oop" as oop_feature; oop_feature.init()
 import "./features/cast" as cast_feature; cast_feature.init()
 import "./features/eval" as eval_feature; eval_feature.init()
@@ -461,6 +481,7 @@ import "./features/parse" as parse_feature; parse_feature.init()
 import "./features/pattern_matching" as pattern_matching_feature; pattern_matching_feature.init()
 import "./features/module" as module_feature; module_feature.init()
 import "./features/hot_reload" as hot_reload_feature; hot_reload_feature.init()
+import "./features/include" as include_feature; include_feature.init()
 import "./features/template" as template_feature; template_feature.init()
 import "./features/print" as print_feature; print_feature.init()
 import "./features/repl" as repl_feature; repl_feature.init()

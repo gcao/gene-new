@@ -15,13 +15,15 @@ type
     repl_on_error*: bool
     file*: string
     eval*: string
-    `include`*: seq[string]
+    # snippets are wrapped like (do <snippet>) and can be accessed from anywhere
+    snippets*: seq[string]
+    # `include` is different from `import`.
+    # `include` is like inserting content of one file in another.
+    includes*: seq[string]
     args*: seq[string]
     benchmark*: bool
     print_result*: bool
     filter_result*: bool
-    # `include` is different from `import`.
-    # `include` is like inserting content of one file in another.
     input_mode*: InputMode
     skip_first*: bool
     skip_empty*: bool
@@ -79,8 +81,10 @@ proc parseOptions*(): Options =
       of "eval", "e":
         result.repl = false
         result.eval = value
+      of "snippet", "s":
+        result.snippets.add(value)
       of "include":
-        result.include.add(value)
+        result.includes.add(value)
       of "debug", "d":
         result.debugging = true
       of "benchmark":
