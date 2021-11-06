@@ -8,13 +8,6 @@ type
   ExTest = ref object of Expr
     data: Expr
 
-# proc test_call_gene_fn*(props: OrderedTable[string, GeneValue], data: seq[GeneValue]): GeneValue =
-#   var fn   = data[0]
-#   var args = new_gene_gene(GeneNil)
-#   args.gene.props = data[1].map
-#   args.gene.data  = data[2].vec
-#   VM.call_fn(GeneNil, fn, args)
-
 proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExTest](expr)
   self.eval(frame, expr.data)
