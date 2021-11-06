@@ -19,7 +19,7 @@ type
   Translator* = proc(value: Value): Expr
   Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
 
-  NativeFn* = proc(args: Value): Value
+  NativeFn* = proc(args: Value): Value {.nimcall.}
   NativeMethod* = proc(self: Value, args: Value): Value
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in

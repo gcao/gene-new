@@ -1,5 +1,6 @@
-import strutils, tables
+import strutils, tables, dynlib
 
+import ../dynlib_mapping
 import ../types
 import ../map_key
 import ../translators
@@ -129,18 +130,19 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   # # Set dir to import_pkg's root directory
 
   var `from` = expr.from
-  # if expr.import_native:
-  #   var path = self.eval(frame, `from`).str
-  #   let lib = load_dynlib(dir & path)
-  #   if lib == nil:
-  #     todo()
-  #   else:
-  #     for m in expr.import_matcher.children:
-  #       var v = lib.sym_addr(m.name.to_s)
-  #       if v == nil:
-  #         todo()
-  #       else:
-  #         self.def_member(frame, m.name, new_gene_internal(cast[NativeFn](v)), true)
+  if expr.native:
+    var path = self.eval(frame, `from`).str
+    let lib = load_dynlib(dir & path)
+    if lib == nil:
+      todo("eval_import native: " & dir & path & " is not loaded.")
+    else:
+      for m in expr.matcher.children:
+        var v = lib.sym_addr(m.name.to_s)
+        if v == nil:
+          todo()
+        else:
+          frame.ns[m.name] = Value(kind: VkNativeFn, native_fn: cast[NativeFn](v))
+    return
   # else:
   #   # If "from" is not given, import from parent of root namespace.
   #   if `from` == nil:
@@ -154,6 +156,7 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   #       ns = self.import_module(`from`.to_key, code)
   #       self.modules[`from`.to_key] = ns
   #   self.import_from_ns(frame, ns, expr.import_matcher.children)
+
   # If "from" is not given, import from parent of root namespace.
   if `from` == nil:
     ns = frame.ns.root.parent
@@ -188,3 +191,4 @@ proc translate_import(value: Value): Expr =
 
 proc init*() =
   GeneTranslators["import"] = translate_import
+  GeneTranslators["import_native"] = translate_import
