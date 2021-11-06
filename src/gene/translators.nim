@@ -4,8 +4,8 @@ import ./map_key
 import ./types
 import ./exprs
 
-var Translators*     = Table[ValueKind, Translator]()
-var GeneTranslators* = Table[string, Translator]()
+var Translators*     = new_table[ValueKind, Translator]()
+var GeneTranslators* = new_table[string, Translator]()
 
 #################### Definitions #################
 

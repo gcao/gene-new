@@ -10,6 +10,6 @@ import ./helpers
 #   check r(props, data) == 3
 
 test_interpreter """
-  (import_native test from "tests/libextension")
+  (import_native from "tests/libextension")
   (test 1)
 """, 1
