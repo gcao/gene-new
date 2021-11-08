@@ -1,4 +1,5 @@
 switch("d", "release")
 switch("d", "ssl")
+switch("d", "useMalloc")
 switch("gc", "orc")
 switch("outdir", "bin")
