@@ -143,19 +143,6 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
         else:
           frame.ns[m.name] = Value(kind: VkNativeFn, native_fn: cast[NativeFn](v))
     return
-  # else:
-  #   # If "from" is not given, import from parent of root namespace.
-  #   if `from` == nil:
-  #     ns = frame.ns.root.parent
-  #   else:
-  #     var `from` = self.eval(frame, `from`).str
-  #     if self.modules.has_key(`from`.to_key):
-  #       ns = self.modules[`from`.to_key]
-  #     else:
-  #       var code = read_file(dir & `from` & ".gene")
-  #       ns = self.import_module(`from`.to_key, code)
-  #       self.modules[`from`.to_key] = ns
-  #   self.import_from_ns(frame, ns, expr.import_matcher.children)
 
   # If "from" is not given, import from parent of root namespace.
   if `from` == nil:

@@ -5,6 +5,7 @@ import asyncdispatch
 import ./map_key
 import ./types
 import ./parser
+import ./dynlib_mapping
 import ./repl
 import ./exprs
 import ./translators
@@ -68,6 +69,9 @@ proc new_vm*(app: Application): VirtualMachine =
 proc init_app_and_vm*() =
   var app = new_app()
   VM = new_vm(app)
+
+  init_dynlib_mapping()
+
   GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
   GLOBAL_NS.ns[STDIN_KEY]  = stdin
   GLOBAL_NS.ns[STDOUT_KEY] = stdout

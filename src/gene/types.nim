@@ -245,6 +245,7 @@ type
       any*: pointer
     of VkCustom:
       custom*: CustomValue
+      custom_class*: Class
     of VkBool:
       bool*: bool
     of VkInt:

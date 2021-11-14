@@ -48,7 +48,10 @@ type
 
 proc call_set_globals(p: pointer)
 
-var DynlibMapping = Table[string, LibHandle]()
+var DynlibMapping: Table[string, LibHandle]
+
+proc init_dynlib_mapping*() =
+  DynlibMapping = Table[string, LibHandle]()
 
 proc load_dynlib*(path: string): LibHandle =
   if DynlibMapping.has_key(path):
@@ -60,9 +63,8 @@ proc load_dynlib*(path: string): LibHandle =
     not_allowed("load_dynlib: set_globals is not defined in the extension " & path)
   call_set_globals(set_globals)
   var init = result.sym_addr("init")
-  if init == nil:
-    not_allowed("load_dynlib: init is not defined in the extension " & path)
-  cast[Init](init)()
+  if init != nil:
+    cast[Init](init)()
   DynlibMapping[path] = result
 
 # TODO:

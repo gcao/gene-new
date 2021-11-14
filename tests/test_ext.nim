@@ -15,3 +15,7 @@ proc test_extension*(code: string, result: Value) =
 test_extension """
   (test 1)
 """, 1
+
+test_extension """
+  MyClass/.name
+""", "MyClass"
