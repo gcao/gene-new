@@ -8,6 +8,7 @@ import ../translators
 import ../interpreter
 import ./oop
 import ./selector
+import ./gene
 
 type
   ExMember* = ref object of Expr
@@ -142,6 +143,12 @@ proc translate*(names: seq[string]): Expr =
         self: translate(names[0..^2]),
         meth: name[1..^1].to_key,
         args: new_ex_arg(),
+      )
+    elif name == "!":
+      return ExGene(
+        evaluator: eval_gene_init,
+        `type`: translate(names[0..^2]),
+        args: new_gene_gene(),
       )
     else:
       return ExMember(

@@ -36,7 +36,7 @@ proc eval_gene2(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var `type` = self.eval(frame, cast[ExGene](expr).`type`)
   cast[ExGene](expr).args_expr.evaluator(self, frame, `type`, cast[ExGene](expr).args_expr)
 
-proc eval_gene_init(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_gene_init*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExGene](expr)
   var `type` = self.eval(frame, e.`type`)
   var translator: Translator
