@@ -4,6 +4,14 @@ import ./map_key
 import ./types
 import ./translators
 
+# Design:
+# * Exception handling
+#   Pass a wrapper proc to the dynamic lib to eval and catch any exception thrown.
+#   Similar logic has to be applied when extension is called from main app.
+#
+# Resources:
+# https://gradha.github.io/articles/2015/01/writing-c-libraries-with-nim.html
+
 type
   Init = proc() {.nimcall.}
 
@@ -44,6 +52,7 @@ type
     datetime_class  : Value,
     time_class      : Value,
     selector_class  : Value,
+    eval_catch      : EvalAndCatch,
   ) {.nimcall.}
 
 proc call_set_globals(p: pointer)
@@ -108,5 +117,6 @@ proc call_set_globals(p: pointer) =
     DateClass,
     DatetimeClass,
     TimeClass,
-    SelectorClass
+    SelectorClass,
+    eval_catch,
   )

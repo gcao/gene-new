@@ -8,6 +8,8 @@ import gene/translators
 # include gene/ext_common
 # `set_globals` will be called when the extension is loaded.
 
+var eval_catch*: EvalAndCatch
+
 proc set_globals*(
   keys            : seq[string],
   key_mapping     : Table[string, MapKey],
@@ -45,6 +47,7 @@ proc set_globals*(
   datetime_class  : Value,
   time_class      : Value,
   selector_class  : Value,
+  eval            : EvalAndCatch,
 ) {.dynlib exportc.} =
   Keys            = keys
   KeyMapping      = key_mapping
@@ -82,3 +85,4 @@ proc set_globals*(
   DatetimeClass   = datetime_class
   TimeClass       = time_class
   SelectorClass   = selector_class
+  eval_catch      = eval

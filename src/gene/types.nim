@@ -18,6 +18,7 @@ type
 
   Translator* = proc(value: Value): Expr
   Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
+  EvalAndCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
 
   NativeFn* = proc(args: Value): Value {.nimcall.}
   NativeMethod* = proc(self: Value, args: Value): Value
@@ -1787,3 +1788,12 @@ proc prop_splat*(self: seq[Matcher]): MapKey =
 
 template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   expr.evaluator(self, frame, nil, expr)
+
+proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  try:
+    result = self.eval(frame, expr)
+  except CatchableError as e:
+    result = Value(
+      kind: VkException,
+      exception: e,
+    )

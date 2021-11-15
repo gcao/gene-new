@@ -12,7 +12,7 @@ var MyClass: Value
 
 proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExTest](expr)
-  self.eval(frame, expr.data)
+  self.eval_catch(frame, expr.data)
 
 proc translate_test(value: Value): Expr =
   return ExTest(
