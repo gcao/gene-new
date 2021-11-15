@@ -1,4 +1,4 @@
-import unittest, tables
+import unittest
 
 import gene/types
 import gene/interpreter
@@ -12,27 +12,34 @@ proc test_extension(code: string, result: Value) =
 
 suite "Extension":
   init_all()
-  discard VM.eval("(import_native from \"tests/libextension\")")
+  discard VM.eval("""
+    (import_native from "tests/libextension")
+    (import_native from "tests/libextension2")
+  """)
 
   test_extension """
     (test 1)
   """, 1
 
   test_extension """
-    (test_i (new_test 1 "s"))
+    (get_i (new_extension 1 "s"))
   """, 1
 
   test_extension """
-    (((new_test 1 "s") .class) .name)
-  """, "TestClass"
+    (((new_extension 1 "s") .class) .name)
+  """, "Extension"
 
   test_extension """
-    ((new_test 1 "s") .i)
+    ((new_extension 1 "s") .i)
   """, 1
 
+  # test_extension """
+  #   ((new Extension 1 "s") .i)
+  # """, 1
+
   test_extension """
-    TestClass/.name
-  """, "TestClass"
+    Extension/.name
+  """, "Extension"
 
   test_extension """
     ((test (throw "error")) .message)

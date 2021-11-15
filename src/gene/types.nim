@@ -1095,6 +1095,13 @@ proc def_native_method*(self: Value, name: string, m: NativeMethod) =
     callable: Value(kind: VkNativeMethod, native_method: m),
   )
 
+proc def_native_constructor*(self: Value, f: NativeFn) =
+  self.class.constructor = Method(
+    class: self.class,
+    name: "new",
+    callable: Value(kind: VkNativeFn, native_fn: f),
+  )
+
 #################### Method ######################
 
 proc new_method*(class: Class, name: string, fn: Function): Method =
