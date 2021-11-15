@@ -466,13 +466,6 @@ proc translate_super(value: Value): Expr =
 #     fn: fn,
 #   )
 
-proc def_native_method*(self: Value, name: string, m: NativeMethod) =
-  self.class.methods[name.to_key] = Method(
-    class: self.class,
-    name: name,
-    callable: Value(kind: VkNativeMethod, native_method: m),
-  )
-
 proc init*() =
   GeneTranslators["class"] = translate_class
   GeneTranslators["mixin"] = translate_mixin

@@ -21,7 +21,7 @@ type
   EvalAndCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
 
   NativeFn* = proc(args: Value): Value {.nimcall.}
-  NativeMethod* = proc(self: Value, args: Value): Value
+  NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
   # To distinguish NativeMacro and NativeMethod, we just create Value with different kind
@@ -1082,6 +1082,13 @@ proc is_a*(self: Value, class: Class): bool =
       return false
     else:
       my_class = my_class.parent
+
+proc def_native_method*(self: Value, name: string, m: NativeMethod) =
+  self.class.methods[name.to_key] = Method(
+    class: self.class,
+    name: name,
+    callable: Value(kind: VkNativeMethod, native_method: m),
+  )
 
 #################### Method ######################
 
