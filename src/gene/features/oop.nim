@@ -163,8 +163,21 @@ proc translate_include(value: Value): Expr =
   result = e
 
 proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExNew](expr)
+  var class = self.eval(frame, expr.class).class
+  var constructor = class.constructor
+  if constructor != nil and constructor.callable.kind == VkNativeFn:
+    var args_expr = cast[ExArguments](expr.args)
+    var args = new_gene_gene()
+    for k, v in args_expr.props.mpairs:
+      args.gene_props[k] = self.eval(frame, v)
+    for v in args_expr.data.mitems:
+      args.gene_data.add(self.eval(frame, v))
+    result = constructor.callable.native_fn(args)
+    return
+
   result = Value(kind: VkInstance)
-  result.instance_class = self.eval(frame, cast[ExNew](expr).class).class
+  result.instance_class = class
   var meth = result.instance_class.constructor
   if meth == nil:
     return

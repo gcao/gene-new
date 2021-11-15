@@ -33,9 +33,9 @@ suite "Extension":
     ((new_extension 1 "s") .i)
   """, 1
 
-  # test_extension """
-  #   ((new Extension 1 "s") .i)
-  # """, 1
+  test_extension """
+    ((new Extension 1 "s") .i)
+  """, 1
 
   test_extension """
     Extension/.name
