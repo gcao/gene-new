@@ -53,10 +53,8 @@ proc init*() =
   try:
     GeneTranslators["test"] = translate_test
 
-    # Seems the map keys are not inserted properly, if we change the order
-    # of below two lines, test will fail.
-    GLOBAL_NS.ns["test_i"]   = Value(kind: VkNativeFn, native_fn: test_i)
     GLOBAL_NS.ns["new_test"] = Value(kind: VkNativeFn, native_fn: new_test)
+    GLOBAL_NS.ns["test_i"]   = Value(kind: VkNativeFn, native_fn: test_i)
 
     TestClass = Value(
       kind: VkClass,

@@ -24,13 +24,10 @@ proc init_all*() =
 
 # This is added to make it easier to write tests
 converter str_to_key*(s: string): MapKey {.inline.} =
-  if KeyMapping.has_key(s):
-    result = KeyMapping[s]
-  else:
-    result = add_key(s)
+  s.to_key
 
 converter key_to_s*(self: MapKey): string {.inline.} =
-  result = Keys[cast[int](self)]
+  self.to_s
 
 converter seq_to_gene*(self: seq[int]): Value =
   result = new_gene_vec()

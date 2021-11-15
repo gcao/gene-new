@@ -3,31 +3,37 @@ import tables, hashes
 type
   MapKey* = distinct int
 
-var Keys*: seq[string] = @[]
-var KeyMapping* = Table[string, MapKey]()
+  Mapping* = ref object
+    keys*: seq[string]
+    map*: Table[string, MapKey]
+
+var mapping* = Mapping(
+  keys: @[],
+  map: Table[string, MapKey](),
+)
 
 converter to_key*(i: int): MapKey {.inline.} =
   result = cast[MapKey](i)
 
 proc add_key*(s: string): MapKey {.inline.} =
-  if KeyMapping.has_key(s):
-    result = KeyMapping[s]
+  if mapping.map.has_key(s):
+    result = mapping.map[s]
   else:
-    result = Keys.len
-    Keys.add(s)
-    KeyMapping[s] = result
+    result = mapping.keys.len
+    mapping.keys.add(s)
+    mapping.map[s] = result
 
 proc to_key*(s: string): MapKey {.inline.} =
-  if KeyMapping.has_key(s):
-    result = KeyMapping[s]
+  if mapping.map.has_key(s):
+    result = mapping.map[s]
   else:
-    result = add_key(s) 
+    result = add_key(s)
 
 proc to_s*(self: MapKey): string {.inline.} =
-  result = Keys[cast[int](self)]
+  result = mapping.keys[cast[int](self)]
 
 proc `%`*(self: MapKey): string =
-  result = Keys[cast[int](self)]
+  result = mapping.keys[cast[int](self)]
 
 converter to_strings*(self: seq[MapKey]): seq[string] {.inline.} =
   for k in self:

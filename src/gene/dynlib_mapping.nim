@@ -16,8 +16,7 @@ type
   Init = proc() {.nimcall.}
 
   SetGlobals = proc(
-    keys            : seq[string],
-    key_mapping     : Table[string, MapKey],
+    mapping         : Mapping,
     translators     : TableRef[ValueKind, Translator],
     gene_translators: TableRef[string, Translator],
     vm              : VirtualMachine,
@@ -82,8 +81,7 @@ proc load_dynlib*(path: string): LibHandle =
 
 proc call_set_globals(p: pointer) =
   cast[SetGlobals](p)(
-    Keys,
-    KeyMapping,
+    mapping,
     Translators,
     GeneTranslators,
     VM,

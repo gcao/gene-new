@@ -11,8 +11,7 @@ import gene/translators
 var eval_catch*: EvalAndCatch
 
 proc set_globals*(
-  keys            : seq[string],
-  key_mapping     : Table[string, MapKey],
+  m               : Mapping,
   translators     : TableRef[ValueKind, Translator],
   gene_translators: TableRef[string, Translator],
   vm              : VirtualMachine,
@@ -49,8 +48,7 @@ proc set_globals*(
   selector_class  : Value,
   eval            : EvalAndCatch,
 ) {.dynlib exportc.} =
-  Keys            = keys
-  KeyMapping      = key_mapping
+  mapping         = m
   Translators     = translators
   GeneTranslators = gene_translators
   VM              = vm
