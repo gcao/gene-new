@@ -23,6 +23,14 @@ suite "Extension":
   """, 1
 
   test_extension """
+    (((new_test 1 "s") .class) .name)
+  """, "TestClass"
+
+  test_extension """
+    ((new_test 1 "s") .i)
+  """, 1
+
+  test_extension """
     TestClass/.name
   """, "TestClass"
 

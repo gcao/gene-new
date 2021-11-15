@@ -28,10 +28,11 @@ proc new_test*(args: Value): Value {.nimcall.} =
   try:
     result = Value(
       kind: VkCustom,
+      custom_class: TestClass.class,
       custom: TestValue(
         i: args.gene_data[0].int,
         s: args.gene_data[1].str,
-      )
+      ),
     )
   except CatchableError as e:
     var s = "Exception: " & e.msg & "\n" & e.get_stack_trace()
@@ -43,6 +44,9 @@ proc new_test*(args: Value): Value {.nimcall.} =
 
 proc test_i*(args: Value): Value {.nimcall.} =
   TestValue(args.gene_data[0].custom).i
+
+proc test_i*(self: Value, args: Value): Value {.nimcall.} =
+  TestValue(self.custom).i
 
 {.push dynlib exportc.}
 
@@ -62,7 +66,7 @@ proc init*() =
     )
     TestClass.class.parent = ObjectClass.class
     GLOBAL_NS.ns["TestClass"] = TestClass
-    # TestClass.def_native_method("i", test_i)
+    TestClass.def_native_method("i", test_i)
   except system.Exception as e:
     echo e.msg
     echo e.get_stack_trace()

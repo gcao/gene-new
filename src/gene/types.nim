@@ -1070,6 +1070,11 @@ proc get_class*(val: Value): Class =
       return GENEX_NS.ns[HTTP_KEY].ns[REQUEST_CLASS_KEY].class
     else:
       todo("get_class " & $val.kind)
+  of VkCustom:
+    if val.custom_class == nil:
+      return ObjectClass.class
+    else:
+      return val.custom_class
   else:
     todo("get_class " & $val.kind)
 
