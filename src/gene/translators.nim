@@ -1,11 +1,7 @@
 import tables
 
-import ./map_key
 import ./types
 import ./exprs
-
-var Translators*     = new_table[ValueKind, Translator]()
-var GeneTranslators* = new_table[string, Translator]()
 
 #################### Definitions #################
 

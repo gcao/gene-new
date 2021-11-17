@@ -1,8 +1,6 @@
-import tables
-
-import gene/types
-import gene/translators
 include gene/ext_common
+
+import gene/translators
 
 type
   Extension = ref object of CustomValue
@@ -49,9 +47,6 @@ proc get_i*(self: Value, args: Value): Value {.nimcall.} =
   Extension(self.custom).i
 
 {.push dynlib exportc.}
-
-proc test*(self: Value): Value =
-  self.gene_data[0]
 
 proc init*() =
   try:

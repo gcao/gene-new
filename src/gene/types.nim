@@ -569,13 +569,15 @@ let
   Do*        = Value(kind: VkSymbol, symbol: "do")
   Equals*    = Value(kind: VkSymbol, symbol: "=")
 
-var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
-
 var Ints: array[111, Value]
 for i in 0..110:
   Ints[i] = Value(kind: VkInt, int: i - 10)
 
 var VM*: VirtualMachine   # The current virtual machine
+var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
+
+var Translators*     = new_table[ValueKind, Translator]()
+var GeneTranslators* = new_table[string, Translator]()
 
 var GLOBAL_NS*     : Value
 var GENE_NS*       : Value

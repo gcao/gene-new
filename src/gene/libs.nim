@@ -5,7 +5,6 @@ import asyncdispatch, asyncfile, asynchttpserver
 import ./types
 import ./map_key
 import ./interpreter
-import ./features/oop
 import ./interpreter
 
 proc `%`*(self: Value): JsonNode =
