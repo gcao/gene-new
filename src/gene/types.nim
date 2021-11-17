@@ -1814,6 +1814,7 @@ proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   try:
     result = self.eval(frame, expr)
   except CatchableError as e:
+    # echo e.msg & "\n" & e.getStackTrace()
     result = Value(
       kind: VkException,
       exception: e,

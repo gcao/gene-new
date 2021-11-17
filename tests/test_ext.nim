@@ -15,15 +15,17 @@ suite "Extension":
   discard VM.eval("""
     (import_native from "tests/libextension")
     (import_native new_extension2 extension2_name from "tests/libextension2")
+    (var global/new_extension2 new_extension2)
+    (var global/extension2_name extension2_name)
   """)
 
   test_extension """
     (test 1)
   """, 1
 
-  # test_extension """
-  #   (test (extension2_name (new_extension2 "x")))
-  # """, "x"
+  test_extension """
+    (test (extension2_name (new_extension2 "x")))
+  """, "x"
 
   test_extension """
     (get_i (new_extension 1 "s"))
