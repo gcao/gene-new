@@ -48,5 +48,9 @@ suite "Extension":
   """, "Extension"
 
   test_extension """
-    ((test (throw "error")) .message)
+    (try
+      (test (throw "error"))
+    catch _
+      $ex/.message
+    )
   """, "error"

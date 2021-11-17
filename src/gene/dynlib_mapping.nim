@@ -52,6 +52,7 @@ type
     time_class      : Value,
     selector_class  : Value,
     eval_catch      : EvalAndCatch,
+    eval_wrap       : Wrap,
   ) {.nimcall.}
 
 proc call_set_globals(p: pointer)
@@ -117,4 +118,5 @@ proc call_set_globals(p: pointer) =
     TimeClass,
     SelectorClass,
     eval_catch,
+    wrap,
   )

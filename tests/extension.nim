@@ -14,11 +14,11 @@ var ExtensionClass: Value
 
 proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExTest](expr)
-  self.eval_catch(frame, expr.data)
+  self.eval(frame, expr.data)
 
 proc translate_test(value: Value): Expr =
   return ExTest(
-    evaluator: eval_test,
+    evaluator: wrap(eval_test),
     data: translate(value.gene_data[0]),
   )
 
