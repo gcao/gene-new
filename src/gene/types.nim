@@ -1,4 +1,5 @@
 import os, nre, strutils, tables, unicode, hashes, sets, asyncdispatch, times, strformat
+import dynlib
 import macros
 
 import ./map_key
@@ -81,6 +82,7 @@ type
     pkg*: Package         # Package in which the module belongs, or stdlib if not set
     name*: string
     ns*: Namespace
+    handle*: LibHandle    # Optional handle for dynamic lib
     props*: Table[string, Value]  # Additional properties
 
   Namespace* = ref object

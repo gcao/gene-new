@@ -48,7 +48,7 @@ proc get_i*(self: Value, args: Value): Value {.nimcall.} =
 
 {.push dynlib exportc.}
 
-proc init*() =
+proc init*(): Value =
   try:
     GeneTranslators["test"] = translate_test
 
@@ -63,8 +63,9 @@ proc init*() =
     GLOBAL_NS.ns["Extension"] = ExtensionClass
     ExtensionClass.def_native_constructor(new_extension)
     ExtensionClass.def_native_method("i", get_i)
-  except system.Exception as e:
-    echo e.msg
-    echo e.get_stack_trace()
+  except CatchableError as e:
+    # echo e.msg
+    # echo e.get_stack_trace()
+    return Value(kind: VkException, exception: e)
 
 {.pop.}

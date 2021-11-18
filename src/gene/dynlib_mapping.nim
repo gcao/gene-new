@@ -2,7 +2,6 @@ import dynlib, tables
 
 import ./map_key
 import ./types
-import ./translators
 
 # Design:
 # * Exception handling
@@ -13,7 +12,7 @@ import ./translators
 # https://gradha.github.io/articles/2015/01/writing-c-libraries-with-nim.html
 
 type
-  Init = proc() {.nimcall.}
+  Init = proc(): Value {.nimcall.}
 
   SetGlobals = proc(
     mapping         : Mapping,
@@ -57,28 +56,29 @@ type
 
 proc call_set_globals(p: pointer)
 
-var DynlibMapping: Table[string, LibHandle]
+proc load_dynlib*(path: string): Module =
+  result = new_module(path)
+  var handle = load_lib(path & ".dylib")
+  result.handle = handle
 
-proc init_dynlib_mapping*() =
-  DynlibMapping = Table[string, LibHandle]()
-
-proc load_dynlib*(path: string): LibHandle =
-  if DynlibMapping.has_key(path):
-    return DynlibMapping[path]
-
-  result = load_lib(path & ".dylib")
-  var set_globals = result.sym_addr("set_globals")
+  var set_globals = handle.sym_addr("set_globals")
   if set_globals == nil:
     not_allowed("load_dynlib: set_globals is not defined in the extension " & path)
   call_set_globals(set_globals)
-  var init = result.sym_addr("init")
-  if init != nil:
-    cast[Init](init)()
-  DynlibMapping[path] = result
 
-# TODO:
-# proc unload_dynlib*(path: string) =
-#   discard
+  var init = handle.sym_addr("init")
+  var init_result: Value
+  if init != nil:
+    init_result = cast[Init](init)()
+  if init_result == nil:
+    return
+  case init_result.kind:
+  of VkException:
+    raise init_result.exception
+  of VkNamespace:
+    result.ns = init_result.ns
+  else:
+    todo("load_dynlib " & $init_result.kind)
 
 proc call_set_globals(p: pointer) =
   cast[SetGlobals](p)(

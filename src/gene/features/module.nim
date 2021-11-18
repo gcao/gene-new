@@ -132,16 +132,13 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   var `from` = expr.from
   if expr.native:
     var path = self.eval(frame, `from`).str
-    let lib = load_dynlib(dir & path)
-    if lib == nil:
-      todo("eval_import native: " & dir & path & " is not loaded.")
-    else:
-      for m in expr.matcher.children:
-        var v = lib.sym_addr(m.name.to_s)
-        if v == nil:
-          todo()
-        else:
-          frame.ns[m.name] = Value(kind: VkNativeFn, native_fn: cast[NativeFn](v))
+    let module = load_dynlib(dir & path)
+    for m in expr.matcher.children:
+      var v = module.handle.sym_addr(m.name.to_s)
+      if v == nil:
+        todo()
+      else:
+        frame.ns[m.name] = Value(kind: VkNativeFn, native_fn: cast[NativeFn](v))
     return
 
   # If "from" is not given, import from parent of root namespace.
