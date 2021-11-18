@@ -119,6 +119,15 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
           name = m.as
         frame.ns.members[name] = value
 
+proc prefetch_from_dynlib(self: Module, names: seq[string]) =
+  for name in names:
+    if not self.ns.has_key(name.to_key):
+      var v = self.handle.sym_addr(name)
+      if v == nil:
+        not_allowed("prefetch_from_dynlib: " & name & " is not found in " & self.name)
+      else:
+        self.ns[name] = Value(kind: VkNativeFn, native_fn: cast[NativeFn](v))
+
 proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExImport](expr)
   var ns: Namespace
@@ -133,16 +142,13 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   if expr.native:
     var path = self.eval(frame, `from`).str
     let module = load_dynlib(dir & path)
+    var names: seq[string] = @[]
     for m in expr.matcher.children:
-      var v = module.handle.sym_addr(m.name.to_s)
-      if v == nil:
-        todo()
-      else:
-        frame.ns[m.name] = Value(kind: VkNativeFn, native_fn: cast[NativeFn](v))
-    return
-
-  # If "from" is not given, import from parent of root namespace.
-  if `from` == nil:
+      names.add(m.name.to_s)
+    module.prefetch_from_dynlib(names)
+    ns = module.ns
+  elif `from` == nil:
+    # If "from" is not given, import from parent of root namespace.
     ns = frame.ns.root.parent
   else:
     var `from` = self.eval(frame, `from`).str

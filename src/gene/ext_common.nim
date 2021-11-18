@@ -16,6 +16,9 @@ proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   if result != nil and result.kind == VkException:
     raise result.exception
 
+converter ns_to_gene*(v: Namespace): Value =
+  Value(kind: VkNamespace, ns: v)
+
 proc set_globals*(
   m               : Mapping,
   translators     : TableRef[ValueKind, Translator],

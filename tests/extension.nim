@@ -52,15 +52,16 @@ proc init*(): Value =
   try:
     GeneTranslators["test"] = translate_test
 
-    GLOBAL_NS.ns["new_extension"] = Value(kind: VkNativeFn, native_fn: new_extension)
-    GLOBAL_NS.ns["get_i"]   = Value(kind: VkNativeFn, native_fn: get_i)
+    result = new_namespace()
+    result.ns["new_extension"] = Value(kind: VkNativeFn, native_fn: new_extension)
+    result.ns["get_i"]   = Value(kind: VkNativeFn, native_fn: get_i)
 
     ExtensionClass = Value(
       kind: VkClass,
       class: new_class("Extension"),
     )
+    result.ns["Extension"] = ExtensionClass
     ExtensionClass.class.parent = ObjectClass.class
-    GLOBAL_NS.ns["Extension"] = ExtensionClass
     ExtensionClass.def_native_constructor(new_extension)
     ExtensionClass.def_native_method("i", get_i)
   except CatchableError as e:
