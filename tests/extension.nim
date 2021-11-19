@@ -51,7 +51,7 @@ proc init*(): Value {.nimcall, wrap_exception.} =
   )
   result.ns["Extension"] = ExtensionClass
   ExtensionClass.class.parent = ObjectClass.class
-  ExtensionClass.def_native_constructor(new_extension)
-  ExtensionClass.def_native_method("i", get_i)
+  ExtensionClass.def_native_constructor(fn_wrap(new_extension))
+  ExtensionClass.def_native_method("i", method_wrap(get_i))
 
 {.pop.}

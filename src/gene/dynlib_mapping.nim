@@ -56,6 +56,7 @@ type
     translate_catch : TranslateCatch,
     translate_wrap  : TranslateWrap,
     fn_wrap         : NativeFnWrap,
+    method_wrap     : NativeMethodWrap,
   ) {.nimcall.}
 
 proc call_set_globals(p: pointer)
@@ -126,4 +127,5 @@ proc call_set_globals(p: pointer) =
     translate_catch,
     translate_wrap,
     fn_wrap,
+    method_wrap,
   )

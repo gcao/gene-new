@@ -28,6 +28,8 @@ type
   NativeFn2* = proc(args: Value): Value
   NativeFnWrap* = proc(f: NativeFn): NativeFn2
   NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
+  NativeMethod2* = proc(self: Value, args: Value): Value
+  NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
   # To distinguish NativeMacro and NativeMethod, we just create Value with different kind
@@ -241,6 +243,7 @@ type
     VkNativeFn
     VkNativeFn2
     VkNativeMethod
+    VkNativeMethod2
     VkInstance
     VkEnum
     VkEnumMember
@@ -348,6 +351,8 @@ type
       native_fn2*: NativeFn2
     of VkNativeMethod:
       native_method*: NativeMethod
+    of VkNativeMethod2:
+      native_method2*: NativeMethod2
     of VkInstance:
       instance_class*: Class
       instance_props*: Table[MapKey, Value]
@@ -1104,11 +1109,25 @@ proc def_native_method*(self: Value, name: string, m: NativeMethod) =
     callable: Value(kind: VkNativeMethod, native_method: m),
   )
 
+proc def_native_method*(self: Value, name: string, m: NativeMethod2) =
+  self.class.methods[name.to_key] = Method(
+    class: self.class,
+    name: name,
+    callable: Value(kind: VkNativeMethod2, native_method2: m),
+  )
+
 proc def_native_constructor*(self: Value, f: NativeFn) =
   self.class.constructor = Method(
     class: self.class,
     name: "new",
     callable: Value(kind: VkNativeFn, native_fn: f),
+  )
+
+proc def_native_constructor*(self: Value, f: NativeFn2) =
+  self.class.constructor = Method(
+    class: self.class,
+    name: "new",
+    callable: Value(kind: VkNativeFn2, native_fn2: f),
   )
 
 #################### Method ######################
@@ -1838,6 +1857,12 @@ proc eval_wrap*(e: Evaluator): Evaluator =
 proc fn_wrap*(f: NativeFn): NativeFn2 =
   return proc(args: Value): Value =
     result = f(args)
+    if result != nil and result.kind == VkException:
+      raise result.exception
+
+proc method_wrap*(m: NativeMethod): NativeMethod2 =
+  return proc(self, args: Value): Value =
+    result = m(self, args)
     if result != nil and result.kind == VkException:
       raise result.exception
 

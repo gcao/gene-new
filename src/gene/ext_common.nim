@@ -13,6 +13,7 @@ var eval_wrap*: EvalWrap
 var translate_catch*: TranslateCatch
 var translate_wrap*: TranslateWrap
 var fn_wrap: NativeFnWrap
+var method_wrap: NativeMethodWrap
 
 proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   result = self.eval_catch(frame, expr)
@@ -74,6 +75,7 @@ proc set_globals*(
   tcatch          : TranslateCatch,
   twrap           : TranslateWrap,
   fwrap           : NativeFnWrap,
+  mwrap           : NativeMethodWrap,
 ) {.dynlib exportc.} =
   mapping         = m
   Translators     = translators
@@ -115,3 +117,4 @@ proc set_globals*(
   translate_catch = tcatch
   translate_wrap  = twrap
   fn_wrap         = fwrap
+  method_wrap     = mwrap

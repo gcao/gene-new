@@ -166,15 +166,22 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   var expr = cast[ExNew](expr)
   var class = self.eval(frame, expr.class).class
   var constructor = class.constructor
-  if constructor != nil and constructor.callable.kind == VkNativeFn:
-    var args_expr = cast[ExArguments](expr.args)
-    var args = new_gene_gene()
-    for k, v in args_expr.props.mpairs:
-      args.gene_props[k] = self.eval(frame, v)
-    for v in args_expr.data.mitems:
-      args.gene_data.add(self.eval(frame, v))
-    result = constructor.callable.native_fn(args)
-    return
+  if constructor != nil:
+    case constructor.callable.kind:
+    of VkNativeFn, VkNativeFn2:
+      var args_expr = cast[ExArguments](expr.args)
+      var args = new_gene_gene()
+      for k, v in args_expr.props.mpairs:
+        args.gene_props[k] = self.eval(frame, v)
+      for v in args_expr.data.mitems:
+        args.gene_data.add(self.eval(frame, v))
+      if constructor.callable.kind == VkNativeFn:
+        result = constructor.callable.native_fn(args)
+      else:
+        result = constructor.callable.native_fn2(args)
+      return
+    else:
+      todo("eval_new " & $constructor.callable.kind)
 
   result = Value(kind: VkInstance)
   result.instance_class = class
@@ -308,14 +315,17 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
     callable = meth.callable
 
   case callable.kind:
-  of VkNativeMethod:
+  of VkNativeMethod, VkNativeMethod2:
     var args_expr = cast[ExArguments](cast[ExInvoke](expr).args)
     var args = new_gene_gene()
     for k, v in args_expr.props.mpairs:
       args.gene_props[k] = self.eval(frame, v)
     for _, v in args_expr.data.mpairs:
       args.gene_data.add self.eval(frame, v)
-    result = meth.callable.native_method(instance, args)
+    if callable.kind == VkNativeMethod:
+      result = meth.callable.native_method(instance, args)
+    else:
+      result = meth.callable.native_method2(instance, args)
 
   of VkFunction:
     var fn_scope = new_scope()
