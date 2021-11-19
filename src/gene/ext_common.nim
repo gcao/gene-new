@@ -1,8 +1,8 @@
 import tables
 
 import gene/map_key
-import gene/types except eval
-import gene/translators except translate
+import gene/types
+import gene/translators
 
 # All extensions should include `ext_common` like below
 # include gene/ext_common

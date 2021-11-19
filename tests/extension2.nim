@@ -6,15 +6,15 @@ type
 
 {.push dynlib exportc.}
 
-proc new_extension2*(args: Value): Value {.nimcall.} =
-  result = Value(
+proc new_extension2*(args: Value): Value {.nimcall, wrap_exception.} =
+  Value(
     kind: VkCustom,
     custom: Extension2(
       name: args.gene_data[0].str,
     ),
   )
 
-proc extension2_name*(args: Value): Value {.nimcall.} =
-  result = Extension2(args.gene_data[0].custom).name
+proc extension2_name*(args: Value): Value {.nimcall, wrap_exception.} =
+  Extension2(args.gene_data[0].custom).name
 
 {.pop.}
