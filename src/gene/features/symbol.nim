@@ -57,7 +57,7 @@ proc call_member_missing(self: VirtualMachine, frame: Frame, obj: Value, target:
       result = r.val
     else:
       raise
-  except CatchableError as e:
+  except system.Exception as e:
     if self.repl_on_error:
       result = repl_on_error(self, frame, e)
       discard

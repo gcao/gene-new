@@ -84,7 +84,7 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
         result = r.val
         stdout.write_line(result)
         break
-      except CatchableError as e:
+      except system.Exception as e:
         result = Nil
         input = ""
         var s = e.get_stack_trace()

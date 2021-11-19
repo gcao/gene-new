@@ -340,7 +340,7 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
         result = r.val
       else:
         raise
-    except CatchableError as e:
+    except system.Exception as e:
       if self.repl_on_error:
         result = repl_on_error(self, frame, e)
         discard
@@ -395,7 +395,7 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr
       result = r.val
     else:
       raise
-  except CatchableError as e:
+  except system.Exception as e:
     if self.repl_on_error:
       result = repl_on_error(self, frame, e)
       discard
@@ -435,7 +435,7 @@ proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
       result = r.val
     else:
       raise
-  except CatchableError as e:
+  except system.Exception as e:
     if self.repl_on_error:
       result = repl_on_error(self, frame, e)
       discard

@@ -6,7 +6,7 @@ import ../translators
 import ../interpreter
 
 type
-  NoResult* = ref object of Catchable
+  NoResult* = ref object of types.Exception
 
   ExSelector* = ref object of Expr
     data*: Expr

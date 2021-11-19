@@ -37,7 +37,7 @@ proc macro_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var
     result = self.eval(new_frame, target.macro.body_compiled)
   except Return as r:
     result = r.val
-  except CatchableError as e:
+  except system.Exception as e:
     if self.repl_on_error:
       result = repl_on_error(self, frame, e)
       discard

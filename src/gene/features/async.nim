@@ -20,7 +20,7 @@ proc eval_async(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     var future = new_future[Value]()
     future.complete(val)
     result = new_gene_future(future)
-  except CatchableError as e:
+  except system.Exception as e:
     var future = new_future[Value]()
     future.fail(e)
     result = new_gene_future(future)

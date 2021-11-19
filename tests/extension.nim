@@ -35,7 +35,7 @@ proc new_extension*(args: Value): Value {.nimcall.} =
         s: args.gene_data[1].str,
       ),
     )
-  except CatchableError as e:
+  except system.Exception as e:
     result = Value(
       kind: VkException,
       exception: e,
@@ -65,7 +65,7 @@ proc init*(): Value =
     ExtensionClass.class.parent = ObjectClass.class
     ExtensionClass.def_native_constructor(new_extension)
     ExtensionClass.def_native_method("i", get_i)
-  except CatchableError as e:
+  except system.Exception as e:
     # echo e.msg
     # echo e.get_stack_trace()
     return Value(kind: VkException, exception: e)

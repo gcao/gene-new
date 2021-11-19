@@ -289,7 +289,7 @@ proc add_failure_callback(self: Value, args: Value): Value =
   if self.future.finished:
     if self.future.failed:
       var callback_args = new_gene_gene()
-      var ex = error_to_gene(cast[ref CatchableError](self.future.read_error()))
+      var ex = error_to_gene(cast[ref system.Exception](self.future.read_error()))
       callback_args.gene_data.add(ex)
       var frame = Frame()
       discard VM.call(frame, args.gene_data[0], callback_args)
@@ -297,7 +297,7 @@ proc add_failure_callback(self: Value, args: Value): Value =
     self.future.add_callback proc() {.gcsafe.} =
       if self.future.failed:
         var callback_args = new_gene_gene()
-        var ex = error_to_gene(cast[ref CatchableError](self.future.read_error()))
+        var ex = error_to_gene(cast[ref system.Exception](self.future.read_error()))
         callback_args.gene_data.add(ex)
         var frame = Frame()
         discard VM.call(frame, args.gene_data[0], callback_args)
@@ -505,7 +505,7 @@ proc init*() =
           options.gene_data.add(new_gene_any(req.unsafe_addr, HTTP_REQUEST_KEY))
           var body = VM.call_fn(nil, args.gene_data[1], options).str
           await req.respond(Http200, body, new_http_headers())
-        except CatchableError as e:
+        except system.Exception as e:
           echo e.msg
           echo e.get_stack_trace()
           discard req.respond(Http500, e.msg, new_http_headers())

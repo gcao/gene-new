@@ -137,10 +137,10 @@ proc run_file*(self: VirtualMachine, file: string): Value =
       var args = VM.app.ns[CMD_ARGS_KEY]
       result = self.call_fn(frame, main, args)
     else:
-      raise new_exception(CatchableError, "main is not a function.")
+      raise new_exception(types.Exception, "main is not a function.")
   self.wait_for_futures()
 
-proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
+proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref system.Exception): Value =
   echo "An exception was thrown: " & e.msg
   echo "Opening debug console..."
   echo "Note: the exception can be accessed as $ex"
@@ -397,7 +397,7 @@ proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Valu
       result = self.eval(new_frame, target.block.body_compiled)
     except Return as r:
       result = r.val
-    except CatchableError as e:
+    except system.Exception as e:
       if self.repl_on_error:
         result = repl_on_error(self, frame, e)
         discard
@@ -418,7 +418,7 @@ proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Valu
       result = r.val
     else:
       raise
-  except CatchableError as e:
+  except system.Exception as e:
     if self.repl_on_error:
       result = repl_on_error(self, frame, e)
       discard

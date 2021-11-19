@@ -7,9 +7,7 @@ import ./map_key
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
 
 type
-  Catchable* = object of CatchableError
-
-  Exception* = object of Catchable
+  Exception* = object of CatchableError
     instance*: Value  # instance of Gene exception class
 
   NotDefinedException* = object of Exception
@@ -316,7 +314,7 @@ type
       cast_value*: Value
     # Internal types
     of VkException:
-      exception*: ref CatchableError
+      exception*: ref system.Exception
     of VkFuture:
       future*: Future[Value]
       ft_success_callbacks*: seq[Value]
@@ -411,12 +409,12 @@ type
     args*: Value # This is only available in some frames (e.g. function/macro/block)
     extra*: FrameExtra
 
-  Break* = ref object of Catchable
+  Break* = ref object of Exception
     val*: Value
 
-  Continue* = ref object of Catchable
+  Continue* = ref object of Exception
 
-  Return* = ref object of Catchable
+  Return* = ref object of Exception
     frame*: Frame
     val*: Value
 
@@ -1035,9 +1033,6 @@ proc get_class*(val: Value): Class =
         return ex.instance.instance_class
       else:
         return ExceptionClass.class
-    # elif ex is CatchableError:
-    #   var nim = VM.app.ns[NIM_KEY]
-    #   return nim.ns[CATCHABLE_ERROR_KEY].class
     else:
       return ExceptionClass.class
   of VkNil:
@@ -1569,7 +1564,7 @@ proc new_mixin*(name: string): Mixin =
 # Do not allow auto conversion between CatchableError and Value
 # because there are sub-classes of CatchableError that need to be
 # handled differently.
-proc error_to_gene*(ex: ref CatchableError): Value =
+proc error_to_gene*(ex: ref system.Exception): Value =
   return Value(
     kind: VkException,
     exception: ex,
@@ -1820,7 +1815,7 @@ template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   try:
     result = self.eval(frame, expr)
-  except CatchableError as e:
+  except system.Exception as e:
     # echo e.msg & "\n" & e.getStackTrace()
     result = Value(
       kind: VkException,
