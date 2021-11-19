@@ -39,3 +39,19 @@ proc translate*(stmts: seq[Value]): Expr =
 proc translate_prop_assignment*(value: Value): Expr =
   var name = value.gene_type.symbol[1..^1]
   return new_ex_set_prop(name, translate(value.gene_data[1]))
+
+export ExException, new_ex_exception
+
+proc translate_catch*(value: Value): Expr =
+  try:
+    result = translate(value)
+  except system.Exception as e:
+    # echo e.msg
+    # echo e.get_stack_trace()
+    result = new_ex_exception(e)
+
+proc translate_wrap*(translate: Translator): Translator =
+  return proc(value: Value): Expr =
+    result = translate(value)
+    if result != nil and result of ExException:
+      raise cast[ExException](result).ex

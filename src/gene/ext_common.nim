@@ -1,20 +1,27 @@
 import tables
 
 import gene/map_key
-import gene/types except eval, wrap
+import gene/types except eval
+import gene/translators except translate
 
 # All extensions should include `ext_common` like below
 # include gene/ext_common
 # `set_globals` will be called when the extension is loaded.
 
-var wrap*: Wrap
-var eval_catch*: EvalAndCatch
-var translate_catch*: EvalAndCatch
+var eval_catch*: EvalCatch
+var eval_wrap*: EvalWrap
+var translate_catch*: TranslateCatch
+var translate_wrap*: TranslateWrap
 
 proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   result = self.eval_catch(frame, expr)
   if result != nil and result.kind == VkException:
     raise result.exception
+
+proc translate*(value: Value): Expr =
+  result = translate_catch(value)
+  if result != nil and result of ExException:
+    raise cast[ExException](result).ex
 
 converter ns_to_gene*(v: Namespace): Value =
   Value(kind: VkNamespace, ns: v)
@@ -55,8 +62,10 @@ proc set_globals*(
   datetime_class  : Value,
   time_class      : Value,
   selector_class  : Value,
-  eval            : EvalAndCatch,
-  eval_wrap       : Wrap,
+  ecatch          : EvalCatch,
+  ewrap           : EvalWrap,
+  tcatch          : TranslateCatch,
+  twrap           : TranslateWrap,
 ) {.dynlib exportc.} =
   mapping         = m
   Translators     = translators
@@ -93,5 +102,7 @@ proc set_globals*(
   DatetimeClass   = datetime_class
   TimeClass       = time_class
   SelectorClass   = selector_class
-  eval_catch      = eval
-  wrap            = eval_wrap
+  eval_catch      = ecatch
+  eval_wrap       = ewrap
+  translate_catch = tcatch
+  translate_wrap  = twrap

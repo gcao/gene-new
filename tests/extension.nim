@@ -1,7 +1,5 @@
 include gene/ext_common
 
-import gene/translators
-
 type
   Extension = ref object of CustomValue
     i: int
@@ -17,10 +15,15 @@ proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   self.eval(frame, expr.data)
 
 proc translate_test(value: Value): Expr =
-  return ExTest(
-    evaluator: wrap(eval_test),
-    data: translate(value.gene_data[0]),
-  )
+  try:
+    return ExTest(
+      evaluator: eval_wrap(eval_test),
+      data: translate(value.gene_data[0]),
+    )
+  except system.Exception as e:
+    # echo e.msg
+    # echo e.get_stack_trace()
+    result = new_ex_exception(e)
 
 proc new_extension*(args: Value): Value {.nimcall.} =
   try:
@@ -33,8 +36,6 @@ proc new_extension*(args: Value): Value {.nimcall.} =
       ),
     )
   except CatchableError as e:
-    var s = "Exception: " & e.msg & "\n" & e.get_stack_trace()
-    echo s
     result = Value(
       kind: VkException,
       exception: e,
@@ -50,7 +51,7 @@ proc get_i*(self: Value, args: Value): Value {.nimcall.} =
 
 proc init*(): Value =
   try:
-    GeneTranslators["test"] = translate_test
+    GeneTranslators["test"] = translate_wrap(translate_test)
 
     result = new_namespace()
     result.ns["new_extension"] = Value(kind: VkNativeFn, native_fn: new_extension)

@@ -5,11 +5,24 @@ import ./types
 
 #################### Expr ########################
 
+type
+  ExException* = ref object of Expr
+    ex*: ref system.Exception
+
 proc eval_todo*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   todo()
 
 proc eval_never*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   raise new_exception(types.Exception, "eval_never should never be called.")
+
+proc eval_exception(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  raise cast[ExException](expr).ex
+
+proc new_ex_exception*(ex: ref system.Exception): ExException =
+  ExException(
+    evaluator: eval_exception,
+    ex: ex,
+  )
 
 #################### ExLiteral ###################
 

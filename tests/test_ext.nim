@@ -29,6 +29,14 @@ suite "Extension":
     (test 1)
   """, 1
 
+  test "Interpreter / eval: translate exception":
+    try:
+      var code = "(test)"
+      discard VM.eval(code)
+      fail() # Exception expected from translator.
+    except system.Exception as e:
+      discard
+
   test_extension """
     (test (extension2_name (new_extension2 "x")))
   """, "x"

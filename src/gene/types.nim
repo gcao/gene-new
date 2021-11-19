@@ -19,8 +19,12 @@ type
 
   Translator* = proc(value: Value): Expr
   Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
-  EvalAndCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
-  Wrap* = proc(eval: Evaluator): Evaluator
+
+  EvalCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
+  EvalWrap* = proc(eval: Evaluator): Evaluator
+
+  TranslateCatch* = proc(value: Value): Expr
+  TranslateWrap* = proc(translate: Translator): Translator
 
   NativeFn* = proc(args: Value): Value {.nimcall.}
   NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
@@ -1823,7 +1827,7 @@ proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       exception: e,
     )
 
-proc wrap*(eval: Evaluator): Evaluator =
+proc eval_wrap*(eval: Evaluator): Evaluator =
   return proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
     result = eval(self, frame, target, expr)
     if result != nil and result.kind == VkException:
