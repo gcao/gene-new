@@ -591,9 +591,6 @@ for i in 0..110:
 var VM*: VirtualMachine   # The current virtual machine
 var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
 
-var Translators*     = new_table[ValueKind, Translator]()
-var GeneTranslators* = new_table[string, Translator]()
-
 var GLOBAL_NS*     : Value
 var GENE_NS*       : Value
 var GENE_NATIVE_NS*: Value

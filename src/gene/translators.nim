@@ -3,6 +3,9 @@ import tables
 import ./types
 import ./exprs
 
+var Translators*     = new_table[ValueKind, Translator]()
+var GeneTranslators* = new_table[string, Translator]()
+
 #################### Definitions #################
 
 proc translate*(stmts: seq[Value]): Expr
@@ -35,13 +38,6 @@ proc translate*(stmts: seq[Value]): Expr =
     for stmt in stmts:
       cast[ExGroup](result).data.add(translate(stmt))
 
-# (@p = 1)
-proc translate_prop_assignment*(value: Value): Expr =
-  var name = value.gene_type.symbol[1..^1]
-  return new_ex_set_prop(name, translate(value.gene_data[1]))
-
-export ExException, new_ex_exception
-
 proc translate_catch*(value: Value): Expr =
   try:
     result = translate(value)
@@ -55,3 +51,8 @@ proc translate_wrap*(translate: Translator): Translator =
     result = translate(value)
     if result != nil and result of ExException:
       raise cast[ExException](result).ex
+
+# (@p = 1)
+proc translate_prop_assignment*(value: Value): Expr =
+  var name = value.gene_type.symbol[1..^1]
+  return new_ex_set_prop(name, translate(value.gene_data[1]))
