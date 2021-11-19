@@ -25,7 +25,8 @@ type
   TranslateWrap* = proc(translate: Translator): Translator
 
   NativeFn* = proc(args: Value): Value {.nimcall.}
-  NativeFnWrap* = proc(f: NativeFn): NativeFn
+  NativeFn2* = proc(args: Value): Value
+  NativeFnWrap* = proc(f: NativeFn): NativeFn2
   NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
@@ -238,6 +239,7 @@ type
     VkMixin
     VkMethod
     VkNativeFn
+    VkNativeFn2
     VkNativeMethod
     VkInstance
     VkEnum
@@ -342,6 +344,8 @@ type
       `method`*: Method
     of VkNativeFn:
       native_fn*: NativeFn
+    of VkNativeFn2:
+      native_fn2*: NativeFn2
     of VkNativeMethod:
       native_method*: NativeMethod
     of VkInstance:
@@ -1829,14 +1833,13 @@ proc eval_wrap*(e: Evaluator): Evaluator =
     if result != nil and result.kind == VkException:
       raise result.exception
 
-# TODO: proc(){.nimcall.} can not access local variables
+# proc(){.nimcall.} can not access local variables
 # Workaround: create a new type like RemoteFn that does not use nimcall
-proc fn_wrap*(f: NativeFn): NativeFn =
-  todo("fn_wrap")
-  # return proc(args: Value): Value {.nimcall.} =
-  #   result = f(args)
-  #   if result != nil and result.kind == VkException:
-  #     raise result.exception
+proc fn_wrap*(f: NativeFn): NativeFn2 =
+  return proc(args: Value): Value =
+    result = f(args)
+    if result != nil and result.kind == VkException:
+      raise result.exception
 
 proc exception_to_value*(ex: ref system.Exception): Value =
   Value(kind: VkException, exception: ex)

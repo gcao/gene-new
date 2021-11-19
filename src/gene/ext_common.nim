@@ -24,14 +24,13 @@ proc translate*(value: Value): Expr =
   if result != nil and result of ExException:
     raise cast[ExException](result).ex
 
-converter ns_to_gene*(v: Namespace): Value =
+converter to_value*(v: Namespace): Value =
   Value(kind: VkNamespace, ns: v)
 
 converter to_value*(v: NativeFn): Value =
   Value(
-    kind: VkNativeFn,
-    # native_fn: fn_wrap(v), # fn_wrap does not work
-    native_fn: v,
+    kind: VkNativeFn2,
+    native_fn2: fn_wrap(v),
   )
 
 proc set_globals*(
