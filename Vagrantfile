@@ -70,7 +70,7 @@ Vagrant.configure(2) do |config|
     curl https://raw.githubusercontent.com/nim-lang/Nim/devel/tools/nim-gdb.py --output $HOME/.nimble/tools/nim-gdb.py
     chmod a+x $HOME/.nimble/tools/nim-gdb
 
-    mkdir gene
+    mkdir $HOME/gene
     echo 'export PATH="$HOME/bin:$HOME/.nimble/bin:$HOME/.nimble/tools:$PATH"' >> $HOME/.bashrc
     echo "cd #{APP_DIR}" >> $HOME/.bashrc
   SHELL
