@@ -1827,3 +1827,21 @@ proc eval_wrap*(eval: Evaluator): Evaluator =
     result = eval(self, frame, target, expr)
     if result != nil and result.kind == VkException:
       raise result.exception
+
+proc exception_to_value*(ex: ref system.Exception): Value =
+  Value(kind: VkException, exception: ex)
+
+macro ex2val*(p: untyped): untyped =
+  if p.kind == nnkProcDef:
+    p[6] = nnkTryStmt.newTree(
+      p[6],
+      nnkExceptBranch.newTree(
+        infix(newDotExpr(ident"system", ident"Exception"), "as", ident"ex"),
+        nnkReturnStmt.newTree(
+          nnkCall.newTree(ident"exception_to_value", ident"ex"),
+        ),
+      ),
+    )
+    return p
+  else:
+    todo("ex2val " & $nnkProcDef)

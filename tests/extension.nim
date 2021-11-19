@@ -25,26 +25,20 @@ proc translate_test(value: Value): Expr =
     # echo e.get_stack_trace()
     result = new_ex_exception(e)
 
-proc new_extension*(args: Value): Value {.nimcall.} =
-  try:
-    result = Value(
-      kind: VkCustom,
-      custom_class: ExtensionClass.class,
-      custom: Extension(
-        i: args.gene_data[0].int,
-        s: args.gene_data[1].str,
-      ),
-    )
-  except system.Exception as e:
-    result = Value(
-      kind: VkException,
-      exception: e,
-    )
+proc new_extension*(args: Value): Value {.nimcall, ex2val.} =
+  result = Value(
+    kind: VkCustom,
+    custom_class: ExtensionClass.class,
+    custom: Extension(
+      i: args.gene_data[0].int,
+      s: args.gene_data[1].str,
+    ),
+  )
 
-proc get_i*(args: Value): Value {.nimcall.} =
+proc get_i*(args: Value): Value {.nimcall, ex2val.} =
   Extension(args.gene_data[0].custom).i
 
-proc get_i*(self: Value, args: Value): Value {.nimcall.} =
+proc get_i*(self: Value, args: Value): Value {.nimcall, ex2val.} =
   Extension(self.custom).i
 
 {.push dynlib exportc.}

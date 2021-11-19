@@ -1,4 +1,5 @@
 import tables
+import macros
 
 import gene/map_key
 import gene/types except eval
