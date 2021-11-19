@@ -25,6 +25,7 @@ type
   TranslateWrap* = proc(translate: Translator): Translator
 
   NativeFn* = proc(args: Value): Value {.nimcall.}
+  NativeFnWrap* = proc(f: NativeFn): NativeFn
   NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
@@ -1822,23 +1823,56 @@ proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       exception: e,
     )
 
-proc eval_wrap*(eval: Evaluator): Evaluator =
+proc eval_wrap*(e: Evaluator): Evaluator =
   return proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-    result = eval(self, frame, target, expr)
+    result = e(self, frame, target, expr)
     if result != nil and result.kind == VkException:
       raise result.exception
+
+# TODO: proc(){.nimcall.} can not access local variables
+# Workaround: create a new type like RemoteFn that does not use nimcall
+proc fn_wrap*(f: NativeFn): NativeFn =
+  todo("fn_wrap")
+  # return proc(args: Value): Value {.nimcall.} =
+  #   result = f(args)
+  #   if result != nil and result.kind == VkException:
+  #     raise result.exception
 
 proc exception_to_value*(ex: ref system.Exception): Value =
   Value(kind: VkException, exception: ex)
 
-macro ex2val*(p: untyped): untyped =
+type
+  ExException* = ref object of Expr
+    ex*: ref system.Exception
+
+proc eval_exception(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  # raise cast[ExException](expr).ex
+  not_allowed("eval_exception")
+
+proc new_ex_exception*(ex: ref system.Exception): ExException =
+  ExException(
+    evaluator: eval_exception, # Should never be called
+    ex: ex,
+  )
+
+macro wrap_exception*(p: untyped): untyped =
   if p.kind == nnkProcDef:
+    var convert: string
+    var ret_type = $p[3][0]
+    case ret_type:
+    of "Value":
+      convert = "exception_to_value"
+    of "Expr":
+      convert = "new_ex_exception"
+    else:
+      todo("wrap_exception does NOT support returning type of " & ret_type)
+
     p[6] = nnkTryStmt.newTree(
       p[6],
       nnkExceptBranch.newTree(
         infix(newDotExpr(ident"system", ident"Exception"), "as", ident"ex"),
         nnkReturnStmt.newTree(
-          nnkCall.newTree(ident"exception_to_value", ident"ex"),
+          nnkCall.newTree(ident(convert), ident"ex"),
         ),
       ),
     )

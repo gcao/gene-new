@@ -1,5 +1,4 @@
 import tables
-import macros
 
 import gene/map_key
 import gene/types except eval
@@ -13,6 +12,7 @@ var eval_catch*: EvalCatch
 var eval_wrap*: EvalWrap
 var translate_catch*: TranslateCatch
 var translate_wrap*: TranslateWrap
+var fn_wrap: NativeFnWrap
 
 proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   result = self.eval_catch(frame, expr)
@@ -26,6 +26,13 @@ proc translate*(value: Value): Expr =
 
 converter ns_to_gene*(v: Namespace): Value =
   Value(kind: VkNamespace, ns: v)
+
+converter to_value*(v: NativeFn): Value =
+  Value(
+    kind: VkNativeFn,
+    # native_fn: fn_wrap(v), # fn_wrap does not work
+    native_fn: v,
+  )
 
 proc set_globals*(
   m               : Mapping,
@@ -67,6 +74,7 @@ proc set_globals*(
   ewrap           : EvalWrap,
   tcatch          : TranslateCatch,
   twrap           : TranslateWrap,
+  fwrap           : NativeFnWrap,
 ) {.dynlib exportc.} =
   mapping         = m
   Translators     = translators
@@ -107,3 +115,4 @@ proc set_globals*(
   eval_wrap       = ewrap
   translate_catch = tcatch
   translate_wrap  = twrap
+  fn_wrap         = fwrap
