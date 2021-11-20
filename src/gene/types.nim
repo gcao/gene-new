@@ -92,6 +92,7 @@ type
     props*: Table[string, Value]  # Additional properties
 
   Namespace* = ref object
+    module*: Module
     parent*: Namespace
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
@@ -722,6 +723,7 @@ proc new_module*(name: string): Module =
     name: name,
     ns: new_namespace(VM.app.ns),
   )
+  result.ns.module = result
 
 proc new_module*(): Module =
   result = new_module("<unknown>")
@@ -731,6 +733,7 @@ proc new_module*(ns: Namespace, name: string): Module =
     name: name,
     ns: new_namespace(ns),
   )
+  result.ns.module = result
 
 proc new_module*(ns: Namespace): Module =
   result = new_module(ns, "<unknown>")

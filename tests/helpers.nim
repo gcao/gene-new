@@ -102,6 +102,15 @@ proc test_interpreter*(code: string, callback: proc(result: Value)) =
     init_all()
     callback VM.eval(code)
 
+proc test_interpreter_error*(code: string) =
+  var code = cleanup(code)
+  test "Interpreter / eval - error expected: " & code:
+    try:
+      discard VM.eval(code)
+      fail()
+    except ParseError:
+      discard
+
 proc test_parse_document*(code: string, callback: proc(result: Document)) =
   var code = cleanup(code)
   test "Parse document: " & code:

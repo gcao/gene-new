@@ -140,28 +140,36 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 
   var `from` = expr.from
   if expr.native:
-    var path = self.eval(frame, `from`).str
-    let module = load_dynlib(dir & path)
+    var `from` = self.eval(frame, `from`).str
+    var path = dir & `from`
+    var module: Module
+    if self.modules.has_key(path.to_key):
+      ns = self.modules[path.to_key]
+      module = ns.module
+    else:
+      module = load_dynlib(path)
+      ns = module.ns
+      self.modules[path.to_key] = ns
     var names: seq[string] = @[]
     for m in expr.matcher.children:
       names.add(m.name.to_s)
     module.prefetch_from_dynlib(names)
-    ns = module.ns
   elif `from` == nil:
     # If "from" is not given, import from parent of root namespace.
     ns = frame.ns.root.parent
   else:
     var `from` = self.eval(frame, `from`).str
+    var path = dir & `from`
     if expr.inherit != nil:
       var inherit = self.eval(frame, expr.inherit).ns
-      var code = read_file(dir & `from` & ".gene")
-      ns = self.import_module(`from`.to_key, code, inherit)
-    elif self.modules.has_key(`from`.to_key):
-      ns = self.modules[`from`.to_key]
+      var code = read_file(path & ".gene")
+      ns = self.import_module(path.to_key, code, inherit)
+    elif self.modules.has_key(path.to_key):
+      ns = self.modules[path.to_key]
     else:
-      var code = read_file(dir & `from` & ".gene")
-      ns = self.import_module(`from`.to_key, code)
-      self.modules[`from`.to_key] = ns
+      var code = read_file(path & ".gene")
+      ns = self.import_module(path.to_key, code)
+      self.modules[path.to_key] = ns
   self.import_from_ns(frame, ns, expr.matcher.children)
 
 proc translate_import(value: Value): Expr =
