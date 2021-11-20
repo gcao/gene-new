@@ -61,6 +61,8 @@ type
 
 proc call_set_globals(p: pointer)
 
+# TODO: unload dynamic libraries before reloading
+
 proc load_dynlib*(path: string): Module =
   result = new_module(path)
   var handle = load_lib(path & ".dylib")
