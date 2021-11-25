@@ -2,4 +2,5 @@
 switch("d", "ssl")
 switch("d", "useMalloc")
 switch("gc", "orc")
+switch("path", "src")
 switch("outdir", "bin")

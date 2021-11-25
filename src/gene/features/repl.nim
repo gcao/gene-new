@@ -1,6 +1,6 @@
 import ../types
 import ../repl
-import ../interpreter
+import ../interpreter_base
 
 type
   ExRepl* = ref object of Expr

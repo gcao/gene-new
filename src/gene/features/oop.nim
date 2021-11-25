@@ -4,7 +4,7 @@ import ../map_key
 import ../types
 import ../exprs
 import ../translators
-import ../interpreter
+import ../interpreter_base
 
 let SELF_KEY*                 = add_key("self")
 let METHOD_KEY*               = add_key("method")

@@ -4,7 +4,7 @@ import ../map_key
 import ../types
 import ../exprs
 import ../translators
-import ../interpreter
+import ../interpreter_base
 
 type
   ExNamespace* = ref object of Expr

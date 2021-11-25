@@ -31,7 +31,7 @@ Normalizers.add proc(self: Value): bool =
 # Normalizers.add proc(self: Value): bool =
 #   var `type` = self.gene_type
 #   if `type`.kind == VkSymbol:
-#     if `type`.symbol == "import" or `type`.symbol == "import_native":
+#     if `type`.symbol == "import":
 #       var names: seq[Value] = @[]
 #       var module: Value
 #       var expect_module = false

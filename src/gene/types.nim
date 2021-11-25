@@ -633,6 +633,8 @@ proc new_gene_string_move*(s: string): Value
 proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
 proc new_namespace*(): Namespace
 proc new_namespace*(parent: Namespace): Namespace
+proc new_class*(name: string): Class
+proc new_class*(name: string, parent: Class): Class
 proc new_match_matcher*(): RootMatcher
 proc new_arg_matcher*(): RootMatcher
 proc hint*(self: RootMatcher): MatchingHint
@@ -671,6 +673,12 @@ proc new_gene_processor*(translator: Translator): Value =
   return Value(
     kind: VkGeneProcessor,
     gene_processor: GeneProcessor(translator: translator),
+  )
+
+proc new_gene_class*(name: string): Value =
+  return Value(
+    kind: VkClass,
+    class: new_class(name),
   )
 
 proc new_gene_future*(f: Future[Value]): Value =
@@ -997,11 +1005,18 @@ proc new_return*(): Return =
 
 #################### Class #######################
 
-proc new_class*(name: string): Class =
+proc new_class*(name: string, parent: Class): Class =
   return Class(
     name: name,
     ns: new_namespace(nil, name),
+    parent: parent,
   )
+
+proc new_class*(name: string): Class =
+  var parent: Class
+  if ObjectClass != nil:
+    parent = ObjectClass.class
+  new_class(name, parent)
 
 proc get_method*(self: Class, name: MapKey): Method =
   if self.methods.has_key(name):

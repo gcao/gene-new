@@ -13,8 +13,8 @@ proc test_extension(code: string, result: Value) =
 suite "Extension":
   init_all()
   discard VM.eval("""
-    (import_native Extension new_extension get_i from "tests/libextension")
-    (import_native new_extension2 extension2_name from "tests/libextension2")
+    (import Extension new_extension get_i from "tests/libextension" ^^native)
+    (import new_extension2 extension2_name from "tests/libextension2" ^^native)
 
     # Have to add them to global namespace because they are only imported to
     # the namespace of this module

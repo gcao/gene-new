@@ -3,7 +3,7 @@ import strutils, tables
 import ../types
 import ../exprs
 import ../translators
-import ../interpreter
+import ../interpreter_base
 
 type
   NoResult* = ref object of types.Exception

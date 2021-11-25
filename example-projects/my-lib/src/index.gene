@@ -1,4 +1,4 @@
-(import_native upcase from "build/libindex")
+(import upcase from "build/libindex" ^^native)
 
 (fn str_size str
   (str .size)

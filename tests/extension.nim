@@ -47,12 +47,8 @@ proc init*(): Value {.wrap_exception.} =
 
   # result.ns["test"] = new_gene_processor(translate_wrap(translate_test))
 
-  ExtensionClass = Value(
-    kind: VkClass,
-    class: new_class("Extension"),
-  )
+  ExtensionClass = new_gene_class("Extension")
   result.ns["Extension"] = ExtensionClass
-  ExtensionClass.class.parent = ObjectClass.class
   ExtensionClass.def_native_constructor(fn_wrap(new_extension))
   ExtensionClass.def_native_method("i", method_wrap(get_i))
 

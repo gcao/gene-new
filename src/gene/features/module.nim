@@ -4,7 +4,7 @@ import ../dynlib_mapping
 import ../types
 import ../map_key
 import ../translators
-import ../interpreter
+import ../interpreter_base
 
 let INHERIT_KEY*               = add_key("inherit")
 
@@ -177,16 +177,16 @@ proc translate_import(value: Value): Expr =
   var e = ExImport(
     evaluator: eval_import,
     matcher: matcher,
-    native: value.gene_type.symbol == "import_native",
   )
   if matcher.from != nil:
     e.from = translate(matcher.from)
   if value.gene_props.has_key(PKG_KEY):
     e.pkg = translate(value.gene_props[PKG_KEY])
+  if value.gene_props.has_key(NATIVE_KEY):
+    e.native = value.gene_props[NATIVE_KEY].bool
   if value.gene_props.has_key(INHERIT_KEY):
     e.inherit = translate(value.gene_props[INHERIT_KEY])
   return e
 
 proc init*() =
   GeneTranslators["import"] = translate_import
-  GeneTranslators["import_native"] = translate_import

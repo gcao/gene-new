@@ -5,7 +5,7 @@ import ../map_key
 import ../types
 import ../exprs
 import ../translators
-import ../interpreter
+import ../interpreter_base
 import ./oop
 import ./selector
 import ./gene
