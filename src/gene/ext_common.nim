@@ -1,4 +1,5 @@
 import tables
+import asyncdispatch
 
 import gene/map_key
 import gene/types
@@ -35,6 +36,7 @@ converter to_value*(v: NativeFn): Value =
   )
 
 proc set_globals*(
+  g_disp          : PDispatcher,
   m               : Mapping,
   translators     : TableRef[ValueKind, Translator],
   gene_translators: TableRef[string, Translator],
@@ -77,6 +79,7 @@ proc set_globals*(
   fwrap           : NativeFnWrap,
   mwrap           : NativeMethodWrap,
 ) {.dynlib exportc.} =
+  set_global_dispatcher(g_disp)
   mapping         = m
   Translators     = translators
   GeneTranslators = gene_translators
