@@ -30,7 +30,8 @@ proc start_server_internal*(args: Value): Value =
   proc handler(req: stdhttp.Request) {.async gcsafe.} =
     var my_args = new_gene_gene()
     my_args.gene_data.add(new_gene_request(req))
-    var body = VM.call_fn(nil, args.gene_data[1], my_args).str
+    # TODO: VM.call is not wrapped
+    var body = VM.call(nil, args.gene_data[1], my_args).str
     await req.respond(Http200, body, new_http_headers())
 
   var server = new_async_http_server()

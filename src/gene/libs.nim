@@ -502,7 +502,7 @@ proc init*() =
         try:
           var options = new_gene_gene(Nil)
           options.gene_data.add(new_gene_any(req.unsafe_addr, HTTP_REQUEST_KEY))
-          var body = VM.call_fn(nil, args.gene_data[1], options).str
+          var body = VM.call(nil, args.gene_data[1], options).str
           await req.respond(Http200, body, new_http_headers())
         except system.Exception as e:
           echo e.msg

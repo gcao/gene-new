@@ -155,7 +155,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
   of SmCallback:
     var args = new_gene_gene(Nil)
     args.gene_data.add(target)
-    var v = VM.call_fn(nil, self.callback, args)
+    var v = VM.call(nil, self.callback, args)
     if v.kind == VkGene and v.gene_type.kind == VkSymbol:
       case v.gene_type.symbol:
       of "void":

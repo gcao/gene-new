@@ -15,7 +15,8 @@ let GENE_RUNTIME* = Runtime(
   # version: read_file(GENE_HOME & "/VERSION").strip(),
 )
 
-proc call_fn*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
+proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
+proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value
 
 #################### Application #################
 
@@ -134,7 +135,7 @@ proc run_file*(self: VirtualMachine, file: string): Value =
     var main = frame[MAIN_KEY]
     if main.kind == VkFunction:
       var args = VM.app.ns[CMD_ARGS_KEY]
-      result = self.call_fn(frame, main, args)
+      result = self.call(frame, main, args)
     else:
       raise new_exception(types.Exception, "main is not a function.")
   self.wait_for_futures()
@@ -374,6 +375,14 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
 
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   case target.kind:
+  of VkFunction:
+    var fn_scope = new_scope()
+    fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
+    var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
+    new_frame.parent = frame
+
+    self.process_args(new_frame, target.fn.matcher, args)
+    result = self.call_fn_skip_args(new_frame, target)
   of VkBlock:
     var scope = new_scope()
     scope.set_parent(target.block.parent_scope, target.block.parent_scope_max)
@@ -427,12 +436,3 @@ proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Valu
     var future = new_future[Value]()
     future.complete(result)
     result = new_gene_future(future)
-
-proc call_fn*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
-  var fn_scope = new_scope()
-  fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
-  var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
-  new_frame.parent = frame
-
-  self.process_args(new_frame, target.fn.matcher, args)
-  self.call_fn_skip_args(new_frame, target)
