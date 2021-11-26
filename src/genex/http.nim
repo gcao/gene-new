@@ -21,21 +21,19 @@ proc new_gene_request(req: stdhttp.Request): Value =
   )
 
 proc req_method*(self: Value, args: Value): Value {.wrap_exception.} =
-  return $cast[stdhttp.Request](self.custom).req_method
+  return $cast[Request](self.custom).req.req_method
 
 proc req_url*(self: Value, args: Value): Value {.wrap_exception.} =
-  return ""
-  # return $cast[stdhttp.Request](self.custom).url
+  return $cast[Request](self.custom).req.url
 
 proc req_params*(self: Value, args: Value): Value {.wrap_exception.} =
-  return new_gene_map()
-  # var req = cast[stdhttp.Request](self.custom)
-  # var parts = req.url.query.split('&')
-  # for p in parts:
-  #   if p == "":
-  #     continue
-  #   var pair = p.split('=', 2)
-  #   result.map[pair[0].to_key] = pair[1]
+  var req = cast[Request](self.custom).req
+  var parts = req.url.query.split('&')
+  for p in parts:
+    if p == "":
+      continue
+    var pair = p.split('=', 2)
+    result.map[pair[0].to_key] = pair[1]
 
 proc start_server_internal*(args: Value): Value =
   var port = if args.gene_data[0].kind == VkString:
