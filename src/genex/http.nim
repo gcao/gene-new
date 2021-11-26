@@ -20,6 +20,23 @@ proc new_gene_request(req: stdhttp.Request): Value =
     custom_class: RequestClass.class,
   )
 
+proc req_method*(self: Value, args: Value): Value {.wrap_exception.} =
+  return $cast[stdhttp.Request](self.custom).req_method
+
+proc req_url*(self: Value, args: Value): Value {.wrap_exception.} =
+  return ""
+  # return $cast[stdhttp.Request](self.custom).url
+
+proc req_params*(self: Value, args: Value): Value {.wrap_exception.} =
+  return new_gene_map()
+  # var req = cast[stdhttp.Request](self.custom)
+  # var parts = req.url.query.split('&')
+  # for p in parts:
+  #   if p == "":
+  #     continue
+  #   var pair = p.split('=', 2)
+  #   result.map[pair[0].to_key] = pair[1]
+
 proc start_server_internal*(args: Value): Value =
   var port = if args.gene_data[0].kind == VkString:
     args.gene_data[0].str.parse_int
@@ -61,6 +78,9 @@ proc init*(): Value {.wrap_exception.} =
   GENEX_NS.ns["http"] = result
 
   RequestClass = new_gene_class("Request")
+  RequestClass.def_native_method "method", req_method
+  RequestClass.def_native_method "url", req_url
+  RequestClass.def_native_method "params", req_params
   result.ns["Request"] = RequestClass
 
   result.ns["start_server"] = start_server
