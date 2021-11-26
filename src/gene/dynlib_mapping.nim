@@ -4,6 +4,7 @@ import asyncdispatch
 import ./map_key
 import ./types
 import ./translators
+import ./interpreter_base
 
 # Design:
 # * Exception handling
@@ -57,6 +58,8 @@ type
     eval_wrap       : EvalWrap,
     translate_catch : TranslateCatch,
     translate_wrap  : TranslateWrap,
+    invoke_catch    : Invoke,
+    invoke_wrap     : InvokeWrap,
     fn_wrap         : NativeFnWrap,
     method_wrap     : NativeMethodWrap,
   ) {.nimcall.}
@@ -131,6 +134,8 @@ proc call_set_globals(p: pointer) =
     eval_wrap,
     translate_catch,
     translate_wrap,
+    call_catch,
+    call_wrap,
     fn_wrap,
     method_wrap,
   )

@@ -2,7 +2,6 @@ import strutils
 import asynchttpserver as stdhttp, asyncdispatch
 
 include gene/ext_common
-import gene/interpreter_base
 
 type
   Request = ref object of CustomValue
@@ -28,11 +27,26 @@ proc start_server_internal*(args: Value): Value =
     args.gene_data[0].int
 
   proc handler(req: stdhttp.Request) {.async gcsafe.} =
+    echo "HTTP REQ: " & $req.url
     var my_args = new_gene_gene()
     my_args.gene_data.add(new_gene_request(req))
-    # TODO: VM.call is not wrapped
-    var body = VM.call(nil, args.gene_data[1], my_args).str
-    await req.respond(Http200, body, new_http_headers())
+    var res = VM.invoke_catch(nil, args.gene_data[1], my_args)
+    if res == nil:
+      echo "HTTP RESP: 200, response is nil"
+      await req.respond(Http200, "", new_http_headers())
+    else:
+      case res.kind
+      of VkException:
+        echo "HTTP RESP: 500 " & res.exception.msg
+        echo res.exception.get_stack_trace()
+        await req.respond(Http500, "Internal Server Error", new_http_headers())
+      of VkString:
+        echo "HTTP RESP: 200"
+        var body = res.str
+        await req.respond(Http200, body, new_http_headers())
+      else:
+        echo "HTTP RESP: 500 response kind is " & $res.kind
+        await req.respond(Http500, "TODO: $res.kind", new_http_headers())
 
   var server = new_async_http_server()
   async_check server.serve(Port(port), handler)

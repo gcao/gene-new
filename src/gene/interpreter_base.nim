@@ -8,6 +8,10 @@ import ./repl
 import ./exprs
 import ./translators
 
+type
+  Invoke* = proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
+  InvokeWrap* = proc(invoke: Invoke): Invoke
+
 let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
 let GENE_RUNTIME* = Runtime(
   home: GENE_HOME,
@@ -436,3 +440,18 @@ proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Valu
     var future = new_future[Value]()
     future.complete(result)
     result = new_gene_future(future)
+
+proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
+  try:
+    result = self.call(frame, target, args)
+  except system.Exception as e:
+    result = Value(
+      kind: VkException,
+      exception: e,
+    )
+
+proc call_wrap*(invoke: Invoke): Invoke =
+  return proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
+    result = invoke(self, frame, target, args)
+    if result != nil and result.kind == VkException:
+      raise result.exception
