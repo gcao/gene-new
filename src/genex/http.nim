@@ -1,5 +1,6 @@
 import strutils
 import asynchttpserver as stdhttp, asyncdispatch
+import uri
 
 include gene/ext_common
 
@@ -49,19 +50,23 @@ proc start_server_internal*(args: Value): Value =
     var res = VM.invoke_catch(nil, args.gene_data[1], my_args)
     if res == nil:
       echo "HTTP RESP: 200, response is nil"
+      echo()
       await req.respond(Http200, "", new_http_headers())
     else:
       case res.kind
       of VkException:
         echo "HTTP RESP: 500 " & res.exception.msg
         echo res.exception.get_stack_trace()
+        echo()
         await req.respond(Http500, "Internal Server Error", new_http_headers())
       of VkString:
         echo "HTTP RESP: 200"
+        echo()
         var body = res.str
         await req.respond(Http200, body, new_http_headers())
       else:
         echo "HTTP RESP: 500 response kind is " & $res.kind
+        echo()
         await req.respond(Http500, "TODO: $res.kind", new_http_headers())
 
   var server = new_async_http_server()

@@ -51,10 +51,10 @@
     (result = (h req))
     (if result (break))
   )
-  (println "200 " (req .method) " " (req .url))
+  (println "200" (req .method) (req .url))
   result
 catch _
-  (println "500 " (req .method) " " (req .url))
+  (println "500" (req .method) (req .url))
   (throw $ex)
 )
 
@@ -62,7 +62,7 @@ catch _
 (if (($cmd_args .size) > 1)
   (port = (($cmd_args .get 1).to_i))
 )
-(println "Starting HTTP server at port " port " ...")
+(println "Starting HTTP server at port" port "...")
 
 (genex/http/start_server port handler)
 (gene/run_forever)
