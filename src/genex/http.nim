@@ -27,6 +27,7 @@ proc req_url*(self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Request](self.custom).req.url
 
 proc req_params*(self: Value, args: Value): Value {.wrap_exception.} =
+  result = new_gene_map()
   var req = cast[Request](self.custom).req
   var parts = req.url.query.split('&')
   for p in parts:
@@ -76,9 +77,9 @@ proc init*(): Value {.wrap_exception.} =
   GENEX_NS.ns["http"] = result
 
   RequestClass = new_gene_class("Request")
-  RequestClass.def_native_method "method", req_method
-  RequestClass.def_native_method "url", req_url
-  RequestClass.def_native_method "params", req_params
+  RequestClass.def_native_method "method", method_wrap(req_method)
+  RequestClass.def_native_method "url", method_wrap(req_url)
+  RequestClass.def_native_method "params", method_wrap(req_params)
   result.ns["Request"] = RequestClass
 
   result.ns["start_server"] = start_server
