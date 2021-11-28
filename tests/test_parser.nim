@@ -33,15 +33,11 @@ test_parser "\\f", 'f'
 test_parser "\\formfeed", '\f'
 test_parser "\\b", 'b'
 test_parser "\\backspace", '\b'
-
-# Below are hacky way of supporting nil/true/false symbols
-# test_parser "\\nil", new_gene_symbol("nil")
-# test_parser "\\true", new_gene_symbol("true")
-# test_parser "\\false", new_gene_symbol("false")
-
-# test_parser "(#Symbol \"nil\")", new_gene_symbol("nil")
-
 test_parser "\\中", "中".runeAt(0)
+
+test_parser "\\\"nil\"", new_gene_symbol("nil")
+test_parser "\\\"true\"", new_gene_symbol("true")
+test_parser "\\\"false\"", new_gene_symbol("false")
 
 test_parser "\"test\"", "test"
 test_parser ",\"test\",", "test"

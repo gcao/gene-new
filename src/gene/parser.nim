@@ -300,6 +300,13 @@ proc read_character(self: var Parser): Value =
   if ch == EndOfFile:
     raise new_exception(ParseError, "EOF while reading character")
 
+  if ch == '"':
+    self.bufpos.inc()
+    discard self.parse_string()
+    if self.error != ErrNone:
+      raise new_exception(ParseError, "read_string failure: " & $self.error)
+    return new_gene_symbol(self.str)
+
   result = Value(kind: VkChar)
   let token = self.read_token(false)
   if token.len == 1:
