@@ -316,9 +316,9 @@ proc read_character(self: var Parser): Value =
   case ch:
   of EndOfFile:
     raise new_exception(ParseError, "EOF while reading character")
-  of '"':
+  of '\'', '"':
     self.bufpos.inc()
-    discard self.parse_string('"')
+    discard self.parse_string(ch)
     if self.error != ErrNone:
       raise new_exception(ParseError, "read_string failure: " & $self.error)
     return new_gene_symbol(self.str)
