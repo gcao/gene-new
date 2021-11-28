@@ -15,15 +15,18 @@ requires "nim >= 1.0.0"
 
 task buildext, "Build the Nim extension":
   exec "nim c --app:lib -d:useMalloc --outdir:build src/genex/http.nim"
+  exec "nim c --app:lib -d:useMalloc --outdir:build src/genex/sqlite.nim"
   exec "nim c --app:lib -d:useMalloc --outdir:tests tests/extension.nim"
   exec "nim c --app:lib -d:useMalloc --outdir:tests tests/extension2.nim"
+
+after build:
+  exec "nimble buildext"
 
 before test:
   exec "nim c --app:lib -d:useMalloc --outdir:tests tests/extension.nim"
   exec "nim c --app:lib -d:useMalloc --outdir:tests tests/extension2.nim"
 
 task test, "Runs the test suite":
-  requires "build"
   exec "nim c -r tests/test_parser.nim"
   exec "nim c -r tests/test_interpreter.nim"
   exec "nim c -r tests/test_scope.nim"

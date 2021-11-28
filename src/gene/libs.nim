@@ -492,42 +492,42 @@ proc init*() =
         future.complete(f.read())
       result = new_gene_future(future)
 
-    GENE_NATIVE_NS.ns["http_start_server"] = new_gene_native_fn proc(args: Value): Value {.name:"http_start_server".} =
-      var port: int
-      if args.gene_data[0].kind == VkString:
-        port = args.gene_data[0].str.parse_int
-      else:
-        port = args.gene_data[0].int
-      proc handler(req: Request) {.async gcsafe.} =
-        try:
-          var options = new_gene_gene(Nil)
-          options.gene_data.add(new_gene_any(req.unsafe_addr, HTTP_REQUEST_KEY))
-          var body = VM.call(nil, args.gene_data[1], options).str
-          await req.respond(Http200, body, new_http_headers())
-        except system.Exception as e:
-          echo e.msg
-          echo e.get_stack_trace()
-          discard req.respond(Http500, e.msg, new_http_headers())
-      var server = new_async_http_server()
-      async_check server.serve(Port(port), handler)
+    # GENE_NATIVE_NS.ns["http_start_server"] = new_gene_native_fn proc(args: Value): Value {.name:"http_start_server".} =
+    #   var port: int
+    #   if args.gene_data[0].kind == VkString:
+    #     port = args.gene_data[0].str.parse_int
+    #   else:
+    #     port = args.gene_data[0].int
+    #   proc handler(req: Request) {.async gcsafe.} =
+    #     try:
+    #       var options = new_gene_gene(Nil)
+    #       options.gene_data.add(new_gene_any(req.unsafe_addr, HTTP_REQUEST_KEY))
+    #       var body = VM.call(nil, args.gene_data[1], options).str
+    #       await req.respond(Http200, body, new_http_headers())
+    #     except system.Exception as e:
+    #       echo e.msg
+    #       echo e.get_stack_trace()
+    #       discard req.respond(Http500, e.msg, new_http_headers())
+    #   var server = new_async_http_server()
+    #   async_check server.serve(Port(port), handler)
 
-    GENE_NATIVE_NS.ns["http_req_url"] = new_gene_native_method proc(self: Value, args: Value): Value {.name:"http_req_url".} =
-      var req = cast[ptr Request](self.any)[]
-      result = $req.url
+    # GENE_NATIVE_NS.ns["http_req_url"] = new_gene_native_method proc(self: Value, args: Value): Value {.name:"http_req_url".} =
+    #   var req = cast[ptr Request](self.any)[]
+    #   result = $req.url
 
-    GENE_NATIVE_NS.ns["http_req_method"] = new_gene_native_method proc(self: Value, args: Value): Value {.name:"http_req_method".} =
-      var req = cast[ptr Request](self.any)[]
-      result = $req.req_method
+    # GENE_NATIVE_NS.ns["http_req_method"] = new_gene_native_method proc(self: Value, args: Value): Value {.name:"http_req_method".} =
+    #   var req = cast[ptr Request](self.any)[]
+    #   result = $req.req_method
 
-    GENE_NATIVE_NS.ns["http_req_params"] = new_gene_native_method proc(self: Value, args: Value): Value {.name:"http_req_params".} =
-      result = new_gene_map()
-      var req = cast[ptr Request](self.any)[]
-      var parts = req.url.query.split('&')
-      for p in parts:
-        if p == "":
-          continue
-        var pair = p.split('=', 2)
-        result.map[pair[0].to_key] = pair[1]
+    # GENE_NATIVE_NS.ns["http_req_params"] = new_gene_native_method proc(self: Value, args: Value): Value {.name:"http_req_params".} =
+    #   result = new_gene_map()
+    #   var req = cast[ptr Request](self.any)[]
+    #   var parts = req.url.query.split('&')
+    #   for p in parts:
+    #     if p == "":
+    #       continue
+    #     var pair = p.split('=', 2)
+    #     result.map[pair[0].to_key] = pair[1]
 
     discard self.eval """
     ($with gene/String
