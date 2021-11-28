@@ -304,17 +304,17 @@ proc read_character(self: var Parser): Value =
   let token = self.read_token(false)
   if token.len == 1:
     result.char = token[0]
-  elif token == "\\n" or token == "\\newline":
-    result.char = '\c'
-  elif token == "\\s" or token == "\\space":
+  elif token == "newline":
+    result.char = '\n'
+  elif token == "space":
     result.char = ' '
-  elif token == "\\t" or token == "\\tab":
+  elif token == "tab":
     result.char = '\t'
-  elif token == "\\b" or token == "\\backspace":
+  elif token == "backspace":
     result.char = '\b'
-  elif token == "\\f" or token == "\\formfeed":
+  elif token == "formfeed":
     result.char = '\f'
-  elif token == "\\r" or token == "\\return":
+  elif token == "return":
     result.char = '\r'
   elif token.startsWith("\\u"):
     # TODO: impl unicode char reading
@@ -573,7 +573,7 @@ proc read_regex(self: var Parser): Value =
         if buf[pos] == 'i':
           inc(pos)
           flags.incl(RfIgnoreCase)
-      break;
+      break
     of '\\':
       case buf[pos+1]
       of '\\', '/':
@@ -660,7 +660,7 @@ proc read_dispatch(self: var Parser): Value =
 proc init_macro_array() =
   macros['"'] = read_string
   macros[':'] = read_quoted
-  macros['\''] = read_character
+  macros['\\'] = read_character
   # macros['`'] = read_quasi_quoted
   macros['%'] = read_unquoted
   macros['#'] = read_dispatch
