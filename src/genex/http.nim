@@ -2,7 +2,7 @@ import strutils
 import asynchttpserver as stdhttp, asyncdispatch
 import uri
 
-include gene/ext_common
+include gene/extension/boilerplate
 import gene/utils
 
 type
