@@ -41,6 +41,8 @@ test_parser "\\\"false\"", new_gene_symbol("false")
 
 test_parser "\"test\"", "test"
 test_parser ",\"test\",", "test"
+test_parser "'test'", "test"
+test_parser ",'test',", "test"
 
 test_parser "a", new_gene_symbol("a")
 test_parser "A", new_gene_symbol("A")
