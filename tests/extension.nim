@@ -1,4 +1,4 @@
-include gene/ext_common
+include gene/extension/boilerplate
 
 type
   Extension = ref object of CustomValue
