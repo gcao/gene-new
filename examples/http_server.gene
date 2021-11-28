@@ -37,7 +37,7 @@
 (fn hello req
   (var params req/.params)
   (if (params .contains "name")
-    ("Hello " params/@name)
+    ("Hello " params/@name "!")
   else
     "Hello world!"
   )

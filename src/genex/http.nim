@@ -3,6 +3,7 @@ import asynchttpserver as stdhttp, asyncdispatch
 import uri
 
 include gene/ext_common
+import gene/utils
 
 type
   Request = ref object of CustomValue
@@ -60,9 +61,9 @@ proc start_server_internal*(args: Value): Value =
         echo()
         await req.respond(Http500, "Internal Server Error", new_http_headers())
       of VkString:
-        echo "HTTP RESP: 200"
-        echo()
         var body = res.str
+        echo "HTTP RESP: 200 " & body.abbrev(100)
+        echo()
         await req.respond(Http200, body, new_http_headers())
       else:
         echo "HTTP RESP: 500 response kind is " & $res.kind
