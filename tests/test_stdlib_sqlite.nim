@@ -1,3 +1,4 @@
+import osproc, db_sqlite
 import unittest
 
 import gene/types
@@ -38,30 +39,31 @@ proc test_sql(code: string, callback: proc(result: Value)) =
   test "Interpreter / eval: " & code:
     callback read(code)
 
+proc recreate_db() =
+  discard exec_cmd_ex "rm " & db_file
+  let db = open(db_file, "", "", "")
+  db.exec(sql"""
+    DROP TABLE IF EXISTS table_a
+  """)
+  db.exec(sql"""
+    CREATE TABLE table_a (
+      id   INTEGER,
+      name VARCHAR(50) NOT NULL
+    )
+  """)
+  db.exec(sql"""
+    INSERT INTO table_a (id, name)
+    VALUES (1, 'John'),
+           (2, 'Mark')
+  """)
+  db.close()
+
 suite "SQLite":
+  recreate_db()
   init_all()
   discard VM.eval("""
     (import from "build/libsqlite" ^^native)
   """)
-
-  setup:
-    # Recreate sqlite db
-    exec "rm " & db_file
-    let db = open(db_file, "", "", "")
-    db.exec(sql"""
-      DROP TABLE IF EXISTS table_a
-    """)
-    db.exec(sql"""
-      CREATE TABLE table_a (
-        id   INTEGER,
-        name VARCHAR(50) NOT NULL
-      )
-    """)
-    db.exec(sql"""
-      INSERT INTO my_table (id, name) VALUES (1, 'John')
-      INSERT INTO my_table (id, name) VALUES (2, 'Mark')
-    """)
-    db.close()
 
   test_sql """
     (var db (genex/sqlite/open "/tmp/gene-test.db"))
