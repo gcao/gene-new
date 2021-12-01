@@ -34,6 +34,11 @@ import ./helpers
 
 var db_file = "/tmp/gene-test.db"
 
+proc test_sql(code: string) =
+  var code = cleanup(code)
+  test "Interpreter / eval: " & code:
+    discard VM.eval(code)
+
 proc test_sql(code: string, callback: proc(result: Value)) =
   var code = cleanup(code)
   test "Interpreter / eval: " & code:
@@ -68,8 +73,7 @@ suite "SQLite":
   test_sql """
     (var db (genex/sqlite/open "/tmp/gene-test.db"))
     (db .close)
-  """, proc(r: Value) =
-    discard
+  """
 
   test_sql """
     (var db (genex/sqlite/open "/tmp/gene-test.db"))

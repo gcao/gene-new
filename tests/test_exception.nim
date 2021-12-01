@@ -95,6 +95,23 @@ test_interpreter """
   )
 """, 2
 
+# # Try can be omitted on the module level, like function body
+# # This can simplify freeing resources
+# test_interpreter """
+#   (throw)
+#   1
+#   catch _
+#   2
+#   finally
+#   3
+# """, 2
+
+# test_interpreter """
+#   1
+#   finally
+#   3
+# """, 1
+
 # test_interpreter """
 #   (try
 #     (throw)
