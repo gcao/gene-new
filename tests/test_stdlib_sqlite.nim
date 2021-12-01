@@ -37,7 +37,7 @@ var db_file = "/tmp/gene-test.db"
 proc test_sql(code: string, callback: proc(result: Value)) =
   var code = cleanup(code)
   test "Interpreter / eval: " & code:
-    callback read(code)
+    callback VM.eval(code)
 
 proc recreate_db() =
   discard exec_cmd_ex "rm " & db_file
@@ -67,6 +67,26 @@ suite "SQLite":
 
   test_sql """
     (var db (genex/sqlite/open "/tmp/gene-test.db"))
-    (db .exec (genex/sqlite/select * from table_a))
+    (db .close)
+  """, proc(r: Value) =
+    discard
+
+  test_sql """
+    (var db (genex/sqlite/open "/tmp/gene-test.db"))
+    (var rows (db .exec "select * from table_a"))
+    (db .close)
+    rows
   """, proc(r: Value) =
     check r.vec.len == 2
+    check r.vec[0].vec[0] == "1"
+    check r.vec[0].vec[1] == "John"
+
+  # test_sql """
+  #   (try
+  #     (var db (genex/sqlite/open "/tmp/gene-test.db"))
+  #     (db .exec (genex/sqlite/select _ from table_a))
+  #   finally
+  #     (db .close)
+  #   )
+  # """, proc(r: Value) =
+  #   check r.vec.len == 2
