@@ -68,7 +68,7 @@ suite "SQLite":
   init_all()
 
   test_sql """
-    (var db (genex/sqlite2/open "/tmp/gene-test.db"))
+    (var db (genex/sqlite/open "/tmp/gene-test.db"))
     (db .close)
   """
 
