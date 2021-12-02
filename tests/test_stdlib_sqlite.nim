@@ -66,12 +66,9 @@ proc recreate_db() =
 suite "SQLite":
   recreate_db()
   init_all()
-  discard VM.eval("""
-    (import from "build/libsqlite" ^^native)
-  """)
 
   test_sql """
-    (var db (genex/sqlite/open "/tmp/gene-test.db"))
+    (var db (genex/sqlite2/open "/tmp/gene-test.db"))
     (db .close)
   """
 

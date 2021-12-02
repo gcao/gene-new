@@ -1,7 +1,5 @@
 #!/usr/bin/env gene
 
-(import from "build/libhttp" ^^native)
-
 # Handler: proc(req, data): nil|response
 # * Native handlers
 # * Gene handlers

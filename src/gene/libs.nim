@@ -347,6 +347,8 @@ proc init*() =
     NamespaceClass.class.parent = ObjectClass.class
     NamespaceClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =
       self.ns.name
+    NamespaceClass.def_native_method "set_member_missing", proc(self: Value, args: Value): Value {.name:"ns_name".} =
+      self.ns.member_missing = args.gene_data[0]
     GENE_NS.ns["Namespace"] = NamespaceClass
     GLOBAL_NS.ns["Namespace"] = NamespaceClass
 
@@ -583,6 +585,21 @@ proc init*() =
           (result .add (block k v))
         )
         result
+      )
+    )
+
+    (global/genex .set_member_missing
+      (fnx name
+        (case name
+        when "http"
+          (import from "build/libhttp" ^^native)
+          /http
+        when "sqlite"
+          (import from "build/libsqlite" ^^native)
+          /sqlite
+        else
+          (throw ("" /.name "/" name " is not defined."))
+        )
       )
     )
 

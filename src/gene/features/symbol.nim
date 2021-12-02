@@ -39,7 +39,6 @@ proc eval_my_member(self: VirtualMachine, frame: Frame, target: Value, expr: var
 
 proc call_member_missing(self: VirtualMachine, frame: Frame, obj: Value, target: Value, args: Value, name: string): Value =
   var fn_scope = new_scope()
-  fn_scope.def_member("$member_name".to_key, name)
   var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
   new_frame.parent = frame
   new_frame.self = obj
