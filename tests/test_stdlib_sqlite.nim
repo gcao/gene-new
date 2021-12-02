@@ -88,7 +88,7 @@ suite "SQLite":
   # test_sql """
   #   (try
   #     (var db (genex/sqlite/open "/tmp/gene-test.db"))
-  #     (db .exec (genex/sqlite/select _ from table_a))
+  #     (db .exec :(select * from table_a))
   #   finally
   #     (db .close)
   #   )

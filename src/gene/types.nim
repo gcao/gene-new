@@ -655,6 +655,13 @@ proc not_allowed*(message: string) =
 proc not_allowed*() =
   not_allowed("Error: should not arrive here.")
 
+proc new_gene_custom*(c: CustomValue, class: Class): Value =
+  Value(
+    kind: VkCustom,
+    custom_class: class,
+    custom: c,
+  )
+
 proc new_gene_exception*(message: string, instance: Value): ref Exception =
   var e = new_exception(Exception, message)
   e.instance = instance
