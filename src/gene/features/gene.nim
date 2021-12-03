@@ -53,7 +53,7 @@ proc eval_gene_init*(self: VirtualMachine, frame: Frame, target: Value, expr: va
     translator = `type`.gene_processor.translator
   of VkNativeFn, VkNativeFn2:
     translator = native_fn_arg_translator
-  of VkNativeMethod:
+  of VkNativeMethod, VkNativeMethod2:
     translator = native_method_arg_translator
   else:
     e.args_expr = arg_translator(e.args)

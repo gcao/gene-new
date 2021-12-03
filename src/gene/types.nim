@@ -627,7 +627,7 @@ var SelectorClass* : Value
 
 #################### Definitions #################
 
-proc new_gene_int*(val: BiggestInt): Value
+proc new_gene_int*(val: BiggestInt): Value {.inline.}
 proc new_gene_string*(s: string): Value {.gcsafe.}
 proc new_gene_string_move*(s: string): Value
 proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
@@ -637,7 +637,7 @@ proc new_class*(name: string): Class
 proc new_class*(name: string, parent: Class): Class
 proc new_match_matcher*(): RootMatcher
 proc new_arg_matcher*(): RootMatcher
-proc hint*(self: RootMatcher): MatchingHint
+proc hint*(self: RootMatcher): MatchingHint {.inline.}
 
 ##################################################
 
@@ -1437,7 +1437,7 @@ proc new_gene_string_move*(s: string): Value =
 proc new_gene_int*(s: string): Value =
   return Value(kind: VkInt, int: parseBiggestInt(s))
 
-proc new_gene_int*(val: BiggestInt): Value =
+proc new_gene_int*(val: BiggestInt): Value {.inline.} =
   # return Value(kind: VkInt, int: val)
   if val > 100 or val < -10:
     return Value(kind: VkInt, int: val)
@@ -1453,7 +1453,7 @@ proc new_gene_float*(s: string): Value =
 proc new_gene_float*(val: float): Value =
   return Value(kind: VkFloat, float: val)
 
-proc new_gene_bool*(val: bool): Value =
+proc new_gene_bool*(val: bool): Value {.inline.} =
   case val
   of true: return True
   of false: return False
@@ -1827,7 +1827,7 @@ proc new_matcher*(root: RootMatcher, kind: MatcherKind): Matcher =
 proc required*(self: Matcher): bool =
   return self.default_value_expr == nil and not self.is_splat
 
-proc hint*(self: RootMatcher): MatchingHint =
+proc hint*(self: RootMatcher): MatchingHint {.inline.} =
   if self.children.len == 0:
     result.mode = MhNone
   else:
