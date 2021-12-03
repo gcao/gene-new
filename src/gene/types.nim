@@ -1,4 +1,5 @@
 import os, nre, strutils, tables, unicode, hashes, sets, asyncdispatch, times, strformat
+import dynlib
 import macros
 
 import ./map_key
@@ -6,9 +7,7 @@ import ./map_key
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
 
 type
-  Catchable* = object of CatchableError
-
-  Exception* = object of Catchable
+  Exception* = object of CatchableError
     instance*: Value  # instance of Gene exception class
 
   NotDefinedException* = object of Exception
@@ -19,8 +18,18 @@ type
   Translator* = proc(value: Value): Expr
   Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
 
-  NativeFn* = proc(args: Value): Value
-  NativeMethod* = proc(self: Value, args: Value): Value
+  EvalCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
+  EvalWrap* = proc(eval: Evaluator): Evaluator
+
+  TranslateCatch* = proc(value: Value): Expr
+  TranslateWrap* = proc(translate: Translator): Translator
+
+  NativeFn* = proc(args: Value): Value {.nimcall.}
+  NativeFn2* = proc(args: Value): Value
+  NativeFnWrap* = proc(f: NativeFn): NativeFn2
+  NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
+  NativeMethod2* = proc(self: Value, args: Value): Value
+  NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
   # To distinguish NativeMacro and NativeMethod, we just create Value with different kind
@@ -100,9 +109,11 @@ type
     pkg*: Package         # Package in which the module belongs, or stdlib if not set
     name*: string
     ns*: Namespace
+    handle*: LibHandle    # Optional handle for dynamic lib
     props*: Table[string, Value]  # Additional properties
 
   Namespace* = ref object
+    module*: Module
     parent*: Namespace
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
@@ -252,7 +263,9 @@ type
     VkMixin
     VkMethod
     VkNativeFn
+    VkNativeFn2
     VkNativeMethod
+    VkNativeMethod2
     VkInstance
     VkEnum
     VkEnumMember
@@ -266,6 +279,7 @@ type
       any*: pointer
     of VkCustom:
       custom*: CustomValue
+      custom_class*: Class
     of VkBool:
       bool*: bool
     of VkInt:
@@ -328,7 +342,7 @@ type
       cast_value*: Value
     # Internal types
     of VkException:
-      exception*: ref CatchableError
+      exception*: ref system.Exception
     of VkFuture:
       future*: Future[Value]
       ft_success_callbacks*: seq[Value]
@@ -357,8 +371,12 @@ type
       `method`*: Method
     of VkNativeFn:
       native_fn*: NativeFn
+    of VkNativeFn2:
+      native_fn2*: NativeFn2
     of VkNativeMethod:
       native_method*: NativeMethod
+    of VkNativeMethod2:
+      native_method2*: NativeMethod2
     of VkInstance:
       instance_class*: Class
       instance_props*: Table[MapKey, Value]
@@ -425,12 +443,12 @@ type
     args*: Value # This is only available in some frames (e.g. function/macro/block)
     extra*: FrameExtra
 
-  Break* = ref object of Catchable
+  Break* = ref object of Exception
     val*: Value
 
-  Continue* = ref object of Catchable
+  Continue* = ref object of Exception
 
-  Return* = ref object of Catchable
+  Return* = ref object of Exception
     frame*: Frame
     val*: Value
 
@@ -568,18 +586,6 @@ type
   # Types related to command line argument parsing
   ArgumentError* = object of Exception
 
-proc new_gene_int*(val: BiggestInt): Value
-proc new_gene_string*(s: string): Value {.gcsafe.}
-proc new_gene_string_move*(s: string): Value
-proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
-proc new_namespace*(): Namespace
-proc new_namespace*(parent: Namespace): Namespace
-proc new_namespace*(name: string): Namespace
-proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.}
-proc new_match_matcher*(): RootMatcher
-proc new_arg_matcher*(): RootMatcher
-proc hint*(self: RootMatcher): MatchingHint
-
 let
   Nil*   = Value(kind: VkNil)
   True*  = Value(kind: VkBool, bool: true)
@@ -602,24 +608,17 @@ let
   Do*        = Value(kind: VkSymbol, symbol: "do")
   Equals*    = Value(kind: VkSymbol, symbol: "=")
 
-var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
-
 var Ints: array[111, Value]
 for i in 0..110:
   Ints[i] = Value(kind: VkInt, int: i - 10)
 
 var VM*: VirtualMachine   # The current virtual machine
+var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
 
-var APP* = Application()
-APP.ns = new_namespace("global")
-var GLOBAL_NS* = Value(kind: VkNamespace, ns: APP.ns)
-
-var GENE_NS* = Value(kind: VkNamespace, ns: new_namespace("gene"))
-GLOBAL_NS.ns[GENE_NS.ns.name] = GENE_NS
-var GENE_NATIVE_NS* = Value(kind: VkNamespace, ns: new_namespace("native"))
-GENE_NS.ns[GENE_NATIVE_NS.ns.name] = GENE_NATIVE_NS
-var GENEX_NS* = Value(kind: VkNamespace, ns: new_namespace("genex"))
-GLOBAL_NS.ns[GENEX_NS.ns.name] = GENEX_NS
+var GLOBAL_NS*     : Value
+var GENE_NS*       : Value
+var GENE_NATIVE_NS*: Value
+var GENEX_NS*      : Value
 
 var ObjectClass*   : Value
 var ClassClass*    : Value
@@ -650,6 +649,24 @@ var TimeClass*     : Value
 var SelectorClass* : Value
 var PackageClass*  : Value
 
+#################### Definitions #################
+
+proc new_gene_int*(val: BiggestInt): Value {.inline.}
+proc new_gene_string*(s: string): Value {.gcsafe.}
+proc new_gene_string_move*(s: string): Value
+proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
+proc new_namespace*(): Namespace
+proc new_namespace*(parent: Namespace): Namespace
+proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.inline.}
+proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.}
+proc new_class*(name: string): Class
+proc new_class*(name: string, parent: Class): Class
+proc new_match_matcher*(): RootMatcher
+proc new_arg_matcher*(): RootMatcher
+proc hint*(self: RootMatcher): MatchingHint {.inline.}
+
+##################################################
+
 proc identity*[T](v: T): T = v
 
 proc todo*() =
@@ -663,6 +680,13 @@ proc not_allowed*(message: string) =
 
 proc not_allowed*() =
   not_allowed("Error: should not arrive here.")
+
+proc new_gene_custom*(c: CustomValue, class: Class): Value =
+  Value(
+    kind: VkCustom,
+    custom_class: class,
+    custom: c,
+  )
 
 proc new_gene_exception*(message: string, instance: Value): ref Exception =
   var e = new_exception(Exception, message)
@@ -682,6 +706,12 @@ proc new_gene_processor*(translator: Translator): Value =
   return Value(
     kind: VkGeneProcessor,
     gene_processor: GeneProcessor(translator: translator),
+  )
+
+proc new_gene_class*(name: string): Value =
+  return Value(
+    kind: VkClass,
+    class: new_class(name),
   )
 
 proc new_gene_future*(f: Future[Value]): Value =
@@ -739,7 +769,8 @@ proc new_module*(name: string): Module =
     name: name,
     ns: new_namespace(VM.app.ns),
   )
-  result.ns["$pkg"] = Value(kind: VkPackage, pkg: APP.pkg)
+  result.ns["$pkg"] = Value(kind: VkPackage, pkg: VM.app.pkg)
+  result.ns.module = result
 
 proc new_module*(): Module =
   result = new_module("<unknown>")
@@ -749,7 +780,8 @@ proc new_module*(ns: Namespace, name: string): Module =
     name: name,
     ns: new_namespace(ns),
   )
-  result.ns["$pkg"] = Value(kind: VkPackage, pkg: APP.pkg)
+  result.ns["$pkg"] = Value(kind: VkPackage, pkg: VM.app.pkg)
+  result.ns.module = result
 
 proc new_module*(ns: Namespace): Module =
   result = new_module(ns, "<unknown>")
@@ -1013,11 +1045,18 @@ proc new_return*(): Return =
 
 #################### Class #######################
 
-proc new_class*(name: string): Class =
+proc new_class*(name: string, parent: Class): Class =
   return Class(
     name: name,
     ns: new_namespace(nil, name),
+    parent: parent,
   )
+
+proc new_class*(name: string): Class =
+  var parent: Class
+  if ObjectClass != nil:
+    parent = ObjectClass.class
+  new_class(name, parent)
 
 proc get_method*(self: Class, name: MapKey): Method =
   if self.methods.has_key(name):
@@ -1059,9 +1098,6 @@ proc get_class*(val: Value): Class =
         return ex.instance.instance_class
       else:
         return ExceptionClass.class
-    # elif ex is CatchableError:
-    #   var nim = VM.app.ns[NIM_KEY]
-    #   return nim.ns[CATCHABLE_ERROR_KEY].class
     else:
       return ExceptionClass.class
   of VkNil:
@@ -1103,6 +1139,11 @@ proc get_class*(val: Value): Class =
       return GENEX_NS.ns[HTTP_KEY].ns[REQUEST_CLASS_KEY].class
     else:
       todo("get_class " & $val.kind)
+  of VkCustom:
+    if val.custom_class == nil:
+      return ObjectClass.class
+    else:
+      return val.custom_class
   else:
     todo("get_class " & $val.kind)
 
@@ -1115,6 +1156,34 @@ proc is_a*(self: Value, class: Class): bool =
       return false
     else:
       my_class = my_class.parent
+
+proc def_native_method*(self: Value, name: string, m: NativeMethod) =
+  self.class.methods[name.to_key] = Method(
+    class: self.class,
+    name: name,
+    callable: Value(kind: VkNativeMethod, native_method: m),
+  )
+
+proc def_native_method*(self: Value, name: string, m: NativeMethod2) =
+  self.class.methods[name.to_key] = Method(
+    class: self.class,
+    name: name,
+    callable: Value(kind: VkNativeMethod2, native_method2: m),
+  )
+
+proc def_native_constructor*(self: Value, f: NativeFn) =
+  self.class.constructor = Method(
+    class: self.class,
+    name: "new",
+    callable: Value(kind: VkNativeFn, native_fn: f),
+  )
+
+proc def_native_constructor*(self: Value, f: NativeFn2) =
+  self.class.constructor = Method(
+    class: self.class,
+    name: "new",
+    callable: Value(kind: VkNativeFn2, native_fn2: f),
+  )
 
 #################### Method ######################
 
@@ -1401,7 +1470,7 @@ proc new_gene_string_move*(s: string): Value =
 proc new_gene_int*(s: string): Value =
   return Value(kind: VkInt, int: parseBiggestInt(s))
 
-proc new_gene_int*(val: BiggestInt): Value =
+proc new_gene_int*(val: BiggestInt): Value {.inline.} =
   # return Value(kind: VkInt, int: val)
   if val > 100 or val < -10:
     return Value(kind: VkInt, int: val)
@@ -1417,7 +1486,7 @@ proc new_gene_float*(s: string): Value =
 proc new_gene_float*(val: float): Value =
   return Value(kind: VkFloat, float: val)
 
-proc new_gene_bool*(val: bool): Value =
+proc new_gene_bool*(val: bool): Value {.inline.} =
   case val
   of true: return True
   of false: return False
@@ -1574,7 +1643,7 @@ proc new_mixin*(name: string): Mixin =
 # Do not allow auto conversion between CatchableError and Value
 # because there are sub-classes of CatchableError that need to be
 # handled differently.
-proc error_to_gene*(ex: ref CatchableError): Value =
+proc error_to_gene*(ex: ref system.Exception): Value =
   return Value(
     kind: VkException,
     exception: ex,
@@ -1791,7 +1860,7 @@ proc new_matcher*(root: RootMatcher, kind: MatcherKind): Matcher =
 proc required*(self: Matcher): bool =
   return self.default_value_expr == nil and not self.is_splat
 
-proc hint*(self: RootMatcher): MatchingHint =
+proc hint*(self: RootMatcher): MatchingHint {.inline.} =
   if self.children.len == 0:
     result.mode = MhNone
   else:
@@ -1821,3 +1890,75 @@ proc prop_splat*(self: seq[Matcher]): MapKey =
 
 template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   expr.evaluator(self, frame, nil, expr)
+
+proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  try:
+    result = self.eval(frame, expr)
+  except system.Exception as e:
+    # echo e.msg & "\n" & e.getStackTrace()
+    result = Value(
+      kind: VkException,
+      exception: e,
+    )
+
+proc eval_wrap*(e: Evaluator): Evaluator =
+  return proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+    result = e(self, frame, target, expr)
+    if result != nil and result.kind == VkException:
+      raise result.exception
+
+# proc(){.nimcall.} can not access local variables
+# Workaround: create a new type like RemoteFn that does not use nimcall
+proc fn_wrap*(f: NativeFn): NativeFn2 =
+  return proc(args: Value): Value =
+    result = f(args)
+    if result != nil and result.kind == VkException:
+      raise result.exception
+
+proc method_wrap*(m: NativeMethod): NativeMethod2 =
+  return proc(self, args: Value): Value =
+    result = m(self, args)
+    if result != nil and result.kind == VkException:
+      raise result.exception
+
+proc exception_to_value*(ex: ref system.Exception): Value =
+  Value(kind: VkException, exception: ex)
+
+type
+  ExException* = ref object of Expr
+    ex*: ref system.Exception
+
+proc eval_exception(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  # raise cast[ExException](expr).ex
+  not_allowed("eval_exception")
+
+proc new_ex_exception*(ex: ref system.Exception): ExException =
+  ExException(
+    evaluator: eval_exception, # Should never be called
+    ex: ex,
+  )
+
+macro wrap_exception*(p: untyped): untyped =
+  if p.kind == nnkProcDef:
+    var convert: string
+    var ret_type = $p[3][0]
+    case ret_type:
+    of "Value":
+      convert = "exception_to_value"
+    of "Expr":
+      convert = "new_ex_exception"
+    else:
+      todo("wrap_exception does NOT support returning type of " & ret_type)
+
+    p[6] = nnkTryStmt.newTree(
+      p[6],
+      nnkExceptBranch.newTree(
+        infix(newDotExpr(ident"system", ident"Exception"), "as", ident"ex"),
+        nnkReturnStmt.newTree(
+          nnkCall.newTree(ident(convert), ident"ex"),
+        ),
+      ),
+    )
+    return p
+  else:
+    todo("ex2val " & $nnkProcDef)

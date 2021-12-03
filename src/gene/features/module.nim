@@ -1,9 +1,10 @@
-import strutils, tables
+import strutils, tables, dynlib
 
+import ../dynlib_mapping
 import ../types
 import ../map_key
 import ../translators
-import ../interpreter
+import ../interpreter_base
 
 let INHERIT_KEY*               = add_key("inherit")
 
@@ -118,6 +119,15 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
           name = m.as
         frame.ns.members[name] = value
 
+proc prefetch_from_dynlib(self: Module, names: seq[string]) =
+  for name in names:
+    if not self.ns.has_key(name.to_key):
+      var v = self.handle.sym_addr(name)
+      if v == nil:
+        not_allowed("prefetch_from_dynlib: " & name & " is not found in " & self.name)
+      else:
+        self.ns[name] = Value(kind: VkNativeFn, native_fn: cast[NativeFn](v))
+
 proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExImport](expr)
   var ns: Namespace
@@ -129,33 +139,23 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   # # Set dir to import_pkg's root directory
 
   var `from` = expr.from
-  # if expr.import_native:
-  #   var path = self.eval(frame, `from`).str
-  #   let lib = load_dynlib(dir & path)
-  #   if lib == nil:
-  #     todo()
-  #   else:
-  #     for m in expr.import_matcher.children:
-  #       var v = lib.sym_addr(m.name.to_s)
-  #       if v == nil:
-  #         todo()
-  #       else:
-  #         self.def_member(frame, m.name, new_gene_internal(cast[NativeFn](v)), true)
-  # else:
-  #   # If "from" is not given, import from parent of root namespace.
-  #   if `from` == nil:
-  #     ns = frame.ns.root.parent
-  #   else:
-  #     var `from` = self.eval(frame, `from`).str
-  #     if self.modules.has_key(`from`.to_key):
-  #       ns = self.modules[`from`.to_key]
-  #     else:
-  #       var code = read_file(dir & `from` & ".gene")
-  #       ns = self.import_module(`from`.to_key, code)
-  #       self.modules[`from`.to_key] = ns
-  #   self.import_from_ns(frame, ns, expr.import_matcher.children)
-  # If "from" is not given, import from parent of root namespace.
-  if `from` == nil:
+  if expr.native:
+    var `from` = self.eval(frame, `from`).str
+    var path = dir & `from`
+    var module: Module
+    if self.modules.has_key(path.to_key):
+      ns = self.modules[path.to_key]
+      module = ns.module
+    else:
+      module = load_dynlib(path)
+      ns = module.ns
+      self.modules[path.to_key] = ns
+    var names: seq[string] = @[]
+    for m in expr.matcher.children:
+      names.add(m.name.to_s)
+    module.prefetch_from_dynlib(names)
+  elif `from` == nil:
+    # If "from" is not given, import from parent of root namespace.
     ns = frame.ns.root.parent
   else:
     var `from` = self.eval(frame, `from`).str
@@ -164,16 +164,18 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
       var dep_name = self.eval(frame, expr.pkg).str
       var dep = pkg.dependencies[dep_name]
       `from` = dep.package.module_path(`from`)
+
+    var path = dir & `from`
     if expr.inherit != nil:
       var inherit = self.eval(frame, expr.inherit).ns
-      var code = read_file(dir & `from` & ".gene")
-      ns = self.import_module(`from`.to_key, code, inherit)
-    elif self.modules.has_key(`from`.to_key):
-      ns = self.modules[`from`.to_key]
+      var code = read_file(path & ".gene")
+      ns = self.import_module(path.to_key, code, inherit)
+    elif self.modules.has_key(path.to_key):
+      ns = self.modules[path.to_key]
     else:
-      var code = read_file(dir & `from` & ".gene")
-      ns = self.import_module(`from`.to_key, code)
-      self.modules[`from`.to_key] = ns
+      var code = read_file(path & ".gene")
+      ns = self.import_module(path.to_key, code)
+      self.modules[path.to_key] = ns
   self.import_from_ns(frame, ns, expr.matcher.children)
 
 proc translate_import(value: Value): Expr =
@@ -181,12 +183,13 @@ proc translate_import(value: Value): Expr =
   var e = ExImport(
     evaluator: eval_import,
     matcher: matcher,
-    native: value.gene_type.symbol == "import_native",
   )
   if matcher.from != nil:
     e.from = translate(matcher.from)
   if value.gene_props.has_key(PKG_KEY):
     e.pkg = translate(value.gene_props[PKG_KEY])
+  if value.gene_props.has_key(NATIVE_KEY):
+    e.native = value.gene_props[NATIVE_KEY].bool
   if value.gene_props.has_key(INHERIT_KEY):
     e.inherit = translate(value.gene_props[INHERIT_KEY])
   return e

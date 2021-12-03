@@ -14,14 +14,17 @@ bin           = @["gene"]
 requires "nim >= 1.0.0"
 
 task buildext, "Build the Nim extension":
-  exec "nim c --app:lib --outdir:build src/genex/http.nim"
-  exec "nim c --app:lib --outdir:tests tests/extension.nim"
+  exec "nim c --app:lib -d:useMalloc --outdir:build src/genex/http.nim"
+  exec "nim c --app:lib -d:useMalloc --outdir:build src/genex/sqlite.nim"
 
-# before test:
-#   exec "nim c --app:lib --outdir:tests tests/extension.nim"
+after build:
+  exec "nimble buildext"
+
+before test:
+  exec "nim c --app:lib -d:useMalloc --outdir:tests tests/extension.nim"
+  exec "nim c --app:lib -d:useMalloc --outdir:tests tests/extension2.nim"
 
 task test, "Runs the test suite":
-  requires "build"
   exec "nim c -r tests/test_parser.nim"
   exec "nim c -r tests/test_interpreter.nim"
   exec "nim c -r tests/test_scope.nim"
@@ -41,10 +44,11 @@ task test, "Runs the test suite":
   exec "nim c -r tests/test_block.nim"
   exec "nim c -r tests/test_async.nim"
   exec "nim c -r tests/test_module.nim"
-  exec "nim c -r tests/test_package.nim"
+  # exec "nim c -r tests/test_package.nim"
   exec "nim c -r tests/test_selector.nim"
   exec "nim c -r tests/test_template.nim"
   exec "nim c -r tests/test_native.nim"
+  exec "nim c -r tests/test_ext.nim"
   exec "nim c -r tests/test_metaprogramming.nim"
 
   exec "nim c -r tests/test_stdlib.nim"

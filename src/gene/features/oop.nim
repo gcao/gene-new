@@ -4,7 +4,7 @@ import ../map_key
 import ../types
 import ../exprs
 import ../translators
-import ../interpreter
+import ../interpreter_base
 
 let SELF_KEY*                 = add_key("self")
 let METHOD_KEY*               = add_key("method")
@@ -163,31 +163,53 @@ proc translate_include(value: Value): Expr =
   result = e
 
 proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  result = Value(kind: VkInstance)
-  result.instance_class = self.eval(frame, cast[ExNew](expr).class).class
-  var meth = result.instance_class.constructor
-  if meth == nil:
-    return
+  var expr = cast[ExNew](expr)
+  var class = self.eval(frame, expr.class).class
+  var ctor = class.constructor
+  if ctor == nil:
+    return Value(
+      kind: VkInstance,
+      instance_class: class,
+    )
 
-  var fn_scope = new_scope()
-  var new_frame = Frame(ns: meth.callable.fn.ns, scope: fn_scope)
-  new_frame.parent = frame
-  new_frame.self = result
-
-  var args_expr = cast[ExNew](expr).args
-  handle_args(self, frame, new_frame, meth.callable.fn.matcher, cast[ExArguments](args_expr))
-
-  if meth.callable.fn.body_compiled == nil:
-    meth.callable.fn.body_compiled = translate(meth.callable.fn.body)
-
-  try:
-    discard self.eval(new_frame, meth.callable.fn.body_compiled)
-  except Return as r:
-    # return's frame is the same as new_frame(current function's frame)
-    if r.frame == new_frame:
-      return
+  case ctor.callable.kind:
+  of VkNativeFn, VkNativeFn2:
+    var args_expr = cast[ExArguments](expr.args)
+    var args = new_gene_gene()
+    for k, v in args_expr.props.mpairs:
+      args.gene_props[k] = self.eval(frame, v)
+    for v in args_expr.data.mitems:
+      args.gene_data.add(self.eval(frame, v))
+    if ctor.callable.kind == VkNativeFn:
+      result = ctor.callable.native_fn(args)
     else:
-      raise
+      result = ctor.callable.native_fn2(args)
+  of VkFunction:
+    result = Value(
+      kind: VkInstance,
+      instance_class: class,
+    )
+    var fn_scope = new_scope()
+    var new_frame = Frame(ns: ctor.callable.fn.ns, scope: fn_scope)
+    new_frame.parent = frame
+    new_frame.self = result
+
+    var args_expr = cast[ExNew](expr).args
+    handle_args(self, frame, new_frame, ctor.callable.fn.matcher, cast[ExArguments](args_expr))
+
+    if ctor.callable.fn.body_compiled == nil:
+      ctor.callable.fn.body_compiled = translate(ctor.callable.fn.body)
+
+    try:
+      discard self.eval(new_frame, ctor.callable.fn.body_compiled)
+    except Return as r:
+      # return's frame is the same as new_frame(current function's frame)
+      if r.frame == new_frame:
+        return
+      else:
+        raise
+  else:
+    todo("eval_new " & $ctor.callable.kind)
 
 proc translate_new(value: Value): Expr =
   ExNew(
@@ -295,14 +317,17 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
     callable = meth.callable
 
   case callable.kind:
-  of VkNativeMethod:
+  of VkNativeMethod, VkNativeMethod2:
     var args_expr = cast[ExArguments](cast[ExInvoke](expr).args)
     var args = new_gene_gene()
     for k, v in args_expr.props.mpairs:
       args.gene_props[k] = self.eval(frame, v)
     for _, v in args_expr.data.mpairs:
       args.gene_data.add self.eval(frame, v)
-    result = meth.callable.native_method(instance, args)
+    if callable.kind == VkNativeMethod:
+      result = meth.callable.native_method(instance, args)
+    else:
+      result = meth.callable.native_method2(instance, args)
 
   of VkFunction:
     var fn_scope = new_scope()
@@ -327,7 +352,7 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
         result = r.val
       else:
         raise
-    except CatchableError as e:
+    except system.Exception as e:
       if self.repl_on_error:
         result = repl_on_error(self, frame, e)
         discard
@@ -382,7 +407,7 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr
       result = r.val
     else:
       raise
-  except CatchableError as e:
+  except system.Exception as e:
     if self.repl_on_error:
       result = repl_on_error(self, frame, e)
       discard
@@ -422,7 +447,7 @@ proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
       result = r.val
     else:
       raise
-  except CatchableError as e:
+  except system.Exception as e:
     if self.repl_on_error:
       result = repl_on_error(self, frame, e)
       discard
@@ -465,13 +490,6 @@ proc translate_super(value: Value): Expr =
 #     evaluator: eval_method_missing,
 #     fn: fn,
 #   )
-
-proc def_native_method*(self: Value, name: string, m: NativeMethod) =
-  self.class.methods[name.to_key] = Method(
-    class: self.class,
-    name: name,
-    callable: Value(kind: VkNativeMethod, native_method: m),
-  )
 
 proc init*() =
   GeneTranslators["class"] = translate_class

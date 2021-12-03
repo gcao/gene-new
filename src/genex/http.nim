@@ -1,41 +1,93 @@
-# TODO: figure out how to make global variables work across extensions
+import strutils
+import asynchttpserver as stdhttp, asyncdispatch
+import uri
 
-# import tables, strutils
-# import asynchttpserver, asyncdispatch
+include gene/extension/boilerplate
+import gene/utils
 
-# import ../gene/types
-# import ../gene/interpreter
+type
+  Request = ref object of CustomValue
+    req: stdhttp.Request
 
-# # HTTP Server
-# # https://nim-lang.org/docs/asynchttpserver.html
-# # https://dev.to/xflywind/write-a-simple-web-framework-in-nim-language-from-scratch-ma0
+var RequestClass: Value
 
-# proc start_http_server(port: int, handler: proc(req: Request) {.async gcsafe.}) =
-#   var server = new_async_http_server()
-#   async_check server.serve(Port(port), handler)
+# HTTP Server
+# https://nim-lang.org/docs/asynchttpserver.html
+# https://dev.to/xflywind/write-a-simple-web-framework-in-nim-language-from-scratch-ma0
 
-# {.push dynlib exportc.}
+proc new_gene_request(req: stdhttp.Request): Value =
+  Value(
+    kind: VkCustom,
+    custom: Request(req: req),
+    custom_class: RequestClass.class,
+  )
 
-# proc start_http_server*(props: OrderedTable[MapKey, GeneValue], data: seq[GeneValue]): GeneValue =
-#   var port = if data[0].kind == GeneString:
-#     data[0].str.parse_int
-#   else:
-#     data[0].int
+proc req_method*(self: Value, args: Value): Value {.wrap_exception.} =
+  return $cast[Request](self.custom).req.req_method
 
-#   proc handler(req: Request) {.async gcsafe.} =
-#     var args = new_gene_gene(GeneNil)
-#     # args.gene.data.add(req)
-#     var body = VM.call_fn(GeneNil, data[1].internal.fn, args).str
-#     await req.respond(Http200, body, new_http_headers())
+proc req_url*(self: Value, args: Value): Value {.wrap_exception.} =
+  return $cast[Request](self.custom).req.url
 
-#   start_http_server port, handler
+proc req_params*(self: Value, args: Value): Value {.wrap_exception.} =
+  result = new_gene_map()
+  var req = cast[Request](self.custom).req
+  var parts = req.url.query.split('&')
+  for p in parts:
+    if p == "":
+      continue
+    var pair = p.split('=', 2)
+    result.map[pair[0].to_key] = pair[1]
 
-# {.pop.}
+proc start_server_internal*(args: Value): Value =
+  var port = if args.gene_data[0].kind == VkString:
+    args.gene_data[0].str.parse_int
+  else:
+    args.gene_data[0].int
 
-# # when isMainModule:
-# #   proc handler(req: Request) {.async.} =
-# #     let headers = {"Content-type": "text/plain; charset=utf-8"}
-# #     await req.respond(Http200, "Hello World", headers.new_http_headers())
+  proc handler(req: stdhttp.Request) {.async gcsafe.} =
+    echo "HTTP REQ: " & $req.url
+    var my_args = new_gene_gene()
+    my_args.gene_data.add(new_gene_request(req))
+    var res = VM.invoke_catch(nil, args.gene_data[1], my_args)
+    if res == nil:
+      echo "HTTP RESP: 200, response is nil"
+      echo()
+      await req.respond(Http200, "", new_http_headers())
+    else:
+      case res.kind
+      of VkException:
+        echo "HTTP RESP: 500 " & res.exception.msg
+        echo res.exception.get_stack_trace()
+        echo()
+        await req.respond(Http500, "Internal Server Error", new_http_headers())
+      of VkString:
+        var body = res.str
+        echo "HTTP RESP: 200 " & body.abbrev(100)
+        echo()
+        await req.respond(Http200, body, new_http_headers())
+      else:
+        echo "HTTP RESP: 500 response kind is " & $res.kind
+        echo()
+        await req.respond(Http500, "TODO: $res.kind", new_http_headers())
 
-# #   start_http_server(2080, handler)
-# #   run_forever()
+  var server = new_async_http_server()
+  async_check server.serve(Port(port), handler)
+
+proc start_server*(args: Value): Value {.wrap_exception.} =
+  start_server_internal(args)
+
+{.push dynlib exportc.}
+
+proc init*(): Value {.wrap_exception.} =
+  result = new_namespace("http")
+  GENEX_NS.ns["http"] = result
+
+  RequestClass = new_gene_class("Request")
+  RequestClass.def_native_method "method", method_wrap(req_method)
+  RequestClass.def_native_method "url", method_wrap(req_url)
+  RequestClass.def_native_method "params", method_wrap(req_params)
+  result.ns["Request"] = RequestClass
+
+  result.ns["start_server"] = start_server
+
+{.pop.}

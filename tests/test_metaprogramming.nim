@@ -28,11 +28,11 @@ import ./helpers
 
 test_interpreter """
   (ns n
-    (member_missing _
-      (if ($member_name == "test")
+    (member_missing name
+      (if (name == "test")
         1
       else
-        (throw ("Member missing: " $member_name))
+        (throw ("Member missing: " name))
       )
     )
   )
@@ -41,8 +41,8 @@ test_interpreter """
 
 test_interpreter """
   (ns n
-    (member_missing _
-      ("" self/.name "/" $member_name)
+    (member_missing name
+      ("" self/.name "/" name)
     )
   )
   n/test
@@ -50,8 +50,8 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (member_missing _
-      ("" self/.name "/" $member_name)
+    (member_missing name
+      ("" self/.name "/" name)
     )
   )
   C/test

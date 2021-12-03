@@ -3,7 +3,7 @@ import sequtils, tables
 import ../types
 import ../map_key
 import ../translators
-import ../interpreter
+import ../interpreter_base
 
 type
   ExDependency* = ref object of Expr
@@ -29,7 +29,7 @@ proc eval_dep(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 
   var pkg = frame.ns["$pkg"].pkg
   pkg.dependencies[name] = dep
-  var node = DependencyNode(root: APP.dep_root)
+  var node = DependencyNode(root: VM.app.dep_root)
   dep.build_dep_tree(node)
 
   # Locate app's root dir

@@ -129,13 +129,13 @@ proc parse_escaped_utf16(buf: cstring, pos: var int): int =
     else:
       return -1
 
-proc parse_string(self: var Parser): TokenKind =
+proc parse_string(self: var Parser, start: char): TokenKind =
   result = TkString
   self.str = ""
   var triple_mode = false
   var pos = self.bufpos
   var buf = self.buf
-  if buf[pos] == '"' and buf[pos + 1] == '"':
+  if start == '"' and buf[pos] == '"' and buf[pos + 1] == '"':
     triple_mode = true
     pos += 2
   while true:
@@ -143,6 +143,13 @@ proc parse_string(self: var Parser): TokenKind =
     of '\0':
       self.error = ErrQuoteExpected
       break
+    of '\'':
+      if buf[pos] == start:
+        inc(pos)
+        break
+      else:
+        add(self.str, buf[pos])
+        inc(pos)
     of '"':
       if triple_mode:
         if buf[pos + 1] == '"' and buf[pos + 2] == '"':
@@ -152,9 +159,12 @@ proc parse_string(self: var Parser): TokenKind =
         else:
           inc(pos)
           add(self.str, '"')
-      else:
+      elif buf[pos] == start:
         inc(pos)
         break
+      else:
+        add(self.str, buf[pos])
+        inc(pos)
     of '\\':
       case buf[pos+1]
       of '\\', '"', '\'', '/':
@@ -211,12 +221,18 @@ proc parse_string(self: var Parser): TokenKind =
       inc(pos)
   self.bufpos = pos
 
-proc read_string(self: var Parser): Value =
-  discard self.parse_string()
+proc read_string(self: var Parser, start: char): Value =
+  discard self.parse_string(start)
   if self.error != ErrNone:
     raise new_exception(ParseError, "read_string failure: " & $self.error)
   result = new_gene_string_move(self.str)
   self.str = ""
+
+proc read_string1(self: var Parser): Value =
+  self.read_string('\'')
+
+proc read_string2(self: var Parser): Value =
+  self.read_string('"')
 
 proc read_quoted(self: var Parser): Value =
   result = Value(kind: VkQuote)
@@ -297,32 +313,43 @@ proc read_token(self: var Parser, lead_constituent: bool): string =
 proc read_character(self: var Parser): Value =
   var pos = self.bufpos
   let ch = self.buf[pos]
-  if ch == EndOfFile:
+  case ch:
+  of EndOfFile:
     raise new_exception(ParseError, "EOF while reading character")
-
-  result = Value(kind: VkChar)
-  let token = self.read_token(false)
-  if token.len == 1:
-    result.char = token[0]
-  elif token == "\\n" or token == "\\newline":
-    result.char = '\c'
-  elif token == "\\s" or token == "\\space":
-    result.char = ' '
-  elif token == "\\t" or token == "\\tab":
-    result.char = '\t'
-  elif token == "\\b" or token == "\\backspace":
-    result.char = '\b'
-  elif token == "\\f" or token == "\\formfeed":
-    result.char = '\f'
-  elif token == "\\r" or token == "\\return":
-    result.char = '\r'
-  elif token.startsWith("\\u"):
-    # TODO: impl unicode char reading
-    raise new_exception(ParseError, "Not implemented: reading unicode chars")
-  elif token.runeLen == 1:
-    result.rune = token.runeAt(0)
+  of '\'', '"':
+    self.bufpos.inc()
+    discard self.parse_string(ch)
+    if self.error != ErrNone:
+      raise new_exception(ParseError, "read_string failure: " & $self.error)
+    return new_gene_symbol(self.str)
   else:
-    raise new_exception(ParseError, "Unknown character: " & token)
+    result = Value(kind: VkChar)
+    let token = self.read_token(false)
+    if token.len == 1:
+      result.char = token[0]
+      return
+
+    case token:
+    of "newline":
+      result.char = '\n'
+    of "space":
+      result.char = ' '
+    of "tab":
+      result.char = '\t'
+    of "backspace":
+      result.char = '\b'
+    of "formfeed":
+      result.char = '\f'
+    of "return":
+      result.char = '\r'
+    else:
+      if token.startsWith("\\u"):
+        # TODO: impl unicode char reading
+        raise new_exception(ParseError, "Not implemented: reading unicode chars")
+      elif token.runeLen == 1:
+        result.rune = token.runeAt(0)
+      else:
+        raise new_exception(ParseError, "Unknown character: " & token)
 
 proc skip_ws(self: var Parser) =
   # commas are whitespace in gene collections
@@ -573,7 +600,7 @@ proc read_regex(self: var Parser): Value =
         if buf[pos] == 'i':
           inc(pos)
           flags.incl(RfIgnoreCase)
-      break;
+      break
     of '\\':
       case buf[pos+1]
       of '\\', '/':
@@ -658,9 +685,10 @@ proc read_dispatch(self: var Parser): Value =
     result = m(self)
 
 proc init_macro_array() =
-  macros['"'] = read_string
+  macros['\''] = read_string1
+  macros['"'] = read_string2
   macros[':'] = read_quoted
-  macros['\''] = read_character
+  macros['\\'] = read_character
   # macros['`'] = read_quasi_quoted
   macros['%'] = read_unquoted
   macros['#'] = read_dispatch

@@ -12,7 +12,13 @@ proc eval_native_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var
   for v in expr.data.mitems:
     args.gene_data.add(self.eval(frame, v))
 
-  target.native_fn(args)
+  case target.kind:
+  of VkNativeFn:
+    return target.native_fn(args)
+  of VkNativeFn2:
+    return target.native_fn2(args)
+  else:
+    todo("eval_native_fn " & $target.kind)
 
 proc native_fn_arg_translator*(value: Value): Expr =
   var e = new_ex_arg()

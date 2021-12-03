@@ -5,9 +5,10 @@ import ../map_key
 import ../types
 import ../exprs
 import ../translators
-import ../interpreter
+import ../interpreter_base
 import ./oop
 import ./selector
+import ./gene
 
 type
   ExMember* = ref object of Expr
@@ -38,7 +39,6 @@ proc eval_my_member(self: VirtualMachine, frame: Frame, target: Value, expr: var
 
 proc call_member_missing(self: VirtualMachine, frame: Frame, obj: Value, target: Value, args: Value, name: string): Value =
   var fn_scope = new_scope()
-  fn_scope.def_member("$member_name".to_key, name)
   var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
   new_frame.parent = frame
   new_frame.self = obj
@@ -56,7 +56,7 @@ proc call_member_missing(self: VirtualMachine, frame: Frame, obj: Value, target:
       result = r.val
     else:
       raise
-  except CatchableError as e:
+  except system.Exception as e:
     if self.repl_on_error:
       result = repl_on_error(self, frame, e)
       discard
@@ -142,6 +142,12 @@ proc translate*(names: seq[string]): Expr =
         self: translate(names[0..^2]),
         meth: name[1..^1].to_key,
         args: new_ex_arg(),
+      )
+    elif name == "!":
+      return ExGene(
+        evaluator: eval_gene_init,
+        `type`: translate(names[0..^2]),
+        args: new_gene_gene(),
       )
     else:
       return ExMember(

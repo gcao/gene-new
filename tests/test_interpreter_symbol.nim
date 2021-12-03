@@ -121,3 +121,17 @@ test_interpreter """
   )
   ((new C).test)
 """, 1
+
+test_interpreter """
+  (fn f _
+    1
+  )
+  f/!
+""", 1
+
+test_interpreter """
+  (fn f _
+    [1 2]
+  )
+  f/!/@0
+""", 1
