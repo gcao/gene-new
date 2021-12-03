@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-APP_DIR = "/home/vagrant/gene"
+APP_DIR = "/vagrant"
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -70,12 +70,11 @@ Vagrant.configure(2) do |config|
     curl https://raw.githubusercontent.com/nim-lang/Nim/devel/tools/nim-gdb.py --output $HOME/.nimble/tools/nim-gdb.py
     chmod a+x $HOME/.nimble/tools/nim-gdb
 
-    mkdir $HOME/gene
     echo 'export PATH="$HOME/bin:$HOME/.nimble/bin:$HOME/.nimble/tools:$PATH"' >> $HOME/.bashrc
     echo "cd #{APP_DIR}" >> $HOME/.bashrc
   SHELL
 
   # config.vm.synced_folder "", APP_DIR, type: "nfs"
-  # Run this command instead:
-  # sudo mount 172.28.128.1:/System/Volumes/Data/Users/gcao/proj/gene /home/vagrant/gene
+  # If above does not work, run this command:
+  # sudo mount 172.28.128.1:/System/Volumes/Data/Users/gcao/proj/gene /vagrant
 end
