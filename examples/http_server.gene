@@ -49,16 +49,16 @@
     (result = (h req))
     (if result (break))
   )
-  (println "200" (req .method) (req .url))
+  (println "200" req/.method req/.url)
   result
 catch _
-  (println "500" (req .method) (req .url))
+  (println "500" req/.method req/.url)
   (throw $ex)
 )
 
 (var port 2080)
-(if (($cmd_args .size) > 1)
-  (port = (($cmd_args .get 1).to_i))
+(if ($cmd_args/.size > 1)
+  (port = $cmd_args/@1/.to_i)
 )
 (println "Starting HTTP server at port" port "...")
 
