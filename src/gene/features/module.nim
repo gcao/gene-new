@@ -1,4 +1,6 @@
-import strutils, tables, dynlib
+import strutils, tables
+import std/os, pathnorm
+import dynlib
 
 import ../dynlib_mapping
 import ../types
@@ -128,54 +130,78 @@ proc prefetch_from_dynlib(self: Module, names: seq[string]) =
       else:
         self.ns[name] = Value(kind: VkNativeFn, native_fn: cast[NativeFn](v))
 
+# Support
+# * Absolute path
+# * Relative path that starts with "." or "..", e.g. "./dir/name"
+# * Relative path that does not start with "." or "..", e.g. "dir/name"
+# * (Maybe) URL
+#
+# * Gene module
+# * Native module on different OSes.
+#
+# Package load paths
+#   Paths added programmatically - order depends on the time when they were added
+#   test-dirs if running in testing mode
+#   src-dirs
+#   package root if not already included
+#
+# Q: Can load paths be removed?
+proc resolve_module*(self: VirtualMachine, frame: Frame, pkg: Package, s: string, native: bool): string =
+  if s.starts_with "/":
+    todo("resolve_module " & s)
+  elif s.starts_with ".":
+    todo("resolve_module " & s)
+  else:
+    var s = s
+    if native:
+      var (dir, name, _) = split_file(s)
+      s = dir & "/" & name & ".dylib"
+    elif not s.ends_with(".gene"):
+      s = s & ".gene"
+    for dir in pkg.load_paths:
+      var path = normalize_path(dir & "/" & s)
+      if file_exists(path):
+        return path
+    not_allowed("resolve_module failed: " & s)
+
 proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExImport](expr)
   var ns: Namespace
-  var dir = ""
-  # if frame.ns.has_key(PKG_KEY):
-  #   var pkg = frame.ns[PKG_KEY].internal.pkg
-  #   dir = pkg.dir & "/"
-  # # TODO: load import_pkg on demand
-  # # Set dir to import_pkg's root directory
-
   var `from` = expr.from
-  if expr.native:
-    var `from` = self.eval(frame, `from`).str
-    var path = dir & `from`
-    var module: Module
-    if self.modules.has_key(path.to_key):
-      ns = self.modules[path.to_key]
-      module = ns.module
-    else:
-      module = load_dynlib(path)
-      ns = module.ns
-      self.modules[path.to_key] = ns
-    var names: seq[string] = @[]
-    for m in expr.matcher.children:
-      names.add(m.name.to_s)
-    module.prefetch_from_dynlib(names)
-  elif `from` == nil:
+  if `from` == nil:
     # If "from" is not given, import from parent of root namespace.
     ns = frame.ns.root.parent
   else:
     var `from` = self.eval(frame, `from`).str
+    var pkg = frame.ns["$pkg"].pkg
     if expr.pkg != nil:
-      var pkg = frame.ns["$pkg"].pkg
       var dep_name = self.eval(frame, expr.pkg).str
-      var dep = pkg.dependencies[dep_name]
-      `from` = dep.package.module_path(`from`)
-
-    var path = dir & `from`
-    if expr.inherit != nil:
-      var inherit = self.eval(frame, expr.inherit).ns
-      var code = read_file(path & ".gene")
-      ns = self.import_module(path.to_key, code, inherit)
-    elif self.modules.has_key(path.to_key):
-      ns = self.modules[path.to_key]
+      pkg = pkg.dependencies[dep_name].package
+    var path = self.resolve_module(frame, pkg, `from`, expr.native)
+    if expr.native:
+      var module: Module
+      if self.modules.has_key(path.to_key):
+        ns = self.modules[path.to_key]
+        module = ns.module
+      else:
+        module = load_dynlib(path)
+        ns = module.ns
+        self.modules[path.to_key] = ns
+      var names: seq[string] = @[]
+      for m in expr.matcher.children:
+        names.add(m.name.to_s)
+      module.prefetch_from_dynlib(names)
     else:
-      var code = read_file(path & ".gene")
-      ns = self.import_module(path.to_key, code)
-      self.modules[path.to_key] = ns
+      if expr.inherit != nil:
+        var inherit = self.eval(frame, expr.inherit).ns
+        var code = read_file(path)
+        ns = self.import_module(path.to_key, code, inherit)
+      elif self.modules.has_key(path.to_key):
+        ns = self.modules[path.to_key]
+      else:
+        var code = read_file(path)
+        ns = self.import_module(path.to_key, code)
+        self.modules[path.to_key] = ns
   self.import_from_ns(frame, ns, expr.matcher.children)
 
 proc translate_import(value: Value): Expr =

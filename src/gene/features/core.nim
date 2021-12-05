@@ -118,6 +118,15 @@ proc init*() =
   # from there.
   GeneTranslators["$debug"] = translate_debug
 
+  # Code that'll be run if current module is the main module
+  # Run like "if isMainModule:" in Python
+  # It can appear on top level or inside functions etc.
+  # Example:
+  #   ($if_main
+  #     ...
+  #   )
+  # GeneTranslators["$if_main"] = translate_if_main
+
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     GLOBAL_NS.ns["assert"] = new_gene_processor(translate_assert)
     GENE_NS.ns["assert"] = GLOBAL_NS.ns["assert"]

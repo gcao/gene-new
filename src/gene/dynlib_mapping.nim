@@ -70,7 +70,7 @@ proc call_set_globals(p: pointer)
 
 proc load_dynlib*(path: string): Module =
   result = new_module(path)
-  var handle = load_lib(path & ".dylib")
+  var handle = load_lib(path)
   result.handle = handle
 
   var set_globals = handle.sym_addr("set_globals")

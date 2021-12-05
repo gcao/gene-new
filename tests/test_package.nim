@@ -1,7 +1,4 @@
-import unittest
-
 import gene/types
-import gene/interpreter
 
 import ./helpers
 
@@ -31,7 +28,7 @@ test_interpreter """
 """, "gene"
 
 test_interpreter """
-  ($dep "my-lib" "*" ^path "example-projects/my-lib")
+  ($dep "my-lib" ^path "example-projects/my-lib")
   (import x from "index" ^pkg "my-lib")
   (x)
 """, 1

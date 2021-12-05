@@ -19,6 +19,7 @@ let GENE_RUNTIME* = Runtime(
   # version: read_file(GENE_HOME & "/VERSION").strip(),
 )
 
+proc new_package*(dir: string): Package
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value
 
@@ -33,12 +34,13 @@ proc new_app*(): Application =
 
 proc init_package*(self: Dependency) =
   if self.package == nil:
-    var package = Package(
-      name: self.name,
-    )
+    var dir: string
     if self.type == "path":
-      package.dir = self.path
-    self.package = package
+      dir = self.path
+    else:
+      todo("init_package " & self.name)
+    self.package = new_package(dir)
+    self.package.reset_load_paths()
 
 proc build_dep_tree*(self: Dependency, node: DependencyNode) =
   self.init_package()
@@ -55,14 +57,14 @@ proc build_dep_tree*(self: Package): DependencyRoot =
     result.children[dep.name] = node
     dep.build_dep_tree(node)
 
-proc parse_deps(deps: seq[Value]): Table[string, Package] =
-  for dep in deps:
-    var name = dep.gene_data[0].str
-    var version = dep.gene_data[1]
-    var location = dep.gene_props[LOCATION_KEY]
-    var pkg = Package(name: name, version: version)
-    pkg.dir = location.str
-    result[name] = pkg
+# proc parse_deps(deps: seq[Value]): Table[string, Package] =
+#   for dep in deps:
+#     var name = dep.gene_data[0].str
+#     var version = dep.gene_data[1]
+#     var location = dep.gene_props[LOCATION_KEY]
+#     var pkg = Package(name: name, version: version)
+#     pkg.dir = location.str
+#     result[name] = pkg
 
 proc new_package*(dir: string): Package =
   result = Package()
@@ -137,6 +139,7 @@ proc prepare*(self: VirtualMachine, code: string): Value =
 
 proc init_package*(self: VirtualMachine, dir: string) =
   self.app.pkg = new_package(dir)
+  self.app.pkg.reset_load_paths()
   self.app.dep_root = self.app.pkg.build_dep_tree()
 
 proc eval_prepare*(self: VirtualMachine): Frame =

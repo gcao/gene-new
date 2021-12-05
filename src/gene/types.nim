@@ -1,4 +1,6 @@
-import os, nre, strutils, tables, unicode, hashes, sets, asyncdispatch, times, strformat
+import os, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm
+import nre
+import asyncdispatch
 import dynlib
 import macros
 
@@ -83,6 +85,12 @@ type
     globals*: seq[string] # Global variables defined by this package
     dependencies*: Table[string, Dependency]
     homepage*: string
+    src_path*: string     # Default to "src"
+    test_path*: string    # Default to "tests"
+    asset_path*: string   # Default to "assets"
+    build_path*: string   # Default to "build"
+    load_paths*: seq[string]
+    init_modules*: seq[string]    # Modules that should be loaded when the package is used the first time
     props*: Table[string, Value]  # Additional properties
     doc*: Document        # content of package.gene
 
@@ -94,6 +102,7 @@ type
     path*: string
     repo*: string
     commit*: string
+    auto_load*: bool        # If true, the package is loaded and its init_modules are executed
 
   DependencyRoot* = ref object
     package*: Package
@@ -106,7 +115,7 @@ type
     children*: Table[string, DependencyNode]
 
   Module* = ref object
-    pkg*: Package         # Package in which the module belongs, or stdlib if not set
+    pkg*: Package         # Package in which the module belongs
     name*: string
     ns*: Namespace
     handle*: LibHandle    # Optional handle for dynamic lib
@@ -759,8 +768,27 @@ converter gene_to_ns*(v: Value): Namespace = todo()
 
 #################### Package #####################
 
-proc module_path*(self: Package, module: string): string =
-  self.dir & "/src/" & module
+proc normalize(self: Package, path: string): string =
+  normalize_path(self.dir & "/" & path)
+
+proc add_load_path*(self: Package, path: string) =
+  var i = self.load_paths.find(path)
+  if i >= 0:
+    self.load_paths.delete(i)
+  self.load_paths.insert(path, 0)
+
+proc reset_load_paths*(self: Package, test_mode = false) =
+  self.load_paths = @[normalize(self.dir)]
+  if self.src_path == "":
+    self.src_path = "src"
+  self.add_load_path(self.normalize(self.src_path))
+  if self.build_path == "":
+    self.build_path = "build"
+  self.add_load_path(self.normalize(self.build_path))
+  if test_mode:
+    if self.test_path == "":
+      self.test_path = "tests"
+    self.add_load_path(self.normalize(self.test_path))
 
 #################### Module ######################
 
