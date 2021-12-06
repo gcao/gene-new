@@ -68,8 +68,8 @@ proc call_set_globals(p: pointer)
 
 # TODO: unload dynamic libraries before reloading
 
-proc load_dynlib*(path: string): Module =
-  result = new_module(path)
+proc load_dynlib*(pkg: Package, path: string): Module =
+  result = new_module(pkg, path)
   var handle = load_lib(path)
   result.handle = handle
 

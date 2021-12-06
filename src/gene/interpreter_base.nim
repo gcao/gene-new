@@ -143,7 +143,7 @@ proc init_package*(self: VirtualMachine, dir: string) =
   self.app.dep_root = self.app.pkg.build_dep_tree()
 
 proc eval_prepare*(self: VirtualMachine): Frame =
-  var module = new_module()
+  var module = new_module(VM.app.pkg)
   result = new_frame()
   result.ns = module.ns
   result.scope = new_scope()
@@ -153,14 +153,14 @@ proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
   result = self.eval(frame, expr)
 
 proc eval*(self: VirtualMachine, code: string): Value =
-  var module = new_module()
+  var module = new_module(VM.app.pkg)
   var frame = new_frame()
   frame.ns = module.ns
   frame.scope = new_scope()
   self.eval(frame, code)
 
 proc run_file*(self: VirtualMachine, file: string): Value =
-  var module = new_module(self.app.pkg.ns, file)
+  var module = new_module(VM.app.pkg, file, self.app.pkg.ns)
   var frame = new_frame()
   frame.ns = module.ns
   frame.scope = new_scope()

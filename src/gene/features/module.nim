@@ -86,11 +86,11 @@ proc new_import_matcher*(v: Value): ImportMatcherRoot =
   result = ImportMatcherRoot()
   result.parse(v, result.children.addr)
 
-proc import_module*(self: VirtualMachine, name: MapKey, code: string): Namespace =
+proc import_module*(self: VirtualMachine, pkg: Package, name: MapKey, code: string): Namespace =
   if self.modules.has_key(name):
     return self.modules[name]
 
-  var module = new_module(name.to_s)
+  var module = new_module(pkg, name.to_s)
   var frame = new_frame()
   frame.ns = module.ns
   frame.scope = new_scope()
@@ -98,8 +98,8 @@ proc import_module*(self: VirtualMachine, name: MapKey, code: string): Namespace
   result = module.ns
   self.modules[name] = result
 
-proc import_module*(self: VirtualMachine, name: MapKey, code: string, inherit: Namespace): Namespace =
-  var module = new_module(inherit, name.to_s)
+proc import_module*(self: VirtualMachine, pkg: Package, name: MapKey, code: string, inherit: Namespace): Namespace =
+  var module = new_module(pkg, name.to_s, inherit)
   var frame = new_frame()
   frame.ns = module.ns
   frame.scope = new_scope()
@@ -155,7 +155,10 @@ proc resolve_module*(self: VirtualMachine, frame: Frame, pkg: Package, s: string
     var s = s
     if native:
       var (dir, name, _) = split_file(s)
-      s = dir & "/" & name & ".dylib"
+      if dir == "":
+        s = "lib" & name & ".dylib"
+      else:
+        s = dir & "/lib" & name & ".dylib"
     elif not s.ends_with(".gene"):
       s = s & ".gene"
     for dir in pkg.load_paths:
@@ -184,7 +187,7 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
         ns = self.modules[path.to_key]
         module = ns.module
       else:
-        module = load_dynlib(path)
+        module = load_dynlib(pkg, path)
         ns = module.ns
         self.modules[path.to_key] = ns
       var names: seq[string] = @[]
@@ -195,12 +198,12 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
       if expr.inherit != nil:
         var inherit = self.eval(frame, expr.inherit).ns
         var code = read_file(path)
-        ns = self.import_module(path.to_key, code, inherit)
+        ns = self.import_module(pkg, path.to_key, code, inherit)
       elif self.modules.has_key(path.to_key):
         ns = self.modules[path.to_key]
       else:
         var code = read_file(path)
-        ns = self.import_module(path.to_key, code)
+        ns = self.import_module(pkg, path.to_key, code)
         self.modules[path.to_key] = ns
   self.import_from_ns(frame, ns, expr.matcher.children)
 

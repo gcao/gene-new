@@ -792,27 +792,29 @@ proc reset_load_paths*(self: Package, test_mode = false) =
 
 #################### Module ######################
 
-proc new_module*(name: string): Module =
+proc new_module*(pkg: Package, name: string): Module =
   result = Module(
+    pkg: pkg,
     name: name,
     ns: new_namespace(VM.app.ns),
   )
-  result.ns["$pkg"] = Value(kind: VkPackage, pkg: VM.app.pkg)
+  result.ns["$pkg"] = Value(kind: VkPackage, pkg: pkg)
   result.ns.module = result
 
-proc new_module*(): Module =
-  result = new_module("<unknown>")
+proc new_module*(pkg: Package): Module =
+  result = new_module(pkg, "<unknown>")
 
-proc new_module*(ns: Namespace, name: string): Module =
+proc new_module*(pkg: Package, name: string, ns: Namespace): Module =
   result = Module(
+    pkg: pkg,
     name: name,
     ns: new_namespace(ns),
   )
-  result.ns["$pkg"] = Value(kind: VkPackage, pkg: VM.app.pkg)
+  result.ns["$pkg"] = Value(kind: VkPackage, pkg: pkg)
   result.ns.module = result
 
-proc new_module*(ns: Namespace): Module =
-  result = new_module(ns, "<unknown>")
+proc new_module*(pkg: Package, ns: Namespace): Module =
+  result = new_module(pkg, "<unknown>", ns)
 
 #################### Namespace ###################
 

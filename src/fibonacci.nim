@@ -18,7 +18,7 @@ when isMainModule:
     (fib 24)
   """
   var e = translate(VM.prepare(code))
-  let module = new_module()
+  let module = new_module(VM.app.pkg)
   var frame = Frame(ns: module.ns, scope: new_scope(), self: Nil)
   let start = cpuTime()
   let result = VM.eval(frame, e)
