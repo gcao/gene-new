@@ -598,10 +598,10 @@ proc init*() =
       (fnx name
         (case name
         when "http"
-          (import from "build/libhttp" ^^native)
+          (import from "http" ^^native)
           /http
         when "sqlite"
-          (import from "build/libsqlite" ^^native)
+          (import from "sqlite" ^^native)
           /sqlite
         else
           (throw ("" /.name "/" name " is not defined."))

@@ -166,13 +166,3 @@ proc test_parse_document*(code: string, callback: proc(result: Document)) =
 #   test "Tests " & file & ":":
 #     init_all()
 #     discard VM.eval(read_file(file))
-
-# proc test_extension*(path: string, name: string, callback: proc(r: NativeFn)) =
-#   test "Interpreter / eval - extension: " & path & "." & name:
-#     let lib = load_lib("tests/lib" & path & ".dylib")
-#     if lib == nil:
-#       skip()
-#     else:
-#       let ext = lib.sym_addr(name)
-#       if ext != nil:
-#         callback cast[NativeFn](ext)

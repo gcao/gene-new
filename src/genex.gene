@@ -1,4 +1,4 @@
-# (import start_http_server from "build/libhttp" ^^native)
+# (import start_http_server from "http" ^^native)
 
 (ns genex/http
   # Support:
