@@ -161,18 +161,12 @@ proc eval*(self: VirtualMachine, code: string): Value =
 
 proc run_file*(self: VirtualMachine, file: string): Value =
   var module = new_module(VM.app.pkg, file, self.app.pkg.ns)
+  VM.main_module = module
   var frame = new_frame()
   frame.ns = module.ns
   frame.scope = new_scope()
   var code = read_file(file)
   result = self.eval(frame, code)
-  if frame.ns.has_key(MAIN_KEY):
-    var main = frame[MAIN_KEY]
-    if main.kind == VkFunction:
-      var args = VM.app.ns[CMD_ARGS_KEY]
-      result = self.call(frame, main, args)
-    else:
-      raise new_exception(types.Exception, "main is not a function.")
   self.wait_for_futures()
 
 proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref system.Exception): Value =

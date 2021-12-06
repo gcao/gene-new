@@ -422,6 +422,7 @@ type
 
   VirtualMachine* = ref object
     app*: Application
+    main_module*: Module
     modules*: OrderedTable[MapKey, Namespace]
     repl_on_error*: bool
 
@@ -849,6 +850,15 @@ proc root*(self: Namespace): Namespace =
     return self
   else:
     return self.parent.root
+
+proc get_module*(self: Namespace): Module =
+  if self.module == nil:
+    if self.parent != nil:
+      return self.parent.get_module()
+    else:
+      return nil
+  else:
+    return self.module
 
 proc has_key*(self: Namespace, key: MapKey): bool {.inline.} =
   return self.members.has_key(key)

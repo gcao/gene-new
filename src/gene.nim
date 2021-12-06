@@ -45,6 +45,7 @@ proc main() =
   elif options.eval != "":
     VM.init_package(get_current_dir())
     var frame = VM.eval_prepare()
+    VM.main_module = frame.ns.module
     VM.eval_includes(frame, options)
     case options.input_mode:
     of ImCsv, ImGene, ImLine:

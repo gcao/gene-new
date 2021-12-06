@@ -1,26 +1,24 @@
 #!/usr/bin/env gene
 
-(fn main args...
-  ($parse_cmd_args
-    [
-      program
-      (option ^^toggle -d --debug)
-      # All includes and run are joined or run will replace #<REPLACE_ME># in includes
-      (option ^^multiple -i --include)
-      (option -r --run)
-      (argument ^!required file)
-    ]
-    args
-  )
+($parse_cmd_args
+  [
+    program
+    (option ^^toggle -d --debug)
+    # All includes and run are joined or run will replace #<REPLACE_ME># in includes
+    (option ^^multiple -i --include)
+    (option -r --run)
+    (argument ^!required file)
+  ]
+  $cmd_args
+)
 
-  (if run
-    (eval ($parse run))
-    (exit)
-  )
+(if run
+  (eval ($parse run))
+  (exit)
+)
 
-  (if file
-    (eval ($parse (gene/File/read file)))
-  else
-    (repl)
-  )
+(if file
+  (eval ($parse (gene/File/read file)))
+else
+  (repl)
 )

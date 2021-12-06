@@ -2,7 +2,7 @@
 
 (import genex/tests/[test skip_test])
 
-(import mungle from "src/index")
+(import mungle from "index")
 
 (test "($pkg .name)"
   (assert (($pkg .name) == "my-app"))

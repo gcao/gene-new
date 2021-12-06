@@ -19,6 +19,7 @@ when isMainModule:
   """
   var e = translate(VM.prepare(code))
   let module = new_module(VM.app.pkg)
+  VM.main_module = module
   var frame = Frame(ns: module.ns, scope: new_scope(), self: Nil)
   let start = cpuTime()
   let result = VM.eval(frame, e)

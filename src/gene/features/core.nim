@@ -20,6 +20,9 @@ type
     first*: string
     rest*: seq[Expr]
 
+  ExIfMain* = ref object of Expr
+    body*: Expr
+
 proc translate_do(value: Value): Expr =
   var r = ExGroup(
     evaluator: eval_group,
@@ -108,6 +111,16 @@ proc translate_debug(value: Value): Expr =
   r.data = value.gene_data[0]
   return r
 
+proc eval_if_main(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  if VM.main_module == frame.ns.get_module():
+    result = self.eval(frame, cast[ExIfMain](expr).body)
+
+proc translate_if_main(value: Value): Expr =
+  return ExIfMain(
+    evaluator: eval_if_main,
+    body: translate(value.gene_data)
+  )
+
 proc init*() =
   GeneTranslators["do"] = translate_do
   GeneTranslators["void"] = translate_void
@@ -125,7 +138,7 @@ proc init*() =
   #   ($if_main
   #     ...
   #   )
-  # GeneTranslators["$if_main"] = translate_if_main
+  GeneTranslators["$if_main"] = translate_if_main
 
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     GLOBAL_NS.ns["assert"] = new_gene_processor(translate_assert)
