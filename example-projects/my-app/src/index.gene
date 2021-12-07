@@ -5,3 +5,7 @@
 (fn mungle s
   ("" s ":" (upcase s))
 )
+
+($if_main
+  (println (mungle "abcDEF"))
+)

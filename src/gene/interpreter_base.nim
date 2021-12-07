@@ -57,14 +57,21 @@ proc build_dep_tree*(self: Package): DependencyRoot =
     result.children[dep.name] = node
     dep.build_dep_tree(node)
 
-# proc parse_deps(deps: seq[Value]): Table[string, Package] =
-#   for dep in deps:
-#     var name = dep.gene_data[0].str
-#     var version = dep.gene_data[1]
-#     var location = dep.gene_props[LOCATION_KEY]
-#     var pkg = Package(name: name, version: version)
-#     pkg.dir = location.str
-#     result[name] = pkg
+proc parse_deps(deps: seq[Value]): Table[string, Dependency] =
+  for dep in deps:
+    var name = dep.gene_data[0].str
+    var version = dep.gene_data[1].str
+    var path = dep.gene_props["path".to_key].str
+
+    var dep = Dependency(
+      name: name,
+      version: version,
+      `type`: "path",
+      path: path,
+    )
+    var node = DependencyNode(root: VM.app.dep_root)
+    dep.build_dep_tree(node)
+    result[name] = dep
 
 proc new_package*(dir: string): Package =
   result = Package()
@@ -77,9 +84,10 @@ proc new_package*(dir: string): Package =
       result.name = doc.props[NAME_KEY].str
       result.version = doc.props[VERSION_KEY]
       result.ns = new_namespace(VM.app.ns, "package:" & result.name)
+      result.ns[CUR_PKG_KEY] = Value(kind: VkPackage, pkg: result)
       result.dir = d
-      # result.dependencies = parse_deps(doc.props[DEPS_KEY].vec)
-      # result.ns[CUR_PKG_KEY] = result
+      if doc.props.has_key(DEPS_KEY):
+        result.dependencies = parse_deps(doc.props[DEPS_KEY].vec)
       return result
     else:
       d = parent_dir(d)

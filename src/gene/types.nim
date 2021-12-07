@@ -67,7 +67,7 @@ type
 
   ## This is the root of a running application
   Application* = ref object
-    name*: string         # default to base name of command
+    name*: string         # Default to base name of command, can be changed, e.g. ($set_app_name "...")
     pkg*: Package         # Entry package for the application
     ns*: Namespace
     cmd*: string
@@ -223,7 +223,11 @@ type
   DateTimeInternal = ref object
     data: DateTime
 
+  # VkVoid vs VkNil:
+  #   VkVoid has special meaning in some places (e.g. templates)
+  #   Value(kind: VkNil) and nil should have same meaning and is the default/uninitialized value.
   ValueKind* = enum
+    VkVoid
     VkNil
     VkAny
     VkCustom
@@ -1174,11 +1178,8 @@ proc get_class*(val: Value): Class =
     return TimeClass.class
   # of VkTimezone:
   #   return VM.gene_ns.ns[TIMEZONE_CLASS_KEY].class
-  of VkAny:
-    if val.any_type == HTTP_REQUEST_KEY:
-      return GENEX_NS.ns[HTTP_KEY].ns[REQUEST_CLASS_KEY].class
-    else:
-      todo("get_class " & $val.kind)
+  # of VkAny:
+  #   todo("get_class " & $val.kind)
   of VkCustom:
     if val.custom_class == nil:
       return ObjectClass.class

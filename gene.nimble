@@ -23,7 +23,7 @@ after build:
 before test:
   exec "nim c --app:lib -d:useMalloc --outdir:tests tests/extension.nim"
   exec "nim c --app:lib -d:useMalloc --outdir:tests tests/extension2.nim"
-  exec "nim c --app:lib -d:useMalloc --outdir:example-projects/my-lib/src example-projects/my-lib/src/my_lib/index.nim"
+  exec "nim c --app:lib -d:useMalloc --outdir:example-projects/my-lib/build example-projects/my-lib/src/my_lib/index.nim"
 
 task test, "Runs the test suite":
   exec "nim c -r tests/test_parser.nim"
