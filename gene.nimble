@@ -16,6 +16,7 @@ requires "nim >= 1.0.0"
 task buildext, "Build the Nim extension":
   exec "nim c --app:lib -d:useMalloc --outdir:build src/genex/http.nim"
   exec "nim c --app:lib -d:useMalloc --outdir:build src/genex/sqlite.nim"
+  exec "nim c --app:lib -d:useMalloc --outdir:build src/genex/mysql.nim"
 
 after build:
   exec "nimble buildext"
