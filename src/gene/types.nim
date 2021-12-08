@@ -787,13 +787,13 @@ proc reset_load_paths*(self: Package, test_mode = false) =
   if self.src_path == "":
     self.src_path = "src"
   self.add_load_path(self.normalize(self.src_path))
-  if self.build_path == "":
-    self.build_path = "build"
-  self.add_load_path(self.normalize(self.build_path))
   if test_mode:
     if self.test_path == "":
       self.test_path = "tests"
     self.add_load_path(self.normalize(self.test_path))
+  if self.build_path == "":
+    self.build_path = "build"
+  self.add_load_path(self.normalize(self.build_path))
 
 #################### Module ######################
 
@@ -803,7 +803,6 @@ proc new_module*(pkg: Package, name: string): Module =
     name: name,
     ns: new_namespace(VM.app.ns),
   )
-  result.ns["$pkg"] = Value(kind: VkPackage, pkg: pkg)
   result.ns.module = result
 
 proc new_module*(pkg: Package): Module =
@@ -815,7 +814,6 @@ proc new_module*(pkg: Package, name: string, ns: Namespace): Module =
     name: name,
     ns: new_namespace(ns),
   )
-  result.ns["$pkg"] = Value(kind: VkPackage, pkg: pkg)
   result.ns.module = result
 
 proc new_module*(pkg: Package, ns: Namespace): Module =
@@ -863,6 +861,9 @@ proc get_module*(self: Namespace): Module =
       return nil
   else:
     return self.module
+
+proc package*(self: Namespace): Package =
+  self.get_module().pkg
 
 proc has_key*(self: Namespace, key: MapKey): bool {.inline.} =
   return self.members.has_key(key)

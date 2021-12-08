@@ -19,6 +19,8 @@ type
   ExMyMember* = ref object of Expr
     name*: MapKey
 
+  ExPackage* = ref object of Expr
+
 let NS_EXPR = Expr()
 NS_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   Value(kind: VkNamespace, ns: frame.ns)
@@ -84,6 +86,14 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
   else:
     raise new_exception(NotDefinedException, name.to_s & " is not defined")
 
+proc eval_pkg(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  Value(kind: VkPackage, pkg: frame.ns.package)
+
+proc new_ex_package(): Expr =
+  return ExPackage(
+    evaluator: eval_pkg,
+  )
+
 proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var v = self.eval(frame, cast[ExMember](expr).container)
   var key = cast[ExMember](expr).name
@@ -114,6 +124,8 @@ proc translate*(name: string): Expr {.inline.} =
     result = new_ex_literal(Value(kind: VkApplication, app: VM.app))
   of "$ns":
     result = NS_EXPR
+  of "$pkg":
+    result = new_ex_package()
   else:
     result = ExMyMember(
       evaluator: eval_my_member,

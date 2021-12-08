@@ -1,4 +1,4 @@
-import sequtils, tables
+import tables
 
 import ../types
 import ../map_key
@@ -27,7 +27,7 @@ proc eval_dep(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     dep.type = "path"
     dep.path = self.eval(frame, expr.path).str
 
-  var pkg = frame.ns["$pkg"].pkg
+  var pkg = frame.ns.package
   pkg.dependencies[name] = dep
   var node = DependencyNode(root: VM.app.dep_root)
   dep.build_dep_tree(node)

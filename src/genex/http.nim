@@ -5,6 +5,60 @@ import uri
 include gene/extension/boilerplate
 import gene/utils
 
+# (ns genex/http
+#   # Support:
+#   # HTTP
+#   # HTTPS
+#   # Get
+#   # Post
+#   # Put
+#   # Basic auth
+#   # Headers
+#   # Cookies
+#   # Query parameter
+#   # Post body - application/x-www-form
+#   # Post body - JSON
+#   # Response code
+#   # Response body
+#   # Response body - JSON
+
+#   (fn get [url params = {} headers = {}]
+#     (gene/native/http_get url params headers)
+#   )
+
+#   (fn ^^async get_async [url params = {} headers = {}]
+#     (gene/native/http_get_async url params headers)
+#   )
+
+#   (fn get_json [url params = {} headers = {}]
+#     (gene/json/parse (get url params headers))
+#   )
+
+#   # (var /parse_uri gene/native/http_parse_uri)
+
+#   (class Uri
+#   )
+
+#   (class Request
+#     (method method = gene/native/http_req_method)
+#     (method url = gene/native/http_req_url)
+#     (method params = gene/native/http_req_params)
+#   )
+
+#   (class Response
+#     (method new [code body]
+#       (@code = code)
+#       (@body = body)
+#     )
+
+#     (method json _
+#       ((gene/json/parse @body) .to_json)
+#     )
+#   )
+
+#   (var /start_server gene/native/http_start_server)
+# )
+
 type
   Request = ref object of CustomValue
     req: stdhttp.Request

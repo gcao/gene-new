@@ -141,6 +141,7 @@ proc prefetch_from_dynlib(self: Module, names: seq[string]) =
 #
 # Package load paths
 #   Paths added programmatically - order depends on the time when they were added
+#   build-dirs
 #   test-dirs if running in testing mode
 #   source-dirs
 #   package root if not already included
@@ -176,7 +177,7 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     ns = frame.ns.root.parent
   else:
     var `from` = self.eval(frame, `from`).str
-    var pkg = frame.ns["$pkg"].pkg
+    var pkg = frame.ns.package
     if expr.pkg != nil:
       var dep_name = self.eval(frame, expr.pkg).str
       pkg = pkg.dependencies[dep_name].package

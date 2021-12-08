@@ -84,7 +84,6 @@ proc new_package*(dir: string): Package =
       result.name = doc.props[NAME_KEY].str
       result.version = doc.props[VERSION_KEY]
       result.ns = new_namespace(VM.app.ns, "package:" & result.name)
-      result.ns[CUR_PKG_KEY] = Value(kind: VkPackage, pkg: result)
       result.dir = d
       if doc.props.has_key(DEPENDENCIES_KEY):
         result.dependencies = parse_deps(doc.props[DEPENDENCIES_KEY].vec)
@@ -95,10 +94,7 @@ proc new_package*(dir: string): Package =
   result.adhoc = true
   result.name = "<adhoc>"
   result.ns = new_namespace(VM.app.ns, "package:" & result.name)
-  result.ns[CUR_PKG_KEY] = Value(kind: VkPackage, pkg: result)
   result.dir = dir
-  # result.ns[CUR_PKG_KEY] = result
-
 
 #################### VM ##########################
 
