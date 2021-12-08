@@ -1,6 +1,6 @@
 import strutils
 import asynchttpserver as stdhttp, asyncdispatch
-import uri
+import httpclient, uri
 
 include gene/extension/boilerplate
 import gene/utils
@@ -130,12 +130,39 @@ proc start_server_internal*(args: Value): Value =
 proc start_server*(args: Value): Value {.wrap_exception.} =
   start_server_internal(args)
 
+proc http_get(args: Value): Value {.wrap_exception.} =
+  var url = args.gene_data[0].str
+  var headers = newHttpHeaders()
+  if args.gene_data.len > 2:
+    for k, v in args.gene_data[2].map:
+      headers.add(k.to_s, v.str)
+  var client = newHttpClient()
+  client.headers = headers
+  result = client.get_content(url)
+
+proc http_get_async(args: Value): Value {.wrap_exception.} =
+  var url = args.gene_data[0].str
+  var headers = newHttpHeaders()
+  if args.gene_data.len > 2:
+    for k, v in args.gene_data[2].map:
+      headers.add(k.to_s, v.str)
+  var client = newAsyncHttpClient()
+  client.headers = headers
+  var f = client.get_content(url)
+  var future = new_future[Value]()
+  f.add_callback proc() {.gcsafe.} =
+    future.complete(f.read())
+  result = new_gene_future(future)
+
 {.push dynlib exportc.}
 
 proc init*(module: Module): Value {.wrap_exception.} =
   result = new_namespace("http")
   result.ns.module = module
   GENEX_NS.ns["http"] = result
+
+  result.ns["get"] = http_get
+  result.ns["get_async"] = http_get_async
 
   RequestClass = new_gene_class("Request")
   RequestClass.def_native_method "method", method_wrap(req_method)
