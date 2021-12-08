@@ -34,8 +34,9 @@ proc close*(self: Value, args: Value): Value {.wrap_exception.} =
 
 {.push dynlib exportc.}
 
-proc init*(): Value {.wrap_exception.} =
+proc init*(module: Module): Value {.wrap_exception.} =
   result = new_namespace("sqlite")
+  result.ns.module = module
   GENEX_NS.ns["sqlite"] = result
 
   # result.ns["select"] = new_gene_processor(translate_select)

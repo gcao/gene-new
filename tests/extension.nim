@@ -38,10 +38,11 @@ proc get_i*(self: Value, args: Value): Value {.wrap_exception.} =
 
 {.push dynlib exportc.}
 
-proc init*(): Value {.wrap_exception.} =
+proc init*(module: Module): Value {.wrap_exception.} =
   GeneTranslators["test"] = translate_wrap(translate_test)
 
   result = new_namespace()
+  result.ns.module = module
   result.ns["new_extension"] = new_extension
   result.ns["get_i"] = NativeFn(get_i)
 

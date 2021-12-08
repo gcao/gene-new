@@ -132,8 +132,9 @@ proc start_server*(args: Value): Value {.wrap_exception.} =
 
 {.push dynlib exportc.}
 
-proc init*(): Value {.wrap_exception.} =
+proc init*(module: Module): Value {.wrap_exception.} =
   result = new_namespace("http")
+  result.ns.module = module
   GENEX_NS.ns["http"] = result
 
   RequestClass = new_gene_class("Request")

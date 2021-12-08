@@ -15,7 +15,7 @@ import ./interpreter_base
 # https://gradha.github.io/articles/2015/01/writing-c-libraries-with-nim.html
 
 type
-  Init = proc(): Value {.nimcall.}
+  Init = proc(module: Module): Value {.nimcall.}
 
   SetGlobals = proc(
     g_disp          : PDispatcher,
@@ -81,7 +81,7 @@ proc load_dynlib*(pkg: Package, path: string): Module =
   var init = handle.sym_addr("init")
   var init_result: Value
   if init != nil:
-    init_result = cast[Init](init)()
+    init_result = cast[Init](init)(result)
   if init_result == nil:
     return
   case init_result.kind:
