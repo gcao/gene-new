@@ -19,7 +19,6 @@ proc test2(self: Value, args: Value): Value =
 
 proc init_all*() =
   init_app_and_vm()
-  VM.init_package(get_current_dir())
   GENE_NATIVE_NS.ns["test"] = new_gene_native_method(test)
   GENE_NATIVE_NS.ns["test2"] = new_gene_native_method(test2)
 

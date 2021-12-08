@@ -38,12 +38,10 @@ proc main() =
   init_app_and_vm()
   VM.repl_on_error = options.repl_on_error
   if options.repl:
-    VM.init_package(get_current_dir())
     var frame = VM.eval_prepare(VM.app.pkg)
     VM.eval_includes(frame, options)
     discard repl(VM, frame, eval, false)
   elif options.eval != "":
-    VM.init_package(get_current_dir())
     var frame = VM.eval_prepare(VM.app.pkg)
     VM.main_module = frame.ns.module
     VM.eval_includes(frame, options)
@@ -109,7 +107,6 @@ proc main() =
         echo result.to_s
   else:
     var file = options.file
-    VM.init_package(parent_dir(file))
     let start = cpu_time()
     let result = VM.run_file(file)
     if options.print_result:

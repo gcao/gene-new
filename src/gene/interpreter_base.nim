@@ -20,6 +20,7 @@ let GENE_RUNTIME* = Runtime(
 )
 
 proc new_package*(dir: string): Package
+proc init_package*(self: VirtualMachine, dir: string)
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value
 
@@ -106,6 +107,7 @@ proc new_vm*(app: Application): VirtualMachine =
 proc init_app_and_vm*() =
   var app = new_app()
   VM = new_vm(app)
+  VM.init_package(get_current_dir())
 
   GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
   GLOBAL_NS.ns[STDIN_KEY]  = stdin
