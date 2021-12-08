@@ -142,7 +142,7 @@ proc prefetch_from_dynlib(self: Module, names: seq[string]) =
 # Package load paths
 #   Paths added programmatically - order depends on the time when they were added
 #   test-dirs if running in testing mode
-#   src-dirs
+#   source-dirs
 #   package root if not already included
 #
 # Q: Can load paths be removed?

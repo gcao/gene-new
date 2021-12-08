@@ -86,15 +86,16 @@ proc new_package*(dir: string): Package =
       result.ns = new_namespace(VM.app.ns, "package:" & result.name)
       result.ns[CUR_PKG_KEY] = Value(kind: VkPackage, pkg: result)
       result.dir = d
-      if doc.props.has_key(DEPS_KEY):
-        result.dependencies = parse_deps(doc.props[DEPS_KEY].vec)
+      if doc.props.has_key(DEPENDENCIES_KEY):
+        result.dependencies = parse_deps(doc.props[DEPENDENCIES_KEY].vec)
       return result
     else:
       d = parent_dir(d)
 
   result.adhoc = true
   result.name = "<adhoc>"
-  result.ns = new_namespace(VM.app.ns, "package:<adhoc>")
+  result.ns = new_namespace(VM.app.ns, "package:" & result.name)
+  result.ns[CUR_PKG_KEY] = Value(kind: VkPackage, pkg: result)
   result.dir = dir
   # result.ns[CUR_PKG_KEY] = result
 
@@ -150,8 +151,8 @@ proc init_package*(self: VirtualMachine, dir: string) =
   self.app.pkg.reset_load_paths()
   self.app.dep_root = self.app.pkg.build_dep_tree()
 
-proc eval_prepare*(self: VirtualMachine): Frame =
-  var module = new_module(VM.app.pkg)
+proc eval_prepare*(self: VirtualMachine, pkg: Package): Frame =
+  var module = new_module(pkg)
   result = new_frame()
   result.ns = module.ns
   result.scope = new_scope()

@@ -5,15 +5,11 @@
   "Guoliang Cao"
 ]
 ^gene-version "*"
-^main-module "main" # Relative to source dir
-^deps [
+^main-module "index" # Relative to source dir
+^dependencies [
   ($dep "my-lib" ">=0.1.0" ^path "../my-lib")
 ]
-^src-dirs [
-  "src"
-]
-^test-dirs [
-  "tests"
-]
+^source-dir "src"
+^test-dir "tests"
 ^homepage "https://github.com/gcao/gene-new/example-projects"
 ^repository "https://github.com/gcao/gene-new.git" # github:gcao/gene-new

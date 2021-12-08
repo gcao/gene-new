@@ -5,12 +5,8 @@
 ^author [
   "Guoliang Cao"
 ]
-^main-module "gene" # Relative to source dir
-^src-dirs [
-  "src"
-]
-^test-dirs [
-  "tests"
-]
+^source-dir "src"
+^test-dir "tests"
 ^homepage "https://github.com/gcao/gene-new"
 ^repository "https://github.com/gcao/gene-new.git" # github:gcao/gene-new
+^tags ["gene" "language"]

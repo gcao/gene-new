@@ -39,12 +39,12 @@ proc main() =
   VM.repl_on_error = options.repl_on_error
   if options.repl:
     VM.init_package(get_current_dir())
-    var frame = VM.eval_prepare()
+    var frame = VM.eval_prepare(VM.app.pkg)
     VM.eval_includes(frame, options)
     discard repl(VM, frame, eval, false)
   elif options.eval != "":
     VM.init_package(get_current_dir())
-    var frame = VM.eval_prepare()
+    var frame = VM.eval_prepare(VM.app.pkg)
     VM.main_module = frame.ns.module
     VM.eval_includes(frame, options)
     case options.input_mode:

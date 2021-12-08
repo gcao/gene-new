@@ -17,7 +17,7 @@ when isMainModule:
     )
     (fib 24)
   """
-  var e = translate(VM.prepare(code))
+  var e = translate(VM.prepare(VM.app.pkg, code))
   let module = new_module(VM.app.pkg)
   VM.main_module = module
   var frame = Frame(ns: module.ns, scope: new_scope(), self: Nil)

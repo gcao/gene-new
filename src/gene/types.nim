@@ -115,7 +115,7 @@ type
     children*: Table[string, DependencyNode]
 
   Module* = ref object
-    pkg*: Package         # Package in which the module belongs
+    pkg*: Package         # Package in which the module is defined
     name*: string
     ns*: Namespace
     handle*: LibHandle    # Optional handle for dynamic lib
