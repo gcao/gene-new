@@ -33,6 +33,16 @@ test_interpreter """
   ((1 ^a "a" "b") .to_s)
 """, "(1 ^a \"a\" \"b\")"
 
+test_interpreter """
+  (class A
+    (method call [x y]
+      (x + y)
+    )
+  )
+  (var a (new A))
+  (a 1 2)   # is equivalent to (a .call 1 2)
+""", 3
+
 # test_interpreter """
 #   (var sum 0)
 #   (4 .times (i -> (sum += i)))

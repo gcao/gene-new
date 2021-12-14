@@ -1,5 +1,6 @@
 import tables
 
+import ./map_key
 import ./types
 import ./exprs
 
@@ -56,3 +57,12 @@ proc translate_wrap*(translate: Translator): Translator =
 proc translate_prop_assignment*(value: Value): Expr =
   var name = value.gene_type.symbol[1..^1]
   return new_ex_set_prop(name, translate(value.gene_data[1]))
+
+proc new_ex_arg*(value: Value): ExArguments =
+  result = ExArguments(
+    evaluator: eval_args,
+  )
+  for k, v in value.gene_props:
+    result.props[k] = translate(v)
+  for v in value.gene_data:
+    result.data.add(translate(v))

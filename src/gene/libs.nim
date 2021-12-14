@@ -326,6 +326,8 @@ proc init*() =
     ObjectClass.def_native_method("to_s", object_to_s)
     ObjectClass.def_native_method("to_json", object_to_json)
     ObjectClass.def_native_method("to_bool", object_to_bool)
+    ObjectClass.def_native_method "call", proc(self: Value, args: Value): Value {.name:"object_call".} =
+      todo("Object.call")
     GENE_NS.ns["Object"] = ObjectClass
     GLOBAL_NS.ns["Object"] = ObjectClass
 

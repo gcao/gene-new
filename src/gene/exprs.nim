@@ -119,7 +119,7 @@ type
     props*: Table[MapKey, Expr]
     data*: seq[Expr]
 
-proc eval_args(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_args*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   todo()
 
 proc new_ex_arg*(): ExArguments =

@@ -1,6 +1,7 @@
 import strutils
 import tables
 
+import ../map_key
 import ../types
 import ../exprs
 import ../normalizers
@@ -11,6 +12,7 @@ import ./regex
 import ./selector
 import ./native
 import ./range
+import ./oop
 
 proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
@@ -55,6 +57,16 @@ proc eval_gene_init*(self: VirtualMachine, frame: Frame, target: Value, expr: va
     translator = native_fn_arg_translator
   of VkNativeMethod, VkNativeMethod2:
     translator = native_method_arg_translator
+  of VkInstance:
+    e.args_expr = ExInvoke(
+      evaluator: eval_invoke,
+      self: e.`type`,
+      meth: CALL_KEY,
+      args: new_ex_arg(e.args),
+    )
+    # For future invocations
+    expr.evaluator = eval_gene2
+    return self.eval_invoke(frame, `type`, e.args_expr)
   else:
     e.args_expr = arg_translator(e.args)
     # For future invocations
