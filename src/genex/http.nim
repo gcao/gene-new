@@ -62,12 +62,46 @@ import gene/utils
 type
   Request = ref object of CustomValue
     req: stdhttp.Request
+    props: Table[string, Value]
+
+  Response = ref object of CustomValue
+    req: Value
+    status: int
+    body: Value
+    headers: Table[string, Value]
+    props: Table[string, Value]
+
+  ExRespond = ref object of Expr
+    args: seq[Expr]
 
 var RequestClass: Value
+var ResponseClass: Value
 
 # HTTP Server
 # https://nim-lang.org/docs/asynchttpserver.html
 # https://dev.to/xflywind/write-a-simple-web-framework-in-nim-language-from-scratch-ma0
+
+proc new_gene_response(resp: Response): Value =
+  Value(
+    kind: VkCustom,
+    custom: resp,
+    custom_class: ResponseClass.class,
+  )
+
+proc eval_respond(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExRespond](expr)
+  var resp = Response()
+  todo("eval_respond")
+  # self.eval(frame, expr.args)
+  new_gene_response(resp)
+
+proc translate_respond(value: Value): Expr {.wrap_exception.} =
+  var e = ExRespond(
+    evaluator: eval_wrap(eval_respond),
+  )
+  for item in value.gene_data:
+    e.args.add(translate(item))
+  return e
 
 proc new_gene_request(req: stdhttp.Request): Value =
   Value(
@@ -157,6 +191,8 @@ proc http_get_async(args: Value): Value {.wrap_exception.} =
 {.push dynlib exportc.}
 
 proc init*(module: Module): Value {.wrap_exception.} =
+  GeneTranslators["respond"] = translate_wrap(translate_respond)
+
   result = new_namespace("http")
   result.ns.module = module
   GENEX_NS.ns["http"] = result
@@ -169,6 +205,9 @@ proc init*(module: Module): Value {.wrap_exception.} =
   RequestClass.def_native_method "url", method_wrap(req_url)
   RequestClass.def_native_method "params", method_wrap(req_params)
   result.ns["Request"] = RequestClass
+
+  ResponseClass = new_gene_class("Response")
+  result.ns["Response"] = ResponseClass
 
   result.ns["start_server"] = start_server
 

@@ -103,6 +103,14 @@ test_interpreter """
   (f 1)
 """, 2
 
+# test_interpreter """
+#   (fn f _
+#     (result = 1) # result: no need to define
+#     2
+#   )
+#   (f)
+# """, 1
+
 test_interpreter """
   (fn f _
     (return 1)
