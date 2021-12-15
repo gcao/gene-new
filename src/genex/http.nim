@@ -65,7 +65,6 @@ type
     props: Table[string, Value]
 
   Response = ref object of CustomValue
-    req: Value
     status: int
     body: Value
     headers: Table[string, Value]
@@ -77,31 +76,59 @@ type
 var RequestClass: Value
 var ResponseClass: Value
 
-# HTTP Server
-# https://nim-lang.org/docs/asynchttpserver.html
-# https://dev.to/xflywind/write-a-simple-web-framework-in-nim-language-from-scratch-ma0
+# proc new_gene_response(resp: Response): Value =
+#   Value(
+#     kind: VkCustom,
+#     custom: resp,
+#     custom_class: ResponseClass.class,
+#   )
 
-proc new_gene_response(resp: Response): Value =
+proc new_response*(args: Value): Value {.wrap_exception.} =
+  var resp = Response()
+  if args.gene_data.len == 0:
+    resp.status = 200
+  else:
+    var first = args.gene_data[0]
+    case first.kind:
+    of VkInt:
+      resp.status = first.int
+      if args.gene_data.len > 1:
+        resp.body = args.gene_data[1].str
+    of VkString:
+      resp.status = 200
+      resp.body = first.str
+    else:
+      todo("new_response " & $first.kind)
   Value(
     kind: VkCustom,
-    custom: resp,
     custom_class: ResponseClass.class,
+    custom: resp,
   )
 
-proc eval_respond(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExRespond](expr)
-  var resp = Response()
-  todo("eval_respond")
-  # self.eval(frame, expr.args)
-  new_gene_response(resp)
+# proc eval_respond(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+#   var expr = cast[ExRespond](expr)
+#   var resp = Response()
+#   new_gene_response(resp)
 
+# (respond ...) => (return (new Response ...))
 proc translate_respond(value: Value): Expr {.wrap_exception.} =
-  var e = ExRespond(
-    evaluator: eval_wrap(eval_respond),
+  # var e = ExRespond(
+  #   evaluator: eval_wrap(eval_respond),
+  # )
+  # for item in value.gene_data:
+  #   e.args.add(translate(item))
+  # return e
+  var new_value = new_gene_gene(
+    new_gene_symbol("return"),
+    new_gene_gene(
+      new_gene_symbol("new"),
+      # # Assume Response class can be accessed thru genex/http/Response
+      new_gene_complex_symbol(@["genex", "http", "Response"]),
+    ),
   )
-  for item in value.gene_data:
-    e.args.add(translate(item))
-  return e
+  for v in value.gene_data:
+    new_value.gene_data[0].gene_data.add(v)
+  translate(new_value)
 
 proc new_gene_request(req: stdhttp.Request): Value =
   Value(
@@ -150,6 +177,12 @@ proc start_server_internal*(args: Value): Value =
         await req.respond(Http500, "Internal Server Error", new_http_headers())
       of VkString:
         var body = res.str
+        echo "HTTP RESP: 200 " & body.abbrev(100)
+        echo()
+        await req.respond(Http200, body, new_http_headers())
+      of VkCustom:
+        var resp = cast[Response](res.custom)
+        var body = resp.body.str
         echo "HTTP RESP: 200 " & body.abbrev(100)
         echo()
         await req.respond(Http200, body, new_http_headers())
@@ -206,6 +239,7 @@ proc init*(module: Module): Value {.wrap_exception.} =
   result.ns["Request"] = RequestClass
 
   ResponseClass = new_gene_class("Response")
+  ResponseClass.def_native_constructor(fn_wrap(new_response))
   result.ns["Response"] = ResponseClass
 
   result.ns["start_server"] = start_server

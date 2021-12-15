@@ -78,11 +78,10 @@
 (fn hello req
   (var params req/.params)
   (if (params .contains "name")
-    ("Hello " params/@name "!")
-    # replace with (respond ("Hello " params/@name "!"))
+    (genex/http/respond ("Hello " params/@name "!"))
   else
-    "Hello world!"
-    # replace with (respond "Hello world!")
+    # "Hello world!"
+    (genex/http/respond "Hello world!")
   )
 )
 
