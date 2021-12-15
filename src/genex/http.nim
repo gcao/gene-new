@@ -191,12 +191,11 @@ proc http_get_async(args: Value): Value {.wrap_exception.} =
 {.push dynlib exportc.}
 
 proc init*(module: Module): Value {.wrap_exception.} =
-  GeneTranslators["respond"] = translate_wrap(translate_respond)
-
   result = new_namespace("http")
   result.ns.module = module
   GENEX_NS.ns["http"] = result
 
+  result.ns["respond"] = new_gene_processor(translate_wrap(translate_respond))
   result.ns["get"] = http_get
   result.ns["get_async"] = http_get_async
 
