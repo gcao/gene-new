@@ -80,7 +80,6 @@
   (if (params .contains "name")
     (genex/http/respond ("Hello " params/@name "!"))
   else
-    # "Hello world!"
     (genex/http/respond "Hello world!")
   )
 )

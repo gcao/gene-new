@@ -5,59 +5,18 @@ import httpclient, uri
 include gene/extension/boilerplate
 import gene/utils
 
-# (ns genex/http
-#   # Support:
-#   # HTTP
-#   # HTTPS
-#   # Get
-#   # Post
-#   # Put
-#   # Basic auth
-#   # Headers
-#   # Cookies
-#   # Query parameter
-#   # Post body - application/x-www-form
-#   # Post body - JSON
-#   # Response code
-#   # Response body
-#   # Response body - JSON
-
-#   (fn get [url params = {} headers = {}]
-#     (gene/native/http_get url params headers)
-#   )
-
-#   (fn ^^async get_async [url params = {} headers = {}]
-#     (gene/native/http_get_async url params headers)
-#   )
-
-#   (fn get_json [url params = {} headers = {}]
-#     (gene/json/parse (get url params headers))
-#   )
-
-#   # (var /parse_uri gene/native/http_parse_uri)
-
-#   (class Uri
-#   )
-
-#   (class Request
-#     (method method = gene/native/http_req_method)
-#     (method url = gene/native/http_req_url)
-#     (method params = gene/native/http_req_params)
-#   )
-
-#   (class Response
-#     (method new [code body]
-#       (@code = code)
-#       (@body = body)
-#     )
-
-#     (method json _
-#       ((gene/json/parse @body) .to_json)
-#     )
-#   )
-
-#   (var /start_server gene/native/http_start_server)
-# )
+# HTTP
+# HTTPS
+# Get/post/put/delete/patch etc
+# Basic auth
+# Headers
+# Cookies
+# Query parameter
+# Post body - application/x-www-form
+# Post body - JSON
+# Response code
+# Response body
+# Response body - JSON
 
 type
   Request = ref object of CustomValue
@@ -70,18 +29,8 @@ type
     headers: Table[string, Value]
     props: Table[string, Value]
 
-  ExRespond = ref object of Expr
-    args: seq[Expr]
-
 var RequestClass: Value
 var ResponseClass: Value
-
-# proc new_gene_response(resp: Response): Value =
-#   Value(
-#     kind: VkCustom,
-#     custom: resp,
-#     custom_class: ResponseClass.class,
-#   )
 
 proc new_response*(args: Value): Value {.wrap_exception.} =
   var resp = Response()
@@ -105,19 +54,8 @@ proc new_response*(args: Value): Value {.wrap_exception.} =
     custom: resp,
   )
 
-# proc eval_respond(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-#   var expr = cast[ExRespond](expr)
-#   var resp = Response()
-#   new_gene_response(resp)
-
 # (respond ...) => (return (new Response ...))
 proc translate_respond(value: Value): Expr {.wrap_exception.} =
-  # var e = ExRespond(
-  #   evaluator: eval_wrap(eval_respond),
-  # )
-  # for item in value.gene_data:
-  #   e.args.add(translate(item))
-  # return e
   var new_value = new_gene_gene(
     new_gene_symbol("return"),
     new_gene_gene(

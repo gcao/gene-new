@@ -4,7 +4,7 @@
 # import nimprof
 # setSamplingFrequency(1)
 
-import times, logging, os, streams, parsecsv, re
+import times, logging, streams, parsecsv, re
 
 import gene/types
 import gene/map_key
