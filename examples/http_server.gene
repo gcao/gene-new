@@ -75,7 +75,42 @@
 
 (var docroot "examples/www")
 
+(class App
+  (method new @port
+    (@middlewares = [])
+  )
+
+  (method start _
+    (println "Starting HTTP server at port" /@port "...")
+
+    (genex/http/start_server /@port /@handler)
+    (gene/run_forever)
+  )
+)
+
+(class DummyRouter
+  (method new _
+    (@handlers = [])
+  )
+
+  (method call req
+    (println "DummyRouter.call")
+    (for h in /@handlers
+      (var result = (h req))
+      (if result
+        (println "200" req/.method req/.url)
+        (return result)
+      )
+    )
+    (genex/http/respond 404)
+  catch _
+    (println "500" req/.method req/.url)
+    (throw $ex)
+  )
+)
+
 (fn hello req
+  (println "hello")
   (var params req/.params)
   (if (params .contains "name")
     (genex/http/respond ("Hello " params/@name "!"))
@@ -84,26 +119,25 @@
   )
 )
 
-(var handlers [hello])
-
-(fn handler req
-  (var result)
-  (for h in handlers
-    (result = (h req))
-    (if result (break))
+(fn auth handler
+  (println "auth")
+  (fnx req
+    (if true
+      (handler req)
+    else
+      (genex/http/respond 401)
+    )
   )
-  (println "200" req/.method req/.url)
-  result
-catch _
-  (println "500" req/.method req/.url)
-  (throw $ex)
 )
 
 (var port 2080)
 (if ($cmd_args/.size > 1)
   (port = $cmd_args/@1/.to_i)
 )
-(println "Starting HTTP server at port" port "...")
 
-(genex/http/start_server port handler)
-(gene/run_forever)
+(var app (new App port))
+(app/@middlewares .add auth)
+(var router (new DummyRouter))
+(router/@handlers .add hello)
+($set app @handler router)
+(app .start)

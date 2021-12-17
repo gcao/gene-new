@@ -288,8 +288,8 @@ type
   Value* {.acyclic.} = ref object
     case kind*: ValueKind
     of VkAny:
-      any_type*: MapKey   # Optional type info
       any*: pointer
+      any_class*: Class
     of VkCustom:
       custom*: CustomValue
       custom_class*: Class
@@ -1496,11 +1496,8 @@ proc `[]=`*(self: var OrderedTable[MapKey, Value], key: string, value: Value) =
 proc new_gene_any*(v: pointer): Value =
   return Value(kind: VkAny, any: v)
 
-proc new_gene_any*(v: pointer, `type`: MapKey): Value =
-  return Value(kind: VkAny, any: v, any_type: `type`)
-
-proc new_gene_any*(v: pointer, `type`: string): Value =
-  return Value(kind: VkAny, any: v, any_type: `type`.to_key)
+proc new_gene_any*(v: pointer, class: Class): Value =
+  return Value(kind: VkAny, any: v, any_class: class)
 
 proc new_gene_string*(s: string): Value {.gcsafe.} =
   return Value(kind: VkString, str: s)

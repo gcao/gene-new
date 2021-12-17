@@ -448,7 +448,12 @@ proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Valu
       else:
         raise
   else:
-    todo()
+    # TODO: Support
+    # VkInstance => call "call" method on the instance class
+    # VkAny / VkCustom => similar to VkInstance
+    # VkClass => create instance and call the constructor
+    # VkNativeFn/VkNativeFn2 => call the native function/procedure
+    todo($target.kind)
 
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value =
   if target.fn.body_compiled == nil:
