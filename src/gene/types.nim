@@ -457,12 +457,12 @@ type
     args*: Value # This is only available in some frames (e.g. function/macro/block)
     extra*: FrameExtra
 
-  Break* = ref object of Exception
+  Break* = ref object of CatchableError
     val*: Value
 
-  Continue* = ref object of Exception
+  Continue* = ref object of CatchableError
 
-  Return* = ref object of Exception
+  Return* = ref object of CatchableError
     frame*: Frame
     val*: Value
 

@@ -94,9 +94,8 @@
   )
 
   (method call req
-    (println "DummyRouter.call")
     (for h in /@handlers
-      (var result = (h req))
+      (var result (h req))
       (if result
         (println "200" req/.method req/.url)
         (return result)
@@ -104,13 +103,13 @@
     )
     (genex/http/respond 404)
   catch _
+    (println $ex/.to_s)
     (println "500" req/.method req/.url)
     (throw $ex)
   )
 )
 
 (fn hello req
-  (println "hello")
   (var params req/.params)
   (if (params .contains "name")
     (genex/http/respond ("Hello " params/@name "!"))

@@ -73,6 +73,12 @@ proc class_parent(self: Value, args: Value): Value =
 proc exception_message(self: Value, args: Value): Value =
   self.exception.msg
 
+proc exception_stack(self: Value, args: Value): Value =
+  self.exception.get_stack_trace()
+
+proc exception_to_s(self: Value, args: Value): Value =
+  self.exception.msg & "\n" & self.exception.get_stack_trace()
+
 proc string_size(self: Value, args: Value): Value =
   self.str.len
 
@@ -341,6 +347,8 @@ proc init*() =
     ExceptionClass = Value(kind: VkClass, class: new_class("Exception"))
     ExceptionClass.class.parent = ObjectClass.class
     ExceptionClass.def_native_method("message", exception_message)
+    ExceptionClass.def_native_method("stacktrace", exception_stack)
+    ExceptionClass.def_native_method("to_s", exception_to_s)
     GENE_NS.ns["Exception"] = ExceptionClass
     GLOBAL_NS.ns["Exception"] = ExceptionClass
 

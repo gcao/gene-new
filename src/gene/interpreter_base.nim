@@ -447,6 +447,18 @@ proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Valu
         discard
       else:
         raise
+  of VkInstance:
+    var class = target.instance_class
+    var meth = class.get_method(CALL_KEY)
+    var fn = meth.callable.fn
+    var fn_scope = new_scope()
+    fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
+    var new_frame = Frame(ns: fn.ns, scope: fn_scope)
+    new_frame.self = target
+    new_frame.parent = frame
+
+    self.process_args(new_frame, fn.matcher, args)
+    result = self.call_fn_skip_args(new_frame, meth.callable)
   else:
     # TODO: Support
     # VkInstance => call "call" method on the instance class
