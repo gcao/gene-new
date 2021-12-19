@@ -101,7 +101,6 @@
         (return result)
       )
     )
-    (genex/http/respond 404)
   catch _
     (println $ex/.to_s)
     (println "500" req/.method req/.url)
