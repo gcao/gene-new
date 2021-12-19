@@ -293,7 +293,7 @@ test_interpreter """
 # #     )
 # #   )
 # #   (var a (new A))
-# #   ((a as B) .test)
+# #   ((cast a B) .test)
 # # """, 2
 
 # # test_interpreter """

@@ -103,7 +103,7 @@ proc start_server_internal*(args: Value): Value =
     args.gene_data[0].int
 
   proc handler(req: stdhttp.Request) {.async gcsafe.} =
-    echo "HTTP REQ: " & $req.url
+    echo "HTTP REQ : " & $req.url
     var my_args = new_gene_gene()
     my_args.gene_data.add(new_gene_request(req))
     var res = VM.invoke_catch(nil, args.gene_data[1], my_args)
