@@ -43,6 +43,8 @@ proc new_response*(args: Value): Value {.wrap_exception.} =
       resp.status = first.int
       if args.gene_data.len > 1:
         resp.body = args.gene_data[1].str
+      else:
+        resp.body = ""
     of VkString:
       resp.status = 200
       resp.body = first.str
@@ -80,6 +82,9 @@ proc req_method*(self: Value, args: Value): Value {.wrap_exception.} =
 
 proc req_url*(self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Request](self.custom).req.url
+
+proc req_path*(self: Value, args: Value): Value {.wrap_exception.} =
+  return $cast[Request](self.custom).req.url.path
 
 proc req_params*(self: Value, args: Value): Value {.wrap_exception.} =
   result = new_gene_map()
@@ -121,9 +126,9 @@ proc start_server_internal*(args: Value): Value =
       of VkCustom:
         var resp = cast[Response](res.custom)
         var body = resp.body.str
-        echo "HTTP RESP: 200 " & body.abbrev(100)
+        echo "HTTP RESP: " & $resp.status & " " & body.abbrev(100)
         echo()
-        await req.respond(Http200, body, new_http_headers())
+        await req.respond(HttpCode(resp.status), body, new_http_headers())
       else:
         echo "HTTP RESP: 500 response kind is " & $res.kind
         echo()
@@ -173,6 +178,7 @@ proc init*(module: Module): Value {.wrap_exception.} =
   RequestClass = new_gene_class("Request")
   RequestClass.def_native_method "method", method_wrap(req_method)
   RequestClass.def_native_method "url", method_wrap(req_url)
+  RequestClass.def_native_method "path", method_wrap(req_path)
   RequestClass.def_native_method "params", method_wrap(req_params)
   result.ns["Request"] = RequestClass
 

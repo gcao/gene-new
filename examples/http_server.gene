@@ -110,6 +110,7 @@
 )
 
 (fn hello req
+  (if (req/.path != "/hello") (return))
   (var params req/.params)
   (if (params .contains "name")
     (genex/http/respond ("Hello " params/@name "!"))

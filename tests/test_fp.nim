@@ -120,6 +120,14 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  (fn f _
+    (return)
+    2
+  )
+  (f)
+""", Nil
+
+test_interpreter """
   (fn fib n
     (if (n < 2)
       n

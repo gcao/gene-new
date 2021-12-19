@@ -79,10 +79,15 @@ proc to_function(node: Value): Function =
   result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
 
 proc eval_return(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  raise Return(
+  var expr = cast[ExReturn](expr)
+  var r = Return(
     frame: frame,
-    val: self.eval(frame, cast[ExReturn](expr).data),
   )
+  if expr.data != nil:
+    r.val = self.eval(frame, expr.data)
+  else:
+    r.val = Nil
+  raise r
 
 proc translate_fn(value: Value): Expr =
   var fn = to_function(value)
@@ -104,7 +109,8 @@ proc translate_fnx(value: Value): Expr =
 proc translate_return(value: Value): Expr =
   var expr = ExReturn()
   expr.evaluator = eval_return
-  expr.data = translate(value.gene_data[0])
+  if value.gene_data.len > 0:
+    expr.data = translate(value.gene_data[0])
   return expr
 
 proc init*() =
