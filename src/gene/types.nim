@@ -866,10 +866,10 @@ proc package*(self: Namespace): Package =
   self.get_module().pkg
 
 proc has_key*(self: Namespace, key: MapKey): bool {.inline.} =
-  return self.members.has_key(key)
+  return self.members.has_key(key) or (self.parent != nil and self.parent.has_key(key))
 
 proc `[]`*(self: Namespace, key: MapKey): Value {.inline.} =
-  if self.has_key(key):
+  if self.members.has_key(key):
     return self.members[key]
   elif not self.stop_inheritance and self.parent != nil:
     return self.parent[key]
@@ -877,7 +877,7 @@ proc `[]`*(self: Namespace, key: MapKey): Value {.inline.} =
     raise new_exception(NotDefinedException, %key & " is not defined")
 
 proc locate*(self: Namespace, key: MapKey): (Value, Namespace) {.inline.} =
-  if self.has_key(key):
+  if self.members.has_key(key):
     result = (self.members[key], self)
   elif not self.stop_inheritance and self.parent != nil:
     result = self.parent.locate(key)

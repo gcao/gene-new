@@ -72,7 +72,7 @@
 #   - Routing hierarchy
 #
 
-(var docroot "examples/www")
+(import genex/http/*)
 
 (class App
   (method new @port
@@ -82,7 +82,7 @@
   (method start _
     (println "Starting HTTP server at port" /@port "...")
 
-    (genex/http/start_server /@port /@handler)
+    (start_server /@port /@handler)
     (gene/run_forever)
   )
 )
@@ -113,9 +113,9 @@
   )
   (var params req/.params)
   (if (params .contains "name")
-    (genex/http/respond ("Hello " params/@name "!"))
+    (respond ("Hello " params/@name "!"))
   else
-    (genex/http/respond "Hello world!")
+    (respond "Hello world!")
   )
 )
 
@@ -124,7 +124,7 @@
     (if true  # TODO: implement authentication and authorization
       (handler req)
     else
-      (genex/http/respond 401)
+      (respond 401)
     )
   )
 )

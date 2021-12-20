@@ -7,6 +7,7 @@ import ../types
 import ../map_key
 import ../translators
 import ../interpreter_base
+import ./symbol
 
 let INHERIT_KEY*               = add_key("inherit")
 
@@ -112,7 +113,12 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
       for k, v in source.members:
         frame.ns.members[k] = v
     else:
-      var value = source[m.name]
+      var value = if source.has_key(m.name):
+        source[m.name]
+      else:
+        var args = new_gene_gene()
+        args.gene_data.add(m.name.to_s)
+        self.call_member_missing(frame, Value(kind: VkNamespace, ns: source), source.member_missing, args)
       if m.children_only:
         self.import_from_ns(frame, value.ns, m.children)
       else:

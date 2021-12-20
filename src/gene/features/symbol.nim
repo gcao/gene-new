@@ -39,7 +39,7 @@ proc eval_my_member(self: VirtualMachine, frame: Frame, target: Value, expr: var
   else:
     expr.evaluator = eval_symbol_scope
 
-proc call_member_missing(self: VirtualMachine, frame: Frame, obj: Value, target: Value, args: Value, name: string): Value =
+proc call_member_missing*(self: VirtualMachine, frame: Frame, obj: Value, target: Value, args: Value): Value =
   var fn_scope = new_scope()
   var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
   new_frame.parent = frame
@@ -82,7 +82,7 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
   elif ns.member_missing != nil:
     var args = new_gene_gene()
     args.gene_data.add(name.to_s)
-    return vm.call_member_missing(frame, self, ns.member_missing, args, name.to_s)
+    return vm.call_member_missing(frame, self, ns.member_missing, args)
   else:
     raise new_exception(NotDefinedException, name.to_s & " is not defined")
 

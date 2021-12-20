@@ -173,6 +173,22 @@ proc init*(module: Module): Value {.wrap_exception.} =
 
   result.ns["respond"] = new_gene_processor(translate_wrap(translate_respond))
   result.ns["get"] = http_get
+  # result.ns["get_json"] = VM.eval """
+  #   (fn get_json [url params = {} headers = {}]
+  #     (gene/json/parse (get url params headers))
+  #   )
+  # """
+  # Above code causes GC problem when the http extension is loaded
+  # $ examples/http_server.gene
+  # Traceback (most recent call last)
+  # /Users/gcao/proj/gene/src/genex/http.nim(176) init
+  # /Users/gcao/proj/gene/src/gene/interpreter_base.nim(167) eval
+  # /Users/gcao/.choosenim/toolchains/nim-1.4.8/lib/system.nim(937) eval
+  # /Users/gcao/.choosenim/toolchains/nim-1.4.8/lib/system/arc.nim(169) nimDestroyAndDispose
+  # /Users/gcao/.choosenim/toolchains/nim-1.4.8/lib/system/orc.nim(413) nimDecRefIsLastCyclicDyn
+  # /Users/gcao/.choosenim/toolchains/nim-1.4.8/lib/system/orc.nim(394) rememberCycle
+  # /Users/gcao/.choosenim/toolchains/nim-1.4.8/lib/system/orc.nim(128) unregisterCycle
+  # SIGSEGV: Illegal storage access. (Attempt to read from nil?)
   result.ns["get_async"] = http_get_async
 
   RequestClass = new_gene_class("Request")
