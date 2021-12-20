@@ -487,7 +487,7 @@ proc init*() =
     GENE_NS.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
     GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
 
-    discard self.eval """
+    discard self.eval(self.runtime.pkg, """
     ($with gene/String
       (method lines _
         (self .split "\n")
@@ -635,4 +635,4 @@ proc init*() =
         )
       )
     )
-    """
+    """)

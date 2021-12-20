@@ -41,11 +41,16 @@ type
   GeneProcessor* = ref object of RootObj
     translator*: Translator
 
+  VirtualMachine* = ref object
+    app*: Application
+    runtime*: Runtime
+    main_module*: Module
+    modules*: OrderedTable[MapKey, Namespace]
+    repl_on_error*: bool
+
   Runtime* = ref object
     name*: string     # default/...
-    home*: string     # GENE_HOME directory
-    version*: string
-    # features*: Table[string, Feature]
+    pkg*: Package
     props*: Table[string, Value]  # Additional properties
 
   # It might not be very useful to group functionalities by features
@@ -53,17 +58,6 @@ type
   # Instead we should define capabilities, e.g. file system access,
   # network access, environment access, input/output device access etc.
   # Capabilities can be enabled/disabled on application, package, module level.
-
-  # # To group functionality like oop, macro, repl
-  # # Features should be divided into core features (e.g. if, var, namespace etc)
-  # # and non-core features (e.g. repl etc)
-  # Feature* = ref object
-  #   parent*: Feature
-  #   key*: string                  # E.g. oop
-  #   name*: string                 # E.g. Object Oriented Programming
-  #   description*: string          # E.g. More descriptive information about the feature
-  #   props*: Table[string, Value]  # Additional properties
-  #   children*: Table[string, Feature]
 
   ## This is the root of a running application
   Application* = ref object
@@ -423,12 +417,6 @@ type
   #   socket server:
   #   http: read/write
   #   custom capabilities provided by libraries
-
-  VirtualMachine* = ref object
-    app*: Application
-    main_module*: Module
-    modules*: OrderedTable[MapKey, Namespace]
-    repl_on_error*: bool
 
   FrameKind* = enum
     FrFunction

@@ -43,6 +43,30 @@ test_interpreter """
   (a 1 2)   # is equivalent to (a .call 1 2)
 """, 3
 
+# test "GeneAny":
+#   var s = "abc"
+#   var g = Value(
+#     kind: VkAny,
+#     any: cast[pointer](s.addr),
+#   )
+#   check cast[ptr string](g.any)[] == s
+
+# test_interpreter "gene", proc(r: Value) =
+#   check r.ns.name == "gene"
+
+# test_interpreter "genex", proc(r: Value) =
+#   check r.ns.name == "genex"
+
+# test_interpreter "(assert true)"
+
+# test_interpreter "(AssertionError .name)","AssertionError"
+
+# test_interpreter """
+#   $runtime
+# """, proc(r: Value) =
+#   check r.runtime.pkg.home == "/Users/gcao/proj/gene.nim"
+#   check r.runtime.pkg.version == "0.1.0"
+
 # test_interpreter """
 #   (var sum 0)
 #   (4 .times (i -> (sum += i)))

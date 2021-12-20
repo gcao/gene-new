@@ -12,13 +12,6 @@ type
   Invoke* = proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
   InvokeWrap* = proc(invoke: Invoke): Invoke
 
-let GENE_HOME*    = get_env("GENE_HOME", parent_dir(get_app_dir()))
-let GENE_RUNTIME* = Runtime(
-  home: GENE_HOME,
-  name: "default",
-  # version: read_file(GENE_HOME & "/VERSION").strip(),
-)
-
 proc new_package*(dir: string): Package
 proc init_package*(self: VirtualMachine, dir: string)
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
@@ -107,6 +100,15 @@ proc new_vm*(app: Application): VirtualMachine =
 proc init_app_and_vm*() =
   var app = new_app()
   VM = new_vm(app)
+
+  let gene_home = get_env("GENE_HOME", parent_dir(get_app_dir()))
+  let gene_pkg = new_package(gene_home)
+  gene_pkg.reset_load_paths()
+  VM.runtime = Runtime(
+    name: "default",
+    pkg: gene_pkg,
+  )
+
   VM.init_package(get_current_dir())
 
   GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
@@ -159,12 +161,15 @@ proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
   var expr = translate(self.prepare(code))
   result = self.eval(frame, expr)
 
-proc eval*(self: VirtualMachine, code: string): Value =
-  var module = new_module(VM.app.pkg)
+proc eval*(self: VirtualMachine, pkg: Package, code: string): Value =
+  var module = new_module(pkg)
   var frame = new_frame()
   frame.ns = module.ns
   frame.scope = new_scope()
   self.eval(frame, code)
+
+proc eval*(self: VirtualMachine, code: string): Value =
+  self.eval(VM.app.pkg, code)
 
 proc run_file*(self: VirtualMachine, file: string): Value =
   var module = new_module(VM.app.pkg, file, self.app.pkg.ns)
