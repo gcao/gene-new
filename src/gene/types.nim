@@ -1,4 +1,4 @@
-import os, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm
+import os, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm, json
 import nre
 import asyncdispatch
 import dynlib
@@ -1791,6 +1791,55 @@ proc wrap_with_try*(body: seq[Value]): seq[Value] =
     return @[new_gene_gene(Try, body)]
   else:
     return body
+
+#################### JSON ########################
+
+proc `%`*(self: Value): JsonNode =
+  case self.kind:
+  of VkNil:
+    return newJNull()
+  of VkBool:
+    return %self.bool
+  of VkInt:
+    return %self.int
+  of VkString:
+    return %self.str
+  # of VkSymbol:
+  #   return %self.symbol
+  of VkVector:
+    result = newJArray()
+    for item in self.vec:
+      result.add(%item)
+  of VkMap:
+    result = newJObject()
+    for k, v in self.map:
+      result[k.to_s] = %v
+  else:
+    todo($self.kind)
+
+proc to_json*(self: Value): string =
+  return $(%self)
+
+converter json_to_gene*(node: JsonNode): Value =
+  case node.kind:
+  of JNull:
+    return Nil
+  of JBool:
+    return node.bval
+  of JInt:
+    return node.num
+  of JFloat:
+    return node.fnum
+  of JString:
+    return node.str
+  of JObject:
+    result = new_gene_map()
+    for k, v in node.fields:
+      result.map[k.to_key] = v.json_to_gene
+  of JArray:
+    result = new_gene_vec()
+    for elem in node.elems:
+      result.vec.add(elem.json_to_gene)
 
 #################### Selector ####################
 

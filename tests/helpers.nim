@@ -1,4 +1,4 @@
-import unittest, strutils, tables, os
+import unittest, strutils, tables
 
 import gene/map_key
 import gene/types

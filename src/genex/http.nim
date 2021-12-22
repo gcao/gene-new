@@ -1,4 +1,4 @@
-import strutils
+import strutils, json
 import asynchttpserver as stdhttp, asyncdispatch
 import httpclient, uri
 
@@ -150,6 +150,16 @@ proc http_get(args: Value): Value {.wrap_exception.} =
   client.headers = headers
   result = client.get_content(url)
 
+proc http_get_json(args: Value): Value {.wrap_exception.} =
+  var url = args.gene_data[0].str
+  var headers = newHttpHeaders()
+  if args.gene_data.len > 2:
+    for k, v in args.gene_data[2].map:
+      headers.add(k.to_s, v.str)
+  var client = newHttpClient()
+  client.headers = headers
+  result = client.get_content(url).parse_json
+
 proc http_get_async(args: Value): Value {.wrap_exception.} =
   var url = args.gene_data[0].str
   var headers = newHttpHeaders()
@@ -173,6 +183,7 @@ proc init*(module: Module): Value {.wrap_exception.} =
 
   result.ns["respond"] = new_gene_processor(translate_wrap(translate_respond))
   result.ns["get"] = http_get
+  result.ns["get_json"] = http_get_json
   # result.ns["get_json"] = VM.eval """
   #   (fn get_json [url params = {} headers = {}]
   #     (gene/json/parse (get url params headers))
