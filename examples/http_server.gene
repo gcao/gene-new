@@ -143,7 +143,7 @@
 (fn auth handler
   (fnx req
     (if (req/.path != "/secret")
-      (return)
+      (return (handler req))
     )
     (var authenticated
       ((gene/base64_decode req/.headers/@authorization) == "secret")

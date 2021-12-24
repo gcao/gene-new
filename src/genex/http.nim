@@ -116,7 +116,7 @@ proc start_server_internal*(args: Value): Value =
     var my_args = new_gene_gene()
     my_args.gene_data.add(new_gene_request(req))
     var res = VM.invoke_catch(nil, args.gene_data[1], my_args)
-    if res == nil:
+    if res == nil or res.kind == VkNil:
       echo "HTTP RESP: 404"
       echo()
       await req.respond(Http404, "", new_http_headers())
