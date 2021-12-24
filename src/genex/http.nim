@@ -96,6 +96,15 @@ proc req_params*(self: Value, args: Value): Value {.wrap_exception.} =
     var pair = p.split('=', 2)
     result.map[pair[0].to_key] = pair[1]
 
+proc req_headers*(self: Value, args: Value): Value {.wrap_exception.} =
+  result = new_gene_map()
+  var req = cast[Request](self.custom).req
+  for key, val in req.headers.pairs:
+    result.map[key.to_key] = val
+
+proc resp_status*(self: Value, args: Value): Value {.wrap_exception.} =
+  return $cast[Response](self.custom).status
+
 proc start_server_internal*(args: Value): Value =
   var port = if args.gene_data[0].kind == VkString:
     args.gene_data[0].str.parse_int
@@ -207,10 +216,12 @@ proc init*(module: Module): Value {.wrap_exception.} =
   RequestClass.def_native_method "url", method_wrap(req_url)
   RequestClass.def_native_method "path", method_wrap(req_path)
   RequestClass.def_native_method "params", method_wrap(req_params)
+  RequestClass.def_native_method "headers", method_wrap(req_headers)
   result.ns["Request"] = RequestClass
 
   ResponseClass = new_gene_class("Response")
   ResponseClass.def_native_constructor(fn_wrap(new_response))
+  ResponseClass.def_native_method "status", method_wrap(resp_status)
   result.ns["Response"] = ResponseClass
 
   result.ns["start_server"] = start_server

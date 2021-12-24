@@ -277,6 +277,14 @@ proc init*() =
       result = new_gene_future(future)
     GENE_NS.ns["base64"] = new_gene_native_fn proc(args: Value): Value =
       encode(args.gene_data[0].str)
+    GENE_NS.ns["base64_decode"] = new_gene_native_fn proc(args: Value): Value =
+      case args.gene_data[0].kind:
+      of VkString:
+        return decode(args.gene_data[0].str)
+      of VkNil:
+        return ""
+      else:
+        todo("base64_decode " & $args.gene_data[0].kind)
     GENE_NS.ns["run_forever"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_run_forever".} =
       run_forever()
 

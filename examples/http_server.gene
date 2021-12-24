@@ -79,10 +79,23 @@
     (@middlewares = [])
   )
 
+  (method call req
+    (/@root_handler req)
+  )
+
+  (method construct_handler middleware_index
+    (if (middleware_index < /@middlewares/.size)
+      ((/@middlewares .@ middleware_index) (.construct_handler (middleware_index + 1)))
+    else
+      /@handler
+    )
+  )
+
   (method start _
     (println "Starting HTTP server at port" /@port "...")
 
-    (start_server /@port /@handler)
+    (start_server /@port self)
+    (@root_handler = (.construct_handler 0))
     (gene/run_forever)
   )
 )
@@ -96,10 +109,11 @@
     (for h in /@handlers
       (var result (h req))
       (if result
-        (println "200" req/.method req/.url)
+        (println result/.status req/.method req/.url)
         (return result)
       )
     )
+    (respond 404)
   catch _
     (println $ex/.to_s)
     (println "500" req/.method req/.url)
@@ -119,9 +133,22 @@
   )
 )
 
+(fn secret req
+  (if (req/.path != "/secret")
+    (return)
+  )
+  (respond "Sssh, do not tell this to anyone!")
+)
+
 (fn auth handler
   (fnx req
-    (if true  # TODO: implement authentication and authorization
+    (if (req/.path != "/secret")
+      (return)
+    )
+    (var authenticated
+      ((gene/base64_decode req/.headers/@authorization) == "secret")
+    )
+    (if authenticated
       (handler req)
     else
       (respond 401)
@@ -138,5 +165,6 @@
 (app/@middlewares .add auth)
 (var router (new DummyRouter))
 (router/@handlers .add hello)
+(router/@handlers .add secret)
 ($set app @handler router)
 (app .start)
