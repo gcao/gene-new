@@ -162,10 +162,16 @@ proc resolve_module*(self: VirtualMachine, frame: Frame, pkg: Package, s: string
     var s = s
     if native:
       var (dir, name, _) = split_file(s)
+      when defined(Windows):
+        name &= ".dll"
+      elif defined(Linux):
+        name = "lib" & name & ".so"
+      elif defined(MacOsX):
+        name = "lib" & name & ".dylib"
       if dir == "":
-        s = "lib" & name & ".dylib"
+        s = name
       else:
-        s = dir & "/lib" & name & ".dylib"
+        s = dir & "/" & name
     elif not s.ends_with(".gene"):
       s = s & ".gene"
     for dir in pkg.load_paths:

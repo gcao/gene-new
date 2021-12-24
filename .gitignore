@@ -13,6 +13,7 @@
 *.dSYM/
 tmp/
 bin/
+build/
 *.dylib
 wip_test.nim
 profile_results.txt
