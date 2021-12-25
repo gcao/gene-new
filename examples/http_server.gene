@@ -16,7 +16,9 @@
   # Helper method for constructing handlers from @middlewares and @handler
   (method construct_handler middleware_index
     (if (middleware_index < /@middlewares/.size)
-      ((/@middlewares .@ middleware_index) (.construct_handler (middleware_index + 1)))
+      (var middleware (/@middlewares .@ middleware_index))
+      (var handler    (.construct_handler (middleware_index + 1)))
+      (middleware handler)
     else
       /@handler
     )
@@ -126,6 +128,7 @@
 )
 
 # Create and initialize the app
+# ($tap <value> <body>) will run <body> with `self` set to <value> and return <value>
 (var app ($tap (new App port)
   (/@middlewares .add auth)
   ($set self @handler ($tap (new DummyRouter)
