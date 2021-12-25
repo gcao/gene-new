@@ -5,6 +5,11 @@ import httpclient, uri
 include gene/extension/boilerplate
 import gene/utils
 
+# https://dev.to/xflywind/write-a-simple-web-framework-in-nim-language-from-scratch-ma0
+# Ruby Rack: https://github.com/rack/rack/blob/master/SPEC.rdoc
+# Python WSGI: https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface
+# Clojure Ring: https://github.com/ring-clojure/ring/wiki/Concepts
+
 # HTTP
 # HTTPS
 # Get/post/put/delete/patch etc
@@ -17,6 +22,73 @@ import gene/utils
 # Response code
 # Response body
 # Response body - JSON
+
+# * Handler
+#   Typically looks like this
+#   (fn handler req
+#     (respond 200 "Hello world!" {^Content-Type "text/plain"})
+#   )
+#   - Invoked like (handler req)
+#   - Anything that can be invoked like (<anything> req) can serve as a handler
+#   - Native handlers work similar to gene handlers
+#   - A few standard handlers can be provided: e.g.
+#     Static asset handler
+#     Simple router
+#       - Takes a list of handlers, call one by one until a response is reurned.
+#       - The insertion order may be important.
+#
+# * Responder
+#   respond will trigger return implicitly?!
+#   (respond 500) <=> (return (new Response 500))
+#   It can accept a few formats:
+#     - code            # int, same as (respond 200, "")
+#     - "response body" # same as (respond 200 "response body")
+#     - (respond code "response body" headers)
+#     - (redirect ...)
+#     - Stream
+#     - Exception -> will produce a HTTP 500 response and log the exception
+#     - What else?
+#
+# * Middlewares
+#   Middlewares are chained
+#   Simple middleware looks like:
+#   (fn s handler
+#     (fnx req
+#       (do_something_with req)
+#       (var resp (handler req))
+#       (do_something_with resp)
+#       resp
+#     )
+#   )
+#   Usage: s
+#
+#   More complex middleware looks like:
+#   (fn m x
+#     (fnx handler
+#       (fnx req
+#         (do_something_with req x)
+#         (handler req)
+#       )
+#     )
+#   )
+#   Usage: (m "something")
+#
+#   - Native middlewares work similar to gene middlewares
+#   - Middlewares usually handles authentication, authorization, response
+#     transformation etc
+#   - Middlewares can do its work before / after handlers
+#     Update request if before handlers
+#     Update response if after handlers
+#
+# * Router
+#   - Router is a handler that routes to other handlers
+#   - Router usually handles mapping between url patterns and handlers.
+#   - Everything a router does can be supported by regular handlers, however
+#     a router provides some convenience, e.g. decouple routing and controller
+#     logic
+#   - Router DSL - it's common to define a dsl to make it easy to implement a router
+#   - Routing hierarchy
+#
 
 type
   Request = ref object of CustomValue
