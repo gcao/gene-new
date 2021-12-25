@@ -165,27 +165,27 @@ test_interpreter """
   )
 """, 1
 
-# test_interpreter """
-#   ($tap 1
-#     (assert (self == 1))
-#     2
-#   )
-# """, 1
+test_interpreter """
+  ($tap 1
+    (assert (self == 1))
+    2
+  )
+""", 1
 
-# test_interpreter """
-#   ($tap 1 :i
-#     (assert (i == 1))
-#     2
-#   )
-# """, 1
+test_interpreter """
+  ($tap 1 :i
+    (assert (i == 1))
+    2
+  )
+""", 1
 
-# test_interpreter """
-#   (var a 1)
-#   ($tap a :i
-#     (assert (i == 1))
-#     2
-#   )
-# """, 1
+test_interpreter """
+  (var a 1)
+  ($tap a :i
+    (assert (i == 1))
+    2
+  )
+""", 1
 
 test_interpreter """
   (var i 0)

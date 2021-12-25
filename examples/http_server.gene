@@ -94,8 +94,8 @@
   (method start _
     (println "Starting HTTP server at port" /@port "...")
 
-    (start_server /@port self)
     (@root_handler = (.construct_handler 0))
+    (start_server /@port self)
     (gene/run_forever)
   )
 )
@@ -161,10 +161,20 @@
   (port = $cmd_args/@1/.to_i)
 )
 
+#< Compare this with the code that uses $tap...
 (var app (new App port))
 (app/@middlewares .add auth)
 (var router (new DummyRouter))
 (router/@handlers .add hello)
 (router/@handlers .add secret)
 ($set app @handler router)
+#>#
+
+(var app ($tap (new App port)
+  (/@middlewares .add auth)
+  ($set self @handler ($tap (new DummyRouter)
+    (/@handlers .add hello)
+    (/@handlers .add secret)
+  ))
+))
 (app .start)

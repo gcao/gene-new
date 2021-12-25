@@ -1,5 +1,6 @@
 import tables
 
+import ../map_key
 import ../types
 import ../exprs
 import ../translators
@@ -21,6 +22,12 @@ type
     rest*: seq[Expr]
 
   ExIfMain* = ref object of Expr
+    body*: Expr
+
+  ExTap* = ref object of Expr
+    value*: Expr
+    as_self*: bool
+    as_name*: string
     body*: Expr
 
 proc translate_do(value: Value): Expr =
@@ -121,6 +128,36 @@ proc translate_if_main(value: Value): Expr =
     body: translate(value.gene_data)
   )
 
+proc eval_tap(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExTap](expr)
+  result = self.eval(frame, expr.value)
+  var old_self = frame.self
+  var old_scope = frame.scope
+  try:
+    frame.scope = new_scope()
+    if expr.as_self:
+      frame.self = result
+    else:
+      frame.scope.def_member(expr.as_name.to_key, result)
+    discard self.eval(frame, expr.body)
+  finally:
+    frame.self = old_self
+    frame.scope = old_scope
+
+proc translate_tap(value: Value): Expr =
+  var r = ExTap(
+    evaluator: eval_tap,
+    value: translate(value.gene_data[0]),
+  )
+  if value.gene_data.len > 1:
+    if value.gene_data[1].kind == VkQuote:
+      r.as_name = value.gene_data[1].quote.symbol
+      r.body = translate(value.gene_data[2..^1])
+    else:
+      r.as_self = true
+      r.body = translate(value.gene_data[1..^1])
+  return r
+
 proc init*() =
   GeneTranslators["do"] = translate_do
   GeneTranslators["void"] = translate_void
@@ -139,6 +176,7 @@ proc init*() =
   #     ...
   #   )
   GeneTranslators["$if_main"] = translate_if_main
+  GeneTranslators["$tap"] = translate_tap
 
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     GLOBAL_NS.ns["assert"] = new_gene_processor(translate_assert)
