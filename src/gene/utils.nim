@@ -4,4 +4,4 @@ proc abbrev*(s: string, len: int): string =
   if len >= s.len:
     return s
   else:
-    s[0..(len+1)/2] & "..." & s[s.len - int(len/2)..^1]
+    s[0..int((len+1)/2)] & "..." & s[s.len - int(len/2)..^1]
