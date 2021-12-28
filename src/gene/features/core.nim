@@ -135,6 +135,7 @@ proc eval_tap(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   var old_scope = frame.scope
   try:
     frame.scope = new_scope()
+    frame.scope.set_parent(old_scope, old_scope.max)
     if expr.as_self:
       frame.self = result
     else:

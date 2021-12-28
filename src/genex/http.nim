@@ -117,6 +117,9 @@ proc new_response*(args: Value): Value {.wrap_exception.} =
         resp.body = args.gene_data[1].str
       else:
         resp.body = ""
+      if args.gene_data.len > 2:
+        for k, v in args.gene_data[2].map:
+          resp.headers[k.to_s] = v
     of VkString:
       resp.status = 200
       resp.body = first.str
@@ -141,7 +144,7 @@ proc translate_respond(value: Value): Expr {.wrap_exception.} =
   var new_stmt = new_value.gene_data[0]
   if value.gene_type.symbol == "redirect":
     new_stmt.gene_data.add(new_gene_int(302))
-    new_stmt.gene_data.add(new_gene_int(""))
+    new_stmt.gene_data.add(new_gene_string(""))
     new_stmt.gene_data.add(new_gene_map({"Location": value.gene_data[0]}.toOrderedTable()))
   else:
     for v in value.gene_data:
@@ -205,17 +208,20 @@ proc start_server_internal*(args: Value): Value =
         echo res.exception.get_stack_trace()
         echo()
         await req.respond(Http500, "Internal Server Error", new_http_headers())
-      of VkString:
-        var body = res.str
-        echo "HTTP RESP: 200 " & body.abbrev(100)
-        echo()
-        await req.respond(Http200, body, new_http_headers())
+      # of VkString:
+      #   var body = res.str
+      #   echo "HTTP RESP: 200 " & body.abbrev(100)
+      #   echo()
+      #   await req.respond(Http200, body, new_http_headers())
       of VkCustom:
         var resp = cast[Response](res.custom)
         var body = resp.body.str
         echo "HTTP RESP: " & $resp.status & " " & body.abbrev(100)
         echo()
-        await req.respond(HttpCode(resp.status), body, new_http_headers())
+        var headers = new_http_headers()
+        for k, v in resp.headers:
+          headers.add(k, v.to_s)
+        await req.respond(HttpCode(resp.status), body, headers)
       else:
         echo "HTTP RESP: 500 response kind is " & $res.kind
         echo()

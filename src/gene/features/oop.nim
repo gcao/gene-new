@@ -389,6 +389,8 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr
   case target.kind:
   of VkString:
     return self.invoke(frame, instance, target.str.to_key, args_expr)
+  of VkSymbol:
+    return self.invoke(frame, instance, target.symbol.to_key, args_expr)
   of VkFunction:
     var fn = target.fn
     var fn_scope = new_scope()
