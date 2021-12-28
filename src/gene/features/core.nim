@@ -152,10 +152,14 @@ proc translate_tap(value: Value): Expr =
   if value.gene_data.len > 1:
     if value.gene_data[1].kind == VkQuote:
       r.as_name = value.gene_data[1].quote.symbol
-      r.body = translate(value.gene_data[2..^1])
+      if value.gene_data.len > 2:
+        r.body = translate(value.gene_data[2..^1])
     else:
       r.as_self = true
-      r.body = translate(value.gene_data[1..^1])
+      if value.gene_data.len > 1:
+        r.body = translate(value.gene_data[1..^1])
+  if r.body == nil:
+    r.body = translate(@[])
   return r
 
 proc init*() =

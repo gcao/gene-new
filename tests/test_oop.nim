@@ -164,6 +164,16 @@ test_interpreter """
 
 test_interpreter """
   (class A
+    (method test @name
+    )
+  )
+  (var a (new A))
+  (a . "test" 1)
+  a/@name
+""", 1
+
+test_interpreter """
+  (class A
     (method new [@name = 1]
     )
   )

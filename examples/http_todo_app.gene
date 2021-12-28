@@ -1,0 +1,108 @@
+#!/usr/bin/env gene
+
+(import genex/http/*)
+(import genex/html/tags/*)
+
+(class App
+
+  (method new @port
+    (@middlewares = [])
+  )
+
+  (method construct_handler middleware_index
+    (if (middleware_index < /@middlewares/.size)
+      (var middleware (/@middlewares .@ middleware_index))
+      (var handler    (.construct_handler (middleware_index + 1)))
+      (middleware handler)
+    else
+      /@handler
+    )
+  )
+
+  (method start _
+    (println "Starting HTTP server at port" /@port "...")
+
+    (var root_handler (.construct_handler 0))
+    (start_server /@port root_handler)
+    (gene/run_forever)
+  )
+)
+
+# Base class for controllers
+(class Controller
+  (method render [title = "TODO App" content]
+    (respond ((HTML
+      (HEAD
+        (TITLE title)
+      ) # HEAD
+      (BODY
+        content
+      )
+    )).to_s)
+  )
+)
+
+(class Home < Controller
+  (method index req
+    (redirect "/todos")
+  )
+)
+
+(class Todos < Controller
+  (method index req
+    (.render
+      (DIV "Show all TODOs here.")
+    )
+  )
+
+  (method create req
+  )
+)
+
+(class Mapping
+  (method new [@path @controller @action @http_method]
+  )
+
+  # Return bool: whether the path/method/... of the request matches
+  (method match req
+    (req/.path == /@path)
+  )
+)
+
+(class Router
+  (method new _
+    (@mappings = [])
+  )
+
+  (method map [path controller action = "index"]
+    (/@mappings .add (new Mapping path controller action))
+  )
+
+  (method call req
+    (for m in /mappings
+      (if (m .match req)
+        (todo "Router.call: create instance of controller and call action method with `req`")
+      )
+    )
+  )
+)
+
+(var router (new Router))
+(router .map "/" Home)
+(router .map "/todos" Todos)
+(router .map ^^post "/todos" Todos :create)
+
+(var port
+  (if ($cmd_args/.size > 1)
+    $cmd_args/@1/.to_i
+  else
+    2080
+  )
+)
+
+(var app ($tap (new App port)
+  ($set app @handler router)
+))
+
+# Start the app
+(app .start)

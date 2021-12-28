@@ -290,24 +290,14 @@ proc translate_method(value: Value): Expr =
     fn: fn,
   )
 
-proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExInvoke](expr)
-  var instance: Value
-  var e = cast[ExInvoke](expr).self
-  if e == nil:
-    instance = frame.self
-  else:
-    instance = self.eval(frame, e)
-  if instance == nil:
-    raise new_exception(types.Exception, "Invoking " & expr.meth.to_s & " on nil.")
-
+proc invoke(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: Expr): Value =
+  var args_expr = cast[ExArguments](args_expr)
   var class = instance.get_class
-  var meth = class.get_method(expr.meth)
-
+  var meth = class.get_method(method_name)
   # var is_method_missing = false
   var callable: Value
   if meth == nil:
-    not_allowed("No method available: " & expr.meth.to_s)
+    not_allowed("No method available: " & method_name.to_s)
     # if class.method_missing == nil:
     #   not_allowed("No method available: " & expr.meth.to_s)
     # else:
@@ -318,7 +308,6 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
 
   case callable.kind:
   of VkNativeMethod, VkNativeMethod2:
-    var args_expr = cast[ExArguments](cast[ExInvoke](expr).args)
     var args = new_gene_gene()
     for k, v in args_expr.props.mpairs:
       args.gene_props[k] = self.eval(frame, v)
@@ -338,13 +327,11 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
     new_frame.self = instance
     new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
 
-    var args_expr = cast[ExInvoke](expr).args
-    handle_args(self, frame, new_frame, callable.fn.matcher, cast[ExArguments](args_expr))
-
     if callable.fn.body_compiled == nil:
       callable.fn.body_compiled = translate(callable.fn.body)
 
     try:
+      handle_args(self, frame, new_frame, callable.fn.matcher, args_expr)
       result = self.eval(new_frame, callable.fn.body_compiled)
     except Return as r:
       # return's frame is the same as new_frame(current function's frame)
@@ -361,6 +348,20 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
   else:
     todo()
 
+proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExInvoke](expr)
+  var instance: Value
+  var e = cast[ExInvoke](expr).self
+  if e == nil:
+    instance = frame.self
+  else:
+    instance = self.eval(frame, e)
+  if instance == nil:
+    raise new_exception(types.Exception, "Invoking " & expr.meth.to_s & " on nil.")
+
+  var args = cast[ExArguments](expr.args)
+  self.invoke(frame, instance, expr.meth, args)
+
 proc translate_invoke(value: Value): Expr =
   var r = ExInvoke(
     evaluator: eval_invoke,
@@ -376,43 +377,46 @@ proc translate_invoke(value: Value): Expr =
   result = r
 
 proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExInvokeDynamic](expr)
   var instance: Value
-  var e = cast[ExInvokeDynamic](expr).self
+  var e = expr.self
   if e == nil:
     instance = frame.self
   else:
     instance = self.eval(frame, e)
-  var target = self.eval(frame, cast[ExInvokeDynamic](expr).target)
-  var fn: Function
+  var target = self.eval(frame, expr.target)
+  var args_expr = expr.args
   case target.kind:
+  of VkString:
+    return self.invoke(frame, instance, target.str.to_key, args_expr)
   of VkFunction:
-    fn = target.fn
+    var fn = target.fn
+    var fn_scope = new_scope()
+    var new_frame = Frame(ns: fn.ns, scope: fn_scope)
+    new_frame.parent = frame
+    new_frame.self = instance
+
+    if fn.body_compiled == nil:
+      fn.body_compiled = translate(fn.body)
+
+    try:
+      handle_args(self, frame, new_frame, fn.matcher, cast[ExArguments](args_expr))
+      result = self.eval(new_frame, fn.body_compiled)
+    except Return as r:
+      # return's frame is the same as new_frame(current function's frame)
+      if r.frame == new_frame:
+        result = r.val
+      else:
+        raise
+    except system.Exception as e:
+      if self.repl_on_error:
+        result = repl_on_error(self, frame, e)
+        discard
+      else:
+        raise
+
   else:
-    todo()
-  # var args = self.eval(frame, cast[ExInvoke](expr).args)
-
-  var fn_scope = new_scope()
-  var new_frame = Frame(ns: fn.ns, scope: fn_scope)
-  new_frame.parent = frame
-  new_frame.self = instance
-
-  if fn.body_compiled == nil:
-    fn.body_compiled = translate(fn.body)
-
-  try:
-    result = self.eval(new_frame, fn.body_compiled)
-  except Return as r:
-    # return's frame is the same as new_frame(current function's frame)
-    if r.frame == new_frame:
-      result = r.val
-    else:
-      raise
-  except system.Exception as e:
-    if self.repl_on_error:
-      result = repl_on_error(self, frame, e)
-      discard
-    else:
-      raise
+    todo("eval_invoke_dynamic " & $target.kind)
 
 proc translate_invoke_dynamic(value: Value): Expr =
   var r = ExInvokeDynamic(
@@ -420,7 +424,12 @@ proc translate_invoke_dynamic(value: Value): Expr =
   )
   r.self = translate(value.gene_props.get_or_default(SELF_KEY, nil))
   r.target = translate(value.gene_props[METHOD_KEY])
-  # r.args = translate(value.gene_props[ARGS_KEY])
+
+  var args = new_ex_arg()
+  for v in value.gene_data:
+    args.data.add(translate(v))
+  r.args = args
+
   result = r
 
 proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =

@@ -138,8 +138,14 @@ proc translate_respond(value: Value): Expr {.wrap_exception.} =
       new_gene_complex_symbol(@["genex", "http", "Response"]),
     ),
   )
-  for v in value.gene_data:
-    new_value.gene_data[0].gene_data.add(v)
+  var new_stmt = new_value.gene_data[0]
+  if value.gene_type.symbol == "redirect":
+    new_stmt.gene_data.add(new_gene_int(302))
+    new_stmt.gene_data.add(new_gene_int(""))
+    new_stmt.gene_data.add(new_gene_map({"Location": value.gene_data[0]}.toOrderedTable()))
+  else:
+    for v in value.gene_data:
+      new_stmt.gene_data.add(v)
   translate(new_value)
 
 proc new_gene_request(req: stdhttp.Request): Value =
@@ -263,6 +269,7 @@ proc init*(module: Module): Value {.wrap_exception.} =
   GENEX_NS.ns["http"] = result
 
   result.ns["respond"] = new_gene_processor(translate_wrap(translate_respond))
+  result.ns["redirect"] = new_gene_processor(translate_wrap(translate_respond))
   result.ns["get"] = http_get
   result.ns["get_json"] = http_get_json
   # result.ns["get_json"] = VM.eval """
