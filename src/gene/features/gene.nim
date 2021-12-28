@@ -91,6 +91,8 @@ proc translate_gene(value: Value): Expr =
       return translate_invoke_selector3(value)
     else:
       return translate_invoke_selector4(value)
+  elif value.gene_type.kind == VkSymbol and value.gene_type.symbol == "import":
+    discard
   elif value.gene_type.kind == VkComplexSymbol and value.gene_type.csymbol[0].starts_with(".@"):
     return translate_invoke_selector4(value)
   elif value.gene_data.len >= 1:

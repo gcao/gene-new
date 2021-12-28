@@ -8,10 +8,10 @@
 # A running database server
 # A database ready to be used
 # A user with proper access
-(var DB_HOST ($env "DB_HOST" "localhost"))
-(var DB_USER ($env "DB_USER"))
-(var DB_PASS ($env "DB_PASS"))
-(var DB_NAME ($env "DB_NAME" "todos"))
+(var $ns/DB_HOST ($env "DB_HOST" "localhost"))
+(var $ns/DB_USER ($env "DB_USER"))
+(var $ns/DB_PASS ($env "DB_PASS"))
+(var $ns/DB_NAME ($env "DB_NAME" "todos"))
 
 (fn init_db _
   (var db (DB/open DB_HOST DB_USER DB_PASS DB_NAME))

@@ -1,4 +1,4 @@
 #!/usr/bin/env gene
 
-(import * from "http_todo_app")
+(import * from "examples/http_todo_app")
 (repl)
