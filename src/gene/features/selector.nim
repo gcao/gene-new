@@ -453,7 +453,11 @@ proc translate_invoke_selector4*(value: Value): Expr =
 
 proc eval_set(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExSet](expr)
-  var target = self.eval(frame, expr.target)
+  var target =
+    if expr.target == nil:
+      frame.self
+    else:
+      self.eval(frame, expr.target)
   var selector = self.eval(frame, expr.selector)
   var value = self.eval(frame, expr.value)
   case selector.kind:
@@ -473,12 +477,17 @@ proc eval_set(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     todo($selector.kind)
 
 proc translate_set*(value: Value): Expr =
-  ExSet(
+  var e = ExSet(
     evaluator: eval_set,
-    target: translate(value.gene_data[0]),
-    selector: translate(value.gene_data[1]),
-    value: translate(value.gene_data[2]),
   )
+  if value.gene_data.len == 2:
+    e.selector = translate(value.gene_data[0])
+    e.value = translate(value.gene_data[1])
+  else:
+    e.target = translate(value.gene_data[0])
+    e.selector = translate(value.gene_data[1])
+    e.value = translate(value.gene_data[2])
+  return e
 
 proc init*() =
   GeneTranslators["@"] = translate_selector

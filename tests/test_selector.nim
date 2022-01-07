@@ -227,6 +227,17 @@ test_interpreter """
 
 test_interpreter """
   (class A
+    (method test x
+      ($set @x x)
+    )
+  )
+  (var a (new A))
+  (a .test 1)
+  a/@x
+""", 1
+
+test_interpreter """
+  (class A
     (method new []
       (@description = "Class A")
     )
