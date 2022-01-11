@@ -14,8 +14,8 @@
 (var $ns/DB_NAME ($env "DB_NAME" "todos"))
 
 (fn init_db _
-  (var db (DB/open DB_HOST DB_USER DB_PASS DB_NAME))
-  (db .exec """
+  (var conn (DB/open DB_HOST DB_USER DB_PASS DB_NAME))
+  (conn .exec """
     CREATE TABLE IF NOT EXISTS `todos`.`todos` (
       `id` INT NOT NULL AUTO_INCREMENT,
       `description` VARCHAR(255) NOT NULL,
@@ -26,14 +26,63 @@
   """)
 )
 
-(mixin Orm
+(class Record
+)
+
+(class Orm
+  (method new @conn
+  )
+
+  (method from model
+    (@query = (new Query model))
+    self
+  )
+
+  (method find id
+    (@query .where "id = ?" id)
+    (@query .limit 1)
+    (.exec)
+  )
+
+  (method all _
+    (.exec)
+  )
+
+  (method exec _
+    (@conn .exec (@query .to_s))
+  )
+
   # If no id, insert into the table, else update existing row.
-  (method save _
+  (method save record
+  )
+
+  (method delete record_or_id
   )
 )
 
-(class Todo
-  (include Orm)
+(class Query
+  (method new model
+    (@tables = [model])
+  )
+
+  (method select @fields...
+  )
+
+  (method where condition
+    (@where .add condition)
+  )
+
+  (method limit n
+    (@limit = n)
+  )
+
+  (method to_s _
+    (var sql "")
+  )
+)
+
+(class Todo < Record
+  (var /table "todos")
 
   (method new @description)
 
@@ -93,6 +142,9 @@
 
 (class TodosController < Controller
   (method index req
+    (var conn (DB/open DB_HOST DB_USER DB_PASS DB_NAME))
+    (var orm (new Orm conn))
+    (var todos ((orm .from Todo) .all))
     (.render
       (DIV "Show all TODOs here.")
     )

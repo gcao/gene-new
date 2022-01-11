@@ -180,6 +180,16 @@ test_interpreter """
   ((new A).@name)
 """, 1
 
+test_interpreter """
+  (class A
+    (method test @x...
+    )
+  )
+  (var a (new A))
+  (a . "test" 1 2)
+  a/@x
+""", @[1, 2]
+
 # test_interpreter """
 #   (class A
 #     (method new ^@name
