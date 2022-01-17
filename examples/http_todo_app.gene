@@ -61,15 +61,21 @@
 )
 
 (class Query
-  (method new model
-    (@tables = [model])
+  (method new @from
   )
 
-  (method select @fields...
+  (method select @select...
   )
 
-  (method where condition
-    (@where .add condition)
+  (method join join
+    (@joins ||= [])
+    (@joins .add join)
+  )
+
+  (method where @where
+  )
+
+  (method order_by @order_by
   )
 
   (method limit n
@@ -77,7 +83,25 @@
   )
 
   (method to_s _
-    (var sql "")
+    (var sql "SELECT ")
+    (if @select
+      (sql .append (@select .join ",") " ")
+    else
+      (sql .append "* ")
+    )
+    (sql .append "FROM " @from " ")
+    (if @joins
+      (sql .append (@joins .join " ") " ")
+    )
+    (if @where
+      (sql .append "WHERE " @where " ")
+    )
+    (if @order_by
+      (sql .append "ORDER BY " @order_by " ")
+    )
+    (if @limit
+      (sql .append "LIMIT " @limit)
+    )
   )
 )
 

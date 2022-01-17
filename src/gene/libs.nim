@@ -129,6 +129,9 @@ proc array_del(self: Value, args: Value): Value =
   result = self.vec[index]
   self.vec.delete(index)
 
+proc array_empty(self: Value, args: Value): Value =
+  result = self.vec.len == 0
+
 proc map_size(self: Value, args: Value): Value =
   result = self.map.len
 
@@ -378,6 +381,7 @@ proc init*() =
     ArrayClass.def_native_method("size", array_size)
     ArrayClass.def_native_method("add", array_add)
     ArrayClass.def_native_method("del", array_del)
+    ArrayClass.def_native_method("empty", array_empty)
     GENE_NS.ns["Array"] = ArrayClass
     GLOBAL_NS.ns["Array"] = ArrayClass
 
