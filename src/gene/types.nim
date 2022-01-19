@@ -481,12 +481,14 @@ type
     MatchOp
     MatchProp
     MatchData
+    MatchLiteral
 
   Matcher* = ref object
     root*: RootMatcher
     kind*: MatcherKind
     name*: MapKey
     is_prop*: bool
+    literal*: Value # if kind is MatchLiteral, this is required
     # match_name*: bool # Match symbol to name - useful for (myif true then ... else ...)
     # default_value*: Value
     default_value_expr*: Expr

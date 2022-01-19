@@ -85,19 +85,29 @@ test_interpreter """
   b
 """, Nil
 
-# test_interpreter """
-#   (match
-#     [:if cond :then logic1... :else logic2...]
-#     :[if true then
-#       (do A)
-#       (do B)
-#     else
-#       (do C)
-#       (do D)
-#     ]
-#   )
-#   cond
-# """, true
+test_interpreter """
+  (match
+    [:if cond :then logic1 :else logic2]
+    :[if 0 then 1 else 2]
+  )
+  cond
+""", 0
+
+test_interpreter """
+  (match
+    [:if cond :then logic1 :else logic2]
+    :[if 0 then 1 else 2]
+  )
+  logic1
+""", 1
+
+test_interpreter """
+  (match
+    [:if cond :then logic1 :else logic2]
+    :[if 0 then 1 else 2]
+  )
+  logic2
+""", 2
 
 # proc test_arg_matching*(pattern: string, input: string, callback: proc(result: MatchResult)) =
 #   var pattern = cleanup(pattern)

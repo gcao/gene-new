@@ -267,6 +267,10 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
           var value = v.vec[i]
           i += 1
           last_matcher.default_value_expr = translate(value)
+  of VkQuote:
+    var m = new_matcher(self, MatchLiteral)
+    m.literal = v.quote
+    group.add(m)
   else:
     todo("parse " & $v.kind)
 
@@ -324,9 +328,9 @@ proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], inp
   # TODO: handle @a... or ^@a...
 
 proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state: MatchState, r: MatchResult) =
+  var value: Value
   case self.kind:
   of MatchData:
-    var value: Value
     if self.is_splat:
       value = new_gene_vec()
       for i in state.data_index..<input.len - self.min_left:
@@ -352,7 +356,6 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
     vm.match_prop_splat(frame, self.children, value, r)
 
   of MatchProp:
-    var value: Value
     if self.is_splat:
       return
     elif input.gene_props.has_key(self.name):
@@ -368,8 +371,14 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
     if self.is_prop:
       frame.self.instance_props[self.name] = value
 
+  of MatchLiteral:
+    value = input[state.data_index]
+    state.data_index += 1
+    if self.literal != value:
+      todo("match " & $self.kind & ": " & $self.literal & " != " & $value)
+
   else:
-    todo()
+    todo("match " & $self.kind)
 
 proc match*(vm: VirtualMachine, frame: Frame, self: RootMatcher, input: Value): MatchResult =
   result = MatchResult()
