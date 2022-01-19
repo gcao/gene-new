@@ -193,6 +193,23 @@ proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref system.Exception)
 
 proc parse*(self: var RootMatcher, v: Value)
 
+proc calc_next*(self: var Matcher) =
+  var last: Matcher = nil
+  for m in self.children:
+    if m.kind in @[MatchData, MatchLiteral]:
+      if last != nil:
+        last.next = m
+      last = m
+
+proc calc_next*(self: var RootMatcher) =
+  var last: Matcher = nil
+  for m in self.children.mitems:
+    m.calc_next()
+    if m.kind in @[MatchData, MatchLiteral]:
+      if last != nil:
+        last.next = m
+      last = m
+
 proc calc_min_left*(self: var Matcher) =
   var min_left = 0
   var i = self.children.len
@@ -209,7 +226,7 @@ proc calc_min_left*(self: var RootMatcher) =
   while i > 0:
     i -= 1
     var m = self.children[i]
-    m.calc_min_left
+    m.calc_min_left()
     m.min_left = min_left
     if m.required:
       min_left += 1
@@ -270,6 +287,7 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
   of VkQuote:
     var m = new_matcher(self, MatchLiteral)
     m.literal = v.quote
+    m.name = "<literal>".to_key
     group.add(m)
   else:
     todo("parse " & $v.kind)
@@ -278,7 +296,8 @@ proc parse*(self: var RootMatcher, v: Value) =
   if v == nil or v == new_gene_symbol("_"):
     return
   self.parse(self.children, v)
-  self.calc_min_left
+  self.calc_min_left()
+  self.calc_next()
 
 proc new_arg_matcher*(value: Value): RootMatcher =
   result = new_arg_matcher()
@@ -334,6 +353,9 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
     if self.is_splat:
       value = new_gene_vec()
       for i in state.data_index..<input.len - self.min_left:
+        # Stop if next matcher is a literal and matches input[i]
+        if self.next != nil and self.next.kind == MatchLiteral and self.next.literal == input[i]:
+          break
         value.vec.add(input[i])
         state.data_index += 1
     elif self.min_left < input.len - state.data_index:

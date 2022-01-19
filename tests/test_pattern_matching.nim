@@ -109,6 +109,22 @@ test_interpreter """
   logic2
 """, 2
 
+test_interpreter """
+  (match
+    [:if cond :then logic1... :else logic2...]
+    :[if 0 then 1 2 else 3 4]
+  )
+  logic1
+""", @[1, 2]
+
+test_interpreter """
+  (match
+    [:if cond :then logic1... :else logic2...]
+    :[if 0 then 1 2 else 3 4]
+  )
+  logic2
+""", @[3, 4]
+
 # proc test_arg_matching*(pattern: string, input: string, callback: proc(result: MatchResult)) =
 #   var pattern = cleanup(pattern)
 #   var input = cleanup(input)

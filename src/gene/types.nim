@@ -478,7 +478,7 @@ type
     mode*: MatchingHintMode
 
   MatcherKind* = enum
-    MatchOp
+    MatchType
     MatchProp
     MatchData
     MatchLiteral
@@ -486,6 +486,7 @@ type
   Matcher* = ref object
     root*: RootMatcher
     kind*: MatcherKind
+    next*: Matcher  # if kind is MatchData and is_splat is true, we may need to check next matcher
     name*: MapKey
     is_prop*: bool
     literal*: Value # if kind is MatchLiteral, this is required
