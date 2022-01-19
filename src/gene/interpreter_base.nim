@@ -195,7 +195,8 @@ proc parse*(self: var RootMatcher, v: Value)
 
 proc calc_next*(self: var Matcher) =
   var last: Matcher = nil
-  for m in self.children:
+  for m in self.children.mitems:
+    m.calc_next()
     if m.kind in @[MatchData, MatchLiteral]:
       if last != nil:
         last.next = m
@@ -216,6 +217,7 @@ proc calc_min_left*(self: var Matcher) =
   while i > 0:
     i -= 1
     var m = self.children[i]
+    m.calc_min_left()
     m.min_left = min_left
     if m.required:
       min_left += 1
