@@ -3,42 +3,47 @@ import tables
 import ../map_key
 import ../types
 import ../translators
+import ../interpreter_base
 
 type
   ExMatch* = ref object of Expr
-    pattern*: Value
+    matcher: RootMatcher
     value*: Expr
-
-proc match*(self: VirtualMachine, frame: Frame, pattern: Value, val: Value, mode: MatchMode): Value =
-  case pattern.kind:
-  of VkSymbol:
-    var name = pattern.symbol
-    case mode:
-    of MatchArgs:
-      frame.scope.def_member(name.to_key, val.gene_data[0])
-    else:
-      frame.scope.def_member(name.to_key, val)
-  of VkVector:
-    for i in 0..<pattern.vec.len:
-      var name = pattern.vec[i].symbol
-      if i < val.gene_data.len:
-        frame.scope.def_member(name.to_key, val.gene_data[i])
-      else:
-        frame.scope.def_member(name.to_key, Nil)
-  else:
-    todo()
 
 proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
-  result = self.match(frame, expr.pattern, self.eval(frame, expr.value), MatchDefault)
+  var matcher = expr.matcher
+  var value = self.eval(frame, expr.value)
+  case matcher.hint.mode:
+  of MhNone:
+    discard
+  of MhSimpleData:
+    case value.kind:
+    of VkVector:
+      for i, v in value.vec:
+        let field = matcher.children[i]
+        if field.is_prop:
+          frame.self.instance_props[field.name] = v
+        else:
+          frame.scope.def_member(field.name, v)
+    of VkGene:
+      for i, v in value.gene_data:
+        let field = matcher.children[i]
+        if field.is_prop:
+          frame.self.instance_props[field.name] = v
+        else:
+          frame.scope.def_member(field.name, v)
+    else:
+      todo("eval_match value.kind = " & $value.kind)
+  else:
+    self.process_args(frame, matcher, value)
 
 proc translate_match(value: Value): Expr =
-  var r = ExMatch(
+  return ExMatch(
     evaluator: eval_match,
+    matcher: new_arg_matcher(value.gene_data[0]),
+    value: translate(value.gene_data[1]),
   )
-  r.pattern = value.gene_data[0]
-  r.value = translate(value.gene_data[1])
-  result = r
 
 proc init*() =
   GeneTranslators["match"] = translate_match

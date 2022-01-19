@@ -276,6 +276,10 @@ proc parse*(self: var RootMatcher, v: Value) =
   self.parse(self.children, v)
   self.calc_min_left
 
+proc new_arg_matcher*(value: Value): RootMatcher =
+  result = new_arg_matcher()
+  result.parse(value)
+
 #################### Matching ####################
 
 proc `[]`*(self: Value, i: int): Value =
@@ -403,9 +407,10 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
     for i, v in args_expr.data.mpairs:
       let field = matcher.children[i]
       let value = self.eval(frame, v)
-      new_frame.scope.def_member(field.name, value)
       if field.is_prop:
         new_frame.self.instance_props[field.name] = value
+      else:
+        new_frame.scope.def_member(field.name, value)
   else:
     var args = new_gene_gene()
     for k, v in args_expr.props.mpairs:

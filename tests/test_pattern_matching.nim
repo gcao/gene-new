@@ -64,7 +64,12 @@ test_interpreter """
 """, 3
 
 test_interpreter """
-  (match a 1)
+  (match a [1])
+  a
+""", 1
+
+test_interpreter """
+  (match [a] [1])
   a
 """, 1
 
@@ -76,7 +81,7 @@ test_interpreter """
 
 test_interpreter """
   (var x (_ 1))
-  (match [a b] x)
+  (match [a b = nil] x)
   b
 """, Nil
 
