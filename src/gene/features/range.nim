@@ -21,7 +21,7 @@ proc new_ex_range*(start, `end`: Expr): Expr =
   )
 
 proc translate_range(value: Value): Expr =
-  new_ex_range(translate(value.gene_data[0]), translate(value.gene_data[1]))
+  new_ex_range(translate(value.gene_children[0]), translate(value.gene_children[1]))
 
 proc init*() =
   GeneTranslators["range"] = translate_range

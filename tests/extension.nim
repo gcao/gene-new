@@ -17,7 +17,7 @@ proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
 proc translate_test(value: Value): Expr {.wrap_exception.} =
   return ExTest(
     evaluator: eval_wrap(eval_test),
-    data: translate(value.gene_data[0]),
+    data: translate(value.gene_children[0]),
   )
 
 proc new_extension*(args: Value): Value {.wrap_exception.} =
@@ -25,13 +25,13 @@ proc new_extension*(args: Value): Value {.wrap_exception.} =
     kind: VkCustom,
     custom_class: ExtensionClass.class,
     custom: Extension(
-      i: args.gene_data[0].int,
-      s: args.gene_data[1].str,
+      i: args.gene_children[0].int,
+      s: args.gene_children[1].str,
     ),
   )
 
 proc get_i*(args: Value): Value {.wrap_exception.} =
-  Extension(args.gene_data[0].custom).i
+  Extension(args.gene_children[0].custom).i
 
 proc get_i*(self: Value, args: Value): Value {.wrap_exception.} =
   Extension(self.custom).i

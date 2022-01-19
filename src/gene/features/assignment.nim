@@ -32,20 +32,20 @@ proc eval_assignment(self: VirtualMachine, frame: Frame, target: Value, expr: va
 proc translate_assignment(value: Value): Expr =
   result = ExAssignment(
     evaluator: eval_assignment,
-    name: value.gene_data[0].symbol.to_key,
-    value: translate(value.gene_data[1]),
+    name: value.gene_children[0].symbol.to_key,
+    value: translate(value.gene_children[1]),
   )
-  # if value.gene_data[0].symbol[0] == "@":
-  #   result = new_ex_set_prop(value.gene_data[0].symbol[1..^1], translate(value.gene_data[1]))
+  # if value.gene_children[0].symbol[0] == "@":
+  #   result = new_ex_set_prop(value.gene_children[0].symbol[1..^1], translate(value.gene_children[1]))
   # else:
   #   result = ExAssignment(
   #     evaluator: eval_assignment,
-  #     name: value.gene_data[0].symbol.to_key,
-  #     value: translate(value.gene_data[1]),
+  #     name: value.gene_children[0].symbol.to_key,
+  #     value: translate(value.gene_children[1]),
   #   )
 
 proc translate_op_eq(value: Value): Expr =
-  var name = value.gene_data[0].symbol
+  var name = value.gene_children[0].symbol
   var value_expr: ExBinOp
   case value.gene_type.symbol:
   of "+=":
@@ -63,15 +63,15 @@ proc translate_op_eq(value: Value): Expr =
   else:
     todo("translate_op_eq " & $value.gene_type.symbol)
 
-  if value.gene_data[0].symbol[0] == '@':
+  if value.gene_children[0].symbol[0] == '@':
     # (@a ||= x)  =>  (@a = (/@a || x))
-    var selector: seq[string] = @["", value.gene_data[0].symbol]
+    var selector: seq[string] = @["", value.gene_children[0].symbol]
     value_expr.op1 = translate(selector)
-    value_expr.op2 = translate(value.gene_data[1])
+    value_expr.op2 = translate(value.gene_children[1])
     return new_ex_set_prop(name[1..^1], value_expr)
   else:
-    value_expr.op1 = translate(value.gene_data[0])
-    value_expr.op2 = translate(value.gene_data[1])
+    value_expr.op1 = translate(value.gene_children[0])
+    value_expr.op2 = translate(value.gene_children[1])
     return ExAssignment(
       evaluator: eval_assignment,
       name: name.to_key,

@@ -90,20 +90,20 @@ proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
     frame.scope = old_scope
 
 proc translate_for(value: Value): Expr =
-  if value.gene_data[0].kind == VkVector:
+  if value.gene_children[0].kind == VkVector:
     return ExFor2(
       evaluator: eval_for2,
-      key_name: value.gene_data[0].vec[0].symbol,
-      val_name: value.gene_data[0].vec[1].symbol,
-      data: translate(value.gene_data[2]),
-      body: translate(value.gene_data[3..^1]),
+      key_name: value.gene_children[0].vec[0].symbol,
+      val_name: value.gene_children[0].vec[1].symbol,
+      data: translate(value.gene_children[2]),
+      body: translate(value.gene_children[3..^1]),
     )
   else:
     return ExFor(
       evaluator: eval_for,
-      name: value.gene_data[0].symbol,
-      data: translate(value.gene_data[2]),
-      body: translate(value.gene_data[3..^1]),
+      name: value.gene_children[0].symbol,
+      data: translate(value.gene_children[2]),
+      body: translate(value.gene_children[3..^1]),
     )
 
 proc eval_emit(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -115,7 +115,7 @@ proc translate_emit(value: Value): Expr =
   var r = ExEmit(
     evaluator: eval_emit,
   )
-  for item in value.gene_data:
+  for item in value.gene_children:
     r.data.add(translate(item))
   return r
 

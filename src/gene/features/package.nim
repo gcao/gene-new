@@ -49,10 +49,10 @@ proc eval_dep(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 proc translate_dep(value: Value): Expr =
   var e = ExDependency(
     evaluator: eval_dep,
-    name: translate(value.gene_data[0]),
+    name: translate(value.gene_children[0]),
   )
-  if value.gene_data.len > 1:
-    e.version = translate(value.gene_data[1])
+  if value.gene_children.len > 1:
+    e.version = translate(value.gene_children[1])
   if value.gene_props.has_key("path".to_key):
     e.path = translate(value.gene_props["path"])
   return e

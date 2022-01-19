@@ -28,7 +28,7 @@ proc eval_async(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 proc translate_async(value: Value): Expr =
   ExAsync(
     evaluator: eval_async,
-    data: translate(value.gene_data),
+    data: translate(value.gene_children),
   )
 
 proc eval_await(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -52,7 +52,7 @@ proc translate_await(value: Value): Expr =
   var r = ExAwait(
     evaluator: eval_await,
   )
-  for item in value.gene_data:
+  for item in value.gene_children:
     r.data.add(translate(item))
   return r
 

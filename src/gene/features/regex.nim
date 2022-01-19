@@ -44,18 +44,18 @@ proc eval_not_match(self: VirtualMachine, frame: Frame, target: Value, expr: var
 
 proc translate_match*(value: Value): Expr =
   var evaluator: Evaluator
-  case value.gene_data[0].symbol:
+  case value.gene_children[0].symbol:
   of "=~":
     evaluator = eval_match
   of "!~":
     evaluator = eval_not_match
   else:
-    not_allowed("translate_match " & $value.gene_data[0].symbol)
+    not_allowed("translate_match " & $value.gene_children[0].symbol)
 
   ExMatch(
     evaluator: evaluator,
     input: translate(value.gene_type),
-    pattern: translate(value.gene_data[1]),
+    pattern: translate(value.gene_children[1]),
   )
 
 proc eval_regex(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -73,7 +73,7 @@ proc translate_regex*(value: Value): Expr =
     r.flags.incl(RfIgnoreCase)
   if value.gene_props.has_key("m".to_key):
     r.flags.incl(RfMultiLine)
-  for item in value.gene_data:
+  for item in value.gene_children:
     r.data.add(translate(item))
   return r
 

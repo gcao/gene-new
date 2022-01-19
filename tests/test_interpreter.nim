@@ -50,8 +50,8 @@ test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
 
 # test_interpreter "(:test 1 2)", proc(r: Value) =
 #   check r.gene_type == new_gene_symbol("test")
-#   check r.gene_data[0] == 1
-#   check r.gene_data[1] == 2
+#   check r.gene_children[0] == 1
+#   check r.gene_children[1] == 2
 
 test_interpreter "(range 0 100)", proc(r: Value) =
   check r.range.start == 0
@@ -130,7 +130,7 @@ test_interpreter """
   (:test ^a a b)
 """, proc(r: Value) =
   check r.gene_props["a"] == 1
-  check r.gene_data[0] == 2
+  check r.gene_children[0] == 2
 
 test_interpreter "(if true 1)", 1
 test_interpreter "(if true then 1)", 1
@@ -281,7 +281,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native function (test)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], data: seq[Value]): Value =
+#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], children: seq[Value]): Value =
 #     1
 #   var code = cleanup """
 #     (test)
@@ -290,8 +290,8 @@ test_interpreter """
 
 # test "Interpreter / eval: native function (test 1 2)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], data: seq[Value]): Value =
-#     data[0].int + data[1].int
+#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], children: seq[Value]): Value =
+#     children[0].int + children[1].int
 #   var code = cleanup """
 #     (test 1 2)
 #   """

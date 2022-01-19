@@ -256,7 +256,7 @@
   (method prop name
   )
 
-  (native_method data gene/native/gene_data)
+  (native_method children gene/native/gene_children)
 
   (method get [i]
   )

@@ -20,8 +20,8 @@ Normalizers.add proc(self: Value): bool =
   if `type`.kind == VkSymbol:
     if `type`.symbol == ".":
       self.gene_props[SELF_KEY] = new_gene_symbol("self")
-      self.gene_props[METHOD_KEY] = self.gene_data[0]
-      self.gene_data.delete 0
+      self.gene_props[METHOD_KEY] = self.gene_children[0]
+      self.gene_children.delete 0
       self.gene_type = new_gene_symbol("$invoke_dynamic")
     elif `type`.symbol[0] == '.' and `type`.symbol != "...":  # (.method x y z)
       self.gene_props[SELF_KEY] = new_gene_symbol("self")
@@ -35,7 +35,7 @@ Normalizers.add proc(self: Value): bool =
 #       var names: seq[Value] = @[]
 #       var module: Value
 #       var expect_module = false
-#       for val in self.gene_data:
+#       for val in self.gene_children:
 #         if expect_module:
 #           module = val
 #         elif val.kind == VkSymbol and val.symbol == "from":
@@ -50,25 +50,25 @@ Normalizers.add proc(self: Value): bool =
 #   if self.gene_type.kind == VkSymbol:
 #     if self.gene_type.symbol == "fnx":
 #       self.gene_type = new_gene_symbol("fn")
-#       self.gene_data.insert(new_gene_symbol("_"), 0)
+#       self.gene_children.insert(new_gene_symbol("_"), 0)
 #       return true
 #     elif self.gene_type.symbol == "fnxx":
 #       self.gene_type = new_gene_symbol("fn")
-#       self.gene_data.insert(new_gene_symbol("_"), 0)
-#       self.gene_data.insert(new_gene_symbol("_"), 0)
+#       self.gene_children.insert(new_gene_symbol("_"), 0)
+#       self.gene_children.insert(new_gene_symbol("_"), 0)
 #       return true
 
 Normalizers.add proc(self: Value): bool =
-  if self.gene_data.len < 1:
+  if self.gene_children.len < 1:
     return false
   var `type` = self.gene_type
-  var first = self.gene_data[0]
+  var first = self.gene_children[0]
   if first.kind == VkSymbol:
     if first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"):
       # (@prop = val)
       self.gene_type = new_gene_symbol("$set")
-      self.gene_data[0] = `type`
-      self.gene_data.insert(new_gene_symbol("self"), 0)
+      self.gene_children[0] = `type`
+      self.gene_children.insert(new_gene_symbol("self"), 0)
       return true
 
 proc handle_assignment_shortcuts(self: seq[Value]): Value =
@@ -78,50 +78,50 @@ proc handle_assignment_shortcuts(self: seq[Value]): Value =
     return self[0]
   if self[1].kind == VkSymbol and self[1].symbol in ASSIGNMENT_OPS:
     result = new_gene_gene(self[1])
-    result.gene_data.add(self[0])
-    result.gene_data.add(handle_assignment_shortcuts(self[2..^1]))
+    result.gene_children.add(self[0])
+    result.gene_children.add(handle_assignment_shortcuts(self[2..^1]))
   else:
     raise new_gene_exception("Invalid right value for assignment " & $self)
 
 Normalizers.add proc(self: Value): bool =
-  if self.gene_data.len < 1:
+  if self.gene_children.len < 1:
     return false
-  var first = self.gene_data[0]
+  var first = self.gene_children[0]
   if first.kind == VkSymbol and first.symbol in ASSIGNMENT_OPS:
-    self.gene_data.delete 0
-    self.gene_data = @[handle_assignment_shortcuts(self.gene_data)]
-    self.gene_data.insert self.gene_type, 0
+    self.gene_children.delete 0
+    self.gene_children = @[handle_assignment_shortcuts(self.gene_children)]
+    self.gene_children.insert self.gene_type, 0
     self.gene_type = first
     return true
 
 Normalizers.add proc(self: Value): bool =
-  if self.gene_data.len < 1:
+  if self.gene_children.len < 1:
     return false
   var `type` = self.gene_type
-  var first = self.gene_data[0]
+  var first = self.gene_children[0]
   if first.kind == VkSymbol:
     if first.symbol == ".":
       self.gene_props[SELF_KEY] = `type`
-      self.gene_data.delete 0
-      self.gene_props[METHOD_KEY] = self.gene_data[0]
-      self.gene_data.delete 0
+      self.gene_children.delete 0
+      self.gene_props[METHOD_KEY] = self.gene_children[0]
+      self.gene_children.delete 0
       self.gene_type = new_gene_symbol("$invoke_dynamic")
       return true
     elif first.symbol[0] == '.' and first.symbol != "...":
       self.gene_props[SELF_KEY] = `type`
       self.gene_props[METHOD_KEY] = new_gene_string_move(first.symbol.substr(1))
-      self.gene_data.delete 0
+      self.gene_children.delete 0
       self.gene_type = new_gene_symbol("$invoke_method")
       return true
 
 Normalizers.add proc(self: Value): bool =
-  if self.gene_data.len < 1:
+  if self.gene_children.len < 1:
     return false
-  var first = self.gene_data[0]
+  var first = self.gene_children[0]
   if first.kind == VkSymbol and first.symbol == "->":
     self.gene_props[ARGS_KEY] = self.gene_type
-    self.gene_type = self.gene_data[0]
-    self.gene_data.delete 0
+    self.gene_type = self.gene_children[0]
+    self.gene_children.delete 0
     return true
 
 # # Normalize symbols like "a..." etc
@@ -129,7 +129,7 @@ Normalizers.add proc(self: Value): bool =
 # proc normalize_symbol(self: Value): Value =
 #   todo()
 
-# # Normalize self.vec, self.gene_data, self.map, self.gene_props etc but don't go further
+# # Normalize self.vec, self.gene_children, self.map, self.gene_props etc but don't go further
 # proc normalize_children*(self:  Value) =
 #   todo()
 

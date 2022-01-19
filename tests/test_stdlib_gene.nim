@@ -13,5 +13,5 @@ test_interpreter """
 """, {"a": new_gene_int(2)}.toOrderedTable
 
 test_interpreter """
-  (:(1 ^a 2 3 4) .data)
+  (:(1 ^a 2 3 4) .children)
 """, @[3, 4]

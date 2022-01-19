@@ -46,11 +46,11 @@ proc eval_repeat(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 proc translate_repeat(value: Value): Expr =
   var r = ExRepeat(
     evaluator: eval_repeat,
-    times: translate(value.gene_data[0]),
+    times: translate(value.gene_children[0]),
     index: value.gene_props.get_or_default(INDEX_KEY, nil),
     total: value.gene_props.get_or_default(TOTAL_KEY, nil),
   )
-  for item in value.gene_data[1..^1]:
+  for item in value.gene_children[1..^1]:
     r.code.add translate(item)
   result = r
 

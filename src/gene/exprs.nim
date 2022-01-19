@@ -45,10 +45,10 @@ proc new_ex_string*(v: Value): ExString =
 
 type
   ExGroup* = ref object of Expr
-    data*: seq[Expr]
+    children*: seq[Expr]
 
 proc eval_group*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  for item in cast[ExGroup](expr).data.mitems:
+  for item in cast[ExGroup](expr).children.mitems:
     result = self.eval(frame, item)
 
 proc new_ex_group*(): ExGroup =
@@ -117,7 +117,7 @@ type
 type
   ExArguments* = ref object of Expr
     props*: Table[MapKey, Expr]
-    data*: seq[Expr]
+    children*: seq[Expr]
 
 proc eval_args*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   todo()

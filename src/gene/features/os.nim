@@ -27,10 +27,10 @@ proc eval_env(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 proc translate_env(value: Value): Expr =
   var r = ExEnv(
     evaluator: eval_env,
-    name: translate(value.gene_data[0]),
+    name: translate(value.gene_children[0]),
   )
-  if value.gene_data.len > 1:
-    r.default_value = translate(value.gene_data[1])
+  if value.gene_children.len > 1:
+    r.default_value = translate(value.gene_children[1])
   return r
 
 proc eval_set_env(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -42,8 +42,8 @@ proc eval_set_env(self: VirtualMachine, frame: Frame, target: Value, expr: var E
 proc translate_set_env(value: Value): Expr =
   ExSetEnv(
     evaluator: eval_set_env,
-    name: translate(value.gene_data[0]),
-    value: translate(value.gene_data[1]),
+    name: translate(value.gene_children[0]),
+    value: translate(value.gene_children[1]),
   )
 
 proc eval_exit(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -57,8 +57,8 @@ proc translate_exit(value: Value): Expr =
   var r = ExExit(
     evaluator: eval_exit,
   )
-  if value.gene_data.len > 0:
-    r.code = translate(value.gene_data[0])
+  if value.gene_children.len > 0:
+    r.code = translate(value.gene_children[0])
   return r
 
 proc init*() =

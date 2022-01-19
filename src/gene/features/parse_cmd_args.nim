@@ -131,7 +131,7 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
       if item.gene_props.has_key(DEFAULT_KEY):
         option.default = item.gene_props[DEFAULT_KEY]
         option.required = false
-      for item in item.gene_data:
+      for item in item.gene_children:
         if item.symbol[0] == '-':
           if item.symbol.len == 2:
             option.short_name = item.symbol
@@ -147,7 +147,7 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
 
     of "argument":
       var arg = ArgMatcher(kind: ArgPositional)
-      arg.arg_name = item.gene_data[0].symbol
+      arg.arg_name = item.gene_children[0].symbol
       if item.gene_props.has_key(DEFAULT_KEY):
         arg.default = item.gene_props[DEFAULT_KEY]
         arg.required = false
@@ -262,10 +262,10 @@ proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 proc translate_parse(value: Value): Expr =
   var r = ExParseCmdArgs(
     evaluator: eval_parse,
-    cmd_args: translate(value.gene_data[1]),
+    cmd_args: translate(value.gene_children[1]),
   )
   var m = new_cmd_args_matcher()
-  m.parse(value.gene_data[0])
+  m.parse(value.gene_children[0])
   r.cmd_args_schema = m
   return r
 

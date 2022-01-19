@@ -26,8 +26,8 @@ proc translate_while(value: Value): Expr =
   var r = ExWhile(
     evaluator: eval_while,
   )
-  r.cond = translate(value.gene_data[0])
-  for item in value.gene_data[1..^1]:
+  r.cond = translate(value.gene_children[0])
+  for item in value.gene_children[1..^1]:
     r.body.add translate(item)
   result = r
 

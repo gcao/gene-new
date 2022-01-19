@@ -551,12 +551,12 @@ proc read_gene(self: var Parser): Value =
   result.gene_type = self.read_gene_type()
   var result_list = self.read_delimited_list(')', true)
   result.gene_props = result_list.map
-  result.gene_data = result_list.list
+  result.gene_children = result_list.list
   if result.gene_type == SET:
-    if result.gene_data[0] == DEBUG:
-      self.debug = result.gene_data[1].bool
+    if result.gene_children[0] == DEBUG:
+      self.debug = result.gene_children[1].bool
     else:
-      todo("#Set " & $result.gene_data[0])
+      todo("#Set " & $result.gene_children[0])
     return
 
 proc read_map(self: var Parser): Value =
@@ -887,7 +887,7 @@ proc read_all*(self: var Parser, buffer: string): seq[Value] =
       node = self.read()
 
 proc read_document*(self: var Parser, buffer: string): Document =
-  self.document.data = self.read_all(buffer)
+  self.document.children = self.read_all(buffer)
   return self.document
 
 proc read*(s: Stream, filename: string): Value =

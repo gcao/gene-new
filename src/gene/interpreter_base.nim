@@ -53,8 +53,8 @@ proc build_dep_tree*(self: Package): DependencyRoot =
 
 proc parse_deps(deps: seq[Value]): Table[string, Dependency] =
   for dep in deps:
-    var name = dep.gene_data[0].str
-    var version = dep.gene_data[1].str
+    var name = dep.gene_children[0].str
+    var version = dep.gene_children[1].str
     var path = dep.gene_props["path".to_key].str
 
     var dep = Dependency(
@@ -310,7 +310,7 @@ proc new_arg_matcher*(value: Value): RootMatcher =
 proc `[]`*(self: Value, i: int): Value =
   case self.kind:
   of VkGene:
-    return self.gene_data[i]
+    return self.gene_children[i]
   of VkVector:
     return self.vec[i]
   else:
@@ -321,7 +321,7 @@ proc `len`(self: Value): int =
     return 0
   case self.kind:
   of VkGene:
-    return self.gene_data.len
+    return self.gene_children.len
   of VkVector:
     return self.vec.len
   else:
@@ -432,12 +432,12 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
   of MhNone:
     for _, v in args_expr.props.mpairs:
       discard self.eval(frame, v)
-    for i, v in args_expr.data.mpairs:
+    for i, v in args_expr.children.mpairs:
       discard self.eval(frame, v)
   of MhSimpleData:
     for _, v in args_expr.props.mpairs:
       discard self.eval(frame, v)
-    for i, v in args_expr.data.mpairs:
+    for i, v in args_expr.children.mpairs:
       let field = matcher.children[i]
       let value = self.eval(frame, v)
       if field.is_prop:
@@ -448,8 +448,8 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
     var args = new_gene_gene()
     for k, v in args_expr.props.mpairs:
       args.gene_props[k] = self.eval(frame, v)
-    for _, v in args_expr.data.mpairs:
-      args.gene_data.add self.eval(frame, v)
+    for _, v in args_expr.children.mpairs:
+      args.gene_children.add self.eval(frame, v)
     self.process_args(new_frame, matcher, args)
 
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
@@ -472,7 +472,7 @@ proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Valu
     of MhSimpleData:
       for _, v in args.gene_props.mpairs:
         todo()
-      for i, v in args.gene_data.mpairs:
+      for i, v in args.gene_children.mpairs:
         let field = target.block.matcher.children[i]
         new_frame.scope.def_member(field.name, v)
     of MhNone:

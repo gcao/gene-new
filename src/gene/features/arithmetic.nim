@@ -61,7 +61,7 @@ type
     op2*: Expr
 
   ExAnd* = ref object of Expr
-    data*: seq[Expr]
+    children*: seq[Expr]
 
 proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var first = self.eval(frame, cast[ExBinOp](expr).op1)
@@ -77,7 +77,7 @@ proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
       todo($first.kind)
       # var class = first.get_class()
       # var args = new_gene_gene(GeneNil)
-      # args.gene_data.add(second)
+      # args.gene_children.add(second)
       # result = self.call_method(frame, first, class, SUB_KEY, args)
   of BinMul:
     result = new_gene_int(first.int * second.int)
@@ -173,75 +173,75 @@ proc translate_arithmetic*(value: Value): Expr =
   of "||":
     result = new_ex_bin(BinOr)
 
-  cast[ExBinOp](result).op1 = translate(value.gene_data[0])
-  cast[ExBinOp](result).op2 = translate(value.gene_data[1])
+  cast[ExBinOp](result).op1 = translate(value.gene_children[0])
+  cast[ExBinOp](result).op2 = translate(value.gene_children[1])
 
-proc translate_arithmetic*(data: seq[Value]): Expr =
-  if data.len == 1:
-    return translate(data[0])
-  elif data.len == 3:
-    return translate_op(data[1].symbol, translate(data[0]), translate(data[2]))
-  elif data.len > 3:
+proc translate_arithmetic*(children: seq[Value]): Expr =
+  if children.len == 1:
+    return translate(children[0])
+  elif children.len == 3:
+    return translate_op(children[1].symbol, translate(children[0]), translate(children[2]))
+  elif children.len > 3:
     # TODO: validate combination of operators
     var lowest_precedence_index = 1
-    var lowest_precedence_op = data[lowest_precedence_index].symbol
+    var lowest_precedence_op = children[lowest_precedence_index].symbol
     var i = lowest_precedence_index + 2
-    while i < data.len:
-      var op = data[i].symbol
+    while i < children.len:
+      var op = children[i].symbol
       if PRECEDENCES[lowest_precedence_op] > PRECEDENCES[op]:
         lowest_precedence_index = i
         lowest_precedence_op = op
       i += 2
     return translate_op(
       lowest_precedence_op,
-      translate_arithmetic(data[0..lowest_precedence_index-1]),
-      translate_arithmetic(data[lowest_precedence_index+1..^1]))
+      translate_arithmetic(children[0..lowest_precedence_index-1]),
+      translate_arithmetic(children[lowest_precedence_index+1..^1]))
   else:
-    not_allowed("translate_arithmetic " & $data)
+    not_allowed("translate_arithmetic " & $children)
 
 proc eval_and(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  for e in cast[ExAnd](expr).data.mitems:
+  for e in cast[ExAnd](expr).children.mitems:
     if not self.eval(frame, e):
       return false
   return true
 
-proc translate_comparisons*(data: seq[Value]): Expr =
-  if data.len == 1:
-    return translate(data[0])
-  elif data.len == 3:
-    return translate_op(data[1].symbol, translate(data[0]), translate(data[2]))
-  elif data.len > 3:
+proc translate_comparisons*(children: seq[Value]): Expr =
+  if children.len == 1:
+    return translate(children[0])
+  elif children.len == 3:
+    return translate_op(children[1].symbol, translate(children[0]), translate(children[2]))
+  elif children.len > 3:
     var r = ExAnd(evaluator: eval_and)
     var i = 1
-    while i < data.len - 1:
-      r.data.add(translate_op(data[i].symbol, translate(data[i-1]), translate(data[i+1])))
+    while i < children.len - 1:
+      r.children.add(translate_op(children[i].symbol, translate(children[i-1]), translate(children[i+1])))
       i += 2
     return r
   else:
-    not_allowed("translate_comparisons " & $data)
+    not_allowed("translate_comparisons " & $children)
 
-proc translate_logic*(data: seq[Value]): Expr =
-  if data.len == 1:
-    return translate(data[0])
-  elif data.len == 3:
-    return translate_op(data[1].symbol, translate(data[0]), translate(data[2]))
-  elif data.len > 3:
+proc translate_logic*(children: seq[Value]): Expr =
+  if children.len == 1:
+    return translate(children[0])
+  elif children.len == 3:
+    return translate_op(children[1].symbol, translate(children[0]), translate(children[2]))
+  elif children.len > 3:
     # TODO: validate combination of operators
     var lowest_precedence_index = 1
-    var lowest_precedence_op = data[lowest_precedence_index].symbol
+    var lowest_precedence_op = children[lowest_precedence_index].symbol
     var i = lowest_precedence_index + 2
-    while i < data.len:
-      var op = data[i].symbol
+    while i < children.len:
+      var op = children[i].symbol
       if PRECEDENCES[lowest_precedence_op] > PRECEDENCES[op]:
         lowest_precedence_index = i
         lowest_precedence_op = op
       i += 2
     return translate_op(
       lowest_precedence_op,
-      translate_logic(data[0..lowest_precedence_index-1]),
-      translate_logic(data[lowest_precedence_index+1..^1]))
+      translate_logic(children[0..lowest_precedence_index-1]),
+      translate_logic(children[lowest_precedence_index+1..^1]))
   else:
-    not_allowed("translate_logic " & $data)
+    not_allowed("translate_logic " & $children)
 
 proc init*() =
   GeneTranslators["+"  ] = translate_arithmetic

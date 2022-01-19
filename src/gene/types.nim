@@ -328,7 +328,7 @@ type
     of VkGene:
       gene_type*: Value
       gene_props*: OrderedTable[MapKey, Value]
-      gene_data*: seq[Value]
+      gene_children*: seq[Value]
     of VkEnum:
       `enum`*: Enum
     of VkEnumMember:
@@ -400,7 +400,7 @@ type
   Document* = ref object
     `type`: Value
     props*: OrderedTable[MapKey, Value]
-    data*: seq[Value]
+    children*: seq[Value]
 
   # environment: local/unittest/development/staging/production
   # assertion: enabled/disabled
@@ -1335,7 +1335,7 @@ proc `==`*(this, that: Value): bool =
       return this.set.len == that.set.len and (this.set.len == 0 or this.set == that.set)
     of VkGene:
       return this.gene_type == that.gene_type and
-        this.gene_data == that.gene_data and
+        this.gene_children == that.gene_children and
         table_equals(this.gene_props, that.gene_props)
     of VkMap:
       return table_equals(this.map, that.map)
@@ -1384,7 +1384,7 @@ proc hash*(node: Value): Hash =
   of VkGene:
     if node.gene_type != nil:
       h = h !& hash(node.gene_type)
-    h = h !& hash(node.gene_data)
+    h = h !& hash(node.gene_children)
   of VkMap:
     for key, val in node.map:
       h = h !& hash(key)
@@ -1454,8 +1454,8 @@ proc `$`*(node: Value): string =
     if node.gene_props.len > 0:
       for k, v in node.gene_props:
         result &= " ^" & k.to_s & " " & $v
-    if node.gene_data.len > 0:
-      result &= " " & node.gene_data.join(" ")
+    if node.gene_children.len > 0:
+      result &= " " & node.gene_children.join(" ")
     result &= ")"
   # of VkFunction:
   #   result = "(fn $# ...)" % [node.fn.name]
@@ -1643,19 +1643,19 @@ proc new_gene_gene*(): Value =
     gene_type: Nil,
   )
 
-proc new_gene_gene*(`type`: Value, data: varargs[Value]): Value =
+proc new_gene_gene*(`type`: Value, children: varargs[Value]): Value =
   return Value(
     kind: VkGene,
     gene_type: `type`,
-    gene_data: @data,
+    gene_children: @children,
   )
 
-proc new_gene_gene*(`type`: Value, props: OrderedTable[MapKey, Value], data: varargs[Value]): Value =
+proc new_gene_gene*(`type`: Value, props: OrderedTable[MapKey, Value], children: varargs[Value]): Value =
   return Value(
     kind: VkGene,
     gene_type: `type`,
     gene_props: props,
-    gene_data: @data,
+    gene_children: @children,
   )
 
 proc new_gene_enum_member*(m: EnumMember): Value =
@@ -1732,13 +1732,13 @@ proc merge*(self: var Value, value: Value) =
   of VkGene:
     case value.kind:
     of VkGene:
-      for item in value.gene_data:
-        self.gene_data.add(item)
+      for item in value.gene_children:
+        self.gene_children.add(item)
       for k, v in value.gene_props:
         self.gene_props[k] = v
     of VkVector:
       for item in value.vec:
-        self.gene_data.add(item)
+        self.gene_children.add(item)
     of VkMap:
       for k, v in value.map:
         self.gene_props[k] = v
@@ -1748,7 +1748,7 @@ proc merge*(self: var Value, value: Value) =
     case value.kind:
     of VkVector:
       for item in value.vec:
-        self.gene_data.add(item)
+        self.gene_children.add(item)
     else:
       todo()
   else:
@@ -1756,8 +1756,8 @@ proc merge*(self: var Value, value: Value) =
 
 #################### Document ####################
 
-proc new_doc*(data: seq[Value]): Document =
-  return Document(data: data)
+proc new_doc*(children: seq[Value]): Document =
+  return Document(children: children)
 
 #################### Converters ##################
 

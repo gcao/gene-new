@@ -106,43 +106,43 @@ test_parser "1 2 3", 1
 test_parser "()", proc(r: Value) =
   check r.gene_type == nil
   check r.gene_props.len == 0
-  check r.gene_data.len == 0
+  check r.gene_children.len == 0
 
 test_parser "(())", proc(r: Value) =
   check r.kind == VkGene
-  check r.gene_data.len == 0
+  check r.gene_children.len == 0
   check r.gene_type.kind == VkGene
-  check r.gene_type.gene_data.len == 0
+  check r.gene_type.gene_children.len == 0
 
 test_parser "(1 2 3)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_data == @[2, 3]
+  check r.gene_children == @[2, 3]
 
 test_parser """
   (_ 1 "test")
 """, proc(r: Value) =
-  check r.gene_data[0] == 1
-  check r.gene_data[1] == "test"
+  check r.gene_children[0] == 1
+  check r.gene_children[1] == "test"
 
 test_parser "(1 ^a 2 3 4)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": new_gene_int(2)}.toOrderedTable
-  check r.gene_data == @[3, 4]
+  check r.gene_children == @[3, 4]
 
 test_parser "(1 2 ^a 3 4)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": new_gene_int(3)}.toOrderedTable
-  check r.gene_data == @[2, 4]
+  check r.gene_children == @[2, 4]
 
 test_parser "(1 ^^a 2 3)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": True}.toOrderedTable
-  check r.gene_data == @[2, 3]
+  check r.gene_children == @[2, 3]
 
 test_parser "(1 ^!a 2 3)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_props == {"a": False}.toOrderedTable
-  check r.gene_data == @[2, 3]
+  check r.gene_children == @[2, 3]
 
 test_parser "{^^x ^!y ^^z}", proc(r: Value) =
   check r.kind == VkMap
@@ -180,7 +180,7 @@ test_parser "{^ratio -1/2}", proc(r: Value) =
   check r.map["ratio"] == new_gene_ratio(-1, 2)
 
 test_parser_error """
-  # Gene properties should not be mixed with data like below
+  # Gene properties should not be mixed with children like below
   (a ^b b c ^d d) # b & d are properties but are separated by c
 """
 
@@ -203,16 +203,16 @@ test_parser """
 """, proc(r: Value) =
   check r.kind == VkGene
   check r.gene_type.symbol == "f"
-  check r.gene_data[0].symbol == "a"
+  check r.gene_children[0].symbol == "a"
 
 test_parser """
   #@f #@g a
 """, proc(r: Value) =
   check r.kind == VkGene
   check r.gene_type.symbol == "f"
-  check r.gene_data[0].kind == VkGene
-  check r.gene_data[0].gene_type.symbol == "g"
-  check r.gene_data[0].gene_data[0].symbol == "a"
+  check r.gene_children[0].kind == VkGene
+  check r.gene_children[0].gene_type.symbol == "g"
+  check r.gene_children[0].gene_children[0].symbol == "a"
 
 # test_parser """
 #   #*f
@@ -225,7 +225,7 @@ test_parser """
 """, proc(r: Value) =
   check r.map["p"].kind == VkGene
   check r.map["p"].gene_type.symbol == "f"
-  check r.map["p"].gene_data[0].symbol == "a"
+  check r.map["p"].gene_children[0].symbol == "a"
 
 test_read_all """
   1 # comment
@@ -302,14 +302,14 @@ test_parse_document """
 """, proc(r: Document) =
   check r.props["name"] == "Test document"
   check r.props["version"] == "0.1.0"
-  check r.data.len == 0
+  check r.children.len == 0
 
 test_parse_document """
   ^name "Test document"
   1 2
 """, proc(r: Document) =
   check r.props["name"] == "Test document"
-  check r.data == @[1, 2]
+  check r.children == @[1, 2]
 
 test_parser "\"\"\"a\"\"\"", "a"
 # Trim whitespaces and new line after opening """

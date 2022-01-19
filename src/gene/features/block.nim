@@ -46,13 +46,13 @@ proc arg_translator(value: Value): Expr =
   e.evaluator = block_invoker
   for k, v in value.gene_props:
     e.props[k] = translate(v)
-  for v in value.gene_data:
-    e.data.add(translate(v))
+  for v in value.gene_children:
+    e.children.add(translate(v))
   return e
 
 proc to_block(node: Value): Block =
   var matcher = new_arg_matcher()
-  var body: seq[Value] = node.gene_data
+  var body: seq[Value] = node.gene_children
 
   if node.gene_props.has_key(ARGS_KEY):
     matcher.parse(node.gene_props[ARGS_KEY])

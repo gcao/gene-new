@@ -81,7 +81,7 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
     return ns.members[name]
   elif ns.member_missing != nil:
     var args = new_gene_gene()
-    args.gene_data.add(name.to_s)
+    args.gene_children.add(name.to_s)
     return vm.call_member_missing(frame, self, ns.member_missing, args)
   else:
     raise new_exception(NotDefinedException, name.to_s & " is not defined")

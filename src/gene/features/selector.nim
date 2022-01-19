@@ -42,13 +42,13 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
         else:
           return target.vec[self.index]
     of VkGene:
-      if self.index >= target.gene_data.len:
+      if self.index >= target.gene_children.len:
         raise NoResult.new
       else:
         if self.index < 0:
-          return target.gene_data[self.index + target.gene_data.len]
+          return target.gene_children[self.index + target.gene_children.len]
         else:
-          return target.gene_data[self.index]
+          return target.gene_children[self.index]
     else:
       todo("search_first " & $target.kind)
   of SmByName:
@@ -85,7 +85,7 @@ proc add_self_and_descendants(self: var seq[Value], v: Value) =
     for child in v.vec:
       self.add_self_and_descendants(child)
   of VkGene:
-    for child in v.gene_data:
+    for child in v.gene_children:
       self.add_self_and_descendants(child)
   else:
     discard
@@ -97,7 +97,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
     of VkVector:
       result.add(target.vec[self.index])
     of VkGene:
-      result.add(target.gene_data[self.index])
+      result.add(target.gene_children[self.index])
     else:
       todo("search SmByIndex " & $target.kind)
   of SmByIndexRange:
@@ -115,7 +115,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
           result.add(target.vec[i])
         i += 1
     of VkGene:
-      var len = target.gene_data.len
+      var len = target.gene_children.len
       var i = cast[int](self.range.start.int)
       if i < 0:
         i += len
@@ -124,7 +124,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
         `end` += len
       while i < len and i <= `end`:
         if i >= 0:
-          result.add(target.gene_data[i])
+          result.add(target.gene_children[i])
         i += 1
     else:
       todo("search SmByIndexRange " & $target.kind)
@@ -145,7 +145,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
         if item.kind == VkGene and item.gene_type == self.by_type:
           result.add(item)
     of VkGene:
-      for item in target.gene_data:
+      for item in target.gene_children:
         if item.kind == VkGene and item.gene_type == self.by_type:
           result.add(item)
     else:
@@ -154,7 +154,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
     result.add_self_and_descendants(target)
   of SmCallback:
     var args = new_gene_gene(Nil)
-    args.gene_data.add(target)
+    args.gene_children.add(target)
     var v = VM.call(nil, self.callback, args)
     if v.kind == VkGene and v.gene_type.kind == VkSymbol:
       case v.gene_type.symbol:
@@ -296,8 +296,8 @@ proc selector_arg_translator*(value: Value): Expr =
   var r = ExSelectorInvoker(
     evaluator: selector_invoker,
   )
-  if value.gene_data.len > 0:
-    r.data = translate(value.gene_data[0])
+  if value.gene_children.len > 0:
+    r.data = translate(value.gene_children[0])
   return r
 
 proc eval_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -353,7 +353,7 @@ proc new_ex_selector*(parallel_mode: bool, data: seq[Value]): Expr =
 
 proc translate_selector(value: Value): Expr =
   var parallel_mode = value.gene_type.symbol == "@*"
-  return new_ex_selector(parallel_mode, value.gene_data)
+  return new_ex_selector(parallel_mode, value.gene_children)
 
 proc handle_item*(item: string): Expr =
   try:
@@ -391,7 +391,7 @@ proc translate_invoke_selector*(value: Value): Expr =
     evaluator: eval_selector2,
     parallel_mode: false,
   )
-  for item in value.gene_data[1..^1]:
+  for item in value.gene_children[1..^1]:
     cast[ExSelector2](r.selector).data.add(translate(item))
   return r
 
@@ -406,15 +406,15 @@ proc translate_invoke_selector2*(value: Value): Expr =
     evaluator: eval_selector2,
     parallel_mode: false,
   )
-  case value.gene_data[0].kind:
+  case value.gene_children[0].kind:
   of VkSymbol:
-    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_data[0].symbol[2..^1]))
+    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_children[0].symbol[2..^1]))
   of VkComplexSymbol:
-    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_data[0].csymbol[0][2..^1]))
-    for item in value.gene_data[0].csymbol[1..^1]:
+    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_children[0].csymbol[0][2..^1]))
+    for item in value.gene_children[0].csymbol[1..^1]:
       cast[ExSelector2](r.selector).data.add(handle_item(item))
   else:
-    todo($value.gene_data[0].kind)
+    todo($value.gene_children[0].kind)
   return r
 
 # (.@ a b)
@@ -426,7 +426,7 @@ proc translate_invoke_selector3*(value: Value): Expr =
     evaluator: eval_selector2,
     parallel_mode: false,
   )
-  for item in value.gene_data:
+  for item in value.gene_children:
     cast[ExSelector2](r.selector).data.add(translate(item))
   return r
 
@@ -468,7 +468,7 @@ proc eval_set(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   of VkInt:
     case target.kind:
     of VkGene:
-      target.gene_data[selector.int] = value
+      target.gene_children[selector.int] = value
     of VkVector:
       target.vec[selector.int] = value
     else:
@@ -480,13 +480,13 @@ proc translate_set*(value: Value): Expr =
   var e = ExSet(
     evaluator: eval_set,
   )
-  if value.gene_data.len == 2:
-    e.selector = translate(value.gene_data[0])
-    e.value = translate(value.gene_data[1])
+  if value.gene_children.len == 2:
+    e.selector = translate(value.gene_children[0])
+    e.value = translate(value.gene_children[1])
   else:
-    e.target = translate(value.gene_data[0])
-    e.selector = translate(value.gene_data[1])
-    e.value = translate(value.gene_data[2])
+    e.target = translate(value.gene_children[0])
+    e.selector = translate(value.gene_children[1])
+    e.value = translate(value.gene_children[2])
   return e
 
 proc init*() =

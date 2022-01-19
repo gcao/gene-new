@@ -50,7 +50,7 @@ proc translate_case(node: Value): Expr =
   var expr = ExCase(
     evaluator: eval_case,
   )
-  expr.case_input = translate(node.gene_data[0])
+  expr.case_input = translate(node.gene_children[0])
 
   var state = CsInput
   var cond: Value
@@ -95,8 +95,8 @@ proc translate_case(node: Value): Expr =
         logic.add(input)
 
   var i = 1
-  while i < node.gene_data.len:
-    handler(node.gene_data[i])
+  while i < node.gene_children.len:
+    handler(node.gene_children[i])
     i += 1
   handler(nil)
 

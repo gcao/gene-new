@@ -34,10 +34,10 @@ proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     ns[e.name] = result
 
 proc translate_var(value: Value): Expr =
-  var name = value.gene_data[0]
+  var name = value.gene_children[0]
   var v: Expr
-  if value.gene_data.len > 1:
-    v = translate(value.gene_data[1])
+  if value.gene_children.len > 1:
+    v = translate(value.gene_children[1])
   else:
     v = new_ex_literal(Nil)
   case name.kind:

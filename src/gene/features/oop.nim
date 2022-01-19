@@ -59,8 +59,8 @@ proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
   for k, v in value.gene_props:
     e.props[k] = translate(v)
-  for v in value.gene_data[1..^1]:
-    e.data.add(translate(v))
+  for v in value.gene_children[1..^1]:
+    e.children.add(translate(v))
   return e
 
 proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -87,7 +87,7 @@ proc translate_class(value: Value): Expr =
   var e = ExClass(
     evaluator: eval_class,
   )
-  var first = value.gene_data[0]
+  var first = value.gene_children[0]
   case first.kind
   of VkSymbol:
     e.name = first.symbol
@@ -98,10 +98,10 @@ proc translate_class(value: Value): Expr =
     todo()
 
   var body_start = 1
-  if value.gene_data.len >= 3 and value.gene_data[1] == LESS_THAN:
+  if value.gene_children.len >= 3 and value.gene_children[1] == LESS_THAN:
     body_start = 3
-    e.parent = translate(value.gene_data[2])
-  e.body = translate(value.gene_data[body_start..^1])
+    e.parent = translate(value.gene_children[2])
+  e.body = translate(value.gene_children[body_start..^1])
   result = e
 
 proc eval_mixin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -124,7 +124,7 @@ proc translate_mixin(value: Value): Expr =
   var e = ExMixin(
     evaluator: eval_mixin,
   )
-  var first = value.gene_data[0]
+  var first = value.gene_children[0]
   case first.kind
   of VkSymbol:
     e.name = first.symbol
@@ -135,7 +135,7 @@ proc translate_mixin(value: Value): Expr =
     todo()
 
   var body_start = 1
-  e.body = translate(value.gene_data[body_start..^1])
+  e.body = translate(value.gene_children[body_start..^1])
   result = e
 
 proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -157,7 +157,7 @@ proc translate_include(value: Value): Expr =
   var e = ExInclude(
     evaluator: eval_include,
   )
-  for item in value.gene_data:
+  for item in value.gene_children:
     e.data.add(translate(item))
 
   result = e
@@ -178,8 +178,8 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     var args = new_gene_gene()
     for k, v in args_expr.props.mpairs:
       args.gene_props[k] = self.eval(frame, v)
-    for v in args_expr.data.mitems:
-      args.gene_data.add(self.eval(frame, v))
+    for v in args_expr.children.mitems:
+      args.gene_children.add(self.eval(frame, v))
     if ctor.callable.kind == VkNativeFn:
       result = ctor.callable.native_fn(args)
     else:
@@ -214,21 +214,21 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 proc translate_new(value: Value): Expr =
   ExNew(
     evaluator: eval_new,
-    class: translate(value.gene_data[0]),
+    class: translate(value.gene_children[0]),
     args: arg_translator(value),
   )
 
 # TODO: this is almost the same as to_function in fp.nim
 proc to_function(node: Value): Function =
-  var first = node.gene_data[0]
+  var first = node.gene_children[0]
   var name = first.symbol
 
   var matcher = new_arg_matcher()
-  matcher.parse(node.gene_data[1])
+  matcher.parse(node.gene_children[1])
 
   var body: seq[Value] = @[]
-  for i in 2..<node.gene_data.len:
-    body.add node.gene_data[i]
+  for i in 2..<node.gene_children.len:
+    body.add node.gene_children[i]
 
   body = wrap_with_try(body)
   result = new_fn(name, matcher, body)
@@ -276,17 +276,17 @@ proc eval_method_eq*(self: VirtualMachine, frame: Frame, target: Value, expr: va
   )
 
 proc translate_method(value: Value): Expr =
-  if value.gene_data.len >= 3 and value.gene_data[1] == Equal:
+  if value.gene_children.len >= 3 and value.gene_children[1] == Equal:
     return ExMethodEq(
       evaluator: eval_method_eq,
-      name: value.gene_data[0].symbol,
-      value: translate(value.gene_data[2])
+      name: value.gene_children[0].symbol,
+      value: translate(value.gene_children[2])
     )
 
   var fn = to_function(value)
   ExMethod(
     evaluator: eval_method,
-    name: value.gene_data[0].symbol,
+    name: value.gene_children[0].symbol,
     fn: fn,
   )
 
@@ -311,8 +311,8 @@ proc invoke(self: VirtualMachine, frame: Frame, instance: Value, method_name: Ma
     var args = new_gene_gene()
     for k, v in args_expr.props.mpairs:
       args.gene_props[k] = self.eval(frame, v)
-    for _, v in args_expr.data.mpairs:
-      args.gene_data.add self.eval(frame, v)
+    for _, v in args_expr.children.mpairs:
+      args.gene_children.add self.eval(frame, v)
     if callable.kind == VkNativeMethod:
       result = meth.callable.native_method(instance, args)
     else:
@@ -370,8 +370,8 @@ proc translate_invoke(value: Value): Expr =
   r.meth = value.gene_props[METHOD_KEY].str.to_key
 
   var args = new_ex_arg()
-  for v in value.gene_data:
-    args.data.add(translate(v))
+  for v in value.gene_children:
+    args.children.add(translate(v))
   r.args = args
 
   result = r
@@ -428,8 +428,8 @@ proc translate_invoke_dynamic(value: Value): Expr =
   r.target = translate(value.gene_props[METHOD_KEY])
 
   var args = new_ex_arg()
-  for v in value.gene_data:
-    args.data.add(translate(v))
+  for v in value.gene_children:
+    args.children.add(translate(v))
   r.args = args
 
   result = r
@@ -470,8 +470,8 @@ proc translate_super(value: Value): Expr =
     evaluator: eval_super,
   )
   var args = new_ex_arg()
-  for v in value.gene_data:
-    args.data.add(translate(v))
+  for v in value.gene_children:
+    args.children.add(translate(v))
   r.args = args
   result = r
 
@@ -488,11 +488,11 @@ proc translate_super(value: Value): Expr =
 # proc translate_method_missing(value: Value): Expr =
 #   var name = "method_missing"
 #   var matcher = new_arg_matcher()
-#   matcher.parse(value.gene_data[0])
+#   matcher.parse(value.gene_children[0])
 
 #   var body: seq[Value] = @[]
-#   for i in 1..<value.gene_data.len:
-#     body.add value.gene_data[i]
+#   for i in 1..<value.gene_children.len:
+#     body.add value.gene_children[i]
 
 #   body = wrap_with_try(body)
 #   var fn = new_fn(name, matcher, body)

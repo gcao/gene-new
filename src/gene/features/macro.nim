@@ -57,7 +57,7 @@ proc arg_translator(value: Value): Expr =
   result = expr
 
 proc to_macro(node: Value): Macro =
-  var first = node.gene_data[0]
+  var first = node.gene_children[0]
   var name: string
   if first.kind == VkSymbol:
     name = first.symbol
@@ -65,11 +65,11 @@ proc to_macro(node: Value): Macro =
     name = first.csymbol[^1]
 
   var matcher = new_arg_matcher()
-  matcher.parse(node.gene_data[1])
+  matcher.parse(node.gene_children[1])
 
   var body: seq[Value] = @[]
-  for i in 2..<node.gene_data.len:
-    body.add node.gene_data[i]
+  for i in 2..<node.gene_children.len:
+    body.add node.gene_children[i]
 
   body = wrap_with_try(body)
   result = new_macro(name, matcher, body)
@@ -93,7 +93,7 @@ proc eval_caller_eval(self: VirtualMachine, frame: Frame, target: Value, expr: v
 proc translate_caller_eval(value: Value): Expr =
   ExCallerEval(
     evaluator: eval_caller_eval,
-    data: translate(value.gene_data[0]),
+    data: translate(value.gene_children[0]),
   )
 
 proc init*() =

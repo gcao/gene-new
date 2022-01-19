@@ -18,8 +18,8 @@ proc arg_translator*(value: Value): Expr =
   var e = new_ex_arg()
   for k, v in value.gene_props:
     e.props[k] = translate(v)
-  for v in value.gene_data:
-    e.data.add(translate(v))
+  for v in value.gene_children:
+    e.children.add(translate(v))
   return e
 
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -27,8 +27,8 @@ proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: va
   var expr = cast[ExArguments](expr)
   for k, v in expr.props.mpairs:
     result.gene_props[k] = self.eval(frame, v)
-  for v in expr.data.mitems:
-    result.gene_data.add(self.eval(frame, v))
+  for v in expr.children.mitems:
+    result.gene_children.add(self.eval(frame, v))
 
 proc eval_gene(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var `type` = self.eval(frame, cast[ExGene](expr).`type`)
@@ -95,29 +95,29 @@ proc translate_gene(value: Value): Expr =
     discard
   elif value.gene_type.kind == VkComplexSymbol and value.gene_type.csymbol[0].starts_with(".@"):
     return translate_invoke_selector4(value)
-  elif value.gene_data.len >= 1:
+  elif value.gene_children.len >= 1:
     var `type` = value.gene_type
-    var first = value.gene_data[0]
+    var first = value.gene_children[0]
     case first.kind:
     of VkSymbol:
       if COMPARISON_OPS.contains(first.symbol):
-        value.gene_data.insert(value.gene_type)
+        value.gene_children.insert(value.gene_type)
         value.gene_type = nil
-        return translate_comparisons(value.gene_data)
+        return translate_comparisons(value.gene_children)
       elif LOGIC_OPS.contains(first.symbol):
-        value.gene_data.insert(value.gene_type)
+        value.gene_children.insert(value.gene_type)
         value.gene_type = nil
-        return translate_logic(value.gene_data)
+        return translate_logic(value.gene_children)
       elif REGEX_OPS.contains(first.symbol):
         return translate_match(value)
       elif arithmetic.BINARY_OPS.contains(first.symbol):
-        value.gene_data.insert(value.gene_type)
+        value.gene_children.insert(value.gene_type)
         value.gene_type = nil
-        return translate_arithmetic(value.gene_data)
+        return translate_arithmetic(value.gene_children)
       elif first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"): # (@p = 1)
         return translate_prop_assignment(value)
       elif first.symbol == "..":
-        return new_ex_range(translate(`type`), translate(value.gene_data[1]))
+        return new_ex_range(translate(`type`), translate(value.gene_children[1]))
       elif first.symbol.startsWith(".@"):
         if first.symbol.len == 2:
           return translate_invoke_selector(value)

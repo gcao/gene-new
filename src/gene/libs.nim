@@ -40,20 +40,20 @@ proc string_to_i(self: Value, args: Value): Value =
 
 proc string_append(self: Value, args: Value): Value =
   result = self
-  for i in 0..<args.gene_data.len:
+  for i in 0..<args.gene_children.len:
     self.str.add(args[i].to_s)
 
 proc string_substr(self: Value, args: Value): Value =
-  case args.gene_data.len:
+  case args.gene_children.len:
   of 1:
-    var start = args.gene_data[0].int
+    var start = args.gene_children[0].int
     if start >= 0:
       return self.str[start..^1]
     else:
       return self.str[^(-start)..^1]
   of 2:
-    var start = args.gene_data[0].int
-    var end_index = args.gene_data[1].int
+    var start = args.gene_children[0].int
+    var end_index = args.gene_children[1].int
     if start >= 0:
       if end_index >= 0:
         return self.str[start..end_index]
@@ -68,15 +68,15 @@ proc string_substr(self: Value, args: Value): Value =
     not_allowed("substr expects 1 or 2 arguments")
 
 proc string_split(self: Value, args: Value): Value =
-  var separator = args.gene_data[0].str
-  case args.gene_data.len:
+  var separator = args.gene_children[0].str
+  case args.gene_children.len:
   of 1:
     var parts = self.str.split(separator)
     result = new_gene_vec()
     for part in parts:
       result.vec.add(part)
   of 2:
-    var maxsplit = args.gene_data[1].int - 1
+    var maxsplit = args.gene_children[1].int - 1
     var parts = self.str.split(separator, maxsplit)
     result = new_gene_vec()
     for part in parts:
@@ -85,30 +85,30 @@ proc string_split(self: Value, args: Value): Value =
     not_allowed("split expects 1 or 2 arguments")
 
 proc string_contains(self: Value, args: Value): Value =
-  var substr = args.gene_data[0].str
+  var substr = args.gene_children[0].str
   result = self.str.find(substr) >= 0
 
 proc string_index(self: Value, args: Value): Value =
-  var substr = args.gene_data[0].str
+  var substr = args.gene_children[0].str
   result = self.str.find(substr)
 
 proc string_rindex(self: Value, args: Value): Value =
-  var substr = args.gene_data[0].str
+  var substr = args.gene_children[0].str
   result = self.str.rfind(substr)
 
 proc string_char_at(self: Value, args: Value): Value =
-  var i = args.gene_data[0].int
+  var i = args.gene_children[0].int
   result = self.str[i]
 
 proc string_trim(self: Value, args: Value): Value =
   result = self.str.strip
 
 proc string_starts_with(self: Value, args: Value): Value =
-  var substr = args.gene_data[0].str
+  var substr = args.gene_children[0].str
   result = self.str.startsWith(substr)
 
 proc string_ends_with(self: Value, args: Value): Value =
-  var substr = args.gene_data[0].str
+  var substr = args.gene_children[0].str
   result = self.str.endsWith(substr)
 
 proc string_to_uppercase(self: Value, args: Value): Value =
@@ -121,11 +121,11 @@ proc array_size(self: Value, args: Value): Value =
   result = self.vec.len
 
 proc array_add(self: Value, args: Value): Value =
-  self.vec.add(args.gene_data[0])
+  self.vec.add(args.gene_children[0])
   result = self
 
 proc array_del(self: Value, args: Value): Value =
-  var index = args.gene_data[0].int
+  var index = args.gene_children[0].int
   result = self.vec[index]
   self.vec.delete(index)
 
@@ -153,18 +153,18 @@ proc gene_props(self: Value, args: Value): Value =
   for k, v in self.gene_props:
     result.map[k] = v
 
-proc gene_data(self: Value, args: Value): Value =
+proc gene_children(self: Value, args: Value): Value =
   result = new_gene_vec()
-  for item in self.gene_data:
+  for item in self.gene_children:
     result.vec.add(item)
 
 proc os_exec(args: Value): Value =
-  var cmd = args.gene_data[0].str
+  var cmd = args.gene_children[0].str
   var (output, _) = execCmdEx(cmd)
   result = output
 
 proc file_read(args: Value): Value =
-  var file = args.gene_data[0]
+  var file = args.gene_children[0]
   case file.kind:
   of VkString:
     result = read_file(file.str)
@@ -175,7 +175,7 @@ proc file_read(self: Value, args: Value): Value =
   self.file.read_all()
 
 proc file_read_async(args: Value): Value =
-  var file = args.gene_data[0]
+  var file = args.gene_children[0]
   case file.kind:
   of VkString:
     var f = open_async(file.str)
@@ -188,20 +188,20 @@ proc file_read_async(args: Value): Value =
     todo($file.kind)
 
 proc file_write(args: Value): Value =
-  var file = args.gene_data[0]
-  var content = args.gene_data[1]
+  var file = args.gene_children[0]
+  var content = args.gene_children[1]
   write_file(file.str, content.str)
 
 proc json_parse(args: Value): Value =
-  result = args.gene_data[0].str.parse_json
+  result = args.gene_children[0].str.parse_json
 
 proc csv_parse(args: Value): Value =
   var parser = CsvParser()
   var sep = ','
   # Detect whether it's a tsv (Tab Separated Values)
-  if args.gene_data[0].str.contains('\t'):
+  if args.gene_children[0].str.contains('\t'):
     sep = '\t'
-  parser.open(new_string_stream(args.gene_data[0].str), "unknown.csv", sep)
+  parser.open(new_string_stream(args.gene_children[0].str), "unknown.csv", sep)
   if not args.gene_props.get_or_default("skip_headers".to_key, false):
     parser.read_header_row()
   result = new_gene_vec()
@@ -233,16 +233,16 @@ proc add_success_callback(self: Value, args: Value): Value =
   if self.future.finished:
     if not self.future.failed:
       var callback_args = new_gene_gene()
-      callback_args.gene_data.add(self.future.read())
+      callback_args.gene_children.add(self.future.read())
       var frame = Frame()
-      discard VM.call(frame, args.gene_data[0], callback_args)
+      discard VM.call(frame, args.gene_children[0], callback_args)
   else:
     self.future.add_callback proc() {.gcsafe.} =
       if not self.future.failed:
         var callback_args = new_gene_gene()
-        callback_args.gene_data.add(self.future.read())
+        callback_args.gene_children.add(self.future.read())
         var frame = Frame()
-        discard VM.call(frame, args.gene_data[0], callback_args)
+        discard VM.call(frame, args.gene_children[0], callback_args)
 
 proc add_failure_callback(self: Value, args: Value): Value =
   # Register callback to future
@@ -250,44 +250,44 @@ proc add_failure_callback(self: Value, args: Value): Value =
     if self.future.failed:
       var callback_args = new_gene_gene()
       var ex = error_to_gene(cast[ref system.Exception](self.future.read_error()))
-      callback_args.gene_data.add(ex)
+      callback_args.gene_children.add(ex)
       var frame = Frame()
-      discard VM.call(frame, args.gene_data[0], callback_args)
+      discard VM.call(frame, args.gene_children[0], callback_args)
   else:
     self.future.add_callback proc() {.gcsafe.} =
       if self.future.failed:
         var callback_args = new_gene_gene()
         var ex = error_to_gene(cast[ref system.Exception](self.future.read_error()))
-        callback_args.gene_data.add(ex)
+        callback_args.gene_children.add(ex)
         var frame = Frame()
-        discard VM.call(frame, args.gene_data[0], callback_args)
+        discard VM.call(frame, args.gene_children[0], callback_args)
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     GENE_NS.ns["rand"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_rand".} =
-      if args.gene_data.len == 0:
+      if args.gene_children.len == 0:
         return new_gene_float(rand(1.0))
       else:
-        return rand(args.gene_data[0].int)
+        return rand(args.gene_children[0].int)
 
     GENE_NS.ns["sleep"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep".} =
-      sleep(args.gene_data[0].int)
+      sleep(args.gene_children[0].int)
     GENE_NS.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep_async".} =
-      var f = sleep_async(args.gene_data[0].int)
+      var f = sleep_async(args.gene_children[0].int)
       var future = new_future[Value]()
       f.add_callback proc() {.gcsafe.} =
         future.complete(Nil)
       result = new_gene_future(future)
     GENE_NS.ns["base64"] = new_gene_native_fn proc(args: Value): Value =
-      encode(args.gene_data[0].str)
+      encode(args.gene_children[0].str)
     GENE_NS.ns["base64_decode"] = new_gene_native_fn proc(args: Value): Value =
-      case args.gene_data[0].kind:
+      case args.gene_children[0].kind:
       of VkString:
-        return decode(args.gene_data[0].str)
+        return decode(args.gene_children[0].str)
       of VkNil:
         return ""
       else:
-        todo("base64_decode " & $args.gene_data[0].kind)
+        todo("base64_decode " & $args.gene_children[0].kind)
     GENE_NS.ns["run_forever"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_run_forever".} =
       run_forever()
 
@@ -321,7 +321,7 @@ proc init*() =
     NamespaceClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =
       self.ns.name
     NamespaceClass.def_native_method "set_member_missing", proc(self: Value, args: Value): Value {.name:"ns_name".} =
-      self.ns.member_missing = args.gene_data[0]
+      self.ns.member_missing = args.gene_children[0]
     GENE_NS.ns["Namespace"] = NamespaceClass
     GLOBAL_NS.ns["Namespace"] = NamespaceClass
 
@@ -361,8 +361,8 @@ proc init*() =
     StringClass.def_native_method("to_uppercase", string_to_uppercase)
     StringClass.def_native_method("to_lowercase", string_to_lowercase)
     StringClass.def_native_method "replace", proc(self: Value, args: Value): Value {.name:"string_replace".} =
-      var first = args.gene_data[0]
-      var second = args.gene_data[1]
+      var first = args.gene_children[0]
+      var second = args.gene_children[1]
       case first.kind:
       of VkString:
         return self.str.replace(first.str, second.str)
@@ -391,7 +391,7 @@ proc init*() =
     MapClass.def_native_method("keys", map_keys)
     MapClass.def_native_method("values", map_values)
     MapClass.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"map_contains".} =
-      self.map.has_key(args.gene_data[0].str.to_key)
+      self.map.has_key(args.gene_children[0].str.to_key)
     GENE_NS.ns["Map"] = MapClass
     GLOBAL_NS.ns["Map"] = MapClass
 
@@ -399,9 +399,9 @@ proc init*() =
     GeneClass.class.parent = ObjectClass.class
     GeneClass.def_native_method("type", gene_type)
     GeneClass.def_native_method("props", gene_props)
-    GeneClass.def_native_method("data", gene_data)
+    GeneClass.def_native_method("children", gene_children)
     GeneClass.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"gene_contains".} =
-      var s = args.gene_data[0].str
+      var s = args.gene_children[0].str
       result = self.gene_props.has_key(s.to_key)
 
     GENE_NS.ns["Gene"] = GeneClass

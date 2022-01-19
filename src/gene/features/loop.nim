@@ -32,7 +32,7 @@ proc translate_loop(value: Value): Expr =
   var r = ExLoop(
     evaluator: eval_loop,
   )
-  for item in value.gene_data:
+  for item in value.gene_children:
     r.data.add translate(item)
   result = r
 
@@ -62,7 +62,7 @@ proc translate_once(value: Value): Expr =
   var r = ExOnce(
     evaluator: eval_once,
   )
-  for item in value.gene_data:
+  for item in value.gene_children:
     r.code.add(translate(item))
   result = r
 

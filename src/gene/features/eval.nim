@@ -17,7 +17,7 @@ proc translate_eval(value: Value): Expr =
   var e = ExEval(
     evaluator: eval_eval,
   )
-  for v in value.gene_data:
+  for v in value.gene_children:
     e.data.add(translate(v))
   return e
 

@@ -34,20 +34,20 @@ proc translate_do(value: Value): Expr =
   var r = ExGroup(
     evaluator: eval_group,
   )
-  for item in value.gene_data:
-    r.data.add translate(item)
+  for item in value.gene_children:
+    r.children.add translate(item)
   result = r
 
 proc eval_void(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  for item in cast[ExGroup](expr).data.mitems:
+  for item in cast[ExGroup](expr).children.mitems:
     discard self.eval(frame, item)
 
 proc translate_void(value: Value): Expr =
   var r = ExGroup(
     evaluator: eval_void,
   )
-  for item in value.gene_data:
-    r.data.add translate(item)
+  for item in value.gene_children:
+    r.children.add translate(item)
   result = r
 
 proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -67,7 +67,7 @@ proc translate_string*(value: Value): Expr =
   else:
     e.first = ""
 
-  for item in value.gene_data:
+  for item in value.gene_children:
     e.rest.add(translate(item))
   return e
 
@@ -82,8 +82,8 @@ proc eval_with(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
 proc translate_with(value: Value): Expr =
   ExWith(
     evaluator: eval_with,
-    self: translate(value.gene_data[0]),
-    body: translate(value.gene_data[1..^1]),
+    self: translate(value.gene_children[0]),
+    body: translate(value.gene_children[1..^1]),
   )
 
 proc eval_assert(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -98,10 +98,10 @@ proc eval_assert(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 proc translate_assert(value: Value): Expr =
   var r = ExAssert(
     evaluator: eval_assert,
-    data: translate(value.gene_data[0]),
+    data: translate(value.gene_children[0]),
   )
-  if value.gene_data.len > 1:
-    r.message = translate(value.gene_data[1])
+  if value.gene_children.len > 1:
+    r.message = translate(value.gene_children[1])
   return r
 
 proc eval_debug(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -115,7 +115,7 @@ proc translate_debug(value: Value): Expr =
   var r = ExDebug(
     evaluator: eval_debug,
   )
-  r.data = value.gene_data[0]
+  r.data = value.gene_children[0]
   return r
 
 proc eval_if_main(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -125,7 +125,7 @@ proc eval_if_main(self: VirtualMachine, frame: Frame, target: Value, expr: var E
 proc translate_if_main(value: Value): Expr =
   return ExIfMain(
     evaluator: eval_if_main,
-    body: translate(value.gene_data)
+    body: translate(value.gene_children)
   )
 
 proc eval_tap(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -148,17 +148,17 @@ proc eval_tap(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 proc translate_tap(value: Value): Expr =
   var r = ExTap(
     evaluator: eval_tap,
-    value: translate(value.gene_data[0]),
+    value: translate(value.gene_children[0]),
   )
-  if value.gene_data.len > 1:
-    if value.gene_data[1].kind == VkQuote:
-      r.as_name = value.gene_data[1].quote.symbol
-      if value.gene_data.len > 2:
-        r.body = translate(value.gene_data[2..^1])
+  if value.gene_children.len > 1:
+    if value.gene_children[1].kind == VkQuote:
+      r.as_name = value.gene_children[1].quote.symbol
+      if value.gene_children.len > 2:
+        r.body = translate(value.gene_children[2..^1])
     else:
       r.as_self = true
-      if value.gene_data.len > 1:
-        r.body = translate(value.gene_data[1..^1])
+      if value.gene_children.len > 1:
+        r.body = translate(value.gene_children[1..^1])
   if r.body == nil:
     r.body = translate(@[])
   return r

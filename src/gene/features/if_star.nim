@@ -99,7 +99,7 @@ proc normalize_if_star(self: Value) =
       else:
         logic.add(input)
 
-  for item in self.gene_data:
+  for item in self.gene_children:
     handler(item)
   handler(nil)
 
@@ -109,7 +109,7 @@ proc normalize_if_star(self: Value) =
   if not self.gene_props.has_key(ELSE_KEY):
     self.gene_props[ELSE_KEY] = new_gene_stream(@[])
 
-  self.gene_data.reset  # Clear our gene_data as it's not needed any more
+  self.gene_children.reset  # Clear our gene_children as it's not needed any more
 
 proc eval_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExIf](expr)

@@ -103,4 +103,4 @@ test_interpreter """
 #   )
 #   (g 2)
 # """, proc(r: Value) =
-#   check r.gene.data == @[2]
+#   check r.gene_children == @[2]

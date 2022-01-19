@@ -37,7 +37,7 @@ proc translate*(stmts: seq[Value]): Expr =
   else:
     result = new_ex_group()
     for stmt in stmts:
-      cast[ExGroup](result).data.add(translate(stmt))
+      cast[ExGroup](result).children.add(translate(stmt))
 
 proc translate_catch*(value: Value): Expr =
   try:
@@ -56,7 +56,7 @@ proc translate_wrap*(translate: Translator): Translator =
 # (@p = 1)
 proc translate_prop_assignment*(value: Value): Expr =
   var name = value.gene_type.symbol[1..^1]
-  return new_ex_set_prop(name, translate(value.gene_data[1]))
+  return new_ex_set_prop(name, translate(value.gene_children[1]))
 
 proc new_ex_arg*(value: Value): ExArguments =
   result = ExArguments(
@@ -64,5 +64,5 @@ proc new_ex_arg*(value: Value): ExArguments =
   )
   for k, v in value.gene_props:
     result.props[k] = translate(v)
-  for v in value.gene_data:
-    result.data.add(translate(v))
+  for v in value.gene_children:
+    result.children.add(translate(v))

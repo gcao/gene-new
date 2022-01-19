@@ -28,8 +28,8 @@ proc fn_arg_translator*(value: Value): Expr =
   e.evaluator = function_invoker
   for k, v in value.gene_props:
     e.props[k] = translate(v)
-  for v in value.gene_data:
-    e.data.add(translate(v))
+  for v in value.gene_children:
+    e.children.add(translate(v))
   return e
 
 proc eval_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -48,14 +48,14 @@ proc to_function(node: Value): Function =
   var body_start: int
   case node.gene_type.symbol:
   of "fnx":
-    matcher.parse(node.gene_data[0])
+    matcher.parse(node.gene_children[0])
     name = "<unnamed>"
     body_start = 1
   of "fnxx":
     name = "<unnamed>"
     body_start = 0
   else:
-    var first = node.gene_data[0]
+    var first = node.gene_children[0]
     case first.kind:
     of VkSymbol:
       name = first.symbol
@@ -66,12 +66,12 @@ proc to_function(node: Value): Function =
     else:
       todo($first.kind)
 
-    matcher.parse(node.gene_data[1])
+    matcher.parse(node.gene_children[1])
     body_start = 2
 
   var body: seq[Value] = @[]
-  for i in body_start..<node.gene_data.len:
-    body.add node.gene_data[i]
+  for i in body_start..<node.gene_children.len:
+    body.add node.gene_children[i]
 
   body = wrap_with_try(body)
   result = new_fn(name, matcher, body)
@@ -109,8 +109,8 @@ proc translate_fnx(value: Value): Expr =
 proc translate_return(value: Value): Expr =
   var expr = ExReturn()
   expr.evaluator = eval_return
-  if value.gene_data.len > 0:
-    expr.data = translate(value.gene_data[0])
+  if value.gene_children.len > 0:
+    expr.data = translate(value.gene_children[0])
   return expr
 
 proc init*() =

@@ -22,8 +22,8 @@ import ./helpers
 # a       # variable in current scope or namespace
 # $ns/a   # member of namespace
 # @prop   # property of self object
-# @0      # first entry of self.gene_data, or self.vec etc
-# @-1     # last entry of self.gene_data, or self.vec etc
+# @0      # first entry of self.gene_children, or self.vec etc
+# @-1     # last entry of self.gene_children, or self.vec etc
 
 # TODO: Unify @prop, @1 and generic selector feature
 

@@ -107,7 +107,7 @@ proc normalize_if(self: Value) =
         else:
           logic.add(input)
 
-    for item in self.gene_data:
+    for item in self.gene_children:
       handler(item)
     handler(nil)
 
@@ -117,7 +117,7 @@ proc normalize_if(self: Value) =
     if not self.gene_props.has_key(ELSE_KEY):
       self.gene_props[ELSE_KEY] = new_gene_stream(@[])
 
-    self.gene_data.reset  # Clear our gene_data as it's not needed any more
+    self.gene_children.reset  # Clear our gene_children as it's not needed any more
 
 proc eval_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExIf](expr)
@@ -155,7 +155,7 @@ proc eval_not(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 proc translate_not(value: Value): Expr =
   ExNot(
     evaluator: eval_not,
-    cond: translate(value.gene_data[0]),
+    cond: translate(value.gene_children[0]),
   )
 
 proc eval_bool(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -164,7 +164,7 @@ proc eval_bool(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
 proc translate_bool(value: Value): Expr =
   ExBool(
     evaluator: eval_bool,
-    data: translate(value.gene_data[0]),
+    data: translate(value.gene_children[0]),
   )
 
 proc init*() =

@@ -14,19 +14,19 @@ import ./helpers
 # * Continuation - is it possible?
 #
 # * Native function
-#   proc(props: OrderedTable[string, Value], data: openarray[Value]): Value
+#   proc(props: OrderedTable[string, Value], children: openarray[Value]): Value
 # * Native method
 #   Simple: proc(
 #     self: Value,
 #     props: OrderedTable[string, Value],
-#     data: openarray[Value],
+#     children: openarray[Value],
 #   ): Value
 #   Complex: proc(
 #     caller: Frame,
 #     options: Table[FnOption, Value],
 #     self: Value,
 #     props: OrderedTable[string, Value],
-#     data: openarray[Value],
+#     children: openarray[Value],
 #   ): Value
 #
 # How do we support "self" inside function?
@@ -70,8 +70,8 @@ test_interpreter """
 #   (f ^a "a" 1 2)
 # """, proc(r: Value) =
 #   check r.gene_props["a"] == "a"
-#   check r.gene_data[0] == 1
-#   check r.gene_data[1] == 2
+#   check r.gene_children[0] == 1
+#   check r.gene_children[1] == 2
 
 test_interpreter """
   (fn f _ self)
@@ -196,7 +196,7 @@ test_interpreter """
 #   (fn f _ $args)
 #   (f 1)
 # """, proc(r: Value) =
-#   check r.gene_data[0] == 1
+#   check r.gene_children[0] == 1
 
 # test_interpreter """
 #   (fn f [a b] (a + b))

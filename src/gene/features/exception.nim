@@ -59,7 +59,7 @@ proc translate_try(value: Value): Expr =
   var catch_exception: Value
   var catch_body: seq[Value] = @[]
   var `finally`: seq[Value] = @[]
-  for item in value.gene_data:
+  for item in value.gene_children:
     case state:
     of TryBody:
       if item == CATCH:
@@ -121,10 +121,10 @@ proc translate_throw(value: Value): Expr =
   var r = ExThrow(
     evaluator: eval_throw,
   )
-  if value.gene_data.len > 0:
-    r.first = translate(value.gene_data[0])
-    if value.gene_data.len > 1:
-      r.second = translate(value.gene_data[1])
+  if value.gene_children.len > 0:
+    r.first = translate(value.gene_children[0])
+    if value.gene_children.len > 1:
+      r.second = translate(value.gene_children[1])
 
   return r
 

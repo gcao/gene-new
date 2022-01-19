@@ -19,7 +19,7 @@ proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 proc translate_parse(value: Value): Expr =
   var r = ExParse(
     evaluator: eval_parse,
-    data: translate(value.gene_data[0])
+    data: translate(value.gene_children[0])
   )
   result = r
 

@@ -5,11 +5,11 @@ import ../translators
 
 type
   ExArray* = ref object of Expr
-    data*: seq[Expr]
+    children*: seq[Expr]
 
 proc eval_array(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = new_gene_vec()
-  for e in cast[ExArray](expr).data.mitems:
+  for e in cast[ExArray](expr).children.mitems:
     let v = self.eval(frame, e)
     if v == nil:
       discard
@@ -24,7 +24,7 @@ proc translate_array(value: Value): Expr =
     evaluator: eval_array,
   )
   for v in value.vec:
-    cast[ExArray](result).data.add(translate(v))
+    cast[ExArray](result).children.add(translate(v))
 
 proc init*() =
   Translators[VkVector] = translate_array

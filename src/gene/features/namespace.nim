@@ -33,9 +33,9 @@ proc eval_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr):
 proc translate_ns(value: Value): Expr =
   var e = ExNamespace(
     evaluator: eval_ns,
-    body: translate(value.gene_data[1..^1]),
+    body: translate(value.gene_children[1..^1]),
   )
-  var first = value.gene_data[0]
+  var first = value.gene_children[0]
   case first.kind
   of VkSymbol:
     e.name = first.symbol
@@ -59,11 +59,11 @@ proc eval_member_missing(self: VirtualMachine, frame: Frame, target: Value, expr
 proc translate_member_missing(value: Value): Expr =
   var name = "member_missing"
   var matcher = new_arg_matcher()
-  matcher.parse(value.gene_data[0])
+  matcher.parse(value.gene_children[0])
 
   var body: seq[Value] = @[]
-  for i in 1..<value.gene_data.len:
-    body.add value.gene_data[i]
+  for i in 1..<value.gene_children.len:
+    body.add value.gene_children[i]
 
   body = wrap_with_try(body)
   var fn = new_fn(name, matcher, body)

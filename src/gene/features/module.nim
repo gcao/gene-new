@@ -40,23 +40,23 @@ proc new_import_matcher(s: string): ImportMatcher =
     todo("new_import_matcher " & s)
 
 proc parse*(self: ImportMatcherRoot, input: Value, group: ptr seq[ImportMatcher]) =
-  var data: seq[Value]
+  var children: seq[Value]
   case input.kind:
   of VkGene:
-    data = input.gene_data
+    children = input.gene_children
   of VkVector:
-    data = input.vec
+    children = input.vec
   else:
     todo()
 
   var i = 0
-  while i < data.len:
-    var item = data[i]
+  while i < children.len:
+    var item = children[i]
     i += 1
     case item.kind:
     of VkSymbol:
       if item.symbol == "from":
-        self.from = data[i]
+        self.from = children[i]
         i += 1
       else:
         group[].add(new_import_matcher(item.symbol))
@@ -73,7 +73,7 @@ proc parse*(self: ImportMatcherRoot, input: Value, group: ptr seq[ImportMatcher]
         var name = names[j]
         j += 1
         if name == "": # TODO: throw error if "" is not the last
-          self.parse(data[i], matcher.children.addr)
+          self.parse(children[i], matcher.children.addr)
           i += 1
         else:
           matcher = new_import_matcher(name)
@@ -117,7 +117,7 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
         source[m.name]
       else:
         var args = new_gene_gene()
-        args.gene_data.add(m.name.to_s)
+        args.gene_children.add(m.name.to_s)
         self.call_member_missing(frame, Value(kind: VkNamespace, ns: source), source.member_missing, args)
       if m.children_only:
         self.import_from_ns(frame, value.ns, m.children)

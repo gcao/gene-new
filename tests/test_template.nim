@@ -31,8 +31,8 @@ test_interpreter """
   ($render :(test %a 2))
 """, proc(r: Value) =
   check r.gene_type == new_gene_symbol("test")
-  check r.gene_data[0] == 1
-  check r.gene_data[1] == 2
+  check r.gene_children[0] == 1
+  check r.gene_children[1] == 2
 
 test_interpreter """
   (var tpl :[%(f b)])
@@ -80,8 +80,8 @@ test_interpreter """
     )
   ))
 """, proc(r: Value) =
-  check r.gene_data[0] == 1
-  check r.gene_data[1] == 2
+  check r.gene_children[0] == 1
+  check r.gene_children[1] == 2
 
 test_interpreter """
   ($render :[
@@ -121,7 +121,7 @@ test_interpreter """
   (a = 2)
   ($render tpl)
 """, proc(r: Value) =
-  check r.gene_data[0] == 2
+  check r.gene_children[0] == 2
 
 # # test_interpreter """
 # #   (var a [1 2])
@@ -131,9 +131,9 @@ test_interpreter """
 # #   )
 # # """, proc(r: Value) =
 # #   check r.gene_type == new_gene_symbol("test")
-# #   check r.gene_data[0] == 1
-# #   check r.gene_data[1] == 2
-# #   check r.gene_data[2] == 3
+# #   check r.gene_children[0] == 1
+# #   check r.gene_children[1] == 2
+# #   check r.gene_children[2] == 3
 
 # # TODO: nested quote/unquote, need more thoughts before implementing
 # # test_interpreter """

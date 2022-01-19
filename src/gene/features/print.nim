@@ -19,7 +19,7 @@ proc translate_print(value: Value): Expr =
     evaluator: eval_print,
     new_line: value.gene_type.symbol == "println",
   )
-  for item in value.gene_data:
+  for item in value.gene_children:
     r.data.add translate(item)
   return r
 

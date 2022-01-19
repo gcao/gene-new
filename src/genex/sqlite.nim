@@ -10,14 +10,14 @@ var ConnectionClass: Value
 var StatementClass: Value
 
 proc open*(args: Value): Value {.wrap_exception.} =
-  var db = open(args.gene_data[0].str, "", "", "")
+  var db = open(args.gene_children[0].str, "", "", "")
   new_gene_custom(CustomConnection(conn: db), ConnectionClass.class)
 
 proc exec*(self: Value, args: Value): Value {.wrap_exception.} =
   result = new_gene_vec()
   var conn = cast[CustomConnection](self.custom).conn
   var stmt: string
-  var arg0 = args.gene_data[0]
+  var arg0 = args.gene_children[0]
   case arg0.kind
   of VkString:
     stmt = arg0.str

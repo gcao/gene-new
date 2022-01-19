@@ -10,11 +10,11 @@ proc new_extension2*(args: Value): Value {.wrap_exception.} =
   Value(
     kind: VkCustom,
     custom: Extension2(
-      name: args.gene_data[0].str,
+      name: args.gene_children[0].str,
     ),
   )
 
 proc extension2_name*(args: Value): Value {.wrap_exception.} =
-  Extension2(args.gene_data[0].custom).name
+  Extension2(args.gene_children[0].custom).name
 
 {.pop.}

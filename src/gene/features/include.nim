@@ -19,7 +19,7 @@ proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var E
 proc translate_include(value: Value): Expr =
   result = ExInclude(
     evaluator: eval_include,
-    path: translate(value.gene_data[0]),
+    path: translate(value.gene_children[0]),
   )
 
 proc init*() =

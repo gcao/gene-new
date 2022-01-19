@@ -106,19 +106,19 @@ var ResponseClass: Value
 
 proc new_response*(args: Value): Value {.wrap_exception.} =
   var resp = Response()
-  if args.gene_data.len == 0:
+  if args.gene_children.len == 0:
     resp.status = 200
   else:
-    var first = args.gene_data[0]
+    var first = args.gene_children[0]
     case first.kind:
     of VkInt:
       resp.status = first.int
-      if args.gene_data.len > 1:
-        resp.body = args.gene_data[1].str
+      if args.gene_children.len > 1:
+        resp.body = args.gene_children[1].str
       else:
         resp.body = ""
-      if args.gene_data.len > 2:
-        for k, v in args.gene_data[2].map:
+      if args.gene_children.len > 2:
+        for k, v in args.gene_children[2].map:
           resp.headers[k.to_s] = v
     of VkString:
       resp.status = 200
@@ -141,14 +141,14 @@ proc translate_respond(value: Value): Expr {.wrap_exception.} =
       new_gene_complex_symbol(@["genex", "http", "Response"]),
     ),
   )
-  var new_stmt = new_value.gene_data[0]
+  var new_stmt = new_value.gene_children[0]
   if value.gene_type.symbol == "redirect":
-    new_stmt.gene_data.add(new_gene_int(302))
-    new_stmt.gene_data.add(new_gene_string(""))
-    new_stmt.gene_data.add(new_gene_map({"Location": value.gene_data[0]}.toOrderedTable()))
+    new_stmt.gene_children.add(new_gene_int(302))
+    new_stmt.gene_children.add(new_gene_string(""))
+    new_stmt.gene_children.add(new_gene_map({"Location": value.gene_children[0]}.toOrderedTable()))
   else:
-    for v in value.gene_data:
-      new_stmt.gene_data.add(v)
+    for v in value.gene_children:
+      new_stmt.gene_children.add(v)
   translate(new_value)
 
 proc new_gene_request(req: stdhttp.Request): Value =
@@ -187,16 +187,16 @@ proc resp_status*(self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Response](self.custom).status
 
 proc start_server_internal*(args: Value): Value =
-  var port = if args.gene_data[0].kind == VkString:
-    args.gene_data[0].str.parse_int
+  var port = if args.gene_children[0].kind == VkString:
+    args.gene_children[0].str.parse_int
   else:
-    args.gene_data[0].int
+    args.gene_children[0].int
 
   proc handler(req: stdhttp.Request) {.async gcsafe.} =
     echo "HTTP REQ : " & $req.url
     var my_args = new_gene_gene()
-    my_args.gene_data.add(new_gene_request(req))
-    var res = VM.invoke_catch(nil, args.gene_data[1], my_args)
+    my_args.gene_children.add(new_gene_request(req))
+    var res = VM.invoke_catch(nil, args.gene_children[1], my_args)
     if res == nil or res.kind == VkNil:
       echo "HTTP RESP: 404"
       echo()
@@ -234,30 +234,30 @@ proc start_server*(args: Value): Value {.wrap_exception.} =
   start_server_internal(args)
 
 proc http_get(args: Value): Value {.wrap_exception.} =
-  var url = args.gene_data[0].str
+  var url = args.gene_children[0].str
   var headers = newHttpHeaders()
-  if args.gene_data.len > 2:
-    for k, v in args.gene_data[2].map:
+  if args.gene_children.len > 2:
+    for k, v in args.gene_children[2].map:
       headers.add(k.to_s, v.str)
   var client = newHttpClient()
   client.headers = headers
   result = client.get_content(url)
 
 proc http_get_json(args: Value): Value {.wrap_exception.} =
-  var url = args.gene_data[0].str
+  var url = args.gene_children[0].str
   var headers = newHttpHeaders()
-  if args.gene_data.len > 2:
-    for k, v in args.gene_data[2].map:
+  if args.gene_children.len > 2:
+    for k, v in args.gene_children[2].map:
       headers.add(k.to_s, v.str)
   var client = newHttpClient()
   client.headers = headers
   result = client.get_content(url).parse_json
 
 proc http_get_async(args: Value): Value {.wrap_exception.} =
-  var url = args.gene_data[0].str
+  var url = args.gene_children[0].str
   var headers = newHttpHeaders()
-  if args.gene_data.len > 2:
-    for k, v in args.gene_data[2].map:
+  if args.gene_children.len > 2:
+    for k, v in args.gene_children[2].map:
       headers.add(k.to_s, v.str)
   var client = newAsyncHttpClient()
   client.headers = headers

@@ -27,7 +27,7 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
         else:
           frame.scope.def_member(field.name, v)
     of VkGene:
-      for i, v in value.gene_data:
+      for i, v in value.gene_children:
         let field = matcher.children[i]
         if field.is_prop:
           frame.self.instance_props[field.name] = v
@@ -41,8 +41,8 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 proc translate_match(value: Value): Expr =
   return ExMatch(
     evaluator: eval_match,
-    matcher: new_arg_matcher(value.gene_data[0]),
-    value: translate(value.gene_data[1]),
+    matcher: new_arg_matcher(value.gene_children[0]),
+    value: translate(value.gene_children[1]),
   )
 
 proc init*() =

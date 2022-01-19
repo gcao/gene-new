@@ -18,9 +18,9 @@ proc eval_cast(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
 proc translate_cast(value: Value): Expr =
   ExCast(
     evaluator: eval_cast,
-    value: translate(value.gene_data[0]),
-    class: translate(value.gene_data[1]),
-    body: translate(value.gene_data[2..^1]),
+    value: translate(value.gene_children[0]),
+    class: translate(value.gene_children[1]),
+    body: translate(value.gene_children[2..^1]),
   )
 
 proc init*() =

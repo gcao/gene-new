@@ -42,16 +42,16 @@ proc render(self: VirtualMachine, frame: Frame, value: var Value): Value =
     result.gene_type = self.render(frame, value.gene_type)
     for key, val in value.gene_props.mpairs:
       result.gene_props[key] = self.render(frame, val)
-    if value.gene_data.len > 0:
-      for item in value.gene_data.mitems:
+    if value.gene_children.len > 0:
+      for item in value.gene_children.mitems:
         var v = self.render(frame, item)
         if v == nil:
           discard
         elif v.kind == VkExplode:
           for item in v.explode.vec:
-            result.gene_data.add(item)
+            result.gene_children.add(item)
         else:
-          result.gene_data.add(v)
+          result.gene_children.add(v)
     return result
   else:
     discard
@@ -73,7 +73,7 @@ proc eval_render(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 proc translate_render(value: Value): Expr =
   ExRender(
     evaluator: eval_render,
-    data: translate(value.gene_data[0]),
+    data: translate(value.gene_children[0]),
   )
 
 proc init*() =
