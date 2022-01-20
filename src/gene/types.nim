@@ -459,7 +459,7 @@ type
     MatchArgs
 
   MatchingMode* = enum
-    MatchArgParsing # (fn f [a b] ...)
+    MatchArguments # (fn f [a b] ...)
     MatchExpression # (match [a b] input): a and b will be defined
     MatchAssignment # ([a b] = input): a and b must be defined first
 
@@ -1927,7 +1927,7 @@ proc new_match_matcher*(): RootMatcher =
 
 proc new_arg_matcher*(): RootMatcher =
   result = RootMatcher(
-    mode: MatchArgParsing,
+    mode: MatchArguments,
   )
 
 proc new_matcher*(root: RootMatcher, kind: MatcherKind): Matcher =
