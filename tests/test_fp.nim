@@ -6,9 +6,12 @@ import ./helpers
 
 # Functional programming:
 #
+# * Define function
+# * Call function
 # * Return function as result
 # * Pass function around
 # * Closure
+# * Bounded function
 # * Iterators
 # * Pure function (mark function as pure, all standard lib should be marked pure if true)
 # * Continuation - is it possible?
@@ -298,3 +301,14 @@ test_interpreter """
 # #   )
 # #   (1 >> f 2)
 # # """, 3
+
+# # $bind work like Function.bind in JavaScript.
+# test_interpreter """
+#   (fn f [a b]
+#     (self + a + b)
+#   )
+#   (var g
+#     ($bind f 1 2)
+#   )
+#   (g 3)
+# """, 6

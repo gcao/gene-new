@@ -330,6 +330,11 @@ proc init*() =
     GENE_NS.ns["Bool"] = BoolClass
     GLOBAL_NS.ns["Bool"] = BoolClass
 
+    IntClass = Value(kind: VkClass, class: new_class("Int"))
+    IntClass.class.parent = ObjectClass.class
+    GENE_NS.ns["Int"] = IntClass
+    GLOBAL_NS.ns["Int"] = IntClass
+
     NilClass = Value(kind: VkClass, class: new_class("Nil"))
     NilClass.class.parent = ObjectClass.class
     GENE_NS.ns["Nil"] = NilClass

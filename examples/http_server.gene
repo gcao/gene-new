@@ -131,7 +131,7 @@
 # ($tap <value> <body>) will run <body> with `self` set to <value> and return <value>
 (var app ($tap (new App port)
   (/@middlewares .add auth)
-  ($set self @handler ($tap (new DummyRouter)
+  ($set @handler ($tap (new DummyRouter)
     (/@handlers .add hello)
     (/@handlers .add secret)
   ))

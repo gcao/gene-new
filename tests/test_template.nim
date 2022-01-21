@@ -27,8 +27,9 @@ test_interpreter """
 """, 3
 
 test_interpreter """
+  (var tpl :(test %a 2))
   (var a 1)
-  ($render :(test %a 2))
+  ($render tpl)
 """, proc(r: Value) =
   check r.gene_type == new_gene_symbol("test")
   check r.gene_children[0] == 1

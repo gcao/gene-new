@@ -27,29 +27,17 @@
 )
 
 (class Record
+  (method test _
+    (println "Table:" /.class/table)
+  )
 )
 
 (class Orm
   (method new @conn
   )
 
-  (method from model
-    (@query = (new Query model))
-    self
-  )
-
-  (method find id
-    (@query .where "id = ?" id)
-    (@query .limit 1)
-    (.exec)
-  )
-
-  (method all _
-    (.exec)
-  )
-
-  (method exec _
-    (@conn .exec (@query .to_s))
+  (method exec query
+    (@conn .exec (query .to_s))
   )
 
   # If no id, insert into the table, else update existing row.
@@ -61,7 +49,15 @@
 )
 
 (class Query
-  (method new @from
+  (method new @table
+  )
+
+  (method find id
+    (.where "id = ?" id)
+    (.limit 1)
+  )
+
+  (method all _
   )
 
   (method select @select...
@@ -89,7 +85,7 @@
     else
       (sql .append "* ")
     )
-    (sql .append "FROM " @from " ")
+    (sql .append "FROM " @table " ")
     (if @joins
       (sql .append (@joins .join " ") " ")
     )
@@ -107,6 +103,11 @@
 
 (class Todo < Record
   (var /table "todos")
+  (var /columns {
+    # id is assumed unless /skip_id is set to true
+    ^description String
+    ^status Int
+  })
 
   (method new @description)
 
@@ -226,7 +227,7 @@
   )
 
   (var app ($tap (new App port)
-    ($set self @handler router)
+    ($set @handler router)
   ))
 
   (app .start)
