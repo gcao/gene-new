@@ -79,12 +79,14 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
 
   if ns.members.has_key(name):
     return ns.members[name]
-  elif ns.member_missing != nil:
+  elif ns.member_missing.len > 0:
     var args = new_gene_gene()
     args.gene_children.add(name.to_s)
-    return vm.call_member_missing(frame, self, ns.member_missing, args)
-  else:
-    raise new_exception(NotDefinedException, name.to_s & " is not defined")
+    for v in ns.member_missing:
+      var r = vm.call_member_missing(frame, self, v, args)
+      if r != nil:
+        return r
+  raise new_exception(NotDefinedException, name.to_s & " is not defined")
 
 proc eval_pkg(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   Value(kind: VkPackage, pkg: frame.ns.package)

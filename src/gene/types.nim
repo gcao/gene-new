@@ -121,7 +121,7 @@ type
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
     members*: Table[MapKey, Value]
-    member_missing*: Value
+    member_missing*: seq[Value]
 
   Scope* = ref object
     parent*: Scope
@@ -849,7 +849,7 @@ proc get_module*(self: Namespace): Module =
     if self.parent != nil:
       return self.parent.get_module()
     else:
-      return nil
+      return
   else:
     return self.module
 

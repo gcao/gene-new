@@ -31,7 +31,7 @@ proc translate*(value: Value): Expr =
 proc translate*(stmts: seq[Value]): Expr =
   case stmts.len:
   of 0:
-    result = new_ex_literal(Nil)
+    result = new_ex_literal(nil)
   of 1:
     result = translate(stmts[0])
   else:

@@ -100,15 +100,15 @@ test_interpreter """
 
 test_interpreter """
   (ns n
-    ($set_member_missing
+    (.member_missing
       (fnx name
         (if (name == "test")
           1
         else
           # What should we do here, in order to pass to the next namespace to search for the name?
           # Option 1: ($get_member /.parent name)
-          # Option 2: (throw (new MemberNotFound name))
-          # Option 3: ($member_missing name)
+          # Option 2: ($not_found)
+          # Option 3: (throw (new MemberNotFound name))
         )
       )
     )
@@ -118,7 +118,7 @@ test_interpreter """
 
 test_interpreter """
   (ns n
-    ($set_member_missing
+    (.member_missing
       (fnx name
         ("" /.name "/" name)
       )
@@ -129,7 +129,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    ($set_member_missing
+    (.member_missing
       (fnx name
         ("" /.name "/" name)
       )
@@ -137,3 +137,23 @@ test_interpreter """
   )
   C/test
 """, "C/test"
+
+test_interpreter """
+  (ns n
+    (.member_missing
+      (fnx name
+        (if (name == "a")
+          1
+        )
+      )
+    )
+    (.member_missing
+      (fnx name
+        (if (name == "b")
+          2
+        )
+      )
+    )
+  )
+  (n/a + n/b)
+""", 3

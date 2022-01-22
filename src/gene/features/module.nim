@@ -113,12 +113,22 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
       for k, v in source.members:
         frame.ns.members[k] = v
     else:
-      var value = if source.has_key(m.name):
-        source[m.name]
-      else:
+      var value: Value
+      if source.has_key(m.name):
+        value = source[m.name]
+      elif source.member_missing.len > 0:
+        var ns = Value(kind: VkNamespace, ns: source)
         var args = new_gene_gene()
         args.gene_children.add(m.name.to_s)
-        self.call_member_missing(frame, Value(kind: VkNamespace, ns: source), source.member_missing, args)
+        for v in source.member_missing:
+          var r = self.call_member_missing(frame, ns, v, args)
+          if r != nil:
+            value = r
+            break
+
+      if value == nil:
+        raise new_exception(NotDefinedException, m.name.to_s & " is not defined")
+
       if m.children_only:
         self.import_from_ns(frame, value.ns, m.children)
       else:

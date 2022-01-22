@@ -46,7 +46,7 @@ proc translate_ns(value: Value): Expr =
 
 proc eval_member_missing(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var fn = self.eval(frame, cast[ExMemberMissing](expr).data)
-  frame.ns.member_missing = fn
+  frame.ns.member_missing.add(fn)
 
 proc translate_member_missing(value: Value): Expr =
   return ExMemberMissing(

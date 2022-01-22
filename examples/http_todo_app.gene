@@ -26,12 +26,6 @@
   """)
 )
 
-(class Record
-  (method test _
-    (println "Table:" /.class/table)
-  )
-)
-
 (class Orm
   (method new @conn
   )
@@ -98,6 +92,12 @@
     (if @limit
       (sql .append "LIMIT " @limit)
     )
+  )
+)
+
+(class Record
+  (method test _
+    (println "Table:" /.class/table)
   )
 )
 
@@ -169,7 +169,7 @@
   (method index req
     (var conn (DB/open DB_HOST DB_USER DB_PASS DB_NAME))
     (var orm (new Orm conn))
-    (var todos ((orm .from Todo) .all))
+    (var todos (orm .exec Todo/all))
     (.render
       (DIV "Show all TODOs here.")
     )
