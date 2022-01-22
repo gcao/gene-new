@@ -116,11 +116,11 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
       var value: Value
       if source.has_key(m.name):
         value = source[m.name]
-      elif source.member_missing.len > 0:
+      elif source.on_member_missing.len > 0:
         var ns = Value(kind: VkNamespace, ns: source)
         var args = new_gene_gene()
         args.gene_children.add(m.name.to_s)
-        for v in source.member_missing:
+        for v in source.on_member_missing:
           var r = self.call_member_missing(frame, ns, v, args)
           if r != nil:
             value = r

@@ -79,10 +79,10 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
 
   if ns.members.has_key(name):
     return ns.members[name]
-  elif ns.member_missing.len > 0:
+  elif ns.on_member_missing.len > 0:
     var args = new_gene_gene()
     args.gene_children.add(name.to_s)
-    for v in ns.member_missing:
+    for v in ns.on_member_missing:
       var r = vm.call_member_missing(frame, self, v, args)
       if r != nil:
         return r

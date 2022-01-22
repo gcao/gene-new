@@ -7,7 +7,7 @@ import ./helpers
 # Ideas:
 # * Namespace.member_defined (called when a member is defined or re-defined)
 # * Namespace.member_removed
-# * Namespace.member_missing (invoked only if <some_ns>/something is invoked and something is not defined)
+# * Namespace.on_member_missing (invoked only if <some_ns>/something is invoked and something is not defined)
 # * Namespace.has_member - it should be consistent with member_missing
 
 # * object created
@@ -19,6 +19,7 @@ import ./helpers
 # * respond_to - whether it'll respond to a method name, it should be consistent with method_missing
 
 # * class extended - can not be unextended
+
 # * mixin included - can not be removed
 
 # * module imported

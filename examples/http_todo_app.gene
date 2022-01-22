@@ -96,6 +96,11 @@
 )
 
 (class Record
+  # Query all and convert each row to an instance of model class
+  (method all _
+    (var query (new Query /.class/table))
+  )
+
   (method test _
     (println "Table:" /.class/table)
   )
@@ -167,12 +172,19 @@
 
 (class TodosController < Controller
   (method index req
+    # Open connection to the database
     (var conn (DB/open DB_HOST DB_USER DB_PASS DB_NAME))
+    # Create a instance of Orm with DB connection
     (var orm (new Orm conn))
-    (var todos (orm .exec Todo/all))
+    # Set orm member on Record class which gets inherited by child classes
+    (var Record/orm orm)
+
+    (var todos Todo/all)
     (.render
       (DIV "Show all TODOs here.")
     )
+  finally
+    # TODO: close the database connection
   )
 
   (method create req

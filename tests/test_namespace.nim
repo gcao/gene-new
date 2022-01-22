@@ -8,7 +8,7 @@ import ./helpers
 #
 # * Namespace.member_defined (called when a member is defined or re-defined)
 # * Namespace.member_removed
-# * Namespace.member_missing (invoked only if <some_ns>/something is invoked and something is not defined)
+# * Namespace.on_member_missing (invoked only if <some_ns>/something is invoked and something is not defined)
 # * Namespace.has_member - it should be consistent with member_missing
 
 test_interpreter "(ns test)", proc(r: Value) =
@@ -100,7 +100,7 @@ test_interpreter """
 
 test_interpreter """
   (ns n
-    (.member_missing
+    (.on_member_missing
       (fnx name
         (if (name == "test")
           1
@@ -118,7 +118,7 @@ test_interpreter """
 
 test_interpreter """
   (ns n
-    (.member_missing
+    (.on_member_missing
       (fnx name
         ("" /.name "/" name)
       )
@@ -129,7 +129,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (.member_missing
+    (.on_member_missing
       (fnx name
         ("" /.name "/" name)
       )
@@ -140,14 +140,14 @@ test_interpreter """
 
 test_interpreter """
   (ns n
-    (.member_missing
+    (.on_member_missing
       (fnx name
         (if (name == "a")
           1
         )
       )
     )
-    (.member_missing
+    (.on_member_missing
       (fnx name
         (if (name == "b")
           2

@@ -399,3 +399,16 @@ test_interpreter """
 #   )
 #   (Config .test)
 # """, "Config.test"
+
+test_interpreter """
+  (class A
+    (var /children [])
+    (.on_extended
+      (fnx child
+        (/children .add child)
+      )
+    )
+  )
+  (class B < A)
+  A/children/.size
+""", 1

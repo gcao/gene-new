@@ -66,12 +66,19 @@ proc arg_translator*(value: Value): Expr =
 proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExClass](expr)
   var class = new_class(e.name)
+  result = Value(kind: VkClass, class: class)
   if e.parent == nil:
     class.parent = ObjectClass.class
   else:
-    class.parent = self.eval(frame, e.parent).class
+    var parent = self.eval(frame, e.parent)
+    class.parent = parent.class
+    if not parent.class.on_extended.is_nil:
+      var f = new_frame()
+      f.self = parent
+      var args = new_gene_gene()
+      args.gene_children.add(result)
+      discard VM.call(f, parent, parent.class.on_extended, args)
   class.ns.parent = frame.ns
-  result = Value(kind: VkClass, class: class)
   var container = frame.ns
   if e.container != nil:
     container = self.eval(frame, e.container).ns
@@ -508,7 +515,7 @@ proc init*() =
   GeneTranslators["include"] = translate_include
   GeneTranslators["new"] = translate_new
   GeneTranslators["method"] = translate_method
+  GeneTranslators["super"] = translate_super
   GeneTranslators["$invoke_method"] = translate_invoke
   GeneTranslators["$invoke_dynamic"] = translate_invoke_dynamic
-  GeneTranslators["super"] = translate_super
   # GeneTranslators["method_missing"] = translate_method_missing

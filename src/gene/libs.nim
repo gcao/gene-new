@@ -17,19 +17,22 @@ proc object_to_s(self: Value, args: Value): Value =
 proc object_to_bool(self: Value, args: Value): Value =
   self.to_bool
 
-proc member_missing(self: Value, args: Value): Value =
+proc on_member_missing(self: Value, args: Value): Value =
   case self.kind
   of VkNamespace:
-    self.ns.member_missing.add(args.gene_children[0])
+    self.ns.on_member_missing.add(args.gene_children[0])
   of VkClass:
-    self.class.ns.member_missing.add(args.gene_children[0])
+    self.class.ns.on_member_missing.add(args.gene_children[0])
   of VkMixin:
-    self.mixin.ns.member_missing.add(args.gene_children[0])
+    self.mixin.ns.on_member_missing.add(args.gene_children[0])
   else:
     todo("member_missing " & $self.kind)
 
 proc class_name(self: Value, args: Value): Value =
   self.class.name
+
+proc class_on_extended(self: Value, args: Value): Value =
+  self.class.on_extended = args.gene_children[0]
 
 proc class_parent(self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.class.parent)
@@ -316,7 +319,8 @@ proc init*() =
     ClassClass.class.parent = ObjectClass.class
     ClassClass.def_native_method("name", class_name)
     ClassClass.def_native_method("parent", class_parent)
-    ClassClass.def_native_method "member_missing", member_missing
+    ClassClass.def_native_method "on_member_missing", on_member_missing
+    ClassClass.def_native_method "on_extended", class_on_extended
     GENE_NS.ns["Class"] = ClassClass
     GLOBAL_NS.ns["Class"] = ClassClass
 
@@ -332,7 +336,7 @@ proc init*() =
     NamespaceClass.class.parent = ObjectClass.class
     NamespaceClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =
       self.ns.name
-    NamespaceClass.def_native_method "member_missing", member_missing
+    NamespaceClass.def_native_method "on_member_missing", on_member_missing
     GENE_NS.ns["Namespace"] = NamespaceClass
     GLOBAL_NS.ns["Namespace"] = NamespaceClass
 
@@ -525,7 +529,7 @@ proc init*() =
       )
     )
 
-    (global/genex .member_missing
+    (global/genex .on_member_missing
       (fnx name
         (case name
         when "http"

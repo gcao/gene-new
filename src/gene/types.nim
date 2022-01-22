@@ -121,7 +121,7 @@ type
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
     members*: Table[MapKey, Value]
-    member_missing*: seq[Value]
+    on_member_missing*: seq[Value]
 
   Scope* = ref object
     parent*: Scope
@@ -138,6 +138,7 @@ type
     name*: string
     constructor*: Method
     methods*: Table[MapKey, Method]
+    on_extended*: Value
     # method_missing*: Value
     ns*: Namespace # Class can act like a namespace
 

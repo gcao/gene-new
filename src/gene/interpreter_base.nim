@@ -427,6 +427,65 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
   else:
     todo()
 
+proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value =
+  case target.kind:
+  of VkFunction:
+    var fn_scope = new_scope()
+    fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
+    var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
+    new_frame.self = this
+    new_frame.parent = frame
+
+    self.process_args(new_frame, target.fn.matcher, args)
+    result = self.call_fn_skip_args(new_frame, target)
+  of VkBlock:
+    var scope = new_scope()
+    scope.set_parent(target.block.parent_scope, target.block.parent_scope_max)
+    var new_frame = Frame(ns: target.block.ns, scope: scope)
+    new_frame.self = this
+    new_frame.parent = frame
+
+    case target.block.matching_hint.mode:
+    of MhSimpleData:
+      for _, v in args.gene_props.mpairs:
+        todo()
+      for i, v in args.gene_children.mpairs:
+        let field = target.block.matcher.children[i]
+        new_frame.scope.def_member(field.name, v)
+    of MhNone:
+      discard
+    else:
+      todo()
+
+    try:
+      result = self.eval(new_frame, target.block.body_compiled)
+    except Return as r:
+      result = r.val
+    except system.Exception as e:
+      if self.repl_on_error:
+        result = repl_on_error(self, frame, e)
+        discard
+      else:
+        raise
+  of VkInstance:
+    var class = target.instance_class
+    var meth = class.get_method(CALL_KEY)
+    var fn = meth.callable.fn
+    var fn_scope = new_scope()
+    fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
+    var new_frame = Frame(ns: fn.ns, scope: fn_scope)
+    new_frame.self = target
+    new_frame.parent = frame
+
+    self.process_args(new_frame, fn.matcher, args)
+    result = self.call_fn_skip_args(new_frame, meth.callable)
+  else:
+    # TODO: Support
+    # VkAny / VkCustom => similar to VkInstance
+    # VkClass => create instance and call the constructor?
+    # VkNativeFn/VkNativeFn2 => call the native function/procedure
+    todo($target.kind)
+
 proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMatcher, args_expr: ExArguments) {.inline.} =
   case matcher.hint.mode:
   of MhNone:

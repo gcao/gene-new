@@ -44,16 +44,5 @@ proc translate_ns(value: Value): Expr =
     todo()
   result = e
 
-proc eval_member_missing(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var fn = self.eval(frame, cast[ExMemberMissing](expr).data)
-  frame.ns.member_missing.add(fn)
-
-proc translate_member_missing(value: Value): Expr =
-  return ExMemberMissing(
-    evaluator: eval_member_missing,
-    data: translate(value.gene_children[0]),
-  )
-
 proc init*() =
   GeneTranslators["ns"] = translate_ns
-  GeneTranslators["$set_member_missing"] = translate_member_missing
