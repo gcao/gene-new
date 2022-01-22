@@ -4,6 +4,13 @@ import gene/types
 
 import ./helpers
 
+# Namespace related metaprogramming:
+#
+# * Namespace.member_defined (called when a member is defined or re-defined)
+# * Namespace.member_removed
+# * Namespace.member_missing (invoked only if <some_ns>/something is invoked and something is not defined)
+# * Namespace.has_member - it should be consistent with member_missing
+
 test_interpreter "(ns test)", proc(r: Value) =
   check r.ns.name == "test"
 
@@ -80,17 +87,6 @@ test_interpreter """
   (A/f 1)
 """, 1
 
-# test_interpreter """
-#   (ns n
-#     (member_missing
-#       (fnx [self name]
-#         "not found"
-#       )
-#     )
-#   )
-#   n/A  # only when a name is accessed using a/X or a/b/X, member_missing is triggered
-# """, "not found"
-
 test_interpreter """
   (ns n
     (class A)
@@ -101,3 +97,43 @@ test_interpreter """
   n/m/B
 """, proc(r: Value) =
   check r.class.name == "B"
+
+test_interpreter """
+  (ns n
+    ($set_member_missing
+      (fnx name
+        (if (name == "test")
+          1
+        else
+          # What should we do here, in order to pass to the next namespace to search for the name?
+          # Option 1: ($get_member /.parent name)
+          # Option 2: (throw (new MemberNotFound name))
+          # Option 3: ($member_missing name)
+        )
+      )
+    )
+  )
+  n/test
+""", 1
+
+test_interpreter """
+  (ns n
+    ($set_member_missing
+      (fnx name
+        ("" /.name "/" name)
+      )
+    )
+  )
+  n/test
+""", "n/test"
+
+test_interpreter """
+  (class C
+    ($set_member_missing
+      (fnx name
+        ("" /.name "/" name)
+      )
+    )
+  )
+  C/test
+""", "C/test"

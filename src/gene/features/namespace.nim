@@ -13,7 +13,7 @@ type
     body*: Expr
 
   ExMemberMissing* = ref object of Expr
-    fn: Function
+    data: Expr
 
 proc eval_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExNamespace](expr)
@@ -47,33 +47,15 @@ proc translate_ns(value: Value): Expr =
   result = e
 
 proc eval_member_missing(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  result = Value(
-    kind: VkFunction,
-    fn: cast[ExMemberMissing](expr).fn,
-  )
-  result.fn.ns = frame.ns
-  result.fn.parent_scope = frame.scope
-  result.fn.parent_scope_max = frame.scope.max
-  frame.ns.member_missing = result
+  var fn = self.eval(frame, cast[ExMemberMissing](expr).data)
+  frame.ns.member_missing = fn
 
 proc translate_member_missing(value: Value): Expr =
-  var name = "member_missing"
-  var matcher = new_arg_matcher()
-  matcher.parse(value.gene_children[0])
-
-  var body: seq[Value] = @[]
-  for i in 1..<value.gene_children.len:
-    body.add value.gene_children[i]
-
-  body = wrap_with_try(body)
-  var fn = new_fn(name, matcher, body)
-  fn.async = value.gene_props.get_or_default(ASYNC_KEY, false)
-
-  ExMemberMissing(
+  return ExMemberMissing(
     evaluator: eval_member_missing,
-    fn: fn,
+    data: translate(value.gene_children[0]),
   )
 
 proc init*() =
   GeneTranslators["ns"] = translate_ns
-  GeneTranslators["member_missing"] = translate_member_missing
+  GeneTranslators["$set_member_missing"] = translate_member_missing

@@ -28,40 +28,6 @@ import ./helpers
 # * aspect enabled
 # * ...
 
-test_interpreter """
-  (ns n
-    (member_missing name
-      (if (name == "test")
-        1
-      else
-        # What should we do here, in order to pass to the next namespace to search for the name?
-        # Option 1: ($get_member self/.parent)
-        # Option 3: ($member_missing name)
-        # Option 2: (throw (new MemberNotFound name))
-      )
-    )
-  )
-  n/test
-""", 1
-
-test_interpreter """
-  (ns n
-    (member_missing name
-      ("" self/.name "/" name)
-    )
-  )
-  n/test
-""", "n/test"
-
-test_interpreter """
-  (class C
-    (member_missing name
-      ("" self/.name "/" name)
-    )
-  )
-  C/test
-""", "C/test"
-
 # test_interpreter """
 #   (class C
 #     (method_missing _
