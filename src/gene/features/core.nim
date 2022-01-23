@@ -50,6 +50,11 @@ proc translate_void(value: Value): Expr =
     r.children.add translate(item)
   result = r
 
+proc translate_explode(value: Value): Expr =
+  var r = new_ex_explode()
+  r.data = translate(value.gene_children[0])
+  result = r
+
 proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExStrings](expr)
   var s = ""
@@ -166,6 +171,7 @@ proc translate_tap(value: Value): Expr =
 proc init*() =
   GeneTranslators["do"] = translate_do
   GeneTranslators["void"] = translate_void
+  GeneTranslators["..."] = translate_explode
   GeneTranslators["$"] = translate_string
   GeneTranslators["$with"] = translate_with
   # In IDE, a breakpoint should be set in eval_debug and when running in debug

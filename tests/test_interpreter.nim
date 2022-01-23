@@ -275,9 +275,9 @@ test_interpreter """
   [1 a... 4]
 """, @[1, 2, 3, 4]
 
-# test_interpreter """
-#   [1 (... [2 3]) 4]
-# """, @[1, 2, 3, 4]
+test_interpreter """
+  [1 (... [2 3]) 4]
+""", @[1, 2, 3, 4]
 
 # test "Interpreter / eval: native function (test)":
 #   init_all()
