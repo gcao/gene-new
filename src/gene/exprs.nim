@@ -116,16 +116,23 @@ type
 
 type
   ExArguments* = ref object of Expr
+    has_explode*: bool
     props*: Table[MapKey, Expr]
     children*: seq[Expr]
 
 proc eval_args*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  todo()
+  todo("eval_args")
 
 proc new_ex_arg*(): ExArguments =
   result = ExArguments(
     evaluator: eval_args,
   )
+
+proc check_explode*(self: var ExArguments) =
+  for child in self.children:
+    if child of ExExplode:
+      self.has_explode = true
+      return
 
 #################### ExBreak #####################
 

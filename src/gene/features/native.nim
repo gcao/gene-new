@@ -21,13 +21,7 @@ proc eval_native_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var
     todo("eval_native_fn " & $target.kind)
 
 proc native_fn_arg_translator*(value: Value): Expr =
-  var e = new_ex_arg()
-  e.evaluator = eval_native_fn
-  for k, v in value.gene_props:
-    e.props[k] = translate(v)
-  for v in value.gene_children:
-    e.children.add(translate(v))
-  return e
+  return translate_arguments(value, eval_native_fn)
 
 proc eval_native_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var args = new_gene_gene()
@@ -40,13 +34,7 @@ proc eval_native_method(self: VirtualMachine, frame: Frame, target: Value, expr:
   target.native_method(frame.self, args)
 
 proc native_method_arg_translator*(value: Value): Expr =
-  var e = new_ex_arg()
-  e.evaluator = eval_native_method
-  for k, v in value.gene_props:
-    e.props[k] = translate(v)
-  for v in value.gene_children:
-    e.children.add(translate(v))
-  return e
+  return translate_arguments(value, eval_native_method)
 
 proc init*() =
   discard

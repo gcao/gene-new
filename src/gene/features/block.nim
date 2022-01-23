@@ -42,13 +42,7 @@ proc eval_block(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   result.block.parent_scope_max = frame.scope.max
 
 proc arg_translator(value: Value): Expr =
-  var e = new_ex_arg()
-  e.evaluator = block_invoker
-  for k, v in value.gene_props:
-    e.props[k] = translate(v)
-  for v in value.gene_children:
-    e.children.add(translate(v))
-  return e
+  return translate_arguments(value, block_invoker)
 
 proc to_block(node: Value): Block =
   var matcher = new_arg_matcher()

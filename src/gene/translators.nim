@@ -39,6 +39,19 @@ proc translate*(stmts: seq[Value]): Expr =
     for stmt in stmts:
       cast[ExGroup](result).children.add(translate(stmt))
 
+proc translate_arguments*(value: Value): Expr =
+  var r = new_ex_arg()
+  for k, v in value.gene_props:
+    r.props[k] = translate(v)
+  for v in value.gene_children:
+    r.children.add(translate(v))
+  r.check_explode()
+  result = r
+
+proc translate_arguments*(value: Value, eval: Evaluator): Expr =
+  result = translate_arguments(value)
+  result.evaluator = eval
+
 proc translate_catch*(value: Value): Expr =
   try:
     result = translate(value)

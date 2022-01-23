@@ -24,13 +24,7 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
   self.call_fn_skip_args(new_frame, target)
 
 proc fn_arg_translator*(value: Value): Expr =
-  var e = new_ex_arg()
-  e.evaluator = function_invoker
-  for k, v in value.gene_props:
-    e.props[k] = translate(v)
-  for v in value.gene_children:
-    e.children.add(translate(v))
-  return e
+  return translate_arguments(value, function_invoker)
 
 proc eval_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = Value(
