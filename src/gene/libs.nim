@@ -54,8 +54,9 @@ proc string_to_i(self: Value, args: Value): Value =
 
 proc string_append(self: Value, args: Value): Value =
   result = self
-  for i in 0..<args.gene_children.len:
-    self.str.add(args[i].to_s)
+  for item in args.gene_children:
+    if not item.is_nil:
+      self.str.add(item.to_s)
 
 proc string_substr(self: Value, args: Value): Value =
   case args.gene_children.len:
@@ -517,7 +518,7 @@ proc init*() =
       (method join [with = ""]
         (var s "")
         (for [i item] in self
-          (s .append (item .to_s) (if (i < (.size)) with))
+          (s .append item/.to_s (if (i < /.size) with))
         )
         s
       )
@@ -569,7 +570,8 @@ proc init*() =
                   )
                   "\""
                 )
-              )).join)
+              )
+            ).join)
             ">"
             (if (/@children/.size > 0)
               ("\n"

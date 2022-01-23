@@ -1416,6 +1416,12 @@ proc is_literal*(self: Value): bool =
   else:
     return false
 
+proc `$`*(self: Class): string =
+  if self.parent.is_nil or self.parent == ObjectClass.class:
+    result = "(class $#)" % [self.name]
+  else:
+    result = "(class $# < $#)" % [self.name, self.parent.name]
+
 proc `$`*(node: Value): string =
   if node.isNil:
     return "nil"
@@ -1465,16 +1471,27 @@ proc `$`*(node: Value): string =
     if node.gene_children.len > 0:
       result &= " " & node.gene_children.join(" ")
     result &= ")"
-  # of VkFunction:
-  #   result = "(fn $# ...)" % [node.fn.name]
-  # of VkMacro:
-  #   result = "(macro $# ...)" % [node.mac.name]
-  # of VkNamespace:
-  #   result = "(ns $# ...)" % [node.ns.name]
-  # of VkClass:
-  #   result = "(class $# ...)" % [node.class.name]
-  # of VkInstance:
-  #   result = "($# ...)" % [node.instance.class.name]
+  of VkFunction:
+    result = "(fn $#)" % [node.fn.name]
+  of VkMacro:
+    result = "(macro $#)" % [node.macro.name]
+  of VkNamespace:
+    result = "(ns $#)" % [node.ns.name]
+  of VkClass:
+    result = $node.class
+  of VkInstance:
+    result = "($# " % [$node.instance_class]
+    var is_first = true
+    for k, v in node.instance_props:
+      if is_first:
+        is_first = false
+      else:
+        result &= " "
+      result &= "^"
+      result &= k.to_s
+      result &= " "
+      result &= $v
+    result &= ")"
   else:
     result = $node.kind
 

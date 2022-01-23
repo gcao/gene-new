@@ -22,8 +22,20 @@ test_interpreter """
 #   sum
 # """, 3
 
-# test_interpreter """
-#   ({^a 1 ^b 2} .map
-#     ([_ v] -> v)
-#   )
-# """, @[1, 2]
+test_interpreter """
+  ({} .map
+    ([_ v] -> v)
+  )
+""", @[]
+
+test_interpreter """
+  ({^a 1 ^b 2} .map
+    ([k v] -> k)
+  )
+""", @["a", "b"]
+
+test_interpreter """
+  ({^a 1 ^b 2} .map
+    ([_ v] -> v)
+  )
+""", @[1, 2]

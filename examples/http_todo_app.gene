@@ -148,6 +148,13 @@
 
   (method new @port
     (@middlewares = [])
+
+    # Open connection to the database
+    (var conn (DB/open DB_HOST DB_USER DB_PASS DB_NAME))
+    # Create a instance of Orm with DB connection
+    (var orm (new Orm conn))
+    # Set orm member on Record class which gets inherited by child classes of Record
+    (var Record/orm orm)
   )
 
   (method construct_handler middleware_index
@@ -171,15 +178,6 @@
 
 # Base class for controllers
 (class Controller
-  (method new _
-    # Open connection to the database
-    (var conn (DB/open DB_HOST DB_USER DB_PASS DB_NAME))
-    # Create a instance of Orm with DB connection
-    (var orm (new Orm conn))
-    # Set orm member on Record class which gets inherited by child classes of Record
-    (var Record/orm orm)
-  )
-
   (method layout [title = "TODO App" content]
     #@$debug (HTML
       (HEAD
@@ -212,8 +210,6 @@
         )))
       )
     )
-  finally
-    # TODO: close the database connection
   )
 
   (method create req
@@ -254,10 +250,11 @@
 ($if_main
   (init_db)
 
-  (var router (new Router))
-  (router .map "/" HomeController)
-  (router .map "/todos" TodosController)
-  (router .map ^^post "/todos" TodosController :create)
+  (var router ($tap (new Router)
+    (.map "/" HomeController)
+    (.map "/todos" TodosController)
+    (.map ^^post "/todos" TodosController :create)
+  ))
 
   (var port
     (if ($cmd_args/.size > 1)
