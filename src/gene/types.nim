@@ -1095,6 +1095,13 @@ proc new_class*(name: string): Class =
     parent = ObjectClass.class
   new_class(name, parent)
 
+proc get_constructor*(self: Class): Method =
+  if self.constructor.is_nil:
+    if not self.parent.is_nil:
+      return self.parent.get_constructor()
+  else:
+    return self.constructor
+
 proc get_method*(self: Class, name: MapKey): Method =
   if self.methods.has_key(name):
     return self.methods[name]

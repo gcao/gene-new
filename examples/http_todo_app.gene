@@ -171,15 +171,28 @@
 
 # Base class for controllers
 (class Controller
-  (method render [title = "TODO App" content]
-    (respond ((HTML
+  (method new _
+    # Open connection to the database
+    (var conn (DB/open DB_HOST DB_USER DB_PASS DB_NAME))
+    # Create a instance of Orm with DB connection
+    (var orm (new Orm conn))
+    # Set orm member on Record class which gets inherited by child classes of Record
+    (var Record/orm orm)
+  )
+
+  (method layout [title = "TODO App" content]
+    #@$debug (HTML
       (HEAD
         (TITLE title)
       )
       (BODY
         content
       )
-    ).to_s))
+    )
+  )
+
+  (method render args...
+    (respond ((.layout args...).to_s))
   )
 )
 
@@ -191,13 +204,6 @@
 
 (class TodosController < Controller
   (method index req
-    # Open connection to the database
-    (var conn (DB/open DB_HOST DB_USER DB_PASS DB_NAME))
-    # Create a instance of Orm with DB connection
-    (var orm (new Orm conn))
-    # Set orm member on Record class which gets inherited by child classes
-    (var Record/orm orm)
-
     (var todos (Todo . Todo/all))
     (.render
       (DIV

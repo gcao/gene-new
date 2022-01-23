@@ -274,6 +274,16 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  (class A
+    (method new _
+      (@test = 1)
+    )
+  )
+  (class B < A)
+  ((new B).@test)
+""", 1
+
+test_interpreter """
   (mixin M
     (method test _
       1

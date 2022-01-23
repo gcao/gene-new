@@ -172,7 +172,7 @@ proc translate_include(value: Value): Expr =
 proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExNew](expr)
   var class = self.eval(frame, expr.class).class
-  var ctor = class.constructor
+  var ctor = class.get_constructor()
   if ctor == nil:
     return Value(
       kind: VkInstance,
