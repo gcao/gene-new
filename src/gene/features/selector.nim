@@ -65,6 +65,12 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
         raise NoResult.new
     of VkInstance:
       return target.instance_props.get_or_default(self.name, Nil)
+    of VkNamespace:
+      return target.ns[self.name]
+    of VkClass:
+      return target.class.ns[self.name]
+    of VkMixin:
+      return target.mixin.ns[self.name]
     else:
       todo($target.kind)
   of SmByType:

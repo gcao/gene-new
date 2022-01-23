@@ -31,7 +31,7 @@
   )
 
   (method exec query
-    (@conn .exec (query .to_s))
+    (/@conn .exec (query .to_s))
   )
 
   # If no id, insert into the table, else update existing row.
@@ -58,8 +58,8 @@
   )
 
   (method join join
-    (@joins ||= [])
-    (@joins .add join)
+    (@joins = (/@joins || []))
+    (/@joins .add join)
   )
 
   (method where @where
@@ -74,31 +74,45 @@
 
   (method to_s _
     (var sql "SELECT ")
-    (if @select
-      (sql .append (@select .join ",") " ")
+    (if /@select
+      (sql .append (/@select .join ",") " ")
     else
       (sql .append "* ")
     )
-    (sql .append "FROM " @table " ")
-    (if @joins
-      (sql .append (@joins .join " ") " ")
+    (sql .append "FROM " /@table " ")
+    (if /@joins
+      (sql .append (/@joins .join " ") " ")
     )
-    (if @where
-      (sql .append "WHERE " @where " ")
+    (if /@where
+      (sql .append "WHERE " /@where " ")
     )
-    (if @order_by
-      (sql .append "ORDER BY " @order_by " ")
+    (if /@order_by
+      (sql .append "ORDER BY " /@order_by " ")
     )
-    (if @limit
-      (sql .append "LIMIT " @limit)
+    (if /@limit
+      (sql .append "LIMIT " /@limit)
     )
   )
 )
 
 (class Record
+  (.on_extended (fnx child
+    (child .on_member_missing (fnx name
+      (if ([
+        "orm" "all"
+      ].contains name)
+        (/.parent .@ name)
+      )
+    ))
+  ))
+
   # Query all and convert each row to an instance of model class
-  (method all _
-    (var query (new Query /.class/table))
+  (fn /all _
+    (var query (new Query /table))
+    (var data (/orm .exec query))
+    (data .map (row ->
+      (new self row)
+    ))
   )
 
   (method test _
@@ -114,7 +128,10 @@
     ^status Int
   })
 
-  (method new @description)
+  (method new props
+    (@description = props/@description)
+    (@status = props/@status)
+  )
 
   (method set_done _
     (@status = 1)
@@ -179,9 +196,13 @@
     # Set orm member on Record class which gets inherited by child classes
     (var Record/orm orm)
 
-    (var todos Todo/all)
+    (var todos (Todo . Todo/all))
     (.render
-      (DIV "Show all TODOs here.")
+      (DIV
+        (todos .map (fnx todo
+          (DIV todo/.description)
+        ))
+      )
     )
   finally
     # TODO: close the database connection

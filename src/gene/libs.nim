@@ -146,6 +146,9 @@ proc array_del(self: Value, args: Value): Value =
 proc array_empty(self: Value, args: Value): Value =
   result = self.vec.len == 0
 
+proc array_contains(self: Value, args: Value): Value =
+  result = self.vec.contains(args.gene_children[0])
+
 proc map_size(self: Value, args: Value): Value =
   result = self.map.len
 
@@ -402,6 +405,7 @@ proc init*() =
     ArrayClass.def_native_method("add", array_add)
     ArrayClass.def_native_method("del", array_del)
     ArrayClass.def_native_method("empty", array_empty)
+    ArrayClass.def_native_method("contains", array_contains)
     GENE_NS.ns["Array"] = ArrayClass
     GLOBAL_NS.ns["Array"] = ArrayClass
 
