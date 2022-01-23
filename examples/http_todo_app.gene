@@ -92,6 +92,7 @@
     (if /@limit
       (sql .append "LIMIT " /@limit)
     )
+    sql
   )
 )
 
@@ -109,6 +110,7 @@
   # Query all and convert each row to an instance of model class
   (fn /all _
     (var query (new Query /table))
+    (println query/.to_s)
     (var data (/orm .exec query))
     (data .map (row ->
       (new self row)
@@ -199,9 +201,9 @@
     (var todos (Todo . Todo/all))
     (.render
       (DIV
-        (todos .map (fnx todo
+        (... (todos .map (fnx todo
           (DIV todo/.description)
-        ))
+        )))
       )
     )
   finally

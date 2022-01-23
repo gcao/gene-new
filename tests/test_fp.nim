@@ -63,6 +63,21 @@ test_interpreter """
   (f 1)
 """, 2
 
+test_interpreter """
+  (fn f [a b]
+    (a + b)
+  )
+  (var c [1 2])
+  (f c...)
+""", 3
+
+test_interpreter """
+  (fn f [a b]
+    (a + b)
+  )
+  (f (... [1 2]))
+""", 3
+
 # test_interpreter """
 #   # How do we tell interpreter to pass arguments as $args?
 #   # _  => arguments in $args

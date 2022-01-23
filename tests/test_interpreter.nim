@@ -279,6 +279,13 @@ test_interpreter """
   [1 (... [2 3]) 4]
 """, @[1, 2, 3, 4]
 
+test_interpreter """
+  (1 (... [2 3]) 4)
+""", proc(r: Value) =
+  check r.gene_children[0] == 2
+  check r.gene_children[1] == 3
+  check r.gene_children[2] == 4
+
 # test "Interpreter / eval: native function (test)":
 #   init_all()
 #   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], children: seq[Value]): Value =

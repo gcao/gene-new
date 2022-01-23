@@ -23,7 +23,12 @@ proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: va
   for k, v in expr.props.mpairs:
     result.gene_props[k] = self.eval(frame, v)
   for v in expr.children.mitems:
-    result.gene_children.add(self.eval(frame, v))
+    var r = self.eval(frame, v)
+    if r.kind == VkExplode:
+      for item in r.explode.vec:
+        result.gene_children.add(item)
+    else:
+      result.gene_children.add(r)
 
 proc eval_gene(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var `type` = self.eval(frame, cast[ExGene](expr).`type`)

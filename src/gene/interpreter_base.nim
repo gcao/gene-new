@@ -496,19 +496,40 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
   of MhSimpleData:
     for _, v in args_expr.props.mpairs:
       discard self.eval(frame, v)
-    for i, v in args_expr.children.mpairs:
-      let field = matcher.children[i]
-      let value = self.eval(frame, v)
-      if field.is_prop:
-        new_frame.self.instance_props[field.name] = value
-      else:
-        new_frame.scope.def_member(field.name, value)
+    if args_expr.has_explode:
+      var children: seq[Value] = @[]
+      for i, v in args_expr.children.mpairs:
+        let value = self.eval(frame, v)
+        if value.kind == VkExplode:
+          for item in value.explode.vec:
+            children.add(item)
+        else:
+          children.add(value)
+      for i, value in children:
+        let field = matcher.children[i]
+        if field.is_prop:
+          new_frame.self.instance_props[field.name] = value
+        else:
+          new_frame.scope.def_member(field.name, value)
+    else:
+      for i, v in args_expr.children.mpairs:
+        let field = matcher.children[i]
+        let value = self.eval(frame, v)
+        if field.is_prop:
+          new_frame.self.instance_props[field.name] = value
+        else:
+          new_frame.scope.def_member(field.name, value)
   else:
     var args = new_gene_gene()
     for k, v in args_expr.props.mpairs:
       args.gene_props[k] = self.eval(frame, v)
     for _, v in args_expr.children.mpairs:
-      args.gene_children.add self.eval(frame, v)
+      var value = self.eval(frame, v)
+      if value.kind == VkExplode:
+        for item in value.explode.vec:
+          args.gene_children.add(item)
+      else:
+        args.gene_children.add(value)
     self.process_args(new_frame, matcher, args)
 
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
