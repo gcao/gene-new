@@ -304,7 +304,7 @@ proc invoke(self: VirtualMachine, frame: Frame, instance: Value, method_name: Ma
   # var is_method_missing = false
   var callable: Value
   if meth == nil:
-    not_allowed("No method available: " & method_name.to_s)
+    not_allowed("No method available: " & class.name & "." & method_name.to_s)
     # if class.method_missing == nil:
     #   not_allowed("No method available: " & expr.meth.to_s)
     # else:

@@ -587,7 +587,13 @@ proc init*() =
       (ns tags
         # HTML, BODY, DIV etc are part of this namespace
         (var tags :[
-          HTML HEAD TITLE BODY DIV HEADER
+          HTML HEAD META LINK TITLE STYLE SCRIPT BODY
+          DIV P SPAN
+          BR
+          HEADER H1
+          IMG
+          INPUT
+          UL
           SVG RECT
         ])
         (for tag in tags

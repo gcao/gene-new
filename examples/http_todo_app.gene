@@ -181,10 +181,227 @@
   (method layout [title = "TODO App" content]
     (HTML
       (HEAD
+        (META ^charset "utf-8")
+        (META ^name "viewport" ^content "width=device-width, initial-scale=1")
         (TITLE title)
+        (LINK ^rel "icon" ^type "image/png" ^href "http://minimal-todo.surge.sh/src/assets/favicon/favicon-32x32.png" ^sizes "32x32")
+        (LINK ^rel "icon" ^type "image/png" ^href "http://minimal-todo.surge.sh/src/assets//favicon/favicon-16x16.png" ^sizes "16x16")
+        (LINK ^href "https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" ^rel "stylesheet")
+        (LINK ^href "https://fonts.googleapis.com/css?family=Raleway:300,400" ^rel "stylesheet")
+        (STYLE """
+          body {
+            font-family: "Raleway", sans-serif;
+            background-color: #111;
+          }
+
+          @media (max-width: 768px) {
+            .github-corner {
+              display: none;
+            }
+          }
+
+          .github-corner:hover .octo-arm {
+            animation: octocat-wave 560ms ease-in-out;
+          }
+
+          @keyframes octocat-wave {
+            0%,
+            100% {
+              transform: rotate(0);
+            }
+            20%,
+            60% {
+              transform: rotate(-25deg);
+            }
+            40%,
+            80% {
+              transform: rotate(10deg);
+            }
+          }
+
+          h1 span {
+            color: #1dd1a1;
+          }
+
+          .input-wrapper input {
+            transition: border-color 0.3s ease;
+          }
+
+          .input-wrapper input:focus {
+            outline: none;
+            border-color: #1dd1a1;
+          }
+
+          .input-wrapper .text-guide {
+            right: 0;
+            bottom: -8px;
+            text-transform: uppercase;
+          }
+
+          .cbx__lbl {
+            margin-left: 4px;
+            vertical-align: middle;
+            cursor: pointer;
+            position: relative;
+          }
+
+          .cbx__lbl:after {
+            content: "";
+            width: 0%;
+            height: 2px;
+            background: #1dd1a1;
+            position: absolute;
+            left: 0;
+            top: 50%;
+            display: block;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          }
+
+          .cbx__lbl.completed {
+            color: #c8ccd4;
+          }
+
+          .cbx__lbl.completed:after {
+            width: 100%;
+          }
+
+          .cbx:checked~.cbx__child {
+            border-color: transparent;
+            background: #1dd1a1;
+            animation: jelly 0.6s ease;
+          }
+
+          .cbx:checked~.cbx__child:after {
+            opacity: 1;
+            transform: rotate(45deg) scale(1);
+          }
+
+          @keyframes jelly {
+            from {
+              transform: scale(1, 1);
+            }
+            30% {
+              transform: scale(1.25, 0.75);
+            }
+            40% {
+              transform: scale(0.75, 1.25);
+            }
+            50% {
+              transform: scale(1.15, 0.85);
+            }
+            65% {
+              transform: scale(0.95, 1.05);
+            }
+            75% {
+              transform: scale(1.05, 0.95);
+            }
+            to {
+              transform: scale(1, 1);
+            }
+          }
+
+          .cbx__child {
+            position: relative;
+            top: 1px;
+            width: 17px;
+            height: 17px;
+            border: 1px solid #c8ccd4;
+            border-radius: 3px;
+            vertical-align: middle;
+            display: inline-block;
+            transition: background 0.1s ease;
+            cursor: pointer;
+          }
+
+          .cbx__child:after {
+            content: "";
+            position: absolute;
+            top: 1px;
+            left: 5px;
+            width: 5px;
+            height: 11px;
+            opacity: 0;
+            transform: rotate(45deg) scale(0);
+            border-right: 2px solid #fff;
+            border-bottom: 2px solid #fff;
+            transition: all 0.3s ease;
+            transition-delay: 0.15s;
+          }
+
+          .fade-enter-active,
+          .fade-leave-active {
+            transition: opacity 0.3s;
+          }
+
+          .fade-enter,
+          .fade-leave-to {
+            opacity: 0;
+          }
+
+          .todo__item:hover .delete-button {
+            opacity: 1;
+            visibility: visible;
+          }
+
+          .todo__item:last-child {
+            border-bottom: none;
+          }
+
+          .delete-button {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+          }
+
+          .delete-button svg {
+            transition: all 0.3s ease;
+            height: 20px;
+          }
+
+          .delete-button .feather {
+            color: #fff;
+          }
+
+          .delete-button:hover .feather {
+            color: #ff6b6b;
+          }
+
+          .delete-button:focus {
+            outline: none;
+            border: 1px dashed #ff6b6b;
+          }
+
+          .credit-disclaimer {
+            color: #1dd1a1;
+          }
+        """)
       )
       (BODY
+        (DIV ^class "container mx-auto"
+          (DIV ^class "mx-auto w-full md:w-1/2 py-8 px-4"
+            (DIV ^class "flex items-center mb-6"
+              (H1 ^class "text-4xl text-white mr-6"
+                (SPAN "MINIMAL") " TO DO"
+              )
+              (IMG ^class "hidden md:block" ^src "http://minimal-todo.surge.sh/logo.f4bfa240.svg" ^width "40")
+            )
+            (DIV ^class "input-wrapper relative"
+              (INPUT ^type "text" ^class "p-4 mb-4 w-full bg-transparent border-grey-light text-white border rounded" ^placeholder "What needs to be done today?")
+              (SPAN ^class "text-guide text-gray-600 absolute text-xs" ^style {^display "none"}
+                "Press Enter"
+              )
+            )
+            (UL ^class "list-reset")
+          )
+        )
         content
+        (BR)
+        (BR)
+        (BR)
+        (BR)
+        (DIV ^class "text-center text-sm credit-disclaimer"
+          "This is a replication of Minimal TODO created by Dronca Raul"
+        )
       )
     )
   )
