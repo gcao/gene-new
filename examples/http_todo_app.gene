@@ -179,7 +179,7 @@
 # Base class for controllers
 (class Controller
   (method layout [title = "TODO App" content]
-    #@$debug (HTML
+    (HTML
       (HEAD
         (TITLE title)
       )

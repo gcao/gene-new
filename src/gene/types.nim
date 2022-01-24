@@ -1423,7 +1423,7 @@ proc `$`*(self: Class): string =
     result = "(class $# < $#)" % [self.name, self.parent.name]
 
 proc `$`*(node: Value): string =
-  if node.isNil:
+  if node.is_nil:
     return "nil"
   case node.kind
   of VkNil:
@@ -1496,6 +1496,8 @@ proc `$`*(node: Value): string =
     result = $node.kind
 
 proc to_s*(self: Value): string =
+  if self.is_nil:
+    return ""
   return case self.kind:
     of VkNil: ""
     of VkString: self.str

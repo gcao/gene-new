@@ -105,7 +105,7 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   of VkEnum:
     return new_gene_enum_member(v.enum.members[key.to_s])
   else:
-    todo()
+    todo("eval_member " & $v.kind)
 
 proc translate*(name: string): Expr {.inline.} =
   if name.startsWith("@"):
