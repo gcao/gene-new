@@ -520,16 +520,8 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
         else:
           new_frame.scope.def_member(field.name, value)
   else:
-    var args = new_gene_gene()
-    for k, v in args_expr.props.mpairs:
-      args.gene_props[k] = self.eval(frame, v)
-    for _, v in args_expr.children.mpairs:
-      var value = self.eval(frame, v)
-      if value.kind == VkExplode:
-        for item in value.explode.vec:
-          args.gene_children.add(item)
-      else:
-        args.gene_children.add(value)
+    var expr = cast[Expr](args_expr)
+    var args = self.eval_args(frame, nil, expr)
     self.process_args(new_frame, matcher, args)
 
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =

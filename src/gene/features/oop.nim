@@ -181,12 +181,7 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 
   case ctor.callable.kind:
   of VkNativeFn, VkNativeFn2:
-    var args_expr = cast[ExArguments](expr.args)
-    var args = new_gene_gene()
-    for k, v in args_expr.props.mpairs:
-      args.gene_props[k] = self.eval(frame, v)
-    for v in args_expr.children.mitems:
-      args.gene_children.add(self.eval(frame, v))
+    var args = self.eval_args(frame, nil, expr.args)
     if ctor.callable.kind == VkNativeFn:
       result = ctor.callable.native_fn(args)
     else:
@@ -297,8 +292,7 @@ proc translate_method(value: Value): Expr =
     fn: fn,
   )
 
-proc invoke(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: Expr): Value =
-  var args_expr = cast[ExArguments](args_expr)
+proc invoke(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value =
   var class = instance.get_class
   var meth = class.get_method(method_name)
   # var is_method_missing = false
@@ -315,11 +309,7 @@ proc invoke(self: VirtualMachine, frame: Frame, instance: Value, method_name: Ma
 
   case callable.kind:
   of VkNativeMethod, VkNativeMethod2:
-    var args = new_gene_gene()
-    for k, v in args_expr.props.mpairs:
-      args.gene_props[k] = self.eval(frame, v)
-    for _, v in args_expr.children.mpairs:
-      args.gene_children.add self.eval(frame, v)
+    var args = self.eval_args(frame, nil, args_expr)
     if callable.kind == VkNativeMethod:
       result = meth.callable.native_method(instance, args)
     else:
@@ -338,7 +328,7 @@ proc invoke(self: VirtualMachine, frame: Frame, instance: Value, method_name: Ma
       callable.fn.body_compiled = translate(callable.fn.body)
 
     try:
-      handle_args(self, frame, new_frame, callable.fn.matcher, args_expr)
+      handle_args(self, frame, new_frame, callable.fn.matcher, cast[ExArguments](args_expr))
       result = self.eval(new_frame, callable.fn.body_compiled)
     except Return as r:
       # return's frame is the same as new_frame(current function's frame)
@@ -366,8 +356,7 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
   if instance == nil:
     raise new_exception(types.Exception, "Invoking " & expr.meth.to_s & " on nil.")
 
-  var args = cast[ExArguments](expr.args)
-  self.invoke(frame, instance, expr.meth, args)
+  self.invoke(frame, instance, expr.meth, expr.args)
 
 proc translate_invoke(value: Value): Expr =
   var r = ExInvoke(
@@ -394,12 +383,11 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr
   else:
     instance = self.eval(frame, e)
   var target = self.eval(frame, expr.target)
-  var args_expr = expr.args
   case target.kind:
   of VkString:
-    return self.invoke(frame, instance, target.str.to_key, args_expr)
+    return self.invoke(frame, instance, target.str.to_key, expr.args)
   of VkSymbol:
-    return self.invoke(frame, instance, target.symbol.to_key, args_expr)
+    return self.invoke(frame, instance, target.symbol.to_key, expr.args)
   of VkFunction:
     var fn = target.fn
     var fn_scope = new_scope()
@@ -411,7 +399,7 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr
       fn.body_compiled = translate(fn.body)
 
     try:
-      handle_args(self, frame, new_frame, fn.matcher, cast[ExArguments](args_expr))
+      handle_args(self, frame, new_frame, fn.matcher, cast[ExArguments](expr.args))
       result = self.eval(new_frame, fn.body_compiled)
     except Return as r:
       # return's frame is the same as new_frame(current function's frame)
@@ -446,6 +434,7 @@ proc translate_invoke_dynamic(value: Value): Expr =
   result = r
 
 proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExSuper](expr)
   var instance = frame.self
   var m = frame.extra.method
   var meth = m.class.get_super_method(m.name.to_key)
@@ -455,8 +444,7 @@ proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   new_frame.parent = frame
   new_frame.self = instance
 
-  var args_expr = cast[ExSuper](expr).args
-  handle_args(self, frame, new_frame, meth.callable.fn.matcher, cast[ExArguments](args_expr))
+  handle_args(self, frame, new_frame, meth.callable.fn.matcher, cast[ExArguments](expr.args))
 
   if meth.callable.fn.body_compiled == nil:
     meth.callable.fn.body_compiled = translate(meth.callable.fn.body)

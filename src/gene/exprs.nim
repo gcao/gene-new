@@ -121,7 +121,19 @@ type
     children*: seq[Expr]
 
 proc eval_args*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  todo("eval_args")
+  var expr = cast[ExArguments](expr)
+  result = new_gene_gene()
+  for k, v in expr.props.mpairs:
+    result.gene_props[k] = self.eval(frame, v)
+  for _, v in expr.children.mpairs:
+    var value = self.eval(frame, v)
+    if value.is_nil:
+      discard
+    elif value.kind == VkExplode:
+      for item in value.explode.vec:
+        result.gene_children.add(item)
+    else:
+      result.gene_children.add(value)
 
 proc new_ex_arg*(): ExArguments =
   result = ExArguments(

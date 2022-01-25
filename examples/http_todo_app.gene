@@ -114,7 +114,7 @@
         "VALUES(" ((columns .map (col -> "?")) .join ", ") ")"
       )
     )
-    (var params (columns .map (col -> (.@ col))))
+    #@$debug (var params (columns .map (col -> (.@ col))))
     (/.class/orm .exec sql params...)
   )
 
