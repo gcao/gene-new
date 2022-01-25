@@ -377,6 +377,8 @@ proc translate_invoke(value: Value): Expr =
   r.meth = value.gene_props[METHOD_KEY].str.to_key
 
   var args = new_ex_arg()
+  for k, v in value.gene_props:
+    args.props[k] = translate(v)
   for v in value.gene_children:
     args.children.add(translate(v))
   r.args = args
@@ -435,6 +437,8 @@ proc translate_invoke_dynamic(value: Value): Expr =
   r.target = translate(value.gene_props[METHOD_KEY])
 
   var args = new_ex_arg()
+  for k, v in value.gene_props:
+    args.props[k] = translate(v)
   for v in value.gene_children:
     args.children.add(translate(v))
   r.args = args
@@ -477,6 +481,8 @@ proc translate_super(value: Value): Expr =
     evaluator: eval_super,
   )
   var args = new_ex_arg()
+  for k, v in value.gene_props:
+    args.props[k] = translate(v)
   for v in value.gene_children:
     args.children.add(translate(v))
   r.args = args

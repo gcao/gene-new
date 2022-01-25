@@ -29,6 +29,9 @@ let ELIF_KEY* = add_key("elif")
 let ELSE_KEY* = add_key("else")
 
 proc normalize_if(self: Value) =
+  # TODO: return a tuple to be used by the translator
+  if self.gene_props.has_key(COND_KEY):
+    return
   var `type` = self.gene_type
   if `type` == If:
     # Store if/elif/else block

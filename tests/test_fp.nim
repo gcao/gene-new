@@ -1,3 +1,4 @@
+import tables
 import unittest
 
 import gene/types
@@ -282,6 +283,19 @@ test_interpreter """
   (fn f [^a = 1 b] b)
   (f 2)
 """, 2
+
+test_interpreter """
+  (fn f [^a ^rest...] a)
+  (f ^a 1 ^b 2 ^c 3)
+""", 1
+
+test_interpreter """
+  (fn f [^a ^rest...] rest)
+  (f ^a 1 ^b 2 ^c 3)
+""", proc(r: Value) =
+  check r.map.len == 2
+  check r.map["b"] == 2
+  check r.map["c"] == 3
 
 # test_interpreter """
 #   (fn f _ 1)

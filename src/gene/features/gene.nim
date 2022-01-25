@@ -101,19 +101,19 @@ proc translate_gene(value: Value): Expr =
     case first.kind:
     of VkSymbol:
       if COMPARISON_OPS.contains(first.symbol):
-        value.gene_children.insert(value.gene_type)
-        value.gene_type = nil
-        return translate_comparisons(value.gene_children)
+        var data = value.gene_children
+        data.insert(value.gene_type)
+        return translate_comparisons(data)
       elif LOGIC_OPS.contains(first.symbol):
-        value.gene_children.insert(value.gene_type)
-        value.gene_type = nil
-        return translate_logic(value.gene_children)
+        var data = value.gene_children
+        data.insert(value.gene_type)
+        return translate_logic(data)
       elif REGEX_OPS.contains(first.symbol):
         return translate_match(value)
       elif arithmetic.BINARY_OPS.contains(first.symbol):
-        value.gene_children.insert(value.gene_type)
-        value.gene_type = nil
-        return translate_arithmetic(value.gene_children)
+        var data = value.gene_children
+        data.insert(value.gene_type)
+        return translate_arithmetic(data)
       elif first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"): # (@p = 1)
         return translate_prop_assignment(value)
       elif first.symbol == "..":
