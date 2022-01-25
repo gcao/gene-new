@@ -97,13 +97,16 @@
     ))
   ))
 
-  # Query all and convert each row to an instance of model class
+  # Query all and convert each row to an instance of the model class
   (fn /all _
     (var query (new Query /table))
-    (println query/.to_s)
     (var data (/orm .exec query))
     (data .map (row ->
-      (new self row)
+      (var props {})
+      (for [i v] in row
+        ($set props (@ (/columns/.keys .@ i)) v)
+      )
+      (new self props)
     ))
   )
 
@@ -114,7 +117,7 @@
         "VALUES(" ((columns .map (col -> "?")) .join ", ") ")"
       )
     )
-    #@$debug (var params (columns .map (col -> (.@ col))))
+    (var params (columns .map (col -> (.@ col))))
     (/.class/orm .exec sql params...)
   )
 
@@ -138,7 +141,7 @@
 (class Todo < Record
   (var /table "todos")
   (var /columns {
-    # id is assumed unless /skip_id is set to true
+    ^id Int
     ^description String
     ^status Int
   })
@@ -442,8 +445,8 @@
     (var todos (Todo . Todo/all))
     (.render
       (DIV
-        (... (todos .map (fnx todo
-          (DIV todo/.description)
+        (... (todos .map (todo ->
+          (DIV todo/@description)
         )))
       )
     )

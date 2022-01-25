@@ -28,15 +28,21 @@ proc exec*(self: Value, args: Value): Value {.wrap_exception.} =
   else:
     todo("Connection.exec " & $arg0.kind)
   if args.gene_children.len > 1:
-    for row in conn.instant_rows(sql(stmt), args.gene_children[1..^1]):
+    var params: seq[Value] = @[]
+    for item in args.gene_children[1..^1]:
+      if item.is_nil or item.kind == VkNil:
+        params.add("null")
+      else:
+        params.add(item.to_s)
+    for row in conn.instant_rows(sql(stmt), params):
       var item = new_gene_vec()
-      for i in 0..row.len():
+      for i in 0..<row.len():
         item.vec.add(row[i])
       result.vec.add(item)
   else:
     for row in conn.instant_rows(sql(stmt)):
       var item = new_gene_vec()
-      for i in 0..row.len():
+      for i in 0..<row.len():
         item.vec.add(row[i])
       result.vec.add(item)
 
