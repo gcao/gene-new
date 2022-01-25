@@ -30,15 +30,8 @@
   (method new @conn
   )
 
-  (method exec query
-    (/@conn .exec (query .to_s))
-  )
-
-  # If no id, insert into the table, else update existing row.
-  (method save record
-  )
-
-  (method delete record_or_id
+  (method exec [query params...]
+    (/@conn .exec (query .to_s) params...)
   )
 )
 
@@ -49,9 +42,6 @@
   (method find id
     (.where "id = ?" id)
     (.limit 1)
-  )
-
-  (method all _
   )
 
   (method select @select...
@@ -115,6 +105,29 @@
     (data .map (row ->
       (new self row)
     ))
+  )
+
+  (method insert _
+    (var columns /.class/columns/.keys)
+    (var sql
+      ("INSERT INTO " /.class/table "(" (columns .join ", ") ") "
+        "VALUES(" ((columns .map (col -> "?")) .join ", ") ")"
+      )
+    )
+    (var params (columns .map (col -> (.@ col))))
+    (/.class/orm .exec sql params...)
+  )
+
+  # If no id, insert into the table, else update existing row.
+  (method save _
+    (if not /@id
+      /.insert
+    else
+      /.update
+    )
+  )
+
+  (method delete record_or_id
   )
 
   (method test _
@@ -376,7 +389,7 @@
           }
         """)
       )
-      (BODY
+      (BODY ^class "text-center text-white"
         (DIV ^class "container mx-auto"
           (DIV ^class "mx-auto w-full md:w-1/2 py-8 px-4"
             (DIV ^class "flex items-center mb-6"
@@ -385,11 +398,18 @@
               )
               (IMG ^class "hidden md:block" ^src "http://minimal-todo.surge.sh/logo.f4bfa240.svg" ^width "40")
             )
-            (DIV ^class "input-wrapper relative"
-              (INPUT ^type "text" ^class "p-4 mb-4 w-full bg-transparent border-grey-light text-white border rounded" ^placeholder "What needs to be done today?")
-              (SPAN ^class "text-guide text-gray-600 absolute text-xs" ^style {^display "none"}
-                "Press Enter"
+            (FORM ^method "POST" ^action "/todos"
+              (DIV ^class "input-wrapper relative"
+                (INPUT ^type "text" ^name "description"
+                  ^class "p-4 mb-4 w-full bg-transparent border-grey-light text-white border rounded"
+                  ^placeholder "What needs to be done today?"
+                )
+                (SPAN ^class "text-guide text-gray-600 absolute text-xs" ^style {^display "none"}
+                  "Press Enter"
+                )
               )
+              # Include a hidden Submit so that Enter will trigger submitting the form
+              (INPUT ^type "submit" ^style {^display "none"})
             )
             (UL ^class "list-reset")
           )
@@ -430,16 +450,22 @@
   )
 
   (method create req
+    (var todo (new Todo req/.body_params))
+    todo/.save
+    (redirect "/todos")
   )
 )
 
 (class Mapping
-  (method new [@path @controller @action @http_method]
+  (method new [@path @controller @action @http_methods]
   )
 
   # Return bool: whether the path/method/... of the request matches
   (method match req
-    (req/.path == /@path)
+    (
+      (req/.path == /@path) &&
+      (/@http_methods/.empty || (/@http_methods .contains req/.method))
+    )
   )
 )
 
@@ -448,8 +474,21 @@
     (@mappings = [])
   )
 
-  (method map [path controller action = "index"]
-    (/@mappings .add (new Mapping path controller action))
+  (method map [^options... path controller action = "index"]
+    (var http_methods [])
+    (if options/@GET
+      (http_methods .add "GET")
+    )
+    (if options/@POST
+      (http_methods .add "POST")
+    )
+    (if options/@PUT
+      (http_methods .add "PUT")
+    )
+    (if options/@DELETE
+      (http_methods .add "DELETE")
+    )
+    (/@mappings .add (new Mapping path controller action http_methods))
   )
 
   (method call req
@@ -469,8 +508,8 @@
 
   (var router ($tap (new Router)
     (.map "/" HomeController)
+    (.map ^^POST "/todos" TodosController :create)
     (.map "/todos" TodosController)
-    (.map ^^post "/todos" TodosController :create)
   ))
 
   (var port

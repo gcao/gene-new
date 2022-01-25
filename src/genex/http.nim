@@ -158,6 +158,89 @@ proc new_gene_request(req: stdhttp.Request): Value =
     custom_class: RequestClass.class,
   )
 
+# Copied from Nim 1.6 standard library code
+proc handleHexChar*(c: char, x: var int): bool {.inline.} =
+  ## Converts `%xx` hexadecimal to the ordinal number and adds the result to `x`.
+  ## Returns `true` if `c` is hexadecimal.
+  ##
+  ## When `c` is hexadecimal, the proc is equal to `x = x shl 4 + hex2Int(c)`.
+  runnableExamples:
+    var x = 0
+    assert handleHexChar('a', x)
+    assert x == 10
+
+    assert handleHexChar('B', x)
+    assert x == 171 # 10 shl 4 + 11
+
+    assert not handleHexChar('?', x)
+    assert x == 171 # unchanged
+  result = true
+  case c
+  of '0'..'9': x = (x shl 4) or (ord(c) - ord('0'))
+  of 'a'..'f': x = (x shl 4) or (ord(c) - ord('a') + 10)
+  of 'A'..'F': x = (x shl 4) or (ord(c) - ord('A') + 10)
+  else:
+    result = false
+
+# Copied from Nim 1.6 standard library code
+proc decodePercent*(s: openArray[char], i: var int): char =
+  ## Converts `%xx` hexadecimal to the character with ordinal number `xx`.
+  ##
+  ## If `xx` is not a valid hexadecimal value, it is left intact: only the
+  ## leading `%` is returned as-is, and `xx` characters will be processed in the
+  ## next step (e.g. in `uri.decodeUrl`) as regular characters.
+  result = '%'
+  if i+2 < s.len:
+    var x = 0
+    if handleHexChar(s[i+1], x) and handleHexChar(s[i+2], x):
+      result = chr(x)
+      inc(i, 2)
+
+# Copied from Nim 1.6 standard library code
+iterator decodeQuery*(data: string): tuple[key, value: string] =
+  ## Reads and decodes query string `data` and yields the `(key, value)` pairs
+  ## the data consists of. If compiled with `-d:nimLegacyParseQueryStrict`, an
+  ## error is raised when there is an unencoded `=` character in a decoded
+  ## value, which was the behavior in Nim < 1.5.1
+  runnableExamples:
+    import std/sequtils
+    assert toSeq(decodeQuery("foo=1&bar=2=3")) == @[("foo", "1"), ("bar", "2=3")]
+    assert toSeq(decodeQuery("&a&=b&=&&")) == @[("", ""), ("a", ""), ("", "b"), ("", ""), ("", "")]
+
+  proc parseData(data: string, i: int, field: var string, sep: char): int =
+    result = i
+    while result < data.len:
+      let c = data[result]
+      case c
+      of '%': add(field, decodePercent(data, result))
+      of '+': add(field, ' ')
+      of '&': break
+      else:
+        if c == sep: break
+        else: add(field, data[result])
+      inc(result)
+
+  var i = 0
+  var name = ""
+  var value = ""
+  # decode everything in one pass:
+  while i < data.len:
+    setLen(name, 0) # reuse memory
+    i = parseData(data, i, name, '=')
+    setLen(value, 0) # reuse memory
+    if i < data.len and data[i] == '=':
+      inc(i) # skip '='
+      when defined(nimLegacyParseQueryStrict):
+        i = parseData(data, i, value, '=')
+      else:
+        i = parseData(data, i, value, '&')
+    yield (name, value)
+    if i < data.len:
+      when defined(nimLegacyParseQueryStrict):
+        if data[i] != '&':
+          uriParseError("'&' expected at index '$#' for '$#'" % [$i, data])
+      inc(i)
+
 proc req_method*(self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Request](self.custom).req.req_method
 
@@ -167,15 +250,20 @@ proc req_url*(self: Value, args: Value): Value {.wrap_exception.} =
 proc req_path*(self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Request](self.custom).req.url.path
 
+proc req_body*(self: Value, args: Value): Value {.wrap_exception.} =
+  return $cast[Request](self.custom).req.body
+
+proc req_body_params*(self: Value, args: Value): Value {.wrap_exception.} =
+  result = new_gene_map()
+  var req = cast[Request](self.custom).req
+  for k, v in decode_query(req.body):
+    result.map[k] = v
+
 proc req_params*(self: Value, args: Value): Value {.wrap_exception.} =
   result = new_gene_map()
   var req = cast[Request](self.custom).req
-  var parts = req.url.query.split('&')
-  for p in parts:
-    if p == "":
-      continue
-    var pair = p.split('=', 2)
-    result.map[pair[0].to_key] = pair[1]
+  for k, v in decode_query(req.url.query):
+    result.map[k] = v
 
 proc req_headers*(self: Value, args: Value): Value {.wrap_exception.} =
   result = new_gene_map()
@@ -193,7 +281,7 @@ proc start_server_internal*(args: Value): Value =
     args.gene_children[0].int
 
   proc handler(req: stdhttp.Request) {.async gcsafe.} =
-    echo "HTTP REQ : " & $req.url
+    echo "HTTP REQ : " & $req.req_method & " " & $req.url
     var my_args = new_gene_gene()
     my_args.gene_children.add(new_gene_request(req))
     var res = VM.invoke_catch(nil, args.gene_children[1], my_args)
@@ -301,6 +389,8 @@ proc init*(module: Module): Value {.wrap_exception.} =
   RequestClass.def_native_method "url", method_wrap(req_url)
   RequestClass.def_native_method "path", method_wrap(req_path)
   RequestClass.def_native_method "params", method_wrap(req_params)
+  RequestClass.def_native_method "body", method_wrap(req_body)
+  RequestClass.def_native_method "body_params", method_wrap(req_body_params)
   RequestClass.def_native_method "headers", method_wrap(req_headers)
   result.ns["Request"] = RequestClass
 

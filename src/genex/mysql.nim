@@ -27,11 +27,18 @@ proc exec*(self: Value, args: Value): Value {.wrap_exception.} =
     stmt = arg0.str
   else:
     todo("Connection.exec " & $arg0.kind)
-  for row in conn.instant_rows(sql(stmt)):
-    var item = new_gene_vec()
-    for i in 0..row.len():
-      item.vec.add(row[i])
-    result.vec.add(item)
+  if args.gene_children.len > 1:
+    for row in conn.instant_rows(sql(stmt), args.gene_children[1..^1]):
+      var item = new_gene_vec()
+      for i in 0..row.len():
+        item.vec.add(row[i])
+      result.vec.add(item)
+  else:
+    for row in conn.instant_rows(sql(stmt)):
+      var item = new_gene_vec()
+      for i in 0..row.len():
+        item.vec.add(row[i])
+      result.vec.add(item)
 
 proc close*(self: Value, args: Value): Value {.wrap_exception.} =
   cast[CustomConnection](self.custom).conn.close()

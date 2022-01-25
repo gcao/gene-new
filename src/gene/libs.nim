@@ -518,7 +518,7 @@ proc init*() =
       (method join [with = ""]
         (var s "")
         (for [i item] in self
-          (s .append item/.to_s (if (i < /.size) with))
+          (s .append item/.to_s (if (i < (/.size - 1)) with))
         )
         s
       )
@@ -592,7 +592,7 @@ proc init*() =
           BR
           HEADER H1
           IMG
-          INPUT
+          FORM INPUT
           UL
           SVG RECT
         ])
