@@ -12,6 +12,7 @@ bin           = @["gene"]
 # Dependencies
 
 requires "nim >= 1.0.0"
+requires "https://github.com/jangko/nim-noise#head"
 
 task buildext, "Build the Nim extension":
   # For debugging purpose

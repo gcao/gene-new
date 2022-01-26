@@ -1,5 +1,6 @@
 import ../types
-import ../repl
+# import ../repl
+import gene/repl_on_noise
 import ../interpreter_base
 
 type

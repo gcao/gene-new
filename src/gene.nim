@@ -10,7 +10,8 @@ import gene/types
 import gene/map_key
 import gene/parser
 import gene/interpreter
-import gene/repl
+# import gene/repl
+import gene/repl_on_noise
 import cmdline/option_parser
 
 proc setup_logger(debugging: bool) =

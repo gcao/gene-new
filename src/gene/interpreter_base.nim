@@ -4,7 +4,8 @@ import asyncdispatch
 import ./map_key
 import ./types
 import ./parser
-import ./repl
+# import ./repl
+import gene/repl_on_noise
 import ./exprs
 import ./translators
 

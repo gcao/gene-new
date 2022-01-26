@@ -85,7 +85,7 @@
   (.on_extended (fnx child
     (child .on_member_missing (fnx name
       (if ([
-        "orm" "all" "find"
+        "orm" "all" "find" "from_row"
       ].contains name)
         (/.parent .@ name)
       )
@@ -229,8 +229,8 @@
         (META ^charset "utf-8")
         (META ^name "viewport" ^content "width=device-width, initial-scale=1")
         (TITLE title)
-        (LINK ^rel "icon" ^type "image/png" ^href "http://minimal-todo.surge.sh/src/assets/favicon/favicon-32x32.png" ^sizes "32x32")
-        (LINK ^rel "icon" ^type "image/png" ^href "http://minimal-todo.surge.sh/src/assets//favicon/favicon-16x16.png" ^sizes "16x16")
+        (LINK ^href "http://minimal-todo.surge.sh/src/assets/favicon/favicon-32x32.png" ^rel "icon" ^type "image/png" ^sizes "32x32")
+        (LINK ^href "http://minimal-todo.surge.sh/src/assets/favicon/favicon-16x16.png" ^rel "icon" ^type "image/png" ^sizes "16x16")
         (LINK ^href "https://cdn.jsdelivr.net/npm/tailwindcss/dist/tailwind.min.css" ^rel "stylesheet")
         (LINK ^href "https://fonts.googleapis.com/css?family=Raleway:300,400" ^rel "stylesheet")
         (STYLE """
