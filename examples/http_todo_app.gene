@@ -103,7 +103,7 @@
   (fn /find id
     (var query (new Query /table))
     (query .where "id = ?")
-    #@$debug (var data (/orm .exec query id))
+    (var data (/orm .exec query id))
     (if (data/.size == 1)
       (/from_row data/0)
     else
@@ -145,10 +145,6 @@
 
   (method delete record_or_id
   )
-
-  (method test _
-    (println "Table:" /.class/table)
-  )
 )
 
 (class Todo < Record
@@ -176,7 +172,7 @@
   (method to_html _
     (LI ^class "py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item"
       (DIV
-        (INPUT ^type "checkbox" ^id /@id ^class "cbx hidden" ^checked /.done)
+        (INPUT ^type "checkbox" ^id /@id ^class "cbx hidden")
         (LABEL ^for /@id ^class "text-xl cbx__child")
         (LABEL ^for /@id ^class "cbx__lbl text-white inline-block mt-1"
           /@description
@@ -466,13 +462,11 @@
         (SCRIPT """
           $("li label.cbx__child").click(function(e) {
             var id = $(this).attr("for");
-            var status = 0;
-            if ($("input#" + id).is(":checked")) {
-              status = 1;
-            }
+            var oldStatus = $("input#" + id).is(":checked") ? 1 : 0;
+            var newStatus = oldStatus == 1 ? 0 : 1;
             $.ajax({url: "/todos",
               type: "PATCH",
-              data: "id=" + id + "&status=" + status,
+              data: "id=" + id + "&status=" + newStatus,
               success: function(result, status) {
                 console.log(result);
               },
@@ -562,15 +556,17 @@
   )
 )
 
-($if_main
-  (init_db)
-
-  (var router ($tap (new Router)
+(fn create_router _
+  ($tap (new Router)
     (.map "/" HomeController)
     (.map ^^POST  "/todos" TodosController :create)
     (.map ^^PATCH "/todos" TodosController :update)
     (.map         "/todos" TodosController)
-  ))
+  )
+)
+
+($if_main
+  (init_db)
 
   (var port
     (if ($cmd_args/.size > 1)
@@ -581,7 +577,7 @@
   )
 
   (var app ($tap (new App port)
-    ($set @handler router)
+    ($set @handler (create_router))
   ))
 
   (app .start)
