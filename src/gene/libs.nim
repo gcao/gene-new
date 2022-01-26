@@ -566,7 +566,7 @@ proc init*() =
                   (if (k == "style")
                     ((v .map ([name value] -> ("" name ":" value ";"))).join)
                   else
-                    v
+                    v/.to_s
                   )
                   "\""
                 )
@@ -592,9 +592,9 @@ proc init*() =
           BR
           HEADER H1
           IMG
-          FORM INPUT
-          UL
-          SVG RECT
+          FORM LABEL INPUT BUTTON
+          UL LI
+          SVG RECT LINE
         ])
         (for tag in tags
           (tag = (tag .to_s))

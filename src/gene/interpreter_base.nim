@@ -382,8 +382,10 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
   of MatchProp:
     if self.is_splat:
       return
-    elif input.gene_props.has_key(self.name):
+    elif input.kind == VkGene and input.gene_props.has_key(self.name):
       value = input.gene_props[self.name]
+    elif input.kind == VkMap and input.map.has_key(self.name):
+      value = input.map[self.name]
     else:
       if self.default_value_expr != nil:
         value = vm.eval(frame, self.default_value_expr)

@@ -39,11 +39,6 @@
   (method new @table
   )
 
-  (method find id
-    (.where "id = ?" id)
-    (.limit 1)
-  )
-
   (method select @select...
   )
 
@@ -90,12 +85,31 @@
   (.on_extended (fnx child
     (child .on_member_missing (fnx name
       (if ([
-        "orm" "all"
+        "orm" "all" "find"
       ].contains name)
         (/.parent .@ name)
       )
     ))
   ))
+
+  (fn /from_row row
+    (var props {})
+    (for [i v] in row
+      ($set props (@ (/columns/.keys .@ i)) v)
+    )
+    (new self props)
+  )
+
+  (fn /find id
+    (var query (new Query /table))
+    (query .where "id = ?")
+    (var data (/orm .exec query id))
+    (if (data/.size == 1)
+      (/from_row data/0)
+    else
+      (throw "TODO: better error")
+    )
+  )
 
   # Query all and convert each row to an instance of the model class
   (fn /all _
@@ -158,6 +172,25 @@
   (method set_todo _
     (@status = nil)
   )
+
+  (method to_html _
+    (LI ^class "py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item"
+      (DIV
+        (INPUT ^type "checkbox" ^id /@id ^class "cbx hidden")
+        (LABEL ^for /@id ^class "text-xl cbx__child")
+        (LABEL ^for /@id ^class "cbx__lbl text-white inline-block mt-1"
+          /@description
+        )
+      )
+      (BUTTON ^type "button" ^class "flex items-center delete-button absolute right-0"
+        (SVG ^class "feather feather-x" ^xmlns "http://www.w3.org/2000/svg" ^width "24" ^height "24" ^viewBox "0 0 24 24"
+             ^fill "none" ^stroke "currentColor" ^stroke-width "2" ^stroke-linecap "round" ^stroke-linejoin "round"
+          (LINE ^x1 "18" ^y1 "6" ^x2 "6" ^y2 "18")
+          (LINE ^x1 "6" ^y1 "6" ^x2 "18" ^y2 "18")
+        )
+      )
+    )
+  )
 )
 
 (class App
@@ -208,6 +241,7 @@
           body {
             font-family: "Raleway", sans-serif;
             background-color: #111;
+            margin-bottom: 50px;
           }
 
           @media (max-width: 768px) {
@@ -389,6 +423,12 @@
 
           .credit-disclaimer {
             color: #1dd1a1;
+            position: fixed;
+            height: 50px;
+            bottom: 0px;
+            left: 0px;
+            right: 0px;
+            margin-bottom: 0px;
           }
         """)
       )
@@ -414,17 +454,33 @@
               # Include a hidden Submit so that Enter will trigger submitting the form
               (INPUT ^type "submit" ^style {^display "none"})
             )
-            (UL ^class "list-reset")
+            (UL ^class "list-reset"
+              content
+            )
           )
         )
-        content
-        (BR)
-        (BR)
-        (BR)
-        (BR)
         (DIV ^class "text-center text-sm credit-disclaimer"
           "This is a replication of Minimal TODO created by Dronca Raul"
         )
+        (SCRIPT ^src "https://code.jquery.com/jquery-3.6.0.min.js" ^integrity "sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" ^crossorigin "anonymous")
+        (SCRIPT """
+          $("li input").click(function(e) {
+            var status = 0;
+            if ($(this).is(":checked")) {
+              status = 1;
+            }
+            $.ajax({url: "/todos",
+              type: "PATCH",
+              data: "id=" + $(this).attr("id") + "&status=" + status,
+              success: function(result, status) {
+                console.log(result);
+              },
+              error: function(xhr, status, error) {
+                console.log(error);
+              }
+            });
+          });
+        """)
       )
     )
   )
@@ -444,16 +500,22 @@
   (method index req
     (var todos (Todo . Todo/all))
     (.render
-      (DIV
-        (... (todos .map (todo ->
-          (DIV todo/@description)
-        )))
-      )
+      (... (todos .map (todo ->
+        todo/.to_html
+      )))
     )
   )
 
   (method create req
     (var todo (new Todo req/.body_params))
+    todo/.save
+    (redirect "/todos")
+  )
+
+  (method update req
+    (match [^id ^status] req/.body_params)
+    (var todo (Todo . Todo/find id))
+    ($set todo @status status)
     todo/.save
     (redirect "/todos")
   )
@@ -479,17 +541,10 @@
 
   (method map [^options... path controller action = "index"]
     (var http_methods [])
-    (if options/@GET
-      (http_methods .add "GET")
-    )
-    (if options/@POST
-      (http_methods .add "POST")
-    )
-    (if options/@PUT
-      (http_methods .add "PUT")
-    )
-    (if options/@DELETE
-      (http_methods .add "DELETE")
+    (for method in ["GET" "POST" "PUT" "PATCH" "DELETE"]
+      (if (options .@ method)
+        (http_methods .add method)
+      )
     )
     (/@mappings .add (new Mapping path controller action http_methods))
   )
@@ -511,8 +566,9 @@
 
   (var router ($tap (new Router)
     (.map "/" HomeController)
-    (.map ^^POST "/todos" TodosController :create)
-    (.map "/todos" TodosController)
+    (.map ^^POST  "/todos" TodosController :create)
+    (.map ^^PATCH "/todos" TodosController :update)
+    (.map         "/todos" TodosController)
   ))
 
   (var port
