@@ -13,6 +13,7 @@ bin           = @["gene"]
 
 requires "nim >= 1.0.0"
 requires "https://github.com/jangko/nim-noise#head"
+# requires "https://github.com/h3rald/nimline#head"
 
 task buildext, "Build the Nim extension":
   # For debugging purpose

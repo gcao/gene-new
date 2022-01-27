@@ -5,7 +5,9 @@ import ./map_key
 import ./types
 import ./parser
 # import ./repl
-import gene/repl_on_noise
+# import gene/repl_on_noise
+# import gene/repl_on_rdstdin
+import gene/repl_on_nimline
 import ./exprs
 import ./translators
 

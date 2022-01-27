@@ -1,6 +1,8 @@
 import ../types
 # import ../repl
-import gene/repl_on_noise
+# import gene/repl_on_noise
+# import gene/repl_on_rdstdin
+import gene/repl_on_nimline
 import ../interpreter_base
 
 type
