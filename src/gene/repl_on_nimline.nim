@@ -1,6 +1,7 @@
 import os, posix, strutils
 
-import ../h3rald/nimline
+# import ../h3rald/nimline
+import nimline
 
 import ./types
 import ./parser
