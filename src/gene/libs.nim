@@ -562,13 +562,19 @@ proc init*() =
           ("<" /@name
             ((/@attrs .map
               ([k v] ->
-                (" " k "=\""
-                  (if (k == "style")
-                    ((v .map ([name value] -> ("" name ":" value ";"))).join)
-                  else
-                    v/.to_s
+                (if (v == false)
+                  ""
+                elif (v == true)
+                  k
+                else
+                  (" " k "=\""
+                    (if (k == "style")
+                      ((v .map ([name value] -> ("" name ":" value ";"))).join)
+                    else
+                      v/.to_s
+                    )
+                    "\""
                   )
-                  "\""
                 )
               )
             ).join)

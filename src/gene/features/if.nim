@@ -124,15 +124,14 @@ proc normalize_if(self: Value) =
 
 proc eval_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExIf](expr)
-  var v = self.eval(frame, expr.cond)
-  if v:
-    result = self.eval(frame, expr.`then`)
-  elif expr.elifs.len > 0:
+  if self.eval(frame, expr.cond):
+    return self.eval(frame, expr.`then`)
+  if expr.elifs.len > 0:
     for pair in expr.elifs.mitems:
       if self.eval(frame, pair[0]):
         return self.eval(frame, pair[1])
-  elif expr.`else` != nil:
-    result = self.eval(frame, expr.`else`)
+  if expr.`else` != nil:
+    return self.eval(frame, expr.`else`)
 
 proc translate_if(value: Value): Expr =
   normalize_if(value)

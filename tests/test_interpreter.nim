@@ -145,6 +145,15 @@ test_interpreter """
     3
   )
 """, 2
+test_interpreter """
+  (if false
+    1
+  elif false
+    2
+  else
+    3
+  )
+""", 3
 
 test_interpreter "(if* true 1)", 1
 test_interpreter """
