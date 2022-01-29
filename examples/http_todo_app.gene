@@ -85,7 +85,7 @@
   (.on_extended (fnx child
     (child .on_member_missing (fnx name
       (if ([
-        "orm" "all" "find" "from_row"
+        "orm" "all" "find" "from_row" "columns_except_id"
       ].contains name)
         (/.parent .@ name)
       )
@@ -124,13 +124,23 @@
     ))
   )
 
-  (method insert _
-    (var sql
-      ("INSERT INTO " /.class/table "(" (columns .join ", ") ") "
-        "VALUES(" ((/.class/columns .map (col -> "?")) .join ", ") ")"
+  (fn /columns_except_id _
+    (var columns [])
+    (for col in /columns
+      (if (col != "id")
+        (columns .add col)
       )
     )
-    (var params (/.class/columns .map (col -> (.@ col))))
+    columns
+  )
+  (method insert _
+    (var columns (/.class . /.class/columns_except_id))
+    (var sql
+      ("INSERT INTO " /.class/table "(" (columns .join ", ") ") "
+        "VALUES(" ((columns .map (col -> "?")) .join ", ") ")"
+      )
+    )
+    (var params (columns .map (col -> (.@ col))))
     (/.class/orm .exec sql params...)
   )
 
@@ -150,7 +160,11 @@
     )
   )
 
-  (method delete record_or_id
+  (method delete _
+    (var sql
+      ("DELETE FROM " /.class/table " WHERE id = ?")
+    )
+    (/.class/orm .exec sql /@id)
   )
 )
 
@@ -161,7 +175,7 @@
   (method new props
     (@id = props/@id)
     (@description = props/@description)
-    (@status = props/@status)
+    (@status = (props/@status || 0))
   )
 
   (method done _
@@ -173,7 +187,7 @@
   )
 
   (method set_todo _
-    (@status = nil)
+    (@status = 0)
   )
 
   (method to_html _
@@ -185,7 +199,7 @@
           /@description
         )
       )
-      (BUTTON ^type "button" ^class "flex items-center delete-button absolute right-0"
+      (BUTTON ^type "button" ^class "flex items-center delete-button absolute right-0" ^data-id /@id
         (SVG ^class "feather feather-x" ^xmlns "http://www.w3.org/2000/svg" ^width "24" ^height "24" ^viewBox "0 0 24 24"
              ^fill "none" ^stroke "currentColor" ^stroke-width "2" ^stroke-linecap "round" ^stroke-linejoin "round"
           (LINE ^x1 "18" ^y1 "6" ^x2 "6" ^y2 "18")
@@ -473,10 +487,23 @@
               type: "PATCH",
               data: "id=" + id + "&status=" + newStatus,
               success: function(result, status) {
-                console.log(result);
+                window.location.reload();
               },
               error: function(xhr, status, error) {
-                console.log(error);
+                alert("Operation failed: " + error);
+              }
+            });
+          });
+          $("li button.delete-button").click(function(e) {
+            var id = $(this).data("id");
+            $.ajax({url: "/todos",
+              type: "DELETE",
+              data: "id=" + id,
+              success: function(result, status) {
+                window.location.reload();
+              },
+              error: function(xhr, status, error) {
+                alert("Operation failed: " + error);
               }
             });
           });
@@ -511,8 +538,7 @@
   (method create req
     (var todo (new Todo req/.body_params))
     todo/.save
-    # (redirect "/todos")
-    (respond ({^status "success"}.to_json))
+    (redirect "/todos")
   )
 
   (method update req
@@ -521,6 +547,16 @@
     ($set todo @status status)
     todo/.save
     # (redirect "/todos")
+    (respond ({^status "success"}.to_json))
+  )
+
+  (method delete req
+    (var id req/.body_params/@id)
+    (var todo (Todo . Todo/find id))
+    (if not todo
+      (throw ("Not found: " id))
+    )
+    todo/.delete
     (respond ({^status "success"}.to_json))
   )
 )
@@ -568,9 +604,10 @@
 (fn create_router _
   ($tap (new Router)
     (.map "/" HomeController)
-    (.map ^^POST  "/todos" TodosController :create)
-    (.map ^^PATCH "/todos" TodosController :update)
-    (.map         "/todos" TodosController)
+    (.map ^^POST   "/todos" TodosController :create)
+    (.map ^^PATCH  "/todos" TodosController :update)
+    (.map ^^DELETE "/todos" TodosController :delete)
+    (.map          "/todos" TodosController)
   )
 )
 
