@@ -164,6 +164,11 @@ type
     body*: seq[Value]
     body_compiled*: Expr
 
+  BoundFunction* = ref object of GeneProcessor
+    target*: Value
+    self*: Value
+    # args*: Value
+
   Block* = ref object of GeneProcessor
     frame*: Frame
     ns*: Namespace
@@ -264,6 +269,7 @@ type
     VkModule
     VkNamespace
     VkFunction
+    VkBoundFunction
     VkMacro
     VkBlock
     VkReturn
@@ -367,6 +373,8 @@ type
       ns*: Namespace
     of VkFunction:
       fn*: Function
+    of VkBoundFunction:
+      bound_fn*: BoundFunction
     of VkMacro:
       `macro`*: Macro
     of VkBlock:

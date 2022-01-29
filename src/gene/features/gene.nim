@@ -45,6 +45,8 @@ proc eval_gene_init*(self: VirtualMachine, frame: Frame, target: Value, expr: va
   case `type`.kind:
   of VkFunction:
     translator = `type`.fn.translator
+  of VkBoundFunction:
+    translator = `type`.bound_fn.translator
   of VkMacro:
     translator = `type`.macro.translator
   of VkBlock:

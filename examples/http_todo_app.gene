@@ -104,10 +104,10 @@
     (var query (new Query /table))
     (query .where "id = ?")
     (var data (/orm .exec query id))
-    (if (data/.size == 1)
-      (. /from_row data/@0)
+    (if (data/.size == 0)
+      (throw ("Not found: " id))
     else
-      (throw "TODO: better error")
+      (. /from_row data/@0)
     )
   )
 

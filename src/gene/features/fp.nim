@@ -13,6 +13,11 @@ type
   ExReturn* = ref object of Expr
     data*: Expr
 
+  ExBind* = ref object of Expr
+    target*: Expr
+    self*: Expr
+    # args*: ExArguments
+
 proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var fn_scope = new_scope()
   fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
@@ -71,17 +76,6 @@ proc to_function(node: Value): Function =
   result.translator = fn_arg_translator
   result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
 
-proc eval_return(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExReturn](expr)
-  var r = Return(
-    frame: frame,
-  )
-  if expr.data != nil:
-    r.val = self.eval(frame, expr.data)
-  else:
-    r.val = Nil
-  raise r
-
 proc translate_fn(value: Value): Expr =
   var fn = to_function(value)
   var expr = new_ex_ns_def()
@@ -99,6 +93,17 @@ proc translate_fnx(value: Value): Expr =
     data: fn,
   )
 
+proc eval_return(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExReturn](expr)
+  var r = Return(
+    frame: frame,
+  )
+  if expr.data != nil:
+    r.val = self.eval(frame, expr.data)
+  else:
+    r.val = Nil
+  raise r
+
 proc translate_return(value: Value): Expr =
   var expr = ExReturn()
   expr.evaluator = eval_return
@@ -106,8 +111,44 @@ proc translate_return(value: Value): Expr =
     expr.data = translate(value.gene_children[0])
   return expr
 
+proc bound_function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var bound_fn = target.bound_fn
+  var fn = bound_fn.target.fn
+  var fn_scope = new_scope()
+  fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
+  var new_frame = Frame(ns: fn.ns, scope: fn_scope)
+  new_frame.parent = frame
+  new_frame.self = bound_fn.self
+
+  handle_args(self, frame, new_frame, fn.matcher, cast[ExArguments](expr))
+
+  self.call_fn_skip_args(new_frame, bound_fn.target)
+
+proc bound_fn_arg_translator*(value: Value): Expr =
+  return translate_arguments(value, bound_function_invoker)
+
+proc eval_bind(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExBind](expr)
+  var target = self.eval(frame, expr.target)
+  var self = self.eval(frame, expr.self)
+  var bound_fn = BoundFunction(
+    translator: bound_fn_arg_translator,
+    target: target,
+    self: self,
+    # args: args,
+  )
+  Value(kind: VkBoundFunction, bound_fn: bound_fn)
+
+proc translate_bind(value: Value): Expr =
+  var expr = ExBind()
+  expr.evaluator = eval_bind
+  expr.target = translate(value.gene_children[0])
+  expr.self = translate(value.gene_children[1])
+  return expr
+
 proc init*() =
   GeneTranslators["fn"] = translate_fn
   GeneTranslators["fnx"] = translate_fnx
   GeneTranslators["fnxx"] = translate_fnx
   GeneTranslators["return"] = translate_return
+  GeneTranslators["$bind"] = translate_bind

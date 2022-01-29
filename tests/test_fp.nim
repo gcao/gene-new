@@ -341,3 +341,31 @@ test_interpreter """
 #   )
 #   (g 3)
 # """, 6
+
+test_interpreter """
+  (fn f _ self)
+  (var f1
+    ($bind f 1) # self = 1
+  )
+  (f1)
+""", 1
+
+# test_interpreter """
+#   (fn f [a b]
+#     [self + a + b]
+#   )
+#   (var f1
+#     ($bind f 1 2) # self = 1, a = 2
+#   )
+#   (f1 3) # b = 3
+# """, 6
+
+# test_interpreter """
+#   (fn f [a b]
+#     (a + b)
+#   )
+#   (var f1
+#     ($bind_args f 1) # a = 1
+#   )
+#   (f1 2)
+# """, 3
