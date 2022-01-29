@@ -170,7 +170,7 @@
   )
 
   (method to_html _
-    (LI ^class "py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item"
+    (LI ^class ("py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item" (if /.done " done"))
       (DIV
         (INPUT ^type "checkbox" ^id /@id ^class "cbx hidden" ^checked /.done)
         (LABEL ^for /@id ^class "text-xl cbx__child")
@@ -303,21 +303,21 @@
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
           }
 
-          .cbx__lbl.completed {
+          li.done .cbx__lbl {
             color: #c8ccd4;
           }
 
-          .cbx__lbl.completed:after {
+          li.done .cbx__lbl:after {
             width: 100%;
           }
 
-          .cbx:checked~.cbx__child {
+          li.done .cbx__child {
             border-color: transparent;
             background: #1dd1a1;
             animation: jelly 0.6s ease;
           }
 
-          .cbx:checked~.cbx__child:after {
+          li.done .cbx__child:after {
             opacity: 1;
             transform: rotate(45deg) scale(1);
           }
@@ -450,9 +450,7 @@
               # Include a hidden Submit so that Enter will trigger submitting the form
               (INPUT ^type "submit" ^style {^display "none"})
             )
-            (UL ^class "list-reset"
-              content
-            )
+            content
           )
         )
         (DIV ^class "text-center text-sm credit-disclaimer"
@@ -495,9 +493,11 @@
   (method index req
     (var todos (Todo . Todo/all))
     (.render
-      (... (todos .map (todo ->
-        todo/.to_html
-      )))
+      (UL ^class "list-reset"
+        (... (todos .map (todo ->
+          todo/.to_html
+        )))
+      )
     )
   )
 
