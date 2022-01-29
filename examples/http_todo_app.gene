@@ -105,7 +105,7 @@
     (query .where "id = ?")
     (var data (/orm .exec query id))
     (if (data/.size == 1)
-      (/from_row data/0)
+      (. /from_row data/@0)
     else
       (throw "TODO: better error")
     )
@@ -132,6 +132,13 @@
     )
     (var params (/.class/columns .map (col -> (.@ col))))
     (/.class/orm .exec sql params...)
+  )
+
+  (method update _
+    (var sql
+      ("UPDATE " /.class/table " SET status = ? WHERE id = ?")
+    )
+    (/.class/orm .exec sql /@status /@id)
   )
 
   # If no id, insert into the table, else update existing row.
@@ -504,7 +511,8 @@
   (method create req
     (var todo (new Todo req/.body_params))
     todo/.save
-    (redirect "/todos")
+    # (redirect "/todos")
+    (respond ({^status "success"}.to_json))
   )
 
   (method update req
@@ -512,7 +520,8 @@
     (var todo (Todo . Todo/find id))
     ($set todo @status status)
     todo/.save
-    (redirect "/todos")
+    # (redirect "/todos")
+    (respond ({^status "success"}.to_json))
   )
 )
 

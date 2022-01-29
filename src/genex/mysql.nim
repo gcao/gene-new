@@ -28,7 +28,7 @@ proc exec*(self: Value, args: Value): Value {.wrap_exception.} =
   else:
     todo("Connection.exec " & $arg0.kind)
   if args.gene_children.len > 1:
-    var params: seq[Value] = @[]
+    var params: seq[string] = @[]
     for item in args.gene_children[1..^1]:
       if item.is_nil or item.kind == VkNil:
         params.add("null")
