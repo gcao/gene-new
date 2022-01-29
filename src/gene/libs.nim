@@ -28,15 +28,6 @@ proc on_member_missing(self: Value, args: Value): Value =
   else:
     todo("member_missing " & $self.kind)
 
-proc class_name(self: Value, args: Value): Value =
-  self.class.name
-
-proc class_on_extended(self: Value, args: Value): Value =
-  self.class.on_extended = args.gene_children[0]
-
-proc class_parent(self: Value, args: Value): Value =
-  Value(kind: VkClass, class: self.class.parent)
-
 proc exception_message(self: Value, args: Value): Value =
   self.exception.msg
 
@@ -321,12 +312,38 @@ proc init*() =
 
     ClassClass = Value(kind: VkClass, class: new_class("Class"))
     ClassClass.class.parent = ObjectClass.class
-    ClassClass.def_native_method("name", class_name)
-    ClassClass.def_native_method("parent", class_parent)
+    ClassClass.def_native_method "name", proc(self: Value, args: Value): Value =
+      self.class.ns.get_members()
+    ClassClass.def_native_method "parent", proc(self: Value, args: Value): Value =
+      Value(kind: VkClass, class: self.class.parent)
+    ClassClass.def_native_method "members", proc(self: Value, args: Value): Value {.name:"class_members".} =
+      self.class.ns.get_members()
+    ClassClass.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"class_member_names".} =
+      self.class.ns.member_names()
+    ClassClass.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"class_has_member".} =
+      self.class.ns.members.has_key(args[0].to_s.to_key)
     ClassClass.def_native_method "on_member_missing", on_member_missing
-    ClassClass.def_native_method "on_extended", class_on_extended
+    ClassClass.def_native_method "on_extended", proc(self: Value, args: Value): Value {.name:"class_on_extended" } =
+      self.class.on_extended = args.gene_children[0]
+
     GENE_NS.ns["Class"] = ClassClass
     GLOBAL_NS.ns["Class"] = ClassClass
+
+    MixinClass = Value(kind: VkClass, class: new_class("Mixin"))
+    MixinClass.class.parent = ObjectClass.class
+    MixinClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"mixin_name".} =
+      self.mixin.name
+    MixinClass.def_native_method "members", proc(self: Value, args: Value): Value {.name:"mixin_members".} =
+      self.mixin.ns.get_members()
+    MixinClass.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"mixin_member_names".} =
+      self.mixin.ns.member_names()
+    MixinClass.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"mixin_has_member".} =
+      self.mixin.ns.members.has_key(args[0].to_s.to_key)
+    MixinClass.def_native_method "on_member_missing", on_member_missing
+    MixinClass.def_native_method "on_included", proc(self: Value, args: Value): Value {.name:"mixin_on_extended" } =
+      self.class.on_extended = args.gene_children[0]
+    GENE_NS.ns["Mixin"] = MixinClass
+    GLOBAL_NS.ns["Mixin"] = MixinClass
 
     ExceptionClass = Value(kind: VkClass, class: new_class("Exception"))
     ExceptionClass.class.parent = ObjectClass.class
@@ -340,6 +357,12 @@ proc init*() =
     NamespaceClass.class.parent = ObjectClass.class
     NamespaceClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =
       self.ns.name
+    NamespaceClass.def_native_method "members", proc(self: Value, args: Value): Value {.name:"ns_members".} =
+      self.ns.get_members()
+    NamespaceClass.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"ns_member_names".} =
+      self.ns.member_names()
+    NamespaceClass.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"ns_has_member".} =
+      self.ns.members.has_key(args[0].to_s.to_key)
     NamespaceClass.def_native_method "on_member_missing", on_member_missing
     GENE_NS.ns["Namespace"] = NamespaceClass
     GLOBAL_NS.ns["Namespace"] = NamespaceClass

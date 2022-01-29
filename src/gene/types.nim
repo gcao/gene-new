@@ -145,6 +145,7 @@ type
   Mixin* = ref object
     name*: string
     methods*: Table[MapKey, Method]
+    on_included*: Value
     ns*: Namespace # Mixin can act like a namespace
 
   Method* = ref object
@@ -636,10 +637,10 @@ var GENEX_NS*      : Value
 
 var ObjectClass*   : Value
 var ClassClass*    : Value
+var MixinClass*    : Value
 var ExceptionClass*: Value
 var FutureClass*   : Value
 var NamespaceClass*: Value
-var MixinClass*    : Value
 var FunctionClass* : Value
 var MacroClass*    : Value
 var BlockClass*    : Value
@@ -669,6 +670,8 @@ proc new_gene_int*(val: BiggestInt): Value {.inline.}
 proc new_gene_string*(s: string): Value {.gcsafe.}
 proc new_gene_string_move*(s: string): Value
 proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
+proc new_gene_vec*(items: varargs[Value]): Value
+proc new_gene_map*(): Value
 proc new_namespace*(): Namespace
 proc new_namespace*(parent: Namespace): Namespace
 proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.inline.}
@@ -892,6 +895,16 @@ proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.inline.} =
 
 proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.} =
   self.members[key.to_key] = val
+
+proc get_members*(self: Namespace): Value =
+  result = new_gene_map()
+  for k, v in self.members:
+    result.map[k] = v
+
+proc member_names*(self: Namespace): Value =
+  result = new_gene_vec()
+  for k, _ in self.members:
+    result.vec.add(k.to_s)
 
 #################### Scope #######################
 
@@ -1136,6 +1149,8 @@ proc get_class*(val: Value): Class =
     return val.cast_class
   of VkClass:
     return ClassClass.class
+  of VkMixin:
+    return MixinClass.class
   of VkNamespace:
     return NamespaceClass.class
   of VkFuture:
