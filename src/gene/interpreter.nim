@@ -61,12 +61,13 @@ proc new_package*(dir: string): Package =
 #################### VM ##########################
 
 proc new_vm*(app: Application): VirtualMachine =
-  result = VirtualMachine(
-    app: app,
-  )
+  result = new_virtual_machine()
+  result.app = app
 
 proc init_app_and_vm*() =
   var app = new_app()
+  if VM != nil:
+    dealloc(VM)
   VM = new_vm(app)
   GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
   GLOBAL_NS.ns[STDIN_KEY]  = stdin
@@ -141,11 +142,11 @@ proc run_file*(self: VirtualMachine, file: string): Value =
 
 proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
   echo "An exception was thrown: " & e.msg
-  echo "Opening debug console..."
-  echo "Note: the exception can be accessed as $ex"
-  var ex = error_to_gene(e)
-  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
-  result = repl(self, frame, eval, true)
+  # echo "Opening debug console..."
+  # echo "Note: the exception can be accessed as $ex"
+  # var ex = error_to_gene(e)
+  # frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
+  # result = repl(self, frame, eval, true)
 
 #################### Parsing #####################
 
@@ -372,7 +373,7 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
       args.gene_data.add self.eval(frame, v)
     self.process_args(new_frame, matcher, args)
 
-proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
+proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
   case target.kind:
   of VkBlock:
     var scope = new_scope()

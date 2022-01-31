@@ -380,10 +380,12 @@ type
   #   http: read/write
   #   custom capabilities provided by libraries
 
-  VirtualMachine* = ref object
+  VirtualMachineInternal = object
     app*: Application
     modules*: OrderedTable[MapKey, Module]
     repl_on_error*: bool
+
+  VirtualMachine* = ptr VirtualMachineInternal
 
   FrameKind* = enum
     FrFunction
@@ -1833,6 +1835,11 @@ proc prop_splat*(self: seq[Matcher]): MapKey =
   for m in self:
     if m.kind == MatchProp and m.is_splat:
       return m.name
+
+#################### VirtualMachine ##############
+
+proc new_virtual_machine*(): VirtualMachine =
+  create(VirtualMachineInternal, sizeof(VirtualMachineInternal))
 
 ##################################################
 
