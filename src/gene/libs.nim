@@ -278,12 +278,13 @@ proc add_success_callback(self: Value, args: Value): Value =
       var frame = Frame()
       discard VM.call(frame, args.gene_data[0], callback_args)
   else:
-    self.future.add_callback proc() {.gcsafe.} =
-      if not self.future.failed:
-        var callback_args = new_gene_gene()
-        callback_args.gene_data.add(self.future.read())
-        var frame = Frame()
-        discard VM.call(frame, args.gene_data[0], callback_args)
+    self.future.add_callback proc() =
+      {.cast(gcsafe).}:
+        if not self.future.failed:
+          var callback_args = new_gene_gene()
+          callback_args.gene_data.add(self.future.read())
+          var frame = Frame()
+          discard VM.call(frame, args.gene_data[0], callback_args)
 
 proc add_failure_callback(self: Value, args: Value): Value =
   # Register callback to future
@@ -295,13 +296,14 @@ proc add_failure_callback(self: Value, args: Value): Value =
       var frame = Frame()
       discard VM.call(frame, args.gene_data[0], callback_args)
   else:
-    self.future.add_callback proc() {.gcsafe.} =
-      if self.future.failed:
-        var callback_args = new_gene_gene()
-        var ex = error_to_gene(cast[ref CatchableError](self.future.read_error()))
-        callback_args.gene_data.add(ex)
-        var frame = Frame()
-        discard VM.call(frame, args.gene_data[0], callback_args)
+    self.future.add_callback proc() =
+      {.cast(gcsafe).}:
+        if self.future.failed:
+          var callback_args = new_gene_gene()
+          var ex = error_to_gene(cast[ref CatchableError](self.future.read_error()))
+          callback_args.gene_data.add(ex)
+          var frame = Frame()
+          discard VM.call(frame, args.gene_data[0], callback_args)
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
@@ -316,8 +318,9 @@ proc init*() =
     GENE_NS.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep_async".} =
       var f = sleep_async(args.gene_data[0].int)
       var future = new_future[Value]()
-      f.add_callback proc() {.gcsafe.} =
-        future.complete(Nil)
+      f.add_callback proc() =
+        {.cast(gcsafe).}:
+          future.complete(Nil)
       result = new_gene_future(future)
     GENE_NS.ns["base64"] = new_gene_native_fn proc(args: Value): Value =
       encode(args.gene_data[0].str)
@@ -500,16 +503,17 @@ proc init*() =
         port = args.gene_data[0].str.parse_int
       else:
         port = args.gene_data[0].int
-      proc handler(req: Request) {.async gcsafe.} =
-        try:
-          var options = new_gene_gene(Nil)
-          options.gene_data.add(new_gene_any(req.unsafe_addr, HTTP_REQUEST_KEY))
-          var body = VM.call_fn(nil, args.gene_data[1], options).str
-          await req.respond(Http200, body, new_http_headers())
-        except CatchableError as e:
-          echo e.msg
-          echo e.get_stack_trace()
-          discard req.respond(Http500, e.msg, new_http_headers())
+      proc handler(req: Request) {.async.} =
+        {.cast(gcsafe).}:
+          try:
+            var options = new_gene_gene(Nil)
+            options.gene_data.add(new_gene_any(req.unsafe_addr, HTTP_REQUEST_KEY))
+            var body = VM.call_fn(nil, args.gene_data[1], options).str
+            await req.respond(Http200, body, new_http_headers())
+          except CatchableError as e:
+            echo e.msg
+            echo e.get_stack_trace()
+            discard req.respond(Http500, e.msg, new_http_headers())
       var server = new_async_http_server()
       async_check server.serve(Port(port), handler)
 

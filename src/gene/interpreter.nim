@@ -142,11 +142,11 @@ proc run_file*(self: VirtualMachine, file: string): Value =
 
 proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref CatchableError): Value =
   echo "An exception was thrown: " & e.msg
-  # echo "Opening debug console..."
-  # echo "Note: the exception can be accessed as $ex"
-  # var ex = error_to_gene(e)
-  # frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
-  # result = repl(self, frame, eval, true)
+  echo "Opening debug console..."
+  echo "Note: the exception can be accessed as $ex"
+  var ex = error_to_gene(e)
+  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
+  result = repl(self, frame, eval, true)
 
 #################### Parsing #####################
 
@@ -373,7 +373,7 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
       args.gene_data.add self.eval(frame, v)
     self.process_args(new_frame, matcher, args)
 
-proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
+proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   case target.kind:
   of VkBlock:
     var scope = new_scope()

@@ -5,36 +5,38 @@ import ../types
 # import ./module
 
 type
-  MonitorWrapper* = ref object
+  MonitorWrapperInternal = object
     monitor*: Monitor
+    paths*: seq[string]
+
+  MonitorWrapper* = ptr MonitorWrapperInternal
 
 var monitor_thread: Thread[void]
-var paths: seq[string] = @[]
-var wrapper: MonitorWrapper
+var wrapper: MonitorWrapper = create(MonitorWrapperInternal, sizeof(MonitorWrapperInternal))
+wrapper.monitor = new_monitor()
+wrapper.paths = @[]
 
 proc eval_reload(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   if frame.ns.module != nil:
     frame.ns.module.reloadable = true
-    paths.add(frame.ns.module.name & ".gene")
+    wrapper.paths.add(frame.ns.module.name & ".gene")
 
 proc translate_reload(value: Value): Expr =
   Expr(
     evaluator: eval_reload,
   )
 
-proc thread_callback() {.thread.} =
-  echo "thread_callback"
-  # proc callback(event: fsw_cevent, event_num: cuint) =
-  #   echo "FSWatch callback: path = " & $event.path
+proc thread_callback() {.thread gcsafe.} =
+  proc callback(event: fsw_cevent, event_num: cuint) =
+    echo "FSWatch callback: path = " & $event.path
 
-  # wrapper = MonitorWrapper(monitor: new_monitor())
-  # for path in paths:
-  #   wrapper.monitor.add_path(path)
-  # wrapper.monitor.set_callback(callback)
-  # wrapper.monitor.start()
+  for path in wrapper.paths:
+    wrapper.monitor.add_path(path)
+  wrapper.monitor.set_callback(callback)
+  wrapper.monitor.start()
 
 proc eval_start_monitor(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  if paths.len == 0:
+  if wrapper.paths.len == 0:
     echo "No path to monitor. Skip starting monitor"
     return false
   else:
