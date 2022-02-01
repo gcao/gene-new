@@ -1,0 +1,18 @@
+#!/usr/bin/env gene
+
+(var mod "tests/fixtures/reloadable")
+(var mod_file ("" mod ".gene"))
+(import a from mod)
+(genex/test/check (a == 1) "Reloadable: precondition failed")
+(gene/os/exec ("cp " mod_file " /tmp/reloadable.gene"))
+($start_monitor)
+(gene/File/write mod_file "
+  (var a 2)
+")
+(gene/sleep 200) # wait 0.2 second
+(try
+  (genex/test/check (a == 2) "Reloadable: reload failed")
+finally
+  ($stop_monitor)
+  (gene/os/exec ("cp /tmp/reloadable.gene " mod_file))
+)

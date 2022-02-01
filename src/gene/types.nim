@@ -587,6 +587,9 @@ for i in 0..110:
 
 var VM*: VirtualMachine   # The current virtual machine
 
+var HotReloadListener*: Channel[string]
+HotReloadListener.open()
+
 var GLOBAL_NS*     : Value
 var GENE_NS*       : Value
 var GENE_NATIVE_NS*: Value

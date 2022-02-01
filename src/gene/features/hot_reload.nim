@@ -2,7 +2,8 @@ import libfswatch
 import libfswatch/fswatch
 
 import ../types
-# import ./module
+
+# See https://nim-lang.org/docs/channels_builtin.html
 
 type
   MonitorWrapperInternal = object
