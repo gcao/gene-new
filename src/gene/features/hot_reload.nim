@@ -30,6 +30,7 @@ proc translate_reload(value: Value): Expr =
 proc thread_callback() {.thread gcsafe.} =
   proc callback(event: fsw_cevent, event_num: cuint) =
     echo "FSWatch callback: path = " & $event.path
+    HotReloadListener.send($event.path)
 
   for path in wrapper.paths:
     wrapper.monitor.add_path(path)

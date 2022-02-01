@@ -1845,6 +1845,3 @@ proc new_virtual_machine*(): VirtualMachine =
   create(VirtualMachineInternal, sizeof(VirtualMachineInternal))
 
 ##################################################
-
-template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  expr.evaluator(self, frame, nil, expr)

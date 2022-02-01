@@ -10,6 +10,7 @@
   (var a 2)
 ")
 (gene/sleep 200) # wait 0.2 second
+(gene/sleep 5000)
 (try
   (genex/test/check (a == 2) "Reloadable: reload failed")
 finally
