@@ -61,11 +61,13 @@ proc new_package*(dir: string): Package =
 #################### VM ##########################
 
 proc new_vm*(app: Application): VirtualMachine =
-  result = new_virtual_machine()
-  result.app = app
+  result = VirtualMachine(
+    app: app,
+  )
 
 proc init_app_and_vm*() =
-  VM = new_vm(new_app())
+  var app = new_app()
+  VM = new_vm(app)
   GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
   GLOBAL_NS.ns[STDIN_KEY]  = stdin
   GLOBAL_NS.ns[STDOUT_KEY] = stdout

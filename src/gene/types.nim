@@ -1841,9 +1841,4 @@ proc prop_splat*(self: seq[Matcher]): MapKey =
     if m.kind == MatchProp and m.is_splat:
       return m.name
 
-#################### VirtualMachine ##############
-
-proc new_virtual_machine*(): VirtualMachine =
-  VirtualMachine()
-
 ##################################################
