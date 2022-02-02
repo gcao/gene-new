@@ -11,9 +11,9 @@
   (var $ns/a 2)
   (println "after")
 """)
-(gene/sleep 200) # wait 0.2 second
-(gene/sleep 5000)
+(gene/sleep 2000)
 (try
+  (println a)
   (genex/test/check (a == 2) "Reloadable: reload failed")
 finally
   ($stop_monitor)
