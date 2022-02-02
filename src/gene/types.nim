@@ -380,12 +380,10 @@ type
   #   http: read/write
   #   custom capabilities provided by libraries
 
-  VirtualMachineInternal = object
+  VirtualMachine* = ref object
     app*: Application
     modules*: OrderedTable[MapKey, Module]
     repl_on_error*: bool
-
-  VirtualMachine* = ptr VirtualMachineInternal
 
   FrameKind* = enum
     FrFunction
@@ -1383,6 +1381,8 @@ proc `$`*(node: Value): string =
   #   result = "(class $# ...)" % [node.class.name]
   # of VkInstance:
   #   result = "($# ...)" % [node.instance.class.name]
+  of VkReloadable:
+    return $node.resolve()
   else:
     result = $node.kind
 
@@ -1844,6 +1844,6 @@ proc prop_splat*(self: seq[Matcher]): MapKey =
 #################### VirtualMachine ##############
 
 proc new_virtual_machine*(): VirtualMachine =
-  create(VirtualMachineInternal, sizeof(VirtualMachineInternal))
+  VirtualMachine()
 
 ##################################################

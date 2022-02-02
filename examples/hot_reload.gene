@@ -7,13 +7,11 @@
 (gene/os/exec ("cp " mod_file " /tmp/reloadable.gene"))
 ($start_monitor)
 (gene/File/write mod_file """
-  (println "before")
   (var $ns/a 2)
-  (println "after")
 """)
 (gene/sleep 2000)
 (try
-  (println a)
+  ($debug a)
   (genex/test/check (a == 2) "Reloadable: reload failed")
 finally
   ($stop_monitor)

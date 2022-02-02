@@ -65,10 +65,7 @@ proc new_vm*(app: Application): VirtualMachine =
   result.app = app
 
 proc init_app_and_vm*() =
-  var app = new_app()
-  if VM != nil:
-    dealloc(VM)
-  VM = new_vm(app)
+  VM = new_vm(new_app())
   GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
   GLOBAL_NS.ns[STDIN_KEY]  = stdin
   GLOBAL_NS.ns[STDOUT_KEY] = stdout

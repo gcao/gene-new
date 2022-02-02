@@ -13,8 +13,8 @@ proc translate*(stmts: seq[Value]): Expr
 var hot_reload_counter = 0
 template check_hot_reload*(self: VirtualMachine) =
   hot_reload_counter += 1
-  echo "check_hot_reload " & $hot_reload_counter
-  if hot_reload_counter mod 5 == 0:
+  if hot_reload_counter == 5:
+    hot_reload_counter = 0
     let tried = HotReloadListener.try_recv()
     if tried.data_available:
       echo "check_hot_reload " & tried.msg
@@ -52,10 +52,9 @@ proc reload_module*(self: VirtualMachine, frame: Frame, name: string, code: stri
   new_frame.ns = module.ns
   new_frame.scope = new_scope()
   var parsed = self.prepare(code)
-  echo "reload_module " & name & "\n" & $parsed
   var expr = translate(parsed)
-  discard self.eval(frame, expr)
-  echo "reload_module done"
+  discard self.eval(new_frame, expr)
+  self.modules[name.to_key] = module
 
 #################### Expr ########################
 
