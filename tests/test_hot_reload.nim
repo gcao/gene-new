@@ -8,6 +8,13 @@ import ./helpers
 # HOT RELOAD
 
 # Module must be marked as reloadable first
+# Support using a path pattern to mark all files that match it can be reloaded
+# Start / stop monitor manually
+# Start / stop monitor automatically
+# Optional: for performance's sake, use Nim compilation flag to compile two versions -
+#           one to support reloading, one not.
+#           The one that does not support hot reloading should produce informational message
+#           when hot-reload related stuff is evaluated.
 # We need symbol table per module
 # Symbols are referenced by names/keys
 # Should work for imported symbols, e.g. (import a from "a")
