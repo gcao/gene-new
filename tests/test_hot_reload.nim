@@ -93,9 +93,9 @@ test_interpreter """
 #   (gene/os/exec ("cp " mod_file " /tmp/reloadable.gene"))
 #   ($start_monitor)
 #   (gene/File/write mod_file "
-#     (var a 2)
+#     (var $ns/a 2)
 #   ")
-#   (gene/sleep 200) # wait 0.2 second
+#   (gene/sleep 2000)
 #   (try
 #     (genex/test/check (a == 2) "Reloadable: reload failed")
 #   finally

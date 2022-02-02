@@ -92,7 +92,7 @@ type
     member_missing*: Value
 
   Reloadable* = ref object
-    module*: Module
+    module_key*: MapKey
     path*: seq[MapKey]
 
   Scope* = ref object
@@ -1159,7 +1159,7 @@ proc resolve*(self: Namespace, path: seq[MapKey], pos: int): Value =
     return val
 
 proc resolve*(self: Reloadable): Value =
-  self.module.ns.resolve(self.path, 0)
+  VM.modules[self.module_key].ns.resolve(self.path, 0)
 
 #################### Value ###################
 
@@ -1592,7 +1592,7 @@ proc new_mixin*(name: string): Mixin =
 proc new_gene_reloadable*(module: Module, path: seq[MapKey]): Value =
   return Value(
     kind: VkReloadable,
-    reloadable: Reloadable(module: module, path: path),
+    reloadable: Reloadable(module_key: module.name.to_key, path: path),
   )
 
 # Do not allow auto conversion between CatchableError and Value

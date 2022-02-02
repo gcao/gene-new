@@ -1,3 +1,1 @@
-($set_reloadable)
-
-(var $ns/a 1)
+  (var $ns/a 2)
