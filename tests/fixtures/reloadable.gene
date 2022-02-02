@@ -1,2 +1,4 @@
+# TODO: ($module .set_reloadable)
+($set_reloadable)
 
-  (var a 2)
+(var $ns/a 1)

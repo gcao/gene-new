@@ -1350,6 +1350,8 @@ proc `$`*(node: Value): string =
     result = "["
     result &= node.vec.join(" ")
     result &= "]"
+  of VkStream:
+    result = node.stream.join("\n")
   of VkMap:
     result = "{"
     var is_first = true

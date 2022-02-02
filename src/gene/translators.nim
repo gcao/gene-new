@@ -51,7 +51,9 @@ proc reload_module*(self: VirtualMachine, frame: Frame, name: string, code: stri
   var new_frame = new_frame()
   new_frame.ns = module.ns
   new_frame.scope = new_scope()
-  var expr = translate(self.prepare(code))
+  var parsed = self.prepare(code)
+  echo "reload_module " & $parsed
+  var expr = translate(parsed)
   discard self.eval(frame, expr)
 
 #################### Expr ########################
