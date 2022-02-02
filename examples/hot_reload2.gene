@@ -1,0 +1,11 @@
+#!/usr/bin/env gene
+
+# Modify this file and see changes in the output
+
+($set_reloadable)
+($start_monitor)
+
+(println 1)
+(loop
+  (gene/sleep 200)
+)

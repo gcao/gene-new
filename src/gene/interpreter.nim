@@ -125,6 +125,7 @@ proc eval*(self: VirtualMachine, code: string): Value =
 
 proc run_file*(self: VirtualMachine, file: string): Value =
   var module = new_module(self.app.pkg.ns, file)
+  self.modules[module.name.to_key] = module
   var frame = new_frame()
   frame.ns = module.ns
   frame.scope = new_scope()

@@ -726,6 +726,9 @@ proc new_module*(): Module =
   result = new_module("<unknown>")
 
 proc new_module*(ns: Namespace, name: string): Module =
+  var name = name
+  if name.ends_with(".gene"):
+    name = name[0..^6]
   result = Module(
     name: name,
     ns: new_namespace(ns),
