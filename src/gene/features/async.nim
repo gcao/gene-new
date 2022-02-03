@@ -56,6 +56,19 @@ proc translate_await(value: Value): Expr =
     r.data.add(translate(item))
   return r
 
+proc eval_new_future(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  Value(
+    kind: VkFuture,
+    future: new_future[Value]("eval_new_future"),
+  )
+
+proc translate_new_future(value: Value): Expr =
+  Expr(
+    evaluator: eval_new_future,
+  )
+
 proc init*() =
   GeneTranslators["async"] = translate_async
   GeneTranslators["await"] = translate_await
+  # This is a temporary approach of creating a VkFuture Value
+  GeneTranslators["$new_future"] = translate_new_future

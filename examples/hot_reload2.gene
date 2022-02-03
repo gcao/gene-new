@@ -4,13 +4,20 @@
 
 ($set_reloadable)
 ($start_monitor)
+(var reload false)
+(var reload_future ($new_future))
 
 # The unloaded callback is called before a module is reloaded.
 ($on_unload (fnx module
   (println "I was unloaded.")
+  (reload = true)
+  reload_future
 ))
 
 (println 1)
-(loop
+(while (not reload)
   (gene/sleep 200)
 )
+
+(println "Done!")
+(reload_future .complete)

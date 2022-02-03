@@ -4,6 +4,7 @@ import gene/map_key
 import gene/types
 import gene/parser
 # import gene/normalizers
+import gene/translators
 import gene/interpreter
 # import gene/interpreter_extras
 

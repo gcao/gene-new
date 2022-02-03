@@ -715,18 +715,24 @@ proc reload_module*(self: VirtualMachine, frame: Frame, name: string, code: stri
   elif not loaded_module.reloadable:
     not_allowed("reload_module: " & loaded_module.name & " is not reloadable.")
 
-  var old_module = self.modules[name.to_key]
-  var args = new_gene_gene()
-  args.gene_data.add(Value(kind: VkModule, module: old_module))
-  var unloaded_result = self.call_fn(frame, old_module.on_unloaded, args)
-  if unloaded_result != nil and unloaded_result.kind == VkFuture:
-    discard wait_for(unloaded_result.future)
+  proc callback(future: Future[Value]) =
+    {.cast(gcsafe).}:
+      var module = new_module(name)
+      var new_frame = new_frame()
+      new_frame.ns = module.ns
+      new_frame.scope = new_scope()
+      var parsed = self.prepare(code)
+      var expr = translate(parsed)
+      discard self.eval(new_frame, expr)
+      self.modules[name.to_key] = module
 
-  var module = new_module(name)
-  var new_frame = new_frame()
-  new_frame.ns = module.ns
-  new_frame.scope = new_scope()
-  var parsed = self.prepare(code)
-  var expr = translate(parsed)
-  discard self.eval(new_frame, expr)
-  self.modules[name.to_key] = module
+  var old_module = self.modules[name.to_key]
+  if old_module.on_unloaded != nil:
+    var args = new_gene_gene()
+    args.gene_data.add(Value(kind: VkModule, module: old_module))
+    var unloaded_result = self.call_fn(frame, old_module.on_unloaded, args)
+    if unloaded_result != nil and unloaded_result.kind == VkFuture:
+      unloaded_result.future.add_callback(callback)
+      return
+
+  callback(nil)

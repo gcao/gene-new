@@ -268,6 +268,18 @@ proc time_elapsed(self: Value, args: Value): Value =
 proc time_hour(self: Value, args: Value): Value =
   result = self.time.hour
 
+proc future_complete(self: Value, args: Value): Value =
+  if args.gene_data.len > 0:
+    self.future.complete(args.gene_data[0])
+  else:
+    self.future.complete(nil)
+
+proc future_fail(self: Value, args: Value): Value =
+  if args.gene_data.len > 0:
+    self.future.fail(args.gene_data[0].exception)
+  else:
+    todo("future_fail")
+
 proc add_success_callback(self: Value, args: Value): Value =
   # Register callback to future
   if self.future.finished:
@@ -366,6 +378,9 @@ proc init*() =
 
     FutureClass = Value(kind: VkClass, class: new_class("Future"))
     FutureClass.class.parent = ObjectClass.class
+    FutureClass.def_native_method("complete", future_complete)
+    FutureClass.def_native_method("fail", future_fail)
+    # FutureClass.def_native_method("finished", future_finished)
     FutureClass.def_native_method("on_success", add_success_callback)
     FutureClass.def_native_method("on_failure", add_failure_callback)
     FutureClass.class.parent = ObjectClass.class
