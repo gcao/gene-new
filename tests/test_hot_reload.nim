@@ -8,9 +8,10 @@ import ./helpers
 # HOT RELOAD
 
 # Module must be marked as reloadable first
-# Support using a path pattern to mark all files that match it can be reloaded
+# Support using a path pattern to mark all files that match it to be reloadable
 # Start / stop monitor manually
 # Start / stop monitor automatically
+# An on_unloaded callback can be defined on a module and is called before the module is reloaded.
 # Optional: for performance's sake, use Nim compilation flag to compile two versions -
 #           one to support reloading, one not.
 #           The one that does not support hot reloading should produce informational message
