@@ -25,6 +25,12 @@ import ./helpers
 # Should work with the entry module (i.e. the script that is invoked)
 # Should use the reloaded version when a symbol is accessed
 
+# To stop a server and restart:
+#   Implement our own run_forever() which will exit if some global variable is set
+#   Create a Future that will be resolved when the current module ends
+#   In on_unloaded, trigger exiting run_forever(), await the future to resolve
+#   Simplify above code
+
 # File monitoring should occur in another thread at configured latency
 # Communicate with the main thread thru channels?
 # https://nim-lang.org/docs/channels_builtin.html

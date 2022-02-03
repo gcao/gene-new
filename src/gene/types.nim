@@ -81,6 +81,7 @@ type
     ns*: Namespace
     props*: Table[string, Value]  # Additional properties
     reloadable*: bool
+    on_unloaded*: Value
 
   Namespace* = ref object
     module*: Module
@@ -326,6 +327,10 @@ type
       gene_processor*: GeneProcessor
     of VkApplication:
       app*: Application
+    of VkPackage:
+      pkg*: Package
+    of VkModule:
+      module*: Module
     of VkNamespace:
       ns*: Namespace
     of VkReloadable:

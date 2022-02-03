@@ -9,6 +9,7 @@ import times, logging, os, streams, parsecsv, re
 import gene/types
 import gene/map_key
 import gene/parser
+import gene/translators
 import gene/interpreter
 import gene/repl
 import cmdline/option_parser
