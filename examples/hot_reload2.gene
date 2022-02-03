@@ -2,6 +2,8 @@
 
 # Modify this file and see changes in the output
 
+(println "----------")
+
 ($set_reloadable)
 ($start_monitor)
 (var reload false)

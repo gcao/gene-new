@@ -718,13 +718,13 @@ proc reload_module*(self: VirtualMachine, frame: Frame, name: string, code: stri
   proc callback(future: Future[Value]) =
     {.cast(gcsafe).}:
       var module = new_module(name)
+      self.modules[name.to_key] = module
       var new_frame = new_frame()
       new_frame.ns = module.ns
       new_frame.scope = new_scope()
       var parsed = self.prepare(code)
       var expr = translate(parsed)
       discard self.eval(new_frame, expr)
-      self.modules[name.to_key] = module
 
   var old_module = self.modules[name.to_key]
   if old_module.on_unloaded != nil:
