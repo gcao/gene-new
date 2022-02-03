@@ -52,7 +52,7 @@ proc eval_start_monitor(self: VirtualMachine, frame: Frame, target: Value, expr:
     return false
   else:
     create_thread(monitor_thread, thread_callback)
-    echo "The module module monitor has started."
+    echo "The module monitor has started."
     return true
 
 proc translate_start_monitor(value: Value): Expr =
