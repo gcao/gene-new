@@ -5,6 +5,11 @@
 ($set_reloadable)
 ($start_monitor)
 
+# The unloaded callback is called before a module is reloaded.
+# ($on_unload (fnx module
+#   (println "I was unloaded.")
+# ))
+
 (println 1)
 (loop
   (gene/sleep 200)
