@@ -155,12 +155,6 @@ test_interpreter """
   )
 """, 3
 
-test_interpreter "(if* true 1)", 1
-test_interpreter """
-  (var a if*)
-  (a true 1)
-""", 1
-
 test_interpreter "(do 1 2)", 2
 
 test_interpreter """
