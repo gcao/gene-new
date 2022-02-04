@@ -171,10 +171,11 @@ proc test_jsgen*(code: string, result: Value) =
   test "JS generation: " & code:
     init_all()
     var parsed = VM.prepare(code)
-    var expr = translate(parsed)
-    var file = "/tmp/test.js"
-    write_file(file, expr.to_js)
-    discard exec_cmd("cat " & file)
+    var translator = new_translator()
+    var generated = translator.process(parsed)
+    echo generated
     echo()
+    var file = "/tmp/test.js"
+    write_file(file, generated)
     var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)
     check output == result
