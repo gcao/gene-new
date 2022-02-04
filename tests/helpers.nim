@@ -1,11 +1,11 @@
-import unittest, strutils, tables
+import unittest, strutils, tables, osproc
 
 import gene/map_key
 import gene/types
 import gene/parser
-# import gene/normalizers
+import gene/translators
 import gene/interpreter
-# import gene/interpreter_extras
+import gene/js/base
 
 # Uncomment below lines to see logs
 # import logging
@@ -165,3 +165,16 @@ proc test_parse_document*(code: string, callback: proc(result: Document)) =
 #   test "Tests " & file & ":":
 #     init_all()
 #     discard VM.eval(read_file(file))
+
+proc test_jsgen*(code: string, result: Value) =
+  var code = cleanup(code)
+  test "JS generation: " & code:
+    init_all()
+    var parsed = VM.prepare(code)
+    var expr = translate(parsed)
+    var file = "/tmp/test.js"
+    write_file(file, expr.to_js)
+    discard exec_cmd("cat " & file)
+    echo()
+    var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)
+    check output == result
