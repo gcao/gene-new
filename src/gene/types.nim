@@ -1520,14 +1520,6 @@ proc `$`*(node: Value): string =
   else:
     result = $node.kind
 
-proc to_s*(self: Value): string =
-  if self.is_nil:
-    return ""
-  return case self.kind:
-    of VkNil: ""
-    of VkString: self.str
-    else: $self
-
 proc `[]`*(self: OrderedTable[MapKey, Value], key: string): Value =
   self[key.to_key]
 

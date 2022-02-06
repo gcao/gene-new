@@ -607,6 +607,79 @@ proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Valu
     future.complete(result)
     result = new_gene_future(future)
 
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value =
+  var class = instance.get_class
+  var meth = class.get_method(method_name)
+  # var is_method_missing = false
+  var callable: Value
+  if meth == nil:
+    not_allowed("No method available: " & class.name & "." & method_name.to_s)
+    # if class.method_missing == nil:
+    #   not_allowed("No method available: " & expr.meth.to_s)
+    # else:
+    #   is_method_missing = true
+    #   callable = class.method_missing
+  else:
+    callable = meth.callable
+
+  case callable.kind:
+  of VkNativeMethod, VkNativeMethod2:
+    var args = self.eval_args(frame, nil, args_expr)
+    if callable.kind == VkNativeMethod:
+      result = meth.callable.native_method(instance, args)
+    else:
+      result = meth.callable.native_method2(instance, args)
+
+  of VkFunction:
+    var fn_scope = new_scope()
+    # if is_method_missing:
+    #   fn_scope.def_member("$method_name".to_key, expr.meth.to_s)
+    var new_frame = Frame(ns: callable.fn.ns, scope: fn_scope)
+    new_frame.parent = frame
+    new_frame.self = instance
+    new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
+
+    if callable.fn.body_compiled == nil:
+      callable.fn.body_compiled = translate(callable.fn.body)
+
+    try:
+      handle_args(self, frame, new_frame, callable.fn.matcher, cast[ExArguments](args_expr))
+      result = self.eval(new_frame, callable.fn.body_compiled)
+    except Return as r:
+      # return's frame is the same as new_frame(current function's frame)
+      if r.frame == new_frame:
+        result = r.val
+      else:
+        raise
+    except system.Exception as e:
+      if self.repl_on_error:
+        result = repl_on_error(self, frame, e)
+        discard
+      else:
+        raise
+  else:
+    todo()
+
+proc to_s*(self: Value): string =
+  if self.is_nil:
+    return ""
+  case self.kind:
+    of VkNil:
+      return ""
+    of VkString:
+      return self.str
+    of VkInstance:
+      var method_key = "to_s".to_key
+      var m = self.instance_class.get_method(method_key)
+      if m.class != ObjectClass.class:
+        var frame = new_frame()
+        var args: Expr = new_ex_arg()
+        return VM.invoke(frame, self, method_key, args).str
+    else:
+      discard
+
+  return $self
+
 proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   try:
     result = self.call(frame, target, args)

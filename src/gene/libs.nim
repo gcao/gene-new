@@ -14,17 +14,6 @@ proc object_to_json(self: Value, args: Value): Value =
   self.to_json()
 
 proc object_to_s(self: Value, args: Value): Value =
-  case self.kind
-  of VkInstance:
-    var method_key = "to_s".to_key
-    var m = self.instance_class.get_method(method_key)
-    if m.class != ObjectClass.class:
-      var frame = new_frame()
-      var args: Expr = new_ex_arg()
-      return VM.invoke(frame, self, method_key, args)
-  else:
-    discard
-
   self.to_s
 
 proc object_to_bool(self: Value, args: Value): Value =

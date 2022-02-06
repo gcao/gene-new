@@ -292,59 +292,6 @@ proc translate_method(value: Value): Expr =
     fn: fn,
   )
 
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value =
-  var class = instance.get_class
-  var meth = class.get_method(method_name)
-  # var is_method_missing = false
-  var callable: Value
-  if meth == nil:
-    not_allowed("No method available: " & class.name & "." & method_name.to_s)
-    # if class.method_missing == nil:
-    #   not_allowed("No method available: " & expr.meth.to_s)
-    # else:
-    #   is_method_missing = true
-    #   callable = class.method_missing
-  else:
-    callable = meth.callable
-
-  case callable.kind:
-  of VkNativeMethod, VkNativeMethod2:
-    var args = self.eval_args(frame, nil, args_expr)
-    if callable.kind == VkNativeMethod:
-      result = meth.callable.native_method(instance, args)
-    else:
-      result = meth.callable.native_method2(instance, args)
-
-  of VkFunction:
-    var fn_scope = new_scope()
-    # if is_method_missing:
-    #   fn_scope.def_member("$method_name".to_key, expr.meth.to_s)
-    var new_frame = Frame(ns: callable.fn.ns, scope: fn_scope)
-    new_frame.parent = frame
-    new_frame.self = instance
-    new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
-
-    if callable.fn.body_compiled == nil:
-      callable.fn.body_compiled = translate(callable.fn.body)
-
-    try:
-      handle_args(self, frame, new_frame, callable.fn.matcher, cast[ExArguments](args_expr))
-      result = self.eval(new_frame, callable.fn.body_compiled)
-    except Return as r:
-      # return's frame is the same as new_frame(current function's frame)
-      if r.frame == new_frame:
-        result = r.val
-      else:
-        raise
-    except system.Exception as e:
-      if self.repl_on_error:
-        result = repl_on_error(self, frame, e)
-        discard
-      else:
-        raise
-  else:
-    todo()
-
 proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExInvoke](expr)
   var instance: Value
