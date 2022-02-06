@@ -111,8 +111,9 @@ proc init*() =
           when ast/Base   # already translated
             value
           when Array
-            (new ast/Array value...)
-          when [Int Bool]
+            (var children (value .map translate))
+            (new ast/Array children...)
+          when [Int Bool Symbol]
             (new ast/Literal value)
           when String
             (new ast/String value)
@@ -131,7 +132,7 @@ proc init*() =
         )
 
         (fn println* args...
-          (new ast/Println args...)
+          (new ast/Println (... (args .map translate)))
         )
       )
     """)

@@ -1,4 +1,4 @@
-import unittest, strutils, tables, osproc
+import unittest, strutils, tables, os, osproc
 
 import gene/map_key
 import gene/types
@@ -169,8 +169,9 @@ proc test_jsgen*(code: string, result: Value) =
   test "JS generation: " & code:
     init_all()
     var generated = VM.eval(code).to_s
-    echo generated
-    echo()
+    if exists_env("SHOW_JS"):
+      echo generated
+      echo()
     var file = "/tmp/test.js"
     write_file(file, generated)
     var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)

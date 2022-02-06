@@ -9,12 +9,12 @@ import ../helpers
 # Use uglifyjs or something else to reformat JS output for better debugging purpose
 # Use environment variable to control output of raw and beautified js output
 
-# test_jsgen """
-#   (import gene/js/*)
-#   (js
-#     (println* [1 2])
-#   )
-# """, "[1, 2]\n"
+test_jsgen """
+  (import genex/js/*)
+  (js
+    (println* [1 2])
+  )
+""", "[ 1, 2 ]\n" # the extra spaces after "[" are special behavior of node.js
 
 test_jsgen """
   (import genex/js/*)
