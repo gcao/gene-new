@@ -84,9 +84,7 @@
 (class Record
   (.on_extended (fnx child
     (child .on_member_missing (fnx name
-      (if ([
-        "orm" "all" "find" "from_row" "columns_except_id"
-      ].contains name)
+      (if (Record/.members .contains name)
         (/.parent .@ name)
       )
     ))

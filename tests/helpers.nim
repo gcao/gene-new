@@ -170,9 +170,7 @@ proc test_jsgen*(code: string, result: Value) =
   var code = cleanup(code)
   test "JS generation: " & code:
     init_all()
-    var parsed = VM.prepare(code)
-    var translator = new_translator()
-    var generated = translator.process(parsed)
+    var generated = VM.eval(code).to_s
     echo generated
     echo()
     var file = "/tmp/test.js"

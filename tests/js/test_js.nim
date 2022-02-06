@@ -6,11 +6,20 @@ import ../helpers
 # Test JavaScript code generation
 # Test Execution of generated JS code - use Node.js, check output
 
-test_jsgen """
-  (println 1)
-""", "1"
+# Use uglifyjs or something else to reformat JS output for better debugging purpose
+# Use environment variable to control output of raw and beautified js output
 
 # test_jsgen """
-#   (fn f [] 1)
-#   (println (f))
-# """, "1"
+#   (import gene/js/*)
+#   (js
+#     (println* [1 2])
+#   )
+# """, "[1, 2]\n"
+
+test_jsgen """
+  (import gene/js/*)
+  (js
+    (var* a 1)
+    (println* :a)
+  )
+""", "1\n"
