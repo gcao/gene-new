@@ -5,6 +5,9 @@ import ../types
 # Use a pipeline to handle the translation
 # Like middlewares and request handlers used in web applications
 
+# https://lisperator.net/pltut/compiler/js-codegen
+# https://tomassetti.me/code-generation/
+
 type
   Translator* = ref object
 
