@@ -3,7 +3,9 @@ import asyncdispatch, asyncfile
 
 import ./types
 import ./map_key
+import ./exprs
 import ./interpreter_base
+import ./features/oop
 
 proc object_class(self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.get_class())
@@ -12,6 +14,17 @@ proc object_to_json(self: Value, args: Value): Value =
   self.to_json()
 
 proc object_to_s(self: Value, args: Value): Value =
+  case self.kind
+  of VkInstance:
+    var method_key = "to_s".to_key
+    var m = self.instance_class.get_method(method_key)
+    if m.class != ObjectClass.class:
+      var frame = new_frame()
+      var args: Expr = new_ex_arg()
+      return VM.invoke(frame, self, method_key, args)
+  else:
+    discard
+
   self.to_s
 
 proc object_to_bool(self: Value, args: Value): Value =
@@ -273,6 +286,14 @@ proc add_failure_callback(self: Value, args: Value): Value =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
+    GENE_NS.ns["todo"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_todo".} =
+      todo(args.gene_children[0].to_s)
+    GLOBAL_NS.ns["todo"] = GENE_NS.ns["todo"]
+    GENE_NS.ns["not_allowed"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_not_allowed".} =
+      not_allowed(args.gene_children[0].to_s)
+    GLOBAL_NS.ns["not_allowed"] = GENE_NS.ns["not_allowed"]
+
+
     GENE_NS.ns["rand"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_rand".} =
       if args.gene_children.len == 0:
         return new_gene_float(rand(1.0))
@@ -313,7 +334,7 @@ proc init*() =
     ClassClass = Value(kind: VkClass, class: new_class("Class"))
     ClassClass.class.parent = ObjectClass.class
     ClassClass.def_native_method "name", proc(self: Value, args: Value): Value =
-      self.class.ns.get_members()
+      self.class.name
     ClassClass.def_native_method "parent", proc(self: Value, args: Value): Value =
       Value(kind: VkClass, class: self.class.parent)
     ClassClass.def_native_method "members", proc(self: Value, args: Value): Value {.name:"class_members".} =

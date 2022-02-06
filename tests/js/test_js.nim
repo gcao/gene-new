@@ -17,7 +17,7 @@ import ../helpers
 # """, "[1, 2]\n"
 
 test_jsgen """
-  (import gene/js/*)
+  (import genex/js/*)
   (js
     (var* a 1)
     (println* :a)

@@ -3,9 +3,7 @@ import unittest, strutils, tables, osproc
 import gene/map_key
 import gene/types
 import gene/parser
-import gene/translators
 import gene/interpreter
-import gene/js/base
 
 # Uncomment below lines to see logs
 # import logging

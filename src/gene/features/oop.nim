@@ -292,7 +292,7 @@ proc translate_method(value: Value): Expr =
     fn: fn,
   )
 
-proc invoke(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value =
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value =
   var class = instance.get_class
   var meth = class.get_method(method_name)
   # var is_method_missing = false

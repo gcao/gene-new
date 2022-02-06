@@ -1378,6 +1378,8 @@ proc `==`*(this, that: Value): bool =
       return this.regex == that.regex
     of VkRange:
       return this.range == that.range
+    of VkClass:
+      return this.class == that.class
     else:
       todo($this.kind)
 
