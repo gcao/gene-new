@@ -23,3 +23,14 @@ test_jsgen """
     (println* :a)
   )
 """, "1\n"
+
+# test_jsgen """
+#   (import genex/js/*)
+#   (js
+#     (if* true
+#       (println* 1)
+#     else
+#       (println* 2)
+#     )
+#   )
+# """, "1\n"
