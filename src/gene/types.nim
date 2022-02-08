@@ -1380,6 +1380,10 @@ proc `==`*(this, that: Value): bool =
       return this.range == that.range
     of VkClass:
       return this.class == that.class
+    of VkEnum:
+      return this.enum == that.enum
+    of VkEnumMember:
+      return this.enum_member == that.enum_member
     else:
       todo($this.kind)
 
