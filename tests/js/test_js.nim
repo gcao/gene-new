@@ -12,49 +12,49 @@ import ../helpers
 test_jsgen """
   (import genex/js/*)
   (js
-    (println* "abc")
+    (console/log "abc")
   )
 """, "abc\n"
 
 test_jsgen """
   (import genex/js/*)
   (js
-    (println* [1 2])
+    (console/log [1 2])
   )
 """, "[ 1, 2 ]\n" # the extra spaces after "[" are special behavior of node.js
 
 test_jsgen """
   (import genex/js/*)
   (js
-    (println* {^a 1 ^b 2})
+    (console/log {^a 1 ^b 2})
   )
 """, "{ a: 1, b: 2 }\n" # the extra spaces after "{" are special behavior of node.js
-
-test_jsgen """
-  (import genex/js/*)
-  (js
-    (var* a 1)
-    (println* a)
-  )
-""", "1\n"
-
-test_jsgen """
-  (import genex/js/*)
-  (js
-    (if* true
-      (println* 1)
-    else
-      (println* 2)
-    )
-  )
-""", "1\n"
 
 # test_jsgen """
 #   (import genex/js/*)
 #   (js
-#     (fn* f a
-#       (return* (:a + 1))
-#     )
-#     (println* (f 1))
+#     (var a 1)
+#     (console/log a)
 #   )
-# """, "2\n"
+# """, "1\n"
+
+# test_jsgen """
+#   (import genex/js/*)
+#   (js
+#     (if true
+#       (console/log 1)
+#     else
+#       (console/log 2)
+#     )
+#   )
+# """, "1\n"
+
+# # test_jsgen """
+# #   (import genex/js/*)
+# #   (js
+# #     (fn f a
+# #       (return (a + 1))
+# #     )
+# #     (console/log (f 1))
+# #   )
+# # """, "2\n"

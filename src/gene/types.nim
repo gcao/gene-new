@@ -651,6 +651,7 @@ var FloatClass*    : Value
 var CharClass*     : Value
 var StringClass*   : Value
 var SymbolClass*   : Value
+var ComplexSymbolClass* : Value
 var ArrayClass*    : Value
 var MapClass*      : Value
 var StreamClass*   : Value
@@ -1179,8 +1180,8 @@ proc get_class*(val: Value): Class =
     return StringClass.class
   of VkSymbol:
     return SymbolClass.class
-  # of VkComplexSymbol:
-  #   return ComplexSymbolClass.class
+  of VkComplexSymbol:
+    return ComplexSymbolClass.class
   of VkVector:
     return ArrayClass.class
   of VkMap:

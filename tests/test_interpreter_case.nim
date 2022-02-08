@@ -95,3 +95,14 @@ test_interpreter """
     300
   )
 """, 300
+
+test_interpreter """
+  (class A)
+  (var a (new A))
+  (case a
+  when A
+    100
+  else
+    200
+  )
+""", 100

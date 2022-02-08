@@ -437,6 +437,15 @@ proc init*() =
     GENE_NS.ns["Symbol"] = SymbolClass
     GLOBAL_NS.ns["Symbol"] = SymbolClass
 
+    ComplexSymbolClass = Value(kind: VkClass, class: new_class("ComplexSymbol"))
+    ComplexSymbolClass.class.parent = ObjectClass.class
+    ComplexSymbolClass.def_native_method "parts", proc(self: Value, args: Value): Value {.name:"complex_symbol_parts".} =
+      result = new_gene_vec()
+      for item in self.csymbol:
+        result.vec.add(item)
+    GENE_NS.ns["ComplexSymbol"] = ComplexSymbolClass
+    GLOBAL_NS.ns["ComplexSymbol"] = ComplexSymbolClass
+
     ArrayClass = Value(kind: VkClass, class: new_class("Array"))
     ArrayClass.class.parent = ObjectClass.class
     ArrayClass.def_native_method("size", array_size)

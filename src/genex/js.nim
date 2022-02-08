@@ -6,6 +6,15 @@ import ../gene/interpreter_base
 # Use macro to generate JavaScript AST nodes
 # Then call to_s to convert to JS code
 
+# For complex statement like
+# if (cond) {
+#   for(var i = 0; i < n; i++) {
+#     ...
+#   }
+# }
+# The condition, body of if and else must be evaluated and translated one by one,
+# then generated body are added to the output one by one as well.
+
 # Statements vs expressions
 # The parent node should know what to expect: statements or expressions.
 # to_stmt, to_expr, to_s
@@ -15,26 +24,30 @@ import ../gene/interpreter_base
 # https://stackoverflow.com/questions/12703214/javascript-difference-between-a-statement-and-an-expression
 
 # gene/js/
-# js: call to_s on nodes
-# literals: Nil -> null, true -> true, false -> false
+# js: render then translate to AST then call to_s on AST nodes
+
+# literals: nil -> null, true -> true, false -> false, 1 -> 1
+# strings:
 # undefined: undefined
-# array -> array
-# map -> object
-# fn* -> function
-# if* -> if
+# [] -> array
+# {} -> object
+# fn, fnx, fnxx -> function
+# if -> if
 # if? = (a ? b c) -> a ? b : c
-# for* -> for
-# while* -> while
-# var* -> var
-# let* -> let
-# class* -> class
+# for -> for
+# while -> while
+# var -> var
+# let -> let
+# class -> class
 # (1 + 2) -> (1 + 2)  # "(" and ")" will be in the generated code
 # (1 + 2 * 3) -> (1 + 2 * 3)
-# (:f 1 2) -> function call, e.g. f(1, 2)
-# :a/b, :a/b/c -> property get, e.g. a.b, a.b.c
-# (:a/b = 1) -> property set, e.g. a.b = 1
-# iife -> (function(){...})()
-# println* -> console.log
+# (f 1 2) -> function call, e.g. f(1, 2)
+# a/b, a/b/c -> property get, e.g. a.b, a.b.c
+# (a = 1) -> assignment set, e.g. a.b = 1
+#
+# Special constructs for convenience:
+# iife* -> (function(){...})()
+# log* -> console.log
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
@@ -137,10 +150,10 @@ proc init*() =
             (method handle input
               (case /@state
               when State/If
-                (@if_cond = (eval input))
+                (@if_cond = (translate input))
                 (@state = State/Cond)
               when State/Cond
-                (/@if_logic/@children .add (eval input))
+                (/@if_logic/@children .add (translate input))
                 (@state = State/Logic)
               when State/Logic
                 (case input
@@ -149,10 +162,10 @@ proc init*() =
                 when :elif
                   (@state = State/Elif)
                 else
-                  (/@if_logic/@children .add (eval input))
+                  (/@if_logic/@children .add (translate input))
                 )
               when State/Else
-                (/@else_logic/@children .add (eval input))
+                (/@else_logic/@children .add (translate input))
               )
             )
             (method parse args
@@ -222,28 +235,39 @@ proc init*() =
           )
         )
 
-        (fn /js nodes...
-          (nodes .join ";\n")
+        (macro js nodes...
+          ((nodes .map translate) .join ";\n")
         )
 
-        (fn /translate_gene value
+        (fn translate_if value
+        )
+
+        (fn translate_gene value
           (case value/@0
           when :=
             # assignment
           when [:+ :- :* :/]
             # binary operations
           else
-            # function call
-            (new ast/Call value/.type value/.children)
+            (case value/.type
+            when :if
+              (translate_if value)
+            else
+              # function call
+              (var children (value/.children .map translate))
+              (new ast/Call (translate value/.type) children)
+            )
           )
         )
 
-        (fn /translate value
-          (case value/.class
+        (fn translate value
+          (case value
           when ast/Base   # already translated
             value
           when [Int Bool Symbol]
             (new ast/Literal value)
+          when ComplexSymbol
+            (new ast/Literal (value/.parts .join "."))
           when String
             (new ast/String value)
           when Array
@@ -259,31 +283,6 @@ proc init*() =
           else
             (todo ("translate " value))
           )
-        )
-
-        (macro var* [name value = nil]
-          (new ast/Var
-            name
-            (if value
-              (translate ($caller_eval value))
-            )
-          )
-        )
-
-        (macro if* args...
-          (new ast/If args)
-        )
-
-        (macro fn* [name args body...]
-          (new ast/Function name args body)
-        )
-
-        (macro return* [value = nil]
-          (new ast/Return (translate value))
-        )
-
-        (macro println* args...
-          (new ast/Println (args .map translate))
         )
       )
     """)

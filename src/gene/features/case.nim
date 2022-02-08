@@ -23,6 +23,8 @@ proc case_equals(input: Value, pattern: Value): bool =
       result = input.int == pattern.int
     of VkRange:
       result = input.int >= pattern.range.start.int and input.int < pattern.range.end.int
+    of VkClass:
+      result = input.is_a(pattern.class)
     else:
       discard
       # not_allowed("case_equals: int vs " & $pattern.kind)
@@ -32,11 +34,16 @@ proc case_equals(input: Value, pattern: Value): bool =
       result = input.str == pattern.str
     of VkRegex:
       result = input.str.match(pattern.regex).is_some()
+    of VkClass:
+      result = input.is_a(pattern.class)
     else:
       discard
       # not_allowed("case_equals: string vs " & $pattern.kind)
   else:
-    result = input == pattern
+    if pattern.kind == VkClass:
+      result = input.is_a(pattern.class)
+    else:
+      result = input == pattern
 
 proc eval_case(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExCase](expr)
