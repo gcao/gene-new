@@ -169,10 +169,17 @@ proc test_jsgen*(code: string, result: Value) =
   test "JS generation: " & code:
     init_all()
     var generated = VM.eval(code).to_s
-    if exists_env("SHOW_JS"):
-      echo generated
-      echo()
+    # if exists_env("SHOW_JS"):
+    #   echo "--------------------"
+    #   echo generated
+    #   echo()
     var file = "/tmp/test.js"
     write_file(file, generated)
+    if exists_env("UGLIFY_JS"):
+      echo "--------------------"
+      var ret = exec_cmd(get_env("UGLIFY_JS") & " -b width=120 " & file)
+      if ret != 0:
+        discard exec_cmd("cat " & file)
+      echo "===================="
     var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)
     check output == result
