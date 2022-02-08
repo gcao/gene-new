@@ -30,24 +30,24 @@ test_jsgen """
   )
 """, "{ a: 1, b: 2 }\n" # the extra spaces after "{" are special behavior of node.js
 
-# test_jsgen """
-#   (import genex/js/*)
-#   (js
-#     (var a 1)
-#     (console/log a)
-#   )
-# """, "1\n"
+test_jsgen """
+  (import genex/js/*)
+  (js
+    (var a 1)
+    (console/log a)
+  )
+""", "1\n"
 
-# test_jsgen """
-#   (import genex/js/*)
-#   (js
-#     (if true
-#       (console/log 1)
-#     else
-#       (console/log 2)
-#     )
-#   )
-# """, "1\n"
+test_jsgen """
+  (import genex/js/*)
+  (js
+    (if true
+      (console/log 1)
+    else
+      (console/log 2)
+    )
+  )
+""", "1\n"
 
 # # test_jsgen """
 # #   (import genex/js/*)

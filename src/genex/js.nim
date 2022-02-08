@@ -240,6 +240,7 @@ proc init*() =
         )
 
         (fn translate_if value
+          (new ast/If value/.children)
         )
 
         (fn translate_gene value
@@ -250,6 +251,12 @@ proc init*() =
             # binary operations
           else
             (case value/.type
+            when :var
+              (new ast/Var value/@0
+                (if (value/.children/.size > 1)
+                  (translate value/@1)
+                )
+              )
             when :if
               (translate_if value)
             else
