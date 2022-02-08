@@ -12,6 +12,13 @@ import ../helpers
 test_jsgen """
   (import genex/js/*)
   (js
+    (println* "abc")
+  )
+""", "abc\n"
+
+test_jsgen """
+  (import genex/js/*)
+  (js
     (println* [1 2])
   )
 """, "[ 1, 2 ]\n" # the extra spaces after "[" are special behavior of node.js
@@ -19,8 +26,15 @@ test_jsgen """
 test_jsgen """
   (import genex/js/*)
   (js
+    (println* {^a 1 ^b 2})
+  )
+""", "{ a: 1, b: 2 }\n" # the extra spaces after "{" are special behavior of node.js
+
+test_jsgen """
+  (import genex/js/*)
+  (js
     (var* a 1)
-    (println* :a)
+    (println* a)
   )
 """, "1\n"
 
@@ -34,3 +48,13 @@ test_jsgen """
     )
   )
 """, "1\n"
+
+# test_jsgen """
+#   (import genex/js/*)
+#   (js
+#     (fn* f a
+#       (return* (:a + 1))
+#     )
+#     (println* (f 1))
+#   )
+# """, "2\n"

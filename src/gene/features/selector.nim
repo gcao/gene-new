@@ -479,6 +479,14 @@ proc eval_set(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
       target.vec[selector.int] = value
     else:
       todo($target.kind)
+  of VkString:
+    case target.kind:
+    of VkGene:
+      target.gene_props[selector.str] = value
+    of VkMap:
+      target.map[selector.str] = value
+    else:
+      todo($target.kind)
   else:
     todo($selector.kind)
 

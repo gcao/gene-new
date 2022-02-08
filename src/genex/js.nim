@@ -137,10 +137,10 @@ proc init*() =
             (method handle input
               (case /@state
               when State/If
-                (@if_cond = (translate input))
+                (@if_cond = (eval input))
                 (@state = State/Cond)
               when State/Cond
-                (/@if_logic/@children .add (translate input))
+                (/@if_logic/@children .add (eval input))
                 (@state = State/Logic)
               when State/Logic
                 (case input
@@ -149,10 +149,10 @@ proc init*() =
                 when :elif
                   (@state = State/Elif)
                 else
-                  (/@if_logic/@children .add (translate input))
+                  (/@if_logic/@children .add (eval input))
                 )
               when State/Else
-                (/@else_logic/@children .add (translate input))
+                (/@else_logic/@children .add (eval input))
               )
             )
             (method parse args
@@ -178,6 +178,39 @@ proc init*() =
             )
           )
 
+          (class Function < Base
+            (method new [@name args body]
+              (@args = [])
+              (if (args .is Array)
+                (@args = args)
+              elif (args != _)
+                (/@args .add args)
+              )
+              (@body = (new Group body))
+            )
+            (method to_s _
+              ("function " /@name "(" (/@args .join ", ") ") {\n"
+                /@body
+              "\n}")
+            )
+          )
+
+          (class Return < Base
+            (method new @value
+            )
+            (method to_s _
+              ("return " /@value ";\n")
+            )
+          )
+
+          (class Call < Base
+            (method new [@fn @args]
+            )
+            (method to_s _
+              ("" /@fn "(" (/@args .join ", ") ")")
+            )
+          )
+
           (class Println < Base
             (method new @args)
 
@@ -191,6 +224,18 @@ proc init*() =
 
         (fn /js nodes...
           (nodes .join ";\n")
+        )
+
+        (fn /translate_gene value
+          (case value/@0
+          when :=
+            # assignment
+          when [:+ :- :* :/]
+            # binary operations
+          else
+            # function call
+            (new ast/Call value/.type value/.children)
+          )
         )
 
         (fn /translate value
@@ -210,7 +255,7 @@ proc init*() =
             )
             (new ast/Map value)
           when Gene
-            (eval value)
+            (translate_gene value)
           else
             (todo ("translate " value))
           )
@@ -229,7 +274,15 @@ proc init*() =
           (new ast/If args)
         )
 
-        (fn println* args...
+        (macro fn* [name args body...]
+          (new ast/Function name args body)
+        )
+
+        (macro return* [value = nil]
+          (new ast/Return (translate value))
+        )
+
+        (macro println* args...
           (new ast/Println (args .map translate))
         )
       )

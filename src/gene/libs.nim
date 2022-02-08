@@ -10,6 +10,9 @@ import ./features/oop
 proc object_class(self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.get_class())
 
+proc object_is(self: Value, args: Value): Value =
+  self.is_a(args.gene_children[0].class)
+
 proc object_to_json(self: Value, args: Value): Value =
   self.to_json()
 
@@ -312,6 +315,7 @@ proc init*() =
 
     ObjectClass = Value(kind: VkClass, class: new_class("Object"))
     ObjectClass.def_native_method("class", object_class)
+    ObjectClass.def_native_method("is", object_is)
     ObjectClass.def_native_method("to_s", object_to_s)
     ObjectClass.def_native_method("to_json", object_to_json)
     ObjectClass.def_native_method("to_bool", object_to_bool)
