@@ -98,8 +98,7 @@ proc init*() =
             )
             (method to_s _
               ("{"
-                (
-                  (/@props .map ([k v] -> ('"' k '": ' v)))
+                ((/@props .map ([k v] -> ('"' k '": ' v)))
                   .join ", "
                 )
               "}")
@@ -191,6 +190,16 @@ proc init*() =
             )
           )
 
+          (class JoinableExpr < Base
+            (method new @children
+            )
+            (method to_s _
+              ("("
+                (/@children .join " ")
+              ")")
+            )
+          )
+
           (class Function < Base
             (method new [@name args body]
               (@args = [])
@@ -239,8 +248,26 @@ proc init*() =
           ((nodes .map translate) .join ";\n")
         )
 
+        (fn translate_bin value
+          (var children [(translate value/.type)])
+          (for item in value/.children
+            (children .add (translate item))
+          )
+          (new ast/JoinableExpr children)
+        )
+
         (fn translate_if value
           (new ast/If value/.children)
+        )
+
+        (fn translate_fn value
+          (var body [])
+          (var i 2)
+          (while (i < value/.children/.size)
+            (body .add (translate (value .@ i)))
+            (i += 1)
+          )
+          (new ast/Function value/@0 value/@1 body)
         )
 
         (fn translate_gene value
@@ -249,6 +276,7 @@ proc init*() =
             # assignment
           when [:+ :- :* :/]
             # binary operations
+            (translate_bin value)
           else
             (case value/.type
             when :var
@@ -259,6 +287,8 @@ proc init*() =
               )
             when :if
               (translate_if value)
+            when :fn
+              (translate_fn value)
             else
               # function call
               (var children (value/.children .map translate))

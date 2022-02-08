@@ -49,12 +49,12 @@ test_jsgen """
   )
 """, "1\n"
 
-# # test_jsgen """
-# #   (import genex/js/*)
-# #   (js
-# #     (fn f a
-# #       (return (a + 1))
-# #     )
-# #     (console/log (f 1))
-# #   )
-# # """, "2\n"
+test_jsgen """
+  (import genex/js/*)
+  (js
+    (fn f a
+      (return (a + 1))
+    )
+    (console/log (f 1))
+  )
+""", "2\n"
