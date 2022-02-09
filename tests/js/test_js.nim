@@ -66,7 +66,7 @@ test_jsgen """
 test_jsgen """
   (import genex/js/*)
   (js
-    (fn f a
+    (fn* f a
       (return (a + 1))
     )
     (console/log (f 1))
@@ -76,7 +76,7 @@ test_jsgen """
 test_jsgen """
   (import genex/js/*)
   (js
-    (var f (fnx a
+    (var f (fnx* a
       (return (a + 1))
     ))
     (console/log (f 1))

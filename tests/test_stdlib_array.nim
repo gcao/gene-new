@@ -27,15 +27,20 @@ test_interpreter """
   ([1 2] .del 0)
 """, 1
 
-# test_interpreter """
-#   (var sum 0)
-#   ([1 2 3] .each (i -> (sum += i)))
-#   sum
-# """, 6
+test_interpreter """
+  (var sum 0)
+  ([1 2 3] .each (i -> (sum += i)))
+  sum
+""", 6
 
-# test_interpreter """
-#   ([1 2] .map (i -> (i + 1)))
-# """, @[2, 3]
+test_interpreter """
+  ([1 2] .map (i -> (i + 1)))
+""", @[2, 3]
+
+test_interpreter """
+  (fn inc i (i + 1))
+  ([1 2] .map inc)
+""", @[2, 3]
 
 # test_interpreter """
 #   ([1 2 3] .filter (i -> (i >= 2)))

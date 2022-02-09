@@ -507,17 +507,17 @@
           });
         """)
         (SCRIPT (genex/js/js
-          # ((($ "li label.cbx__child") .click) (fnx e
+          # ((($ "li label.cbx__child") .click) (fnx* e
           #   (var id ((($ this).attr) "for"))
           #   (var oldStatus (? ((($ ("input#" id)).is) ":checked") 1 0))
           #   (var newStatus (? (oldStatus == 1) 0 1))
           #   ($.ajax {^url "/todos"
           #     ^type "PATCH"
           #     ^data ("id=" id "&status=" newStatus)
-          #     ^success (fnx [result status]
+          #     ^success (fnx* [result status]
           #       (window.location.reload)
           #     )
-          #     ^error (fnx [xhr status error]
+          #     ^error (fnx* [xhr status error]
           #       (alert ("Operation failed: " error))
           #     )
           #   })

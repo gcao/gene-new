@@ -36,6 +36,8 @@ proc eval_gene(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
 
 proc eval_gene2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var `type` = self.eval(frame, cast[ExGene](expr).`type`)
+  # TODO: this is causing problem because the args_expr may not be compatible with type,
+  # we need to update args_expr along with the type.
   cast[ExGene](expr).args_expr.evaluator(self, frame, `type`, cast[ExGene](expr).args_expr)
 
 proc eval_gene_init*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =

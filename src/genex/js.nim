@@ -31,7 +31,7 @@ import ../gene/interpreter_base
 # undefined: undefined
 # [] -> array
 # {} -> object
-# fn, fnx, fnxx -> function
+# fn*, fnx*, fnxx* -> function
 # if -> if
 # if? = (a ? b c) -> a ? b : c
 # for -> for
@@ -325,9 +325,9 @@ proc init*() =
               (translate_if value)
             when :?
               (translate_ternary value)
-            when :fn
+            when :fn*
               (translate_fn value)
-            when :fnx
+            when :fnx*
               (translate_fnx value)
             else
               # function call
