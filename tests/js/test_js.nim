@@ -52,9 +52,33 @@ test_jsgen """
 test_jsgen """
   (import genex/js/*)
   (js
+    (console/log (? true 1 2))
+  )
+""", "1\n"
+
+test_jsgen """
+  (import genex/js/*)
+  (js
+    (console/log (? false 1 2))
+  )
+""", "2\n"
+
+test_jsgen """
+  (import genex/js/*)
+  (js
     (fn f a
       (return (a + 1))
     )
+    (console/log (f 1))
+  )
+""", "2\n"
+
+test_jsgen """
+  (import genex/js/*)
+  (js
+    (var f (fnx a
+      (return (a + 1))
+    ))
     (console/log (f 1))
   )
 """, "2\n"

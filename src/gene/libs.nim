@@ -434,6 +434,9 @@ proc init*() =
 
     SymbolClass = Value(kind: VkClass, class: new_class("Symbol"))
     SymbolClass.class.parent = ObjectClass.class
+    SymbolClass.def_native_method "starts_with", proc(self: Value, args: Value): Value {.name:"symbol_starts_with".} =
+      var substr = args.gene_children[0].str
+      result = self.symbol.starts_with(substr)
     GENE_NS.ns["Symbol"] = SymbolClass
     GLOBAL_NS.ns["Symbol"] = SymbolClass
 

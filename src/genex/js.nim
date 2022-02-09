@@ -190,6 +190,16 @@ proc init*() =
             )
           )
 
+          (class Ternary < Base
+            (method new [@cond @true_value @false_value]
+            )
+            (method to_s _
+              ("("
+                /@cond " ? " /@true_value " : " /@false_value
+              ")")
+            )
+          )
+
           (class JoinableExpr < Base
             (method new @children
             )
@@ -260,6 +270,14 @@ proc init*() =
           (new ast/If value/.children)
         )
 
+        (fn translate_ternary value
+          (new ast/Ternary
+            (translate value/@0)
+            (translate value/@1)
+            (translate value/@2)
+          )
+        )
+
         (fn translate_fn value
           (var body [])
           (var i 2)
@@ -270,25 +288,47 @@ proc init*() =
           (new ast/Function value/@0 value/@1 body)
         )
 
+        (fn translate_fnx value
+          (var body [])
+          (var i 1)
+          (while (i < value/.children/.size)
+            (body .add (translate (value .@ i)))
+            (i += 1)
+          )
+          (new ast/Function "" value/@0 body)
+        )
+
         (fn translate_gene value
-          (case value/@0
+          (var first value/@0)
+          (if ((first .is Symbol) && (first .starts_with "."))
+            (var children [])
+            (children .add (translate value/.type))
+            (for item in value/.children
+              (children .add (translate item))
+            )
+            (return (new ast/JoinableExpr children))
+          )
+          (case first
           when :=
             # assignment
-          when [:+ :- :* :/]
-            # binary operations
+          when [:+ :- :* :/ :== :&& :||]
             (translate_bin value)
           else
             (case value/.type
             when :var
-              (new ast/Var value/@0
+              (new ast/Var first
                 (if (value/.children/.size > 1)
                   (translate value/@1)
                 )
               )
             when :if
               (translate_if value)
+            when :?
+              (translate_ternary value)
             when :fn
               (translate_fn value)
+            when :fnx
+              (translate_fnx value)
             else
               # function call
               (var children (value/.children .map translate))

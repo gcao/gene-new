@@ -95,24 +95,38 @@ proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     result = new_gene_bool(first.int > second.int)
   of BinGe:
     result = new_gene_bool(first.int >= second.int)
+  else:
+    todo("eval_bin " & $cast[ExBinOp](expr).op)
+
+proc eval_logical(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var op = cast[ExBinOp](expr).op
+  var first = self.eval(frame, cast[ExBinOp](expr).op1)
+  case op:
   of BinAnd:
     if first.is_truthy:
-      result = second
+      result = self.eval(frame, cast[ExBinOp](expr).op2)
     else:
       result = first
   of BinOr:
     if first.is_truthy:
       result = first
     else:
-      result = second
+      result = self.eval(frame, cast[ExBinOp](expr).op2)
   else:
-    todo($cast[ExBinOp](expr).op)
+    not_allowed("eval_logical " & $op)
 
 proc new_ex_bin*(op: BinOp): ExBinOp =
-  ExBinOp(
-    evaluator: eval_bin,
-    op: op,
-  )
+  case op:
+  of BinAnd, BinOr:
+    ExBinOp(
+      evaluator: eval_logical,
+      op: op,
+    )
+  else:
+    ExBinOp(
+      evaluator: eval_bin,
+      op: op,
+    )
 
 proc translate_op*(op: string, op1, op2: Expr): Expr =
   case op:
