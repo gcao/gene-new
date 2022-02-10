@@ -22,8 +22,10 @@ proc eval_env(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   var env = self.eval(frame, expr.name).to_s
   if exists_env(env):
     result = get_env(env)
-  else:
+  elif expr.default_value != nil:
     result = self.eval(frame, expr.default_value).to_s
+  else:
+    result = nil
 
 proc translate_env(value: Value): Expr =
   var r = ExEnv(

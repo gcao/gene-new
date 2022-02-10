@@ -264,7 +264,16 @@ proc init*() =
         )
 
         (macro js nodes...
-          ((nodes .map translate) .join ";\n")
+          (var code ((nodes .map translate) .join ";\n"))
+          (var uglify ($env "GENE_UGLIFY_JS"))
+          (if uglify
+            (var file "/tmp/generated.js")
+            (gene/File/write file code)
+            (var uglified "/tmp/generated.uglified.js")
+            (gene/os/exec ("" uglify " -b width=120 " file " > " uglified))
+            (code = (gene/File/read uglified))
+          )
+          code
         )
 
         (fn translate_bin value

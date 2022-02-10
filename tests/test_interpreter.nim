@@ -117,6 +117,11 @@ test_interpreter """
   check r.vec[1] == 2
 
 test_interpreter """
+  (var a (if false 1))
+  a
+""", Nil
+
+test_interpreter """
   (var a 1)
   (var b 2)
   {^a a ^b b}

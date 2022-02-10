@@ -16,6 +16,8 @@ proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   var e = cast[ExVar](expr)
   if e.container == nil:
     result = self.eval(frame, e.value)
+    if result == nil:
+      result = Nil
     frame.scope.def_member(e.name, result)
   else:
     var container = self.eval(frame, e.container)
@@ -31,6 +33,8 @@ proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
       todo("eval_var " & $container.kind)
 
     result = self.eval(frame, e.value)
+    if result == nil:
+      result = Nil
     ns[e.name] = result
 
 proc translate_var(value: Value): Expr =
