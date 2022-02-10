@@ -476,52 +476,65 @@
           "This is a replication of Minimal TODO created by Dronca Raul"
         )
         (SCRIPT ^src "https://code.jquery.com/jquery-3.6.0.min.js" ^integrity "sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" ^crossorigin "anonymous")
-        (SCRIPT """
-          $("li label.cbx__child").click(function(e) {
-            var id = $(this).attr("for");
-            var oldStatus = $("input#" + id).is(":checked") ? 1 : 0;
-            var newStatus = oldStatus == 1 ? 0 : 1;
-            $.ajax({url: "/todos",
-              type: "PATCH",
-              data: "id=" + id + "&status=" + newStatus,
-              success: function(result, status) {
-                window.location.reload();
-              },
-              error: function(xhr, status, error) {
-                alert("Operation failed: " + error);
-              }
-            });
-          });
-          $("li button.delete-button").click(function(e) {
-            var id = $(this).data("id");
-            $.ajax({url: "/todos",
-              type: "DELETE",
-              data: "id=" + id,
-              success: function(result, status) {
-                window.location.reload();
-              },
-              error: function(xhr, status, error) {
-                alert("Operation failed: " + error);
-              }
-            });
-          });
-        """)
+        # (SCRIPT """
+        #   $("li label.cbx__child").click(function(e) {
+        #     var id = $(this).attr("for");
+        #     var oldStatus = $("input#" + id).is(":checked") ? 1 : 0;
+        #     var newStatus = oldStatus == 1 ? 0 : 1;
+        #     $.ajax({url: "/todos",
+        #       type: "PATCH",
+        #       data: "id=" + id + "&status=" + newStatus,
+        #       success: function(result, status) {
+        #         window.location.reload();
+        #       },
+        #       error: function(xhr, status, error) {
+        #         alert("Operation failed: " + error);
+        #       }
+        #     });
+        #   });
+        #   $("li button.delete-button").click(function(e) {
+        #     var id = $(this).data("id");
+        #     $.ajax({url: "/todos",
+        #       type: "DELETE",
+        #       data: "id=" + id,
+        #       success: function(result, status) {
+        #         window.location.reload();
+        #       },
+        #       error: function(xhr, status, error) {
+        #         alert("Operation failed: " + error);
+        #       }
+        #     });
+        #   });
+        # """)
         (SCRIPT (genex/js/js
-          # ((($ "li label.cbx__child") .click) (fnx* e
-          #   (var id ((($ this).attr) "for"))
-          #   (var oldStatus (? ((($ ("input#" id)).is) ":checked") 1 0))
-          #   (var newStatus (? (oldStatus == 1) 0 1))
-          #   ($.ajax {^url "/todos"
-          #     ^type "PATCH"
-          #     ^data ("id=" id "&status=" newStatus)
-          #     ^success (fnx* [result status]
-          #       (window.location.reload)
-          #     )
-          #     ^error (fnx* [xhr status error]
-          #       (alert ("Operation failed: " error))
-          #     )
-          #   })
-          # ))
+          ((($ "li label.cbx__child") .click) (fnx* e
+            (var id ((($ this).attr) "for"))
+            (var oldStatus (? ((($ ("input#" id)).is) ":checked") 1 0))
+            (var newStatus (? (oldStatus == 1) 0 1))
+            ($.ajax {^url "/todos"
+              ^type "PATCH"
+              ^data ("id=" id "&status=" newStatus)
+              ^success (fnx* [result status]
+                (window.location.reload)
+              )
+              ^error (fnx* [xhr status error]
+                (alert ("Operation failed: " error))
+              )
+            })
+          ))
+          ((($ "li button.delete-button").click) (fnx* e
+            (var id ((($ this).data) "id"))
+            ($.ajax {^url "/todos"
+              ^type "DELETE"
+              ^data ("id=" id)
+              ^success (fnx* [result status]
+                (window.location.reload)
+              )
+              ^error (fnx* [xhr status error]
+                (alert ("Operation failed: " error))
+              )
+            })
+          ))
         ))
       )
     )

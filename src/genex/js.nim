@@ -210,13 +210,22 @@ proc init*() =
             )
           )
 
+          (class JoinStrings < Base
+            (method new @children
+            )
+            (method to_s _
+              ("("
+                (/@children .join " + ")
+              ")")
+            )
+          )
+
           (class Function < Base
             (method new [@name args body]
-              (@args = [])
-              (if (args .is Array)
+              (if (args .is gene/Array)
                 (@args = args)
               elif (args != _)
-                (/@args .add args)
+                (@args = [args])
               )
               (@body = (new Group body))
             )
@@ -301,8 +310,7 @@ proc init*() =
         (fn translate_gene value
           (var first value/@0)
           (if ((first .is Symbol) && (first .starts_with "."))
-            (var children [])
-            (children .add (translate value/.type))
+            (var children [(translate value/.type)])
             (for item in value/.children
               (children .add (translate item))
             )
@@ -315,6 +323,16 @@ proc init*() =
             (translate_bin value)
           else
             (case value/.type
+            when String
+              (var children [(translate value/.type)])
+              (for item in value/.children
+                (if (item == :+)
+                  (not_allowed "+ is not allowed, use \"+\" if necessary")
+                else
+                  (children .add (translate item))
+                )
+              )
+              (new ast/JoinStrings children)
             when :var
               (new ast/Var first
                 (if (value/.children/.size > 1)

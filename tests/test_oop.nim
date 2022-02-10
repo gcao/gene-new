@@ -310,7 +310,11 @@ test_interpreter """
   ((new A) .test)
 """, 1
 
-# # # Single inheritance with flexibility of changing class, overwriting methods
+test_interpreter """
+  ([] .is Array)
+""", true
+
+# # Single inheritance with flexibility of changing class, overwriting methods
 # # test_interpreter """
 # #   (class A
 # #     (method test _

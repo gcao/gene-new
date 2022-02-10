@@ -159,7 +159,7 @@ proc translate*(names: seq[string]): Expr =
       )
     elif name == "!":
       return ExGene(
-        evaluator: eval_gene_init,
+        evaluator: eval_gene,
         `type`: translate(names[0..^2]),
         args: new_gene_gene(),
       )

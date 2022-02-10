@@ -30,17 +30,7 @@ proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: va
     else:
       result.gene_children.add(r)
 
-proc eval_gene(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var `type` = self.eval(frame, cast[ExGene](expr).`type`)
-  default_invoker(self, frame, `type`, cast[ExGene](expr).args_expr)
-
-proc eval_gene2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var `type` = self.eval(frame, cast[ExGene](expr).`type`)
-  # TODO: this is causing problem because the args_expr may not be compatible with type,
-  # we need to update args_expr along with the type.
-  cast[ExGene](expr).args_expr.evaluator(self, frame, `type`, cast[ExGene](expr).args_expr)
-
-proc eval_gene_init*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_gene*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExGene](expr)
   var `type` = self.eval(frame, e.`type`)
   var translator: Translator
@@ -68,22 +58,17 @@ proc eval_gene_init*(self: VirtualMachine, frame: Frame, target: Value, expr: va
       meth: CALL_KEY,
       args: new_ex_arg(e.args),
     )
-    # For future invocations
-    expr.evaluator = eval_gene2
     return self.eval_invoke(frame, `type`, e.args_expr)
   else:
     e.args_expr = arg_translator(e.args)
-    # For future invocations
-    expr.evaluator = eval_gene
     return default_invoker(self, frame, `type`, e.args_expr)
 
   e.args_expr = translator(e.args)
-  expr.evaluator = eval_gene2
   return e.args_expr.evaluator(self, frame, `type`, e.args_expr)
 
 proc default_translator(value: Value): Expr =
   ExGene(
-    evaluator: eval_gene_init,
+    evaluator: eval_gene,
     `type`: translate(value.gene_type),
     args: value,
   )
@@ -144,13 +129,13 @@ proc translate_gene(value: Value): Expr =
   of VkFunction:
     # TODO: this can be optimized further
     return ExGene(
-      evaluator: eval_gene_init,
+      evaluator: eval_gene,
       `type`: new_ex_literal(value.gene_type),
       args: value,
     )
   else:
     return ExGene(
-      evaluator: eval_gene_init,
+      evaluator: eval_gene,
       `type`: translate(value.gene_type),
       args: value,
     )

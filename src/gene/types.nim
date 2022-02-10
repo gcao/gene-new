@@ -1200,6 +1200,8 @@ proc get_class*(val: Value): Class =
     return DateTimeClass.class
   of VkTime:
     return TimeClass.class
+  of VkFunction:
+    return FunctionClass.class
   # of VkTimezone:
   #   return VM.gene_ns.ns[TIMEZONE_CLASS_KEY].class
   # of VkAny:
