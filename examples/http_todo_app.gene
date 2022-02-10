@@ -507,7 +507,7 @@
         #   });
         # """)
         (SCRIPT (genex/js/js
-          ((($ "li label.cbx__child") .click) (fnx* e
+          ((($ "li label.cbx__child").click) (fnx* e
             (var id ((($ this).attr) "for"))
             (var oldStatus (? ((($ ("input#" id)).is) ":checked") 1 0))
             (var newStatus (? (oldStatus == 1) 0 1))
