@@ -329,6 +329,32 @@ proc init*() =
           (new ast/Function "" value/@0 body)
         )
 
+        (fn translate_symbol value
+          (var symbol value/.to_s)
+          (if (symbol .starts_with "@")
+            (var s (symbol .substr 1))
+            (if (s =~ #/^\d+$/)
+              (new ast/AccessBy (new ast/Literal s/.to_i))
+            else
+              (new ast/AccessBy (new ast/String s))
+            )
+          elif (symbol .contains ".")
+            (var s "")
+            (for [i part] in (symbol .split ".")
+              (if (i == 0)
+                (s .append part)
+              elif (part =~ #/^\d+$/)
+                (s .append "[" part "]")
+              else
+                (s .append "." part)
+              )
+            )
+            (new ast/Literal s)
+          else
+            (new ast/Literal value)
+          )
+        )
+
         (fn translate_gene value
           (var first value/@0)
           (if (first .is Symbol)
@@ -398,29 +424,7 @@ proc init*() =
           when [Int Bool]
             (new ast/Literal value)
           when Symbol
-            (var symbol value/.to_s)
-            (if (symbol .starts_with "@")
-              (var s (symbol .substr 1))
-              (if (s =~ #/^\d+$/)
-                (new ast/AccessBy (new ast/Literal s/.to_i))
-              else
-                (new ast/AccessBy (new ast/String s))
-              )
-            elif (symbol .contains ".")
-              (var s "")
-              (for [i part] in (symbol .split ".")
-                (if (i == 0)
-                  (s .append part)
-                elif (part =~ #/^\d+$/)
-                  (s .append "[" part "]")
-                else
-                  (s .append "." part)
-                )
-              )
-              (new ast/Literal s)
-            else
-              (new ast/Literal value)
-            )
+            (translate_symbol value)
           when String
             (new ast/String value)
           when Array

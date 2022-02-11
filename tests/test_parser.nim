@@ -20,6 +20,46 @@ test_parser "-1", -1
 test_parser "10e10", 10e10
 test_parser "+5.0E5", +5.0E5
 
+# Support simple numbers with unit (e.g. 3px) and complex numbers with units (e.g. 1m30s)
+# Support custom units (e.g. 1x) - a mapping should be provided to the parser or added to the document
+#   e.g. (#Unit x 100) -> 1x = 100 default unit
+# Standard unit can be overwritten, e.g. (#Unit m 60) -> 1m = 60
+# Mixing units of different type is supported (e.g. 1km2s). The parser won't validate unit type.
+# See https://www.britannica.com/science/International-System-of-Units
+# Common units to support (but not limited to these):
+# They can be converted to default unit for the type of measurement
+
+# km, kilometer
+# m, meter - default
+# cm, centimeter
+# mm, millimeter
+# um, micrometer
+# nm, nanometer
+
+# y, year
+# mon, month
+# d, day
+# h, hour
+# min, minute
+# s, sec, second - default
+# ms, millisecond
+# us, microsecond
+# ns, nanosecond
+
+# kg, kilogram
+# g, gram - default
+# mg, milligram
+# lb, pound
+
+# px, pixel - default
+
+# %: 1% equals to 0.01 (we can imagine 100% is the default)
+
+# test_parser "10m", 600
+# test_parser "0.5m", 30
+# test_parser "10m30s", 630
+# test_parser "30s10m", 630  # The order does not matter
+
 test_parser "\\\\", '\\'
 test_parser "\\s", 's'
 test_parser "\\space", ' '
