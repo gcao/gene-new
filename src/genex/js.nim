@@ -252,6 +252,14 @@ proc init*() =
             )
           )
 
+          (class AccessBy < Base
+            (method new @by
+            )
+            (method to_s _
+              ("[" /@by "]")
+            )
+          )
+
           (class Println < Base
             (method new @args)
 
@@ -318,12 +326,14 @@ proc init*() =
 
         (fn translate_gene value
           (var first value/@0)
-          (if ((first .is Symbol) && (first .starts_with "."))
-            (var children [(translate value/.type)])
-            (for item in value/.children
-              (children .add (translate item))
+          (if (first .is Symbol)
+            (if ((first .starts_with ".") || (first .starts_with "@"))
+              (var children [(translate value/.type)])
+              (for item in value/.children
+                (children .add (translate item))
+              )
+              (return (new ast/JoinableExpr children))
             )
-            (return (new ast/JoinableExpr children))
           )
           (case first
           when :=
@@ -368,10 +378,31 @@ proc init*() =
           (case value
           when ast/Base   # already translated
             value
-          when [Int Bool Symbol]
+          when [Int Bool]
             (new ast/Literal value)
+          when Symbol
+            (if (value .starts_with "@")
+              (var s (value/.to_s .substr 1))
+              (if (s =~ #/^\d+$/)
+                (new ast/AccessBy (new ast/Literal s/.to_i))
+              else
+                (new ast/AccessBy (new ast/String s))
+              )
+            else
+              (new ast/Literal value)
+            )
           when ComplexSymbol
-            (new ast/Literal (value/.parts .join "."))
+            (var s "")
+            (for [i v] in value/.parts
+              (if (i == 0)
+                (s .append v)
+              elif (v =~ #/^\d+$/)
+                (s .append "[" v "]")
+              else
+                (s .append "." v)
+              )
+            )
+            (new ast/Literal s)
           when String
             (new ast/String value)
           when Array

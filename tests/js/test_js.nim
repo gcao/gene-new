@@ -87,6 +87,14 @@ test_jsgen """
   (import genex/js/*)
   (js
     (var a [1 2])
-    (console/log ?)  # ? -> a[0]
+    (console/log a/0) # -> a[0]
+  )
+""", "1\n"
+
+test_jsgen """
+  (import genex/js/*)
+  (js
+    (var a [1 2])
+    (console/log (a @0)) # -> a[0]
   )
 """, "1\n"
