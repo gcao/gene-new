@@ -12,21 +12,21 @@ import ../helpers
 test_jsgen """
   (import genex/js/*)
   (js
-    (console/log "abc")
+    (console.log "abc")
   )
 """, "abc\n"
 
 test_jsgen """
   (import genex/js/*)
   (js
-    (console/log [1 2])
+    (console.log [1 2])
   )
 """, "[ 1, 2 ]\n" # the extra spaces after "[" are special behavior of node.js
 
 test_jsgen """
   (import genex/js/*)
   (js
-    (console/log {^a 1 ^b 2})
+    (console.log {^a 1 ^b 2})
   )
 """, "{ a: 1, b: 2 }\n" # the extra spaces after "{" are special behavior of node.js
 
@@ -34,7 +34,7 @@ test_jsgen """
   (import genex/js/*)
   (js
     (var a 1)
-    (console/log a)
+    (console.log a)
   )
 """, "1\n"
 
@@ -42,9 +42,9 @@ test_jsgen """
   (import genex/js/*)
   (js
     (if true
-      (console/log 1)
+      (console.log 1)
     else
-      (console/log 2)
+      (console.log 2)
     )
   )
 """, "1\n"
@@ -52,14 +52,14 @@ test_jsgen """
 test_jsgen """
   (import genex/js/*)
   (js
-    (console/log (? true 1 2))
+    (console.log (? true 1 2))
   )
 """, "1\n"
 
 test_jsgen """
   (import genex/js/*)
   (js
-    (console/log (? false 1 2))
+    (console.log (? false 1 2))
   )
 """, "2\n"
 
@@ -69,7 +69,7 @@ test_jsgen """
     (fn* f a
       (return (a + 1))
     )
-    (console/log (f 1))
+    (console.log (f 1))
   )
 """, "2\n"
 
@@ -79,7 +79,7 @@ test_jsgen """
     (var f (fnx* a
       (return (a + 1))
     ))
-    (console/log (f 1))
+    (console.log (f 1))
   )
 """, "2\n"
 
@@ -87,14 +87,20 @@ test_jsgen """
   (import genex/js/*)
   (js
     (var a [1 2])
-    (console/log a/0) # -> a[0]
+    (console.log a.0) # -> a[0]
   )
 """, "1\n"
 
 test_jsgen """
   (import genex/js/*)
   (js
-    (var a [1 2])
-    (console/log (a @0)) # -> a[0]
+    (console.log ([1 2] .0))
+  )
+""", "1\n"
+
+test_jsgen """
+  (import genex/js/*)
+  (js
+    (console.log ([1 2] @ 0))
   )
 """, "1\n"

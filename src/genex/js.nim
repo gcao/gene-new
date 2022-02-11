@@ -200,6 +200,11 @@ proc init*() =
             )
           )
 
+          # This is not a valid AST node. Replace with more appropriate one like
+          # Arithmatic node (a + b * c)
+          # Logical node (a && b || c)
+          # Assignment node (a = b) (a += b)
+          # ...
           (class JoinableExpr < Base
             (method new @children
             )
@@ -327,17 +332,29 @@ proc init*() =
         (fn translate_gene value
           (var first value/@0)
           (if (first .is Symbol)
-            (if ((first .starts_with ".") || (first .starts_with "@"))
+            (var symbol first/.to_s)
+            (if (symbol .starts_with ".")
               (var children [(translate value/.type)])
               (for item in value/.children
                 (children .add (translate item))
               )
               (return (new ast/JoinableExpr children))
+            elif (symbol .starts_with "@")
+              (if (symbol/.size == 1) # (x @ y) -> x[y]
+                (var children [(translate value/.type) (new ast/AccessBy (translate value/@1))])
+                (return (new ast/JoinableExpr children))
+              else
+                (var children [(translate value/.type)])
+                (for item in value/.children
+                  (children .add (translate item))
+                )
+                (return (new ast/JoinableExpr children))
+              )
             )
           )
           (case first
           when :=
-            # assignment
+            (translate_bin value)
           when [:+ :- :* :/ :== :&& :||]
             (translate_bin value)
           else
@@ -381,28 +398,29 @@ proc init*() =
           when [Int Bool]
             (new ast/Literal value)
           when Symbol
-            (if (value .starts_with "@")
-              (var s (value/.to_s .substr 1))
+            (var symbol value/.to_s)
+            (if (symbol .starts_with "@")
+              (var s (symbol .substr 1))
               (if (s =~ #/^\d+$/)
                 (new ast/AccessBy (new ast/Literal s/.to_i))
               else
                 (new ast/AccessBy (new ast/String s))
               )
+            elif (symbol .contains ".")
+              (var s "")
+              (for [i part] in (symbol .split ".")
+                (if (i == 0)
+                  (s .append part)
+                elif (part =~ #/^\d+$/)
+                  (s .append "[" part "]")
+                else
+                  (s .append "." part)
+                )
+              )
+              (new ast/Literal s)
             else
               (new ast/Literal value)
             )
-          when ComplexSymbol
-            (var s "")
-            (for [i v] in value/.parts
-              (if (i == 0)
-                (s .append v)
-              elif (v =~ #/^\d+$/)
-                (s .append "[" v "]")
-              else
-                (s .append "." v)
-              )
-            )
-            (new ast/Literal s)
           when String
             (new ast/String value)
           when Array
