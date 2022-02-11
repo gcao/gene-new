@@ -6,10 +6,31 @@ import gene/types
 
 import ./helpers
 
-# 0b... Bin
-# 0o... Oct
-# 0x... Hex
-# 0s... Base64
+# #B... Bin
+# #X... Hex
+# (#Base64 ...)  Base64
+
+# Parser options:
+# A map of name->stack is used to store parser options
+# A cache of computed options are stored, and refreshed whenever any of below commands is found.
+# (#Set name value)
+# (#Unset name...) - will clear non-pushed top value of the stack
+# (#Reset name...) - will clear all non-pushed values of the stack
+# (#Push name value)
+# Set vs Push:
+# Options are applicable to end of document or until it's changed by further Set/Unset/....
+# Options are applicable to gene/array/map and will be removed automatically
+# Push is recommended over Set
+
+# Usecases:
+# (#Set x 1) (#Get x) -> 1
+# [(#Set x 1)] (#Get x) -> 1
+
+# (#Push x 1) (#Get x) -> 1
+# [(#Push x 1)] (#Get x) -> nil
+
+# [(#Push x 1) (#Set x 2)] (#Get x) -> 2
+# ...
 
 test_parser "nil", Nil
 test_parser "true", true
