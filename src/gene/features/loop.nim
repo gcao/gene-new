@@ -12,8 +12,8 @@ type
   ExContinue* = ref object of Expr
 
   ExOnce* = ref object of Expr
+    input*: Value
     code*: seq[Expr]
-    value*: Value
 
 let LOOP_KEY* = add_key("loop")
 
@@ -50,17 +50,18 @@ proc translate_continue(value: Value): Expr =
   )
 
 proc eval_once(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  result = cast[ExOnce](expr).value
-  if result == nil:
-    for item in cast[ExOnce](expr).code.mitems:
+  var expr = cast[ExOnce](expr)
+  if expr.input.gene_props.has_key(RETURN_KEY):
+    result = expr.input.gene_props[RETURN_KEY]
+  else:
+    for item in expr.code.mitems:
       result = self.eval(frame, item)
-    if result == nil:
-      result = Nil
-    cast[ExOnce](expr).value = result
+    expr.input.gene_props[RETURN_KEY] = result
 
 proc translate_once(value: Value): Expr =
   var r = ExOnce(
     evaluator: eval_once,
+    input: value,
   )
   for item in value.gene_children:
     r.code.add(translate(item))
