@@ -1,8 +1,9 @@
-import strutils, json
+import strutils
 import asynchttpserver as stdhttp, asyncdispatch
 import httpclient, uri
 
 include gene/extension/boilerplate
+import gene/json
 import gene/utils
 
 # https://dev.to/xflywind/write-a-simple-web-framework-in-nim-language-from-scratch-ma0

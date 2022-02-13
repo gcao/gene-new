@@ -1,4 +1,4 @@
-import os, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm, json
+import os, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm
 import nre
 import asyncdispatch
 import dynlib
@@ -682,6 +682,7 @@ proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
 proc new_gene_vec*(items: varargs[Value]): Value
 proc new_gene_map*(): Value
 proc new_namespace*(): Namespace
+proc new_namespace*(name: string): Namespace
 proc new_namespace*(parent: Namespace): Namespace
 proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.inline.}
 proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.}
@@ -782,6 +783,20 @@ converter int_to_scope_index*(v: int): NameIndexScope = cast[NameIndexScope](v)
 converter scope_index_to_int*(v: NameIndexScope): int = cast[int](v)
 
 converter gene_to_ns*(v: Value): Namespace = todo()
+
+#################### VM ##########################
+
+proc new_vm*(app: Application): VirtualMachine =
+  result = VirtualMachine(
+    app: app,
+  )
+
+#################### Application #################
+
+proc new_app*(): Application =
+  result = Application()
+  var global = new_namespace("global")
+  result.ns = global
 
 #################### Package #####################
 
@@ -1293,6 +1308,55 @@ proc `==`*(this, that: Time): bool =
 
 #################### Value ###################
 
+proc is_truthy*(self: Value): bool =
+  case self.kind:
+  of VkBool:
+    return self.bool
+  of VkNil:
+    return false
+  else:
+    return true
+
+# proc is_empty*(self: Value): bool =
+#   case self.kind:
+#   of VkNil:
+#     return true
+#   of VkVector:
+#     return self.vec.len == 0
+#   of VkMap:
+#     return self.map.len == 0
+#   of VkString:
+#     return self.str.len == 0
+#   else:
+#     return false
+
+proc merge*(self: var Value, value: Value) =
+  case self.kind:
+  of VkGene:
+    case value.kind:
+    of VkGene:
+      for item in value.gene_children:
+        self.gene_children.add(item)
+      for k, v in value.gene_props:
+        self.gene_props[k] = v
+    of VkVector:
+      for item in value.vec:
+        self.gene_children.add(item)
+    of VkMap:
+      for k, v in value.map:
+        self.gene_props[k] = v
+    else:
+      todo()
+  of VkVector:
+    case value.kind:
+    of VkVector:
+      for item in value.vec:
+        self.gene_children.add(item)
+    else:
+      todo()
+  else:
+    todo()
+
 # proc get_member*(self: Value, name: string): Value =
 #   case self.kind:
 #   of VkInternal:
@@ -1741,57 +1805,6 @@ converter new_gene_file*(file: File): Value =
     file: file,
   )
 
-#################### Value ###################
-
-proc is_truthy*(self: Value): bool =
-  case self.kind:
-  of VkBool:
-    return self.bool
-  of VkNil:
-    return false
-  else:
-    return true
-
-# proc is_empty*(self: Value): bool =
-#   case self.kind:
-#   of VkNil:
-#     return true
-#   of VkVector:
-#     return self.vec.len == 0
-#   of VkMap:
-#     return self.map.len == 0
-#   of VkString:
-#     return self.str.len == 0
-#   else:
-#     return false
-
-proc merge*(self: var Value, value: Value) =
-  case self.kind:
-  of VkGene:
-    case value.kind:
-    of VkGene:
-      for item in value.gene_children:
-        self.gene_children.add(item)
-      for k, v in value.gene_props:
-        self.gene_props[k] = v
-    of VkVector:
-      for item in value.vec:
-        self.gene_children.add(item)
-    of VkMap:
-      for k, v in value.map:
-        self.gene_props[k] = v
-    else:
-      todo()
-  of VkVector:
-    case value.kind:
-    of VkVector:
-      for item in value.vec:
-        self.gene_children.add(item)
-    else:
-      todo()
-  else:
-    todo()
-
 #################### Document ####################
 
 proc new_doc*(children: seq[Value]): Document =
@@ -1832,55 +1845,6 @@ proc wrap_with_try*(body: seq[Value]): seq[Value] =
     return @[new_gene_gene(Try, body)]
   else:
     return body
-
-#################### JSON ########################
-
-proc `%`*(self: Value): JsonNode =
-  case self.kind:
-  of VkNil:
-    return newJNull()
-  of VkBool:
-    return %self.bool
-  of VkInt:
-    return %self.int
-  of VkString:
-    return %self.str
-  # of VkSymbol:
-  #   return %self.str
-  of VkVector:
-    result = newJArray()
-    for item in self.vec:
-      result.add(%item)
-  of VkMap:
-    result = newJObject()
-    for k, v in self.map:
-      result[k.to_s] = %v
-  else:
-    todo($self.kind)
-
-proc to_json*(self: Value): string =
-  return $(%self)
-
-converter json_to_gene*(node: JsonNode): Value =
-  case node.kind:
-  of JNull:
-    return Nil
-  of JBool:
-    return node.bval
-  of JInt:
-    return node.num
-  of JFloat:
-    return node.fnum
-  of JString:
-    return node.str
-  of JObject:
-    result = new_gene_map()
-    for k, v in node.fields:
-      result.map[k.to_key] = v.json_to_gene
-  of JArray:
-    result = new_gene_vec()
-    for elem in node.elems:
-      result.vec.add(elem.json_to_gene)
 
 #################### Selector ####################
 

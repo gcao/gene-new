@@ -14,17 +14,57 @@ type
 
 proc new_package*(dir: string): Package
 proc init_package*(self: VirtualMachine, dir: string)
+proc parse_deps(deps: seq[Value]): Table[string, Dependency]
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value
 
-#################### Application #################
+#################### Value #######################
 
-proc new_app*(): Application =
-  result = Application()
-  var global = new_namespace("global")
-  result.ns = global
+proc to_s*(self: Value): string =
+  if self.is_nil:
+    return ""
+  case self.kind:
+    of VkNil:
+      return ""
+    of VkString:
+      return self.str
+    of VkInstance:
+      var method_key = "to_s".to_key
+      var m = self.instance_class.get_method(method_key)
+      if m.class != ObjectClass.class:
+        var frame = new_frame()
+        var args: Expr = new_ex_arg()
+        return VM.invoke(frame, self, method_key, args).str
+    else:
+      discard
+
+  return $self
 
 #################### Package #####################
+
+proc new_package*(dir: string): Package =
+  result = Package()
+  var dir = normalize_path(dir)
+  var d = absolute_path(dir)
+  while d.len > 1:  # not "/"
+    var package_file = d & "/package.gene"
+    if file_exists(package_file):
+      var doc = read_document(read_file(package_file))
+      result.name = doc.props[NAME_KEY].str
+      result.version = doc.props[VERSION_KEY]
+      result.ns = new_namespace(VM.app.ns, "package:" & result.name)
+      result.dir = d
+      if doc.props.has_key(DEPENDENCIES_KEY):
+        result.dependencies = parse_deps(doc.props[DEPENDENCIES_KEY].vec)
+      return result
+    else:
+      d = parent_dir(d)
+
+  result.adhoc = true
+  result.name = "<adhoc>"
+  result.ns = new_namespace(VM.app.ns, "package:" & result.name)
+  result.dir = dir
 
 proc init_package*(self: Dependency) =
   if self.package == nil:
@@ -67,129 +107,7 @@ proc parse_deps(deps: seq[Value]): Table[string, Dependency] =
     dep.build_dep_tree(node)
     result[name] = dep
 
-proc new_package*(dir: string): Package =
-  result = Package()
-  var dir = normalize_path(dir)
-  var d = absolute_path(dir)
-  while d.len > 1:  # not "/"
-    var package_file = d & "/package.gene"
-    if file_exists(package_file):
-      var doc = read_document(read_file(package_file))
-      result.name = doc.props[NAME_KEY].str
-      result.version = doc.props[VERSION_KEY]
-      result.ns = new_namespace(VM.app.ns, "package:" & result.name)
-      result.dir = d
-      if doc.props.has_key(DEPENDENCIES_KEY):
-        result.dependencies = parse_deps(doc.props[DEPENDENCIES_KEY].vec)
-      return result
-    else:
-      d = parent_dir(d)
-
-  result.adhoc = true
-  result.name = "<adhoc>"
-  result.ns = new_namespace(VM.app.ns, "package:" & result.name)
-  result.dir = dir
-
-#################### VM ##########################
-
-proc new_vm*(app: Application): VirtualMachine =
-  result = VirtualMachine(
-    app: app,
-  )
-
-proc init_app_and_vm*() =
-  var app = new_app()
-  VM = new_vm(app)
-
-  let gene_home = get_env("GENE_HOME", parent_dir(get_app_dir()))
-  let gene_pkg = new_package(gene_home)
-  gene_pkg.reset_load_paths()
-  VM.runtime = Runtime(
-    name: "default",
-    pkg: gene_pkg,
-  )
-
-  VM.init_package(get_current_dir())
-
-  GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
-  GLOBAL_NS.ns[STDIN_KEY]  = stdin
-  GLOBAL_NS.ns[STDOUT_KEY] = stdout
-  GLOBAL_NS.ns[STDERR_KEY] = stderr
-
-  GENE_NS = Value(kind: VkNamespace, ns: new_namespace("gene"))
-  GENE_NATIVE_NS = Value(kind: VkNamespace, ns: new_namespace("native"))
-  GENE_NS.ns[GENE_NATIVE_NS.ns.name] = GENE_NATIVE_NS
-  GLOBAL_NS.ns[GENE_NS.ns.name] = GENE_NS
-
-  GENEX_NS = Value(kind: VkNamespace, ns: new_namespace("genex"))
-  GLOBAL_NS.ns[GENEX_NS.ns.name] = GENEX_NS
-
-  for callback in VmCreatedCallbacks:
-    callback(VM)
-
-proc wait_for_futures*(self: VirtualMachine) =
-  try:
-    run_forever()
-  except ValueError as e:
-    if e.msg == "No handles or timers registered in dispatcher.":
-      discard
-    else:
-      raise
-
-proc prepare*(self: VirtualMachine, code: string): Value =
-  var parsed = read_all(code)
-  case parsed.len:
-  of 0:
-    Nil
-  of 1:
-    parsed[0]
-  else:
-    new_gene_stream(parsed)
-
-proc init_package*(self: VirtualMachine, dir: string) =
-  self.app.pkg = new_package(dir)
-  self.app.pkg.reset_load_paths()
-  self.app.dep_root = self.app.pkg.build_dep_tree()
-
-proc eval_prepare*(self: VirtualMachine, pkg: Package): Frame =
-  var module = new_module(pkg)
-  result = new_frame()
-  result.ns = module.ns
-  result.scope = new_scope()
-
-proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
-  var expr = translate(self.prepare(code))
-  result = self.eval(frame, expr)
-
-proc eval*(self: VirtualMachine, pkg: Package, code: string): Value =
-  var module = new_module(pkg)
-  var frame = new_frame()
-  frame.ns = module.ns
-  frame.scope = new_scope()
-  self.eval(frame, code)
-
-proc eval*(self: VirtualMachine, code: string): Value =
-  self.eval(VM.app.pkg, code)
-
-proc run_file*(self: VirtualMachine, file: string): Value =
-  var module = new_module(VM.app.pkg, file, self.app.pkg.ns)
-  VM.main_module = module
-  var frame = new_frame()
-  frame.ns = module.ns
-  frame.scope = new_scope()
-  var code = read_file(file)
-  result = self.eval(frame, code)
-  self.wait_for_futures()
-
-proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref system.Exception): Value =
-  echo "An exception was thrown: " & e.msg
-  echo "Opening debug console..."
-  echo "Note: the exception can be accessed as $ex"
-  var ex = error_to_gene(e)
-  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
-  result = repl(self, frame, eval, true)
-
-#################### Parsing #####################
+#################### Pattern Parsing #############
 
 proc parse*(self: var RootMatcher, v: Value)
 
@@ -305,7 +223,7 @@ proc new_arg_matcher*(value: Value): RootMatcher =
   result = new_arg_matcher()
   result.parse(value)
 
-#################### Matching ####################
+#################### Pattern Matching ############
 
 proc `[]`*(self: Value, i: int): Value =
   case self.kind:
@@ -413,6 +331,100 @@ proc match*(vm: VirtualMachine, frame: Frame, self: RootMatcher, input: Value): 
   for child in children:
     vm.match(frame, child, input, state, result)
   vm.match_prop_splat(frame, children, input, result)
+
+#################### VM ##########################
+
+proc init_app_and_vm*() =
+  var app = new_app()
+  VM = new_vm(app)
+
+  let gene_home = get_env("GENE_HOME", parent_dir(get_app_dir()))
+  let gene_pkg = new_package(gene_home)
+  gene_pkg.reset_load_paths()
+  VM.runtime = Runtime(
+    name: "default",
+    pkg: gene_pkg,
+  )
+
+  VM.init_package(get_current_dir())
+
+  GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
+  GLOBAL_NS.ns[STDIN_KEY]  = stdin
+  GLOBAL_NS.ns[STDOUT_KEY] = stdout
+  GLOBAL_NS.ns[STDERR_KEY] = stderr
+
+  GENE_NS = Value(kind: VkNamespace, ns: new_namespace("gene"))
+  GENE_NATIVE_NS = Value(kind: VkNamespace, ns: new_namespace("native"))
+  GENE_NS.ns[GENE_NATIVE_NS.ns.name] = GENE_NATIVE_NS
+  GLOBAL_NS.ns[GENE_NS.ns.name] = GENE_NS
+
+  GENEX_NS = Value(kind: VkNamespace, ns: new_namespace("genex"))
+  GLOBAL_NS.ns[GENEX_NS.ns.name] = GENEX_NS
+
+  for callback in VmCreatedCallbacks:
+    callback(VM)
+
+proc wait_for_futures*(self: VirtualMachine) =
+  try:
+    run_forever()
+  except ValueError as e:
+    if e.msg == "No handles or timers registered in dispatcher.":
+      discard
+    else:
+      raise
+
+proc prepare*(self: VirtualMachine, code: string): Value =
+  var parsed = read_all(code)
+  case parsed.len:
+  of 0:
+    Nil
+  of 1:
+    parsed[0]
+  else:
+    new_gene_stream(parsed)
+
+proc init_package*(self: VirtualMachine, dir: string) =
+  self.app.pkg = new_package(dir)
+  self.app.pkg.reset_load_paths()
+  self.app.dep_root = self.app.pkg.build_dep_tree()
+
+proc eval_prepare*(self: VirtualMachine, pkg: Package): Frame =
+  var module = new_module(pkg)
+  result = new_frame()
+  result.ns = module.ns
+  result.scope = new_scope()
+
+proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
+  var expr = translate(self.prepare(code))
+  result = self.eval(frame, expr)
+
+proc eval*(self: VirtualMachine, pkg: Package, code: string): Value =
+  var module = new_module(pkg)
+  var frame = new_frame()
+  frame.ns = module.ns
+  frame.scope = new_scope()
+  self.eval(frame, code)
+
+proc eval*(self: VirtualMachine, code: string): Value =
+  self.eval(VM.app.pkg, code)
+
+proc run_file*(self: VirtualMachine, file: string): Value =
+  var module = new_module(VM.app.pkg, file, self.app.pkg.ns)
+  VM.main_module = module
+  var frame = new_frame()
+  frame.ns = module.ns
+  frame.scope = new_scope()
+  var code = read_file(file)
+  result = self.eval(frame, code)
+  self.wait_for_futures()
+
+proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref system.Exception): Value =
+  echo "An exception was thrown: " & e.msg
+  echo "Opening debug console..."
+  echo "Note: the exception can be accessed as $ex"
+  var ex = error_to_gene(e)
+  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
+  result = repl(self, frame, eval, true)
 
 proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
   var match_result = self.match(frame, matcher, args)
@@ -659,26 +671,6 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: M
         raise
   else:
     todo()
-
-proc to_s*(self: Value): string =
-  if self.is_nil:
-    return ""
-  case self.kind:
-    of VkNil:
-      return ""
-    of VkString:
-      return self.str
-    of VkInstance:
-      var method_key = "to_s".to_key
-      var m = self.instance_class.get_method(method_key)
-      if m.class != ObjectClass.class:
-        var frame = new_frame()
-        var args: Expr = new_ex_arg()
-        return VM.invoke(frame, self, method_key, args).str
-    else:
-      discard
-
-  return $self
 
 proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   try:

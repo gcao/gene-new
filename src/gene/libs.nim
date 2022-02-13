@@ -1,7 +1,8 @@
-import os, osproc, random, base64, json, tables, sequtils, strutils, times, parsecsv, streams, nre
+import os, osproc, random, base64, tables, sequtils, strutils, times, parsecsv, streams, nre
 import asyncdispatch, asyncfile
 
 import ./types
+import ./json
 import ./map_key
 import ./exprs
 import ./interpreter_base
