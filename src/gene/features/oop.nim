@@ -294,7 +294,7 @@ proc eval_method_eq*(self: VirtualMachine, frame: Frame, target: Value, expr: va
   )
 
 proc translate_method(value: Value): Expr =
-  if value.gene_children.len >= 3 and value.gene_children[1] == Equal:
+  if value.gene_children.len >= 3 and value.gene_children[1] == Equals:
     return ExMethodEq(
       evaluator: eval_method_eq,
       name: value.gene_children[0].symbol,

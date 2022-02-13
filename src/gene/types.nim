@@ -9,10 +9,228 @@ import ./map_key
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
 
 type
+  RegexFlag* = enum
+    RfIgnoreCase
+    RfMultiLine
+    RfDotAll      # Nim nre: (?s) - . also matches newline (dotall)
+    RfExtended    # Nim nre: (?x) - whitespace and comments (#) are ignored (extended)
+
+  ValueKind* = enum
+    # VkVoid vs VkNil vs VkPlaceholder:
+    #   VkVoid has special meaning in some places (e.g. templates)
+    #   Value(kind: VkNil) and nil should have same meaning and is the default/uninitialized value.
+    #   VkPlaceholder can be interpreted any way we want
+    VkVoid
+    VkNil
+    VkPlaceholder
+    # VkAny vs VkCustom:
+    # VkAny can be used to represent anything
+    # VkCustom can be used to represent any value that inherits from CustomValue
+    VkAny
+    VkCustom
+    VkBool
+    VkInt
+    VkRatio
+    VkFloat
+    VkChar
+    VkString
+    VkSymbol
+    VkComplexSymbol
+    VkRegex
+    VkRegexMatch
+    VkRange
+    VkSelector
+    VkQuote
+    VkUnquote
+    # Time part should be 00:00:00 and timezone should not matter
+    VkDate
+    # Date + time + timezone
+    VkDateTime
+    VkTime
+    VkTimezone
+    VkVector
+    VkMap
+    VkSet
+    VkGene
+    VkStream
+    VkDocument
+    # Internal types
+    VkException = 128
+    VkGeneProcessor
+    VkApplication
+    VkPackage
+    VkModule
+    VkNamespace
+    VkFunction
+    VkBoundFunction
+    VkMacro
+    VkBlock
+    VkClass
+    VkMixin
+    VkMethod
+    VkNativeFn
+    VkNativeFn2
+    VkNativeMethod
+    VkNativeMethod2
+    VkInstance
+    VkCast
+    VkEnum
+    VkEnumMember
+    VkExpr
+    VkExplode
+    VkFuture
+    VkFile
+
+  Value* {.acyclic.} = ref object
+    case kind*: ValueKind
+    of VkAny:
+      any*: pointer
+      any_class*: Class
+    of VkCustom:
+      custom*: CustomValue
+      custom_class*: Class
+    of VkBool:
+      bool*: bool
+    of VkInt:
+      int*: BiggestInt
+    of VkRatio:
+      ratio_num*: BiggestInt
+      ratio_denom*: BiggestInt
+    of VkFloat:
+      float*: float
+    of VkChar:
+      char*: char
+      rune*: Rune
+    of VkString:
+      str*: string
+    of VkSymbol:
+      symbol*: string
+    of VkComplexSymbol:
+      csymbol*: seq[string]
+    of VkRegex:
+      regex*: Regex
+      regex_pattern*: string
+      regex_flags: set[RegexFlag]
+    of VkRegexMatch:
+      regex_match*: RegexMatch
+    of VkRange:
+      range*: Range
+    of VkDate, VkDateTime:
+      date_internal: DateTimeInternal
+    of VkTime:
+      time*: Time
+    of VkTimezone:
+      timezone*: Timezone
+    of VkMap:
+      map*: OrderedTable[MapKey, Value]
+    of VkVector:
+      vec*: seq[Value]
+    of VkSet:
+      set*: OrderedSet[Value]
+    of VkGene:
+      gene_type*: Value
+      gene_props*: OrderedTable[MapKey, Value]
+      gene_children*: seq[Value]
+    of VkEnum:
+      `enum`*: Enum
+    of VkEnumMember:
+      `enum_parent`*: Enum
+      `enum_member`*: EnumMember
+    of VkStream:
+      stream*: seq[Value]
+      stream_index*: BiggestInt
+      stream_ended*: bool
+    of VkQuote:
+      quote*: Value
+    of VkUnquote:
+      unquote*: Value
+      unquote_discard*: bool
+    of VkExplode:
+      explode*: Value
+    of VkSelector:
+      selector*: Selector
+    of VkCast:
+      cast_class*: Class
+      cast_value*: Value
+    # Internal types
+    of VkException:
+      exception*: ref system.Exception
+    of VkGeneProcessor:
+      gene_processor*: GeneProcessor
+    of VkApplication:
+      app*: Application
+    of VkPackage:
+      pkg*: Package
+    of VkNamespace:
+      ns*: Namespace
+    of VkFunction:
+      fn*: Function
+    of VkBoundFunction:
+      bound_fn*: BoundFunction
+    of VkMacro:
+      `macro`*: Macro
+    of VkBlock:
+      `block`*: Block
+    of VkClass:
+      class*: Class
+    of VkMixin:
+      `mixin`*: Mixin
+    of VkMethod:
+      `method`*: Method
+    of VkNativeFn:
+      native_fn*: NativeFn
+    of VkNativeFn2:
+      native_fn2*: NativeFn2
+    of VkNativeMethod:
+      native_method*: NativeMethod
+    of VkNativeMethod2:
+      native_method2*: NativeMethod2
+    of VkInstance:
+      instance_class*: Class
+      instance_props*: Table[MapKey, Value]
+    of VkExpr:
+      expr*: Expr
+    of VkFuture:
+      future*: Future[Value]
+      ft_success_callbacks*: seq[Value]
+      ft_failure_callbacks*: seq[Value]
+    of VkFile:
+      file*: File
+    else:
+      discard
+
+  CustomValue* = ref object of RootObj
+
+  Document* = ref object
+    `type`: Value
+    props*: OrderedTable[MapKey, Value]
+    children*: seq[Value]
+
+  # applicable to numbers, characters
+  Range* = ref object
+    start*: Value
+    `end`*: Value
+    step*: Value # default to 1 if first is greater than last
+    # include_start*: bool # always true
+    include_end*: bool # default to false
+
+  DateTimeInternal = ref object
+    data: DateTime
+
+  # Non-date specific time object
+  Time* = ref object
+    hour*: int
+    minute*: int
+    second*: int
+    nanosec*: int
+    timezone*: Timezone
+
   Exception* = object of CatchableError
     instance*: Value  # instance of Gene exception class
 
   NotDefinedException* = object of Exception
+  # Types related to command line argument parsing
+  ArgumentError* = object of Exception
 
   # index of a name in a scope
   NameIndexScope* = distinct int
@@ -39,6 +257,7 @@ type
   # NativeMacro* = proc(self: Value, args: Value): Value
 
   GeneProcessor* = ref object of RootObj
+    name*: string
     translator*: Translator
 
   VirtualMachine* = ref object
@@ -48,6 +267,7 @@ type
     modules*: OrderedTable[MapKey, Namespace]
     repl_on_error*: bool
 
+  # VirtualMachine depends on a Runtime
   Runtime* = ref object
     name*: string     # default/...
     pkg*: Package
@@ -58,6 +278,22 @@ type
   # Instead we should define capabilities, e.g. file system access,
   # network access, environment access, input/output device access etc.
   # Capabilities can be enabled/disabled on application, package, module level.
+
+  # environment: local/unittest/development/staging/production
+  # assertion: enabled/disabled
+  # log level: fatal/error/warning/info/debug/trace
+  # repl on error: true/false
+  # capabilities:
+  #   environment variables: read/write
+  #   stdin/stdout/stderr/pipe: read/write
+  #   gui:
+  #   file system: read/write
+  #   os execution: read/write
+  #   database: read/write
+  #   socket client: read/write
+  #   socket server:
+  #   http: read/write
+  #   custom capabilities provided by libraries
 
   ## This is the root of a running application
   Application* = ref object
@@ -123,16 +359,6 @@ type
     members*: Table[MapKey, Value]
     on_member_missing*: seq[Value]
 
-  Scope* = ref object
-    parent*: Scope
-    parent_index_max*: NameIndexScope
-    members*:  seq[Value]
-    # Value of mappings is composed of two bytes:
-    #   first is the optional index in self.mapping_history + 1
-    #   second is the index in self.members
-    mappings*: Table[MapKey, int]
-    mapping_history*: seq[seq[NameIndexScope]]
-
   Class* = ref object
     parent*: Class
     name*: string
@@ -159,7 +385,6 @@ type
     ns*: Namespace
     parent_scope*: Scope
     parent_scope_max*: NameIndexScope
-    name*: string
     matcher*: RootMatcher
     matching_hint*: MatchingHint
     body*: seq[Value]
@@ -170,8 +395,7 @@ type
     self*: Value
     # args*: Value
 
-  Block* = ref object of GeneProcessor
-    frame*: Frame
+  Macro* = ref object of GeneProcessor
     ns*: Namespace
     parent_scope*: Scope
     parent_scope_max*: NameIndexScope
@@ -180,11 +404,11 @@ type
     body*: seq[Value]
     body_compiled*: Expr
 
-  Macro* = ref object of GeneProcessor
+  Block* = ref object of GeneProcessor
+    frame*: Frame
     ns*: Namespace
     parent_scope*: Scope
     parent_scope_max*: NameIndexScope
-    name*: string
     matcher*: RootMatcher
     matching_hint*: MatchingHint
     body*: seq[Value]
@@ -199,234 +423,8 @@ type
     name*: string
     value*: int
 
-  # applicable to numbers, characters
-  Range* = ref object
-    start*: Value
-    `end`*: Value
-    step*: Value # default to 1 if first is greater than last
-    # include_start*: bool # always true
-    include_end*: bool # default to false
-
-  RegexFlag* = enum
-    RfIgnoreCase
-    RfMultiLine
-    RfDotAll      # Nim nre: (?s) - . also matches newline (dotall)
-    RfExtended    # Nim nre: (?x) - whitespace and comments (#) are ignored (extended)
-
-  # Non-date specific time object
-  Time* = ref object
-    hour*: int
-    minute*: int
-    second*: int
-    nanosec*: int
-    timezone*: Timezone
-
-  DateTimeInternal = ref object
-    data: DateTime
-
-  # VkVoid vs VkNil:
-  #   VkVoid has special meaning in some places (e.g. templates)
-  #   Value(kind: VkNil) and nil should have same meaning and is the default/uninitialized value.
-  ValueKind* = enum
-    VkVoid
-    VkNil
-    VkAny
-    VkCustom
-    VkBool
-    VkInt
-    VkRatio
-    VkFloat
-    VkChar
-    VkString
-    VkSymbol
-    VkComplexSymbol
-    VkRegex
-    VkRegexMatch
-    VkRange
-    VkSelector
-    VkCast
-    VkQuote
-    VkUnquote
-    # Time part should be 00:00:00 and timezone should not matter
-    VkDate
-    # Date + time + timezone
-    VkDateTime
-    VkTime
-    VkTimezone
-    VkMap
-    VkVector
-    VkSet
-    VkGene
-    VkStream
-    VkDocument
-    VkPlaceholder
-    # Internal types
-    VkException = 128
-    VkFuture
-    VkExpr
-    VkGeneProcessor
-    VkApplication
-    VkPackage
-    VkModule
-    VkNamespace
-    VkFunction
-    VkBoundFunction
-    VkMacro
-    VkBlock
-    VkReturn
-    VkClass
-    VkMixin
-    VkMethod
-    VkNativeFn
-    VkNativeFn2
-    VkNativeMethod
-    VkNativeMethod2
-    VkInstance
-    VkEnum
-    VkEnumMember
-    VkExplode
-    VkFile
-
-  Value* {.acyclic.} = ref object
-    case kind*: ValueKind
-    of VkAny:
-      any*: pointer
-      any_class*: Class
-    of VkCustom:
-      custom*: CustomValue
-      custom_class*: Class
-    of VkBool:
-      bool*: bool
-    of VkInt:
-      int*: BiggestInt
-    of VkRatio:
-      ratio_num*: BiggestInt
-      ratio_denom*: BiggestInt
-    of VkFloat:
-      float*: float
-    of VkChar:
-      char*: char
-      rune*: Rune
-    of VkString:
-      str*: string
-    of VkSymbol:
-      symbol*: string
-    of VkComplexSymbol:
-      csymbol*: seq[string]
-    of VkRegex:
-      regex*: Regex
-      regex_pattern*: string
-      regex_flags: set[RegexFlag]
-    of VkRegexMatch:
-      regex_match*: RegexMatch
-    of VkRange:
-      range*: Range
-    of VkDate, VkDateTime:
-      date_internal: DateTimeInternal
-    of VkTime:
-      time*: Time
-    of VkTimezone:
-      timezone*: Timezone
-    of VkMap:
-      map*: OrderedTable[MapKey, Value]
-    of VkVector:
-      vec*: seq[Value]
-    of VkSet:
-      set*: OrderedSet[Value]
-    of VkGene:
-      gene_type*: Value
-      gene_props*: OrderedTable[MapKey, Value]
-      gene_children*: seq[Value]
-    of VkEnum:
-      `enum`*: Enum
-    of VkEnumMember:
-      `enum_member`*: EnumMember
-    of VkStream:
-      stream*: seq[Value]
-    of VkQuote:
-      quote*: Value
-    of VkUnquote:
-      unquote*: Value
-      unquote_discard*: bool
-    of VkExplode:
-      explode*: Value
-    of VkSelector:
-      selector*: Selector
-    of VkCast:
-      cast_class*: Class
-      cast_value*: Value
-    # Internal types
-    of VkException:
-      exception*: ref system.Exception
-    of VkFuture:
-      future*: Future[Value]
-      ft_success_callbacks*: seq[Value]
-      ft_failure_callbacks*: seq[Value]
-    of VkExpr:
-      expr*: Expr
-    of VkGeneProcessor:
-      gene_processor*: GeneProcessor
-    of VkApplication:
-      app*: Application
-    of VkPackage:
-      pkg*: Package
-    of VkNamespace:
-      ns*: Namespace
-    of VkFunction:
-      fn*: Function
-    of VkBoundFunction:
-      bound_fn*: BoundFunction
-    of VkMacro:
-      `macro`*: Macro
-    of VkBlock:
-      `block`*: Block
-    of VkClass:
-      class*: Class
-    of VkMixin:
-      `mixin`*: Mixin
-    of VkMethod:
-      `method`*: Method
-    of VkNativeFn:
-      native_fn*: NativeFn
-    of VkNativeFn2:
-      native_fn2*: NativeFn2
-    of VkNativeMethod:
-      native_method*: NativeMethod
-    of VkNativeMethod2:
-      native_method2*: NativeMethod2
-    of VkInstance:
-      instance_class*: Class
-      instance_props*: Table[MapKey, Value]
-    of VkFile:
-      file*: File
-    else:
-      discard
-
   Expr* = ref object of RootObj
     evaluator*: Evaluator
-
-  CustomValue* = ref object of RootObj
-
-  Document* = ref object
-    `type`: Value
-    props*: OrderedTable[MapKey, Value]
-    children*: seq[Value]
-
-  # environment: local/unittest/development/staging/production
-  # assertion: enabled/disabled
-  # log level: fatal/error/warning/info/debug/trace
-  # repl on error: true/false
-  # capabilities:
-  #   environment variables: read/write
-  #   stdin/stdout/stderr/pipe: read/write
-  #   gui:
-  #   file system: read/write
-  #   os execution: read/write
-  #   database: read/write
-  #   socket client: read/write
-  #   socket server:
-  #   http: read/write
-  #   custom capabilities provided by libraries
 
   FrameKind* = enum
     FrFunction
@@ -454,6 +452,16 @@ type
     scope*: Scope
     args*: Value # This is only available in some frames (e.g. function/macro/block)
     extra*: FrameExtra
+
+  Scope* = ref object
+    parent*: Scope
+    parent_index_max*: NameIndexScope
+    members*:  seq[Value]
+    # Value of mappings is composed of two bytes:
+    #   first is the optional index in self.mapping_history + 1
+    #   second is the index in self.members
+    mappings*: Table[MapKey, int]
+    mapping_history*: seq[seq[NameIndexScope]]
 
   Break* = ref object of CatchableError
     val*: Value
@@ -598,10 +606,8 @@ type
     of SrAll:
       all*: seq[Value]
 
-  # Types related to command line argument parsing
-  ArgumentError* = object of Exception
-
 let
+  Void*  = Value(kind: VkVoid)
   Nil*   = Value(kind: VkNil)
   True*  = Value(kind: VkBool, bool: true)
   False* = Value(kind: VkBool, bool: false)
@@ -613,9 +619,9 @@ let
   Then*      = Value(kind: VkSymbol, symbol: "then")
   Elif*      = Value(kind: VkSymbol, symbol: "elif")
   Else*      = Value(kind: VkSymbol, symbol: "else")
+  Case*      = Value(kind: VkSymbol, symbol: "case")
   When*      = Value(kind: VkSymbol, symbol: "when")
   Not*       = Value(kind: VkSymbol, symbol: "not")
-  Equal*     = Value(kind: VkSymbol, symbol: "=")
   Try*       = Value(kind: VkSymbol, symbol: "try")
   Catch*     = Value(kind: VkSymbol, symbol: "catch")
   Finally*   = Value(kind: VkSymbol, symbol: "finally")
@@ -636,14 +642,6 @@ var GENE_NATIVE_NS*: Value
 var GENEX_NS*      : Value
 
 var ObjectClass*   : Value
-var ClassClass*    : Value
-var MixinClass*    : Value
-var ExceptionClass*: Value
-var FutureClass*   : Value
-var NamespaceClass*: Value
-var FunctionClass* : Value
-var MacroClass*    : Value
-var BlockClass*    : Value
 var NilClass*      : Value
 var BoolClass*     : Value
 var IntClass*      : Value
@@ -654,16 +652,28 @@ var SymbolClass*   : Value
 var ComplexSymbolClass* : Value
 var ArrayClass*    : Value
 var MapClass*      : Value
-var StreamClass*   : Value
 var SetClass*      : Value
 var GeneClass*     : Value
+var StreamClass*   : Value
 var DocumentClass* : Value
-var FileClass*     : Value
+var RegexClass*    : Value
+var RangeClass*    : Value
 var DateClass*     : Value
 var DatetimeClass* : Value
 var TimeClass*     : Value
 var SelectorClass* : Value
+var ExceptionClass*: Value
+var ClassClass*    : Value
+var MixinClass*    : Value
+var ApplicationClass* : Value
 var PackageClass*  : Value
+var ModuleClass*   : Value
+var NamespaceClass*: Value
+var FunctionClass* : Value
+var MacroClass*    : Value
+var BlockClass*    : Value
+var FutureClass*   : Value
+var FileClass*     : Value
 
 #################### Definitions #################
 
