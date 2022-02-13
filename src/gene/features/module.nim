@@ -55,11 +55,11 @@ proc parse*(self: ImportMatcherRoot, input: Value, group: ptr seq[ImportMatcher]
     i += 1
     case item.kind:
     of VkSymbol:
-      if item.symbol == "from":
+      if item.str == "from":
         self.from = children[i]
         i += 1
       else:
-        group[].add(new_import_matcher(item.symbol))
+        group[].add(new_import_matcher(item.str))
     of VkComplexSymbol:
       var names: seq[string] = @[]
       names.add(item.csymbol[0])

@@ -75,12 +75,12 @@ proc default_translator(value: Value): Expr =
 
 proc translate_gene(value: Value): Expr =
   # normalize is inefficient.
-  if value.gene_type.kind == VkSymbol and value.gene_type.symbol.starts_with(".@"):
-    if value.gene_type.symbol.len == 2:
+  if value.gene_type.kind == VkSymbol and value.gene_type.str.starts_with(".@"):
+    if value.gene_type.str.len == 2:
       return translate_invoke_selector3(value)
     else:
       return translate_invoke_selector4(value)
-  elif value.gene_type.kind == VkSymbol and value.gene_type.symbol == "import":
+  elif value.gene_type.kind == VkSymbol and value.gene_type.str == "import":
     discard
   elif value.gene_type.kind == VkComplexSymbol and value.gene_type.csymbol[0].starts_with(".@"):
     return translate_invoke_selector4(value)
@@ -89,26 +89,26 @@ proc translate_gene(value: Value): Expr =
     var first = value.gene_children[0]
     case first.kind:
     of VkSymbol:
-      if COMPARISON_OPS.contains(first.symbol):
+      if COMPARISON_OPS.contains(first.str):
         var data = value.gene_children
         data.insert(value.gene_type)
         return translate_comparisons(data)
-      elif LOGIC_OPS.contains(first.symbol):
+      elif LOGIC_OPS.contains(first.str):
         var data = value.gene_children
         data.insert(value.gene_type)
         return translate_logic(data)
-      elif REGEX_OPS.contains(first.symbol):
+      elif REGEX_OPS.contains(first.str):
         return translate_match(value)
-      elif arithmetic.BINARY_OPS.contains(first.symbol):
+      elif arithmetic.BINARY_OPS.contains(first.str):
         var data = value.gene_children
         data.insert(value.gene_type)
         return translate_arithmetic(data)
-      elif first.symbol == "=" and `type`.kind == VkSymbol and `type`.symbol.startsWith("@"): # (@p = 1)
+      elif first.str == "=" and `type`.kind == VkSymbol and `type`.str.startsWith("@"): # (@p = 1)
         return translate_prop_assignment(value)
-      elif first.symbol == "..":
+      elif first.str == "..":
         return new_ex_range(translate(`type`), translate(value.gene_children[1]))
-      elif first.symbol.startsWith(".@"):
-        if first.symbol.len == 2:
+      elif first.str.startsWith(".@"):
+        if first.str.len == 2:
           return translate_invoke_selector(value)
         else:
           return translate_invoke_selector2(value)
@@ -122,7 +122,7 @@ proc translate_gene(value: Value): Expr =
 
   case value.gene_type.kind:
   of VkSymbol:
-    var translator = GeneTranslators.get_or_default(value.gene_type.symbol, default_translator)
+    var translator = GeneTranslators.get_or_default(value.gene_type.str, default_translator)
     return translator(value)
   of VkString:
     return translate_string(value)

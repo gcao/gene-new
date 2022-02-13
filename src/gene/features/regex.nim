@@ -45,13 +45,13 @@ proc eval_not_match(self: VirtualMachine, frame: Frame, target: Value, expr: var
 
 proc translate_match*(value: Value): Expr =
   var evaluator: Evaluator
-  case value.gene_children[0].symbol:
+  case value.gene_children[0].str:
   of "=~":
     evaluator = eval_match
   of "!~":
     evaluator = eval_not_match
   else:
-    not_allowed("translate_match " & $value.gene_children[0].symbol)
+    not_allowed("translate_match " & $value.gene_children[0].str)
 
   ExMatch(
     evaluator: evaluator,

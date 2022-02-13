@@ -118,7 +118,7 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
       self.include_program = true
       continue
 
-    case item.gene_type.symbol:
+    case item.gene_type.str:
     of "option":
       var option = ArgMatcher(kind: ArgOption)
       option.parse_data_type(item)
@@ -132,11 +132,11 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
         option.default = item.gene_props[DEFAULT_KEY]
         option.required = false
       for item in item.gene_children:
-        if item.symbol[0] == '-':
-          if item.symbol.len == 2:
-            option.short_name = item.symbol
+        if item.str[0] == '-':
+          if item.str.len == 2:
+            option.short_name = item.str
           else:
-            option.long_name = item.symbol
+            option.long_name = item.str
         else:
           option.description = item.str
 
@@ -147,7 +147,7 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
 
     of "argument":
       var arg = ArgMatcher(kind: ArgPositional)
-      arg.arg_name = item.gene_children[0].symbol
+      arg.arg_name = item.gene_children[0].str
       if item.gene_props.has_key(DEFAULT_KEY):
         arg.default = item.gene_props[DEFAULT_KEY]
         arg.required = false

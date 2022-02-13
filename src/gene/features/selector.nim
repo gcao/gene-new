@@ -163,7 +163,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
     args.gene_children.add(target)
     var v = VM.call(nil, self.callback, args)
     if v.kind == VkGene and v.gene_type.kind == VkSymbol:
-      case v.gene_type.symbol:
+      case v.gene_type.str:
       of "void":
         discard
       else:
@@ -358,7 +358,7 @@ proc new_ex_selector*(parallel_mode: bool, data: seq[Value]): Expr =
     return r
 
 proc translate_selector(value: Value): Expr =
-  var parallel_mode = value.gene_type.symbol == "@*"
+  var parallel_mode = value.gene_type.str == "@*"
   return new_ex_selector(parallel_mode, value.gene_children)
 
 proc handle_item*(item: string): Expr =
@@ -414,7 +414,7 @@ proc translate_invoke_selector2*(value: Value): Expr =
   )
   case value.gene_children[0].kind:
   of VkSymbol:
-    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_children[0].symbol[2..^1]))
+    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_children[0].str[2..^1]))
   of VkComplexSymbol:
     cast[ExSelector2](r.selector).data.add(handle_item(value.gene_children[0].csymbol[0][2..^1]))
     for item in value.gene_children[0].csymbol[1..^1]:
@@ -448,7 +448,7 @@ proc translate_invoke_selector4*(value: Value): Expr =
   )
   case value.gene_type.kind:
   of VkSymbol:
-    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_type.symbol[2..^1]))
+    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_type.str[2..^1]))
   of VkComplexSymbol:
     cast[ExSelector2](r.selector).data.add(handle_item(value.gene_type.csymbol[0][2..^1]))
     for item in value.gene_type.csymbol[1..^1]:

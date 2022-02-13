@@ -18,7 +18,7 @@ proc eval_print(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 proc translate_print(value: Value): Expr =
   var r = ExPrint(
     evaluator: eval_print,
-    new_line: value.gene_type.symbol == "println",
+    new_line: value.gene_type.str == "println",
   )
   for item in value.gene_children:
     r.data.add translate(item)

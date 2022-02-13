@@ -101,10 +101,8 @@ type
     of VkChar:
       char*: char
       rune*: Rune
-    of VkString:
+    of VkString, VkSymbol:
       str*: string
-    of VkSymbol:
-      symbol*: string
     of VkComplexSymbol:
       csymbol*: seq[string]
     of VkRegex:
@@ -613,21 +611,21 @@ let
   False* = Value(kind: VkBool, bool: false)
   Placeholder* = Value(kind: VkPlaceholder)
 
-  Quote*     = Value(kind: VkSymbol, symbol: "quote")
-  Unquote*   = Value(kind: VkSymbol, symbol: "unquote")
-  If*        = Value(kind: VkSymbol, symbol: "if")
-  Then*      = Value(kind: VkSymbol, symbol: "then")
-  Elif*      = Value(kind: VkSymbol, symbol: "elif")
-  Else*      = Value(kind: VkSymbol, symbol: "else")
-  Case*      = Value(kind: VkSymbol, symbol: "case")
-  When*      = Value(kind: VkSymbol, symbol: "when")
-  Not*       = Value(kind: VkSymbol, symbol: "not")
-  Try*       = Value(kind: VkSymbol, symbol: "try")
-  Catch*     = Value(kind: VkSymbol, symbol: "catch")
-  Finally*   = Value(kind: VkSymbol, symbol: "finally")
-  Call*      = Value(kind: VkSymbol, symbol: "call")
-  Do*        = Value(kind: VkSymbol, symbol: "do")
-  Equals*    = Value(kind: VkSymbol, symbol: "=")
+  Quote*     = Value(kind: VkSymbol, str: "quote")
+  Unquote*   = Value(kind: VkSymbol, str: "unquote")
+  If*        = Value(kind: VkSymbol, str: "if")
+  Then*      = Value(kind: VkSymbol, str: "then")
+  Elif*      = Value(kind: VkSymbol, str: "elif")
+  Else*      = Value(kind: VkSymbol, str: "else")
+  Case*      = Value(kind: VkSymbol, str: "case")
+  When*      = Value(kind: VkSymbol, str: "when")
+  Not*       = Value(kind: VkSymbol, str: "not")
+  Try*       = Value(kind: VkSymbol, str: "try")
+  Catch*     = Value(kind: VkSymbol, str: "catch")
+  Finally*   = Value(kind: VkSymbol, str: "finally")
+  Call*      = Value(kind: VkSymbol, str: "call")
+  Do*        = Value(kind: VkSymbol, str: "do")
+  Equals*    = Value(kind: VkSymbol, str: "=")
 
 var Ints: array[111, Value]
 for i in 0..110:
@@ -1057,7 +1055,7 @@ proc `[]`*(self: Frame, name: MapKey): Value {.inline.} =
 proc `[]`*(self: Frame, name: Value): Value {.inline.} =
   case name.kind:
   of VkSymbol:
-    result = self[name.symbol.to_key]
+    result = self[name.str.to_key]
   # of VkComplexSymbol:
   #   var csymbol = name.csymbol
   #   if csymbol[0] == "global":
@@ -1295,15 +1293,6 @@ proc `==`*(this, that: Time): bool =
 
 #################### Value ###################
 
-proc symbol_or_str*(self: Value): string =
-  case self.kind:
-  of VkSymbol:
-    return self.symbol
-  of VkString:
-    return self.str
-  else:
-    not_allowed()
-
 # proc get_member*(self: Value, name: string): Value =
 #   case self.kind:
 #   of VkInternal:
@@ -1355,10 +1344,8 @@ proc `==`*(this, that: Value): bool =
       return this.ratio_num == that.ratio_num and this.ratio_denom == that.ratio_denom
     of VkFloat:
       return this.float == that.float
-    of VkString:
+    of VkString, VkSymbol:
       return this.str == that.str
-    of VkSymbol:
-      return this.symbol == that.symbol
     of VkComplexSymbol:
       return this.csymbol == that.csymbol
     of VkDate, VkDateTime:
@@ -1409,10 +1396,8 @@ proc hash*(node: Value): Hash =
     h = h !& hash(node.ratio_denom)
   of VkFloat:
     h = h !& hash(node.float)
-  of VkString:
+  of VkString, VkSymbol:
     h = h !& hash(node.str)
-  of VkSymbol:
-    h = h !& hash(node.symbol)
   of VkComplexSymbol:
     h = h !& hash(node.csymbol.join("/"))
   of VkDate, VkDateTime:
@@ -1471,7 +1456,7 @@ proc `$`*(node: Value): string =
   of VkString:
     result = "\"" & node.str.replace("\"", "\\\"") & "\""
   of VkSymbol:
-    result = node.symbol
+    result = node.str
   of VkComplexSymbol:
     result = node.csymbol.join("/")
   of VkDate:
@@ -1587,7 +1572,7 @@ proc new_gene_char*(c: Rune): Value =
   return Value(kind: VkChar, rune: c)
 
 proc new_gene_symbol*(name: string): Value =
-  return Value(kind: VkSymbol, symbol: name)
+  return Value(kind: VkSymbol, str: name)
 
 proc new_gene_complex_symbol*(strs: seq[string]): Value =
   Value(
@@ -1861,7 +1846,7 @@ proc `%`*(self: Value): JsonNode =
   of VkString:
     return %self.str
   # of VkSymbol:
-  #   return %self.symbol
+  #   return %self.str
   of VkVector:
     result = newJArray()
     for item in self.vec:

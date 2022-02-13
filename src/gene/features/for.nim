@@ -93,15 +93,15 @@ proc translate_for(value: Value): Expr =
   if value.gene_children[0].kind == VkVector:
     return ExFor2(
       evaluator: eval_for2,
-      key_name: value.gene_children[0].vec[0].symbol,
-      val_name: value.gene_children[0].vec[1].symbol,
+      key_name: value.gene_children[0].vec[0].str,
+      val_name: value.gene_children[0].vec[1].str,
       data: translate(value.gene_children[2]),
       body: translate(value.gene_children[3..^1]),
     )
   else:
     return ExFor(
       evaluator: eval_for,
-      name: value.gene_children[0].symbol,
+      name: value.gene_children[0].str,
       data: translate(value.gene_children[2]),
       body: translate(value.gene_children[3..^1]),
     )

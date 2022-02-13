@@ -32,22 +32,22 @@ proc eval_assignment(self: VirtualMachine, frame: Frame, target: Value, expr: va
 proc translate_assignment(value: Value): Expr =
   result = ExAssignment(
     evaluator: eval_assignment,
-    name: value.gene_children[0].symbol.to_key,
+    name: value.gene_children[0].str.to_key,
     value: translate(value.gene_children[1]),
   )
-  # if value.gene_children[0].symbol[0] == "@":
-  #   result = new_ex_set_prop(value.gene_children[0].symbol[1..^1], translate(value.gene_children[1]))
+  # if value.gene_children[0].str[0] == "@":
+  #   result = new_ex_set_prop(value.gene_children[0].str[1..^1], translate(value.gene_children[1]))
   # else:
   #   result = ExAssignment(
   #     evaluator: eval_assignment,
-  #     name: value.gene_children[0].symbol.to_key,
+  #     name: value.gene_children[0].str.to_key,
   #     value: translate(value.gene_children[1]),
   #   )
 
 proc translate_op_eq(value: Value): Expr =
-  var name = value.gene_children[0].symbol
+  var name = value.gene_children[0].str
   var value_expr: ExBinOp
-  case value.gene_type.symbol:
+  case value.gene_type.str:
   of "+=":
     value_expr = new_ex_bin(BinAdd)
   of "-=":
@@ -61,11 +61,11 @@ proc translate_op_eq(value: Value): Expr =
   of "||=":
     value_expr = new_ex_bin(BinOr)
   else:
-    todo("translate_op_eq " & $value.gene_type.symbol)
+    todo("translate_op_eq " & $value.gene_type.str)
 
-  if value.gene_children[0].symbol[0] == '@':
+  if value.gene_children[0].str[0] == '@':
     # (@a ||= x)  =>  (@a = (/@a || x))
-    var selector: seq[string] = @["", value.gene_children[0].symbol]
+    var selector: seq[string] = @["", value.gene_children[0].str]
     value_expr.op1 = translate(selector)
     value_expr.op2 = translate(value.gene_children[1])
     return new_ex_set_prop(name[1..^1], value_expr)

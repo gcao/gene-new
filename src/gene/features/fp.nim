@@ -44,7 +44,7 @@ proc to_function(node: Value): Function =
   var name: string
   var matcher = new_arg_matcher()
   var body_start: int
-  case node.gene_type.symbol:
+  case node.gene_type.str:
   of "fnx":
     matcher.parse(node.gene_children[0])
     name = "<unnamed>"
@@ -56,7 +56,7 @@ proc to_function(node: Value): Function =
     var first = node.gene_children[0]
     case first.kind:
     of VkSymbol:
-      name = first.symbol
+      name = first.str
     of VkComplexSymbol:
       name = first.csymbol[^1]
     of VkString:

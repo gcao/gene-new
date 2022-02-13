@@ -15,11 +15,11 @@ proc translate_enum(value: Value): Expr =
   var r = ExEnum(
     evaluator: eval_enum,
   )
-  var e = new_enum(value.gene_children[0].symbol_or_str)
+  var e = new_enum(value.gene_children[0].str)
   var i = 1
   var v = 0
   while i < value.gene_children.len:
-    var name = value.gene_children[i].symbol
+    var name = value.gene_children[i].str
     i += 1
     if i < value.gene_children.len and value.gene_children[i] == Equals:
       i += 1

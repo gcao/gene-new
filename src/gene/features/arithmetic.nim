@@ -161,7 +161,7 @@ proc translate_op*(op: string, op1, op2: Expr): Expr =
   cast[ExBinOp](result).op2 = op2
 
 proc translate_arithmetic*(value: Value): Expr =
-  case value.gene_type.symbol:
+  case value.gene_type.str:
   of "+":
     result = new_ex_bin(BinAdd)
   of "-":
@@ -194,14 +194,14 @@ proc translate_arithmetic*(children: seq[Value]): Expr =
   if children.len == 1:
     return translate(children[0])
   elif children.len == 3:
-    return translate_op(children[1].symbol, translate(children[0]), translate(children[2]))
+    return translate_op(children[1].str, translate(children[0]), translate(children[2]))
   elif children.len > 3:
     # TODO: validate combination of operators
     var lowest_precedence_index = 1
-    var lowest_precedence_op = children[lowest_precedence_index].symbol
+    var lowest_precedence_op = children[lowest_precedence_index].str
     var i = lowest_precedence_index + 2
     while i < children.len:
-      var op = children[i].symbol
+      var op = children[i].str
       if PRECEDENCES[lowest_precedence_op] > PRECEDENCES[op]:
         lowest_precedence_index = i
         lowest_precedence_op = op
@@ -223,12 +223,12 @@ proc translate_comparisons*(children: seq[Value]): Expr =
   if children.len == 1:
     return translate(children[0])
   elif children.len == 3:
-    return translate_op(children[1].symbol, translate(children[0]), translate(children[2]))
+    return translate_op(children[1].str, translate(children[0]), translate(children[2]))
   elif children.len > 3:
     var r = ExAnd(evaluator: eval_and)
     var i = 1
     while i < children.len - 1:
-      r.children.add(translate_op(children[i].symbol, translate(children[i-1]), translate(children[i+1])))
+      r.children.add(translate_op(children[i].str, translate(children[i-1]), translate(children[i+1])))
       i += 2
     return r
   else:
@@ -238,14 +238,14 @@ proc translate_logic*(children: seq[Value]): Expr =
   if children.len == 1:
     return translate(children[0])
   elif children.len == 3:
-    return translate_op(children[1].symbol, translate(children[0]), translate(children[2]))
+    return translate_op(children[1].str, translate(children[0]), translate(children[2]))
   elif children.len > 3:
     # TODO: validate combination of operators
     var lowest_precedence_index = 1
-    var lowest_precedence_op = children[lowest_precedence_index].symbol
+    var lowest_precedence_op = children[lowest_precedence_index].str
     var i = lowest_precedence_index + 2
     while i < children.len:
-      var op = children[i].symbol
+      var op = children[i].str
       if PRECEDENCES[lowest_precedence_op] > PRECEDENCES[op]:
         lowest_precedence_index = i
         lowest_precedence_op = op

@@ -236,39 +236,39 @@ proc calc_min_left*(self: var RootMatcher) =
 proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
   case v.kind:
   of VkSymbol:
-    if v.symbol[0] == '^':
+    if v.str[0] == '^':
       var m = new_matcher(self, MatchProp)
-      if v.symbol.ends_with("..."):
+      if v.str.ends_with("..."):
         m.is_splat = true
-        if v.symbol[1] == '@':
-          m.name = v.symbol[2..^4].to_key
+        if v.str[1] == '@':
+          m.name = v.str[2..^4].to_key
           m.is_prop = true
         else:
-          m.name = v.symbol[1..^4].to_key
+          m.name = v.str[1..^4].to_key
       else:
-        if v.symbol[1] == '@':
-          m.name = v.symbol[2..^1].to_key
+        if v.str[1] == '@':
+          m.name = v.str[2..^1].to_key
           m.is_prop = true
         else:
-          m.name = v.symbol[1..^1].to_key
+          m.name = v.str[1..^1].to_key
       group.add(m)
     else:
       var m = new_matcher(self, MatchData)
       group.add(m)
-      if v.symbol != "_":
-        if v.symbol.endsWith("..."):
+      if v.str != "_":
+        if v.str.endsWith("..."):
           m.is_splat = true
-          if v.symbol[0] == '@':
-            m.name = v.symbol[1..^4].to_key
+          if v.str[0] == '@':
+            m.name = v.str[1..^4].to_key
             m.is_prop = true
           else:
-            m.name = v.symbol[0..^4].to_key
+            m.name = v.str[0..^4].to_key
         else:
-          if v.symbol[0] == '@':
-            m.name = v.symbol[1..^1].to_key
+          if v.str[0] == '@':
+            m.name = v.str[1..^1].to_key
             m.is_prop = true
           else:
-            m.name = v.symbol.to_key
+            m.name = v.str.to_key
   of VkVector:
     var i = 0
     while i < v.vec.len:

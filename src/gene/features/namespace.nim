@@ -36,7 +36,7 @@ proc translate_ns(value: Value): Expr =
   var first = value.gene_children[0]
   case first.kind
   of VkSymbol:
-    e.name = first.symbol
+    e.name = first.str
   of VkComplexSymbol:
     e.container = new_ex_names(first)
     e.name = first.csymbol[^1]

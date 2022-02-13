@@ -158,7 +158,7 @@ proc translate_tap(value: Value): Expr =
   )
   if value.gene_children.len > 1:
     if value.gene_children[1].kind == VkQuote:
-      r.as_name = value.gene_children[1].quote.symbol
+      r.as_name = value.gene_children[1].quote.str
       if value.gene_children.len > 2:
         r.body = translate(value.gene_children[2..^1])
     else:

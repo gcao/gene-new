@@ -48,7 +48,7 @@ proc translate_var(value: Value): Expr =
   of VkSymbol:
     result = ExVar(
       evaluator: eval_var,
-      name: name.symbol.to_key,
+      name: name.str.to_key,
       value: v,
     )
   of VkComplexSymbol:

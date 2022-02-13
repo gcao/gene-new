@@ -60,7 +60,7 @@ proc to_macro(node: Value): Macro =
   var first = node.gene_children[0]
   var name: string
   if first.kind == VkSymbol:
-    name = first.symbol
+    name = first.str
   elif first.kind == VkComplexSymbol:
     name = first.csymbol[^1]
 

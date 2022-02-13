@@ -102,7 +102,7 @@ proc translate_class(value: Value): Expr =
   var first = value.gene_children[0]
   case first.kind
   of VkSymbol:
-    e.name = first.symbol
+    e.name = first.str
   of VkComplexSymbol:
     e.container = new_ex_names(first)
     e.name = first.csymbol[^1]
@@ -139,7 +139,7 @@ proc translate_mixin(value: Value): Expr =
   var first = value.gene_children[0]
   case first.kind
   of VkSymbol:
-    e.name = first.symbol
+    e.name = first.str
   of VkComplexSymbol:
     e.container = new_ex_names(first)
     e.name = first.csymbol[^1]
@@ -232,7 +232,7 @@ proc translate_new(value: Value): Expr =
 # TODO: this is almost the same as to_function in fp.nim
 proc to_function(node: Value): Function =
   var first = node.gene_children[0]
-  var name = first.symbol
+  var name = first.str
 
   var matcher = new_arg_matcher()
   matcher.parse(node.gene_children[1])
@@ -297,14 +297,14 @@ proc translate_method(value: Value): Expr =
   if value.gene_children.len >= 3 and value.gene_children[1] == Equals:
     return ExMethodEq(
       evaluator: eval_method_eq,
-      name: value.gene_children[0].symbol,
+      name: value.gene_children[0].str,
       value: translate(value.gene_children[2])
     )
 
   var fn = to_function(value)
   ExMethod(
     evaluator: eval_method,
-    name: value.gene_children[0].symbol,
+    name: value.gene_children[0].str,
     fn: fn,
   )
 
@@ -320,7 +320,7 @@ proc translate_constructor(value: Value): Expr =
   var r = ExConstructor(
     evaluator: eval_constructor,
   )
-  if value.gene_type.symbol == "$def_constructor":
+  if value.gene_type.str == "$def_constructor":
     r.fn = value.to_constructor()
   else:
     r.value = translate(value.gene_children[0])
@@ -368,7 +368,7 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr
   of VkString:
     return self.invoke(frame, instance, target.str.to_key, expr.args)
   of VkSymbol:
-    return self.invoke(frame, instance, target.symbol.to_key, expr.args)
+    return self.invoke(frame, instance, target.str.to_key, expr.args)
   of VkFunction:
     var fn = target.fn
     var fn_scope = new_scope()

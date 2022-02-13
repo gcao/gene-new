@@ -68,7 +68,7 @@ proc translate_wrap*(translate: Translator): Translator =
 
 # (@p = 1)
 proc translate_prop_assignment*(value: Value): Expr =
-  var name = value.gene_type.symbol[1..^1]
+  var name = value.gene_type.str[1..^1]
   return new_ex_set_prop(name, translate(value.gene_children[1]))
 
 proc new_ex_arg*(value: Value): ExArguments =

@@ -171,7 +171,7 @@ proc translate*(names: seq[string]): Expr =
       )
 
 proc translate_symbol(value: Value): Expr =
-  translate(value.symbol)
+  translate(value.str)
 
 proc translate_complex_symbol(value: Value): Expr =
   if value.csymbol[0].starts_with("@"):
