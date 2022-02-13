@@ -675,12 +675,17 @@ var FileClass*     : Value
 
 #################### Definitions #################
 
+proc new_gene_bool*(val: bool): Value {.inline.}
 proc new_gene_int*(val: BiggestInt): Value {.inline.}
+proc new_gene_float*(val: float): Value
+proc new_gene_char*(c: char): Value
+proc new_gene_char*(c: Rune): Value
 proc new_gene_string*(s: string): Value {.gcsafe.}
 proc new_gene_string_move*(s: string): Value
 proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
 proc new_gene_vec*(items: varargs[Value]): Value
 proc new_gene_map*(): Value
+proc new_gene_map*(map: OrderedTable[MapKey, Value]): Value
 proc new_namespace*(): Namespace
 proc new_namespace*(name: string): Namespace
 proc new_namespace*(parent: Namespace): Namespace
@@ -763,6 +768,30 @@ macro name*(name: static string, f: untyped): untyped =
       `id`
 
 #################### Converters ##################
+
+converter to_gene*(v: int): Value                      = new_gene_int(v)
+converter to_gene*(v: bool): Value                     = new_gene_bool(v)
+converter to_gene*(v: float): Value                    = new_gene_float(v)
+converter to_gene*(v: string): Value                   = new_gene_string(v)
+converter to_gene*(v: char): Value                     = new_gene_char(v)
+converter to_gene*(v: Rune): Value                     = new_gene_char(v)
+converter to_gene*(v: OrderedTable[MapKey, Value]): Value = new_gene_map(v)
+
+# Below converter causes problem with the hash function
+# converter to_gene*(v: seq[Value]): Value           = new_gene_vec(v)
+
+converter to_bool*(v: Value): bool =
+  if v.isNil:
+    return false
+  case v.kind:
+  of VkNil:
+    return false
+  of VkBool:
+    return v.bool
+  of VkString:
+    return v.str != ""
+  else:
+    return true
 
 converter int_to_gene*(v: int): Value = new_gene_int(v)
 converter int_to_gene*(v: int64): Value = new_gene_int(v)
@@ -1805,37 +1834,6 @@ converter new_gene_file*(file: File): Value =
     file: file,
   )
 
-#################### Document ####################
-
-proc new_doc*(children: seq[Value]): Document =
-  return Document(children: children)
-
-#################### Converters ##################
-
-converter to_gene*(v: int): Value                      = new_gene_int(v)
-converter to_gene*(v: bool): Value                     = new_gene_bool(v)
-converter to_gene*(v: float): Value                    = new_gene_float(v)
-converter to_gene*(v: string): Value                   = new_gene_string(v)
-converter to_gene*(v: char): Value                     = new_gene_char(v)
-converter to_gene*(v: Rune): Value                     = new_gene_char(v)
-converter to_gene*(v: OrderedTable[MapKey, Value]): Value = new_gene_map(v)
-
-# Below converter causes problem with the hash function
-# converter to_gene*(v: seq[Value]): Value           = new_gene_vec(v)
-
-converter to_bool*(v: Value): bool =
-  if v.isNil:
-    return false
-  case v.kind:
-  of VkNil:
-    return false
-  of VkBool:
-    return v.bool
-  of VkString:
-    return v.str != ""
-  else:
-    return true
-
 proc wrap_with_try*(body: seq[Value]): seq[Value] =
   var found_catch_or_finally = false
   for item in body:
@@ -1845,6 +1843,11 @@ proc wrap_with_try*(body: seq[Value]): seq[Value] =
     return @[new_gene_gene(Try, body)]
   else:
     return body
+
+#################### Document ####################
+
+proc new_doc*(children: seq[Value]): Document =
+  return Document(children: children)
 
 #################### Selector ####################
 
