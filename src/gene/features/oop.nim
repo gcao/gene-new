@@ -39,6 +39,11 @@ type
     name*: string
     value*: Expr
 
+  # Either fn or value is given
+  ExConstructor* = ref object of Expr
+    fn*: Function
+    value*: Expr
+
   ExInvoke* = ref object of Expr
     self*: Expr
     meth*: MapKey
@@ -174,44 +179,48 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   var class = self.eval(frame, expr.class).class
   var ctor = class.get_constructor()
   if ctor == nil:
-    return Value(
-      kind: VkInstance,
-      instance_class: class,
-    )
-
-  case ctor.callable.kind:
-  of VkNativeFn, VkNativeFn2:
-    var args = self.eval_args(frame, nil, expr.args)
-    if ctor.callable.kind == VkNativeFn:
-      result = ctor.callable.native_fn(args)
-    else:
-      result = ctor.callable.native_fn2(args)
-  of VkFunction:
     result = Value(
       kind: VkInstance,
       instance_class: class,
     )
-    var fn_scope = new_scope()
-    var new_frame = Frame(ns: ctor.callable.fn.ns, scope: fn_scope)
-    new_frame.parent = frame
-    new_frame.self = result
-
-    var args_expr = cast[ExNew](expr).args
-    handle_args(self, frame, new_frame, ctor.callable.fn.matcher, cast[ExArguments](args_expr))
-
-    if ctor.callable.fn.body_compiled == nil:
-      ctor.callable.fn.body_compiled = translate(ctor.callable.fn.body)
-
-    try:
-      discard self.eval(new_frame, ctor.callable.fn.body_compiled)
-    except Return as r:
-      # return's frame is the same as new_frame(current function's frame)
-      if r.frame == new_frame:
-        return
-      else:
-        raise
+    # TODO: should "init" be called for instances created by custom constructors?
+    var init = class.get_method(INIT_KEY)
+    if init != nil:
+      discard self.invoke(frame, result, INIT_KEY, expr.args)
   else:
-    todo("eval_new " & $ctor.callable.kind)
+    case ctor.kind:
+    of VkNativeFn, VkNativeFn2:
+      var args = self.eval_args(frame, nil, expr.args)
+      if ctor.kind == VkNativeFn:
+        result = ctor.native_fn(args)
+      else:
+        result = ctor.native_fn2(args)
+    of VkFunction:
+      result = Value(
+        kind: VkInstance,
+        instance_class: class,
+      )
+      var fn_scope = new_scope()
+      var new_frame = Frame(ns: ctor.fn.ns, scope: fn_scope)
+      new_frame.parent = frame
+      new_frame.self = result
+
+      var args_expr = cast[ExNew](expr).args
+      handle_args(self, frame, new_frame, ctor.fn.matcher, cast[ExArguments](args_expr))
+
+      if ctor.fn.body_compiled == nil:
+        ctor.fn.body_compiled = translate(ctor.fn.body)
+
+      try:
+        discard self.eval(new_frame, ctor.fn.body_compiled)
+      except Return as r:
+        # return's frame is the same as new_frame(current function's frame)
+        if r.frame == new_frame:
+          return
+        else:
+          raise
+    else:
+      todo("eval_new " & $ctor.kind)
 
 proc translate_new(value: Value): Expr =
   ExNew(
@@ -236,19 +245,26 @@ proc to_function(node: Value): Function =
   result = new_fn(name, matcher, body)
   result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
 
+proc to_constructor(node: Value): Function =
+  var name = "new"
+
+  var matcher = new_arg_matcher()
+  matcher.parse(node.gene_children[0])
+
+  var body: seq[Value] = @[]
+  for i in 1..<node.gene_children.len:
+    body.add node.gene_children[i]
+
+  body = wrap_with_try(body)
+  result = new_fn(name, matcher, body)
+
 proc assign_method(frame: Frame, m: Method) =
   case frame.self.kind:
   of VkClass:
     m.class = frame.self.class
-    if m.name == "new":
-      frame.self.class.constructor = m
-    else:
-      frame.self.class.methods[m.name.to_key] = m
+    frame.self.class.methods[m.name.to_key] = m
   of VkMixin:
-    if m.name == "new":
-      not_allowed()
-    else:
-      frame.self.mixin.methods[m.name.to_key] = m
+    frame.self.mixin.methods[m.name.to_key] = m
   else:
     not_allowed()
 
@@ -291,6 +307,24 @@ proc translate_method(value: Value): Expr =
     name: value.gene_children[0].symbol,
     fn: fn,
   )
+
+proc eval_constructor*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExConstructor](expr)
+  var class = frame.self.class
+  if expr.fn != nil:
+    class.constructor = Value(kind: VkFunction, fn: expr.fn)
+  else:
+    class.constructor = self.eval(frame, expr.value)
+
+proc translate_constructor(value: Value): Expr =
+  var r = ExConstructor(
+    evaluator: eval_constructor,
+  )
+  if value.gene_type.symbol == "$def_constructor":
+    r.fn = value.to_constructor()
+  else:
+    r.value = translate(value.gene_children[0])
+  result = r
 
 proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExInvoke](expr)
@@ -452,6 +486,8 @@ proc translate_super(value: Value): Expr =
 
 proc init*() =
   GeneTranslators["class"] = translate_class
+  GeneTranslators["$def_constructor"] = translate_constructor
+  GeneTranslators["$set_constructor"] = translate_constructor
   GeneTranslators["mixin"] = translate_mixin
   GeneTranslators["include"] = translate_include
   GeneTranslators["new"] = translate_new

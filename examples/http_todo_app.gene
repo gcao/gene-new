@@ -27,7 +27,7 @@
 )
 
 (class Orm
-  (method new @conn
+  (method init @conn
   )
 
   (method exec [query params...]
@@ -36,7 +36,7 @@
 )
 
 (class Query
-  (method new @table
+  (method init @table
   )
 
   (method select @select...
@@ -170,7 +170,7 @@
   (var /table "todos")
   (var /columns ["id" "description" "status"])
 
-  (method new props
+  (method init props
     (@id = props/@id)
     (@description = props/@description)
     (@status = (props/@status || 0))
@@ -210,7 +210,7 @@
 
 (class App
 
-  (method new @port
+  (method init @port
     (@middlewares = [])
 
     # Open connection to the database
@@ -590,7 +590,7 @@
 )
 
 (class Mapping
-  (method new [@path @controller @action @http_methods]
+  (method init [@path @controller @action @http_methods]
   )
 
   # Return bool: whether the path/method/... of the request matches
@@ -603,7 +603,7 @@
 )
 
 (class Router
-  (method new _
+  (method init _
     (@mappings = [])
   )
 

@@ -3,6 +3,7 @@ import tables
 import ../types
 import ../map_key
 import ../translators
+import ./symbol
 
 type
   TryParsingState = enum
@@ -30,12 +31,12 @@ proc eval_try(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     if expr.catches.len > 0:
       for catch in expr.catches.mitems:
         # check whether the thrown exception matches exception in catch statement
-        var class = self.eval(frame, catch[0])
-        if class == Placeholder:
+        if catch[0] of ExMyMember and cast[ExMyMember](catch[0]).name.to_s == "*":
           # class = GeneExceptionClass
           handled = true
           result = self.eval(frame, catch[1])
           break
+        var class = self.eval(frame, catch[0])
         if ex.instance == nil:
           raise
         if ex.instance.is_a(class.class):

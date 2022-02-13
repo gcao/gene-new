@@ -59,7 +59,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method new _
+    (method init _
       (@a = 1)
     )
     # gene/native/test2 is defined in tests/helpers.nim:init_all()
@@ -106,7 +106,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method new []
+    (method init []
       (@description = "Class A")
     )
   )
@@ -116,7 +116,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method new []
+    (method init []
       (@description = "Class A")
     )
   )
@@ -125,7 +125,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method new description
+    (method init description
       (@description = description)
     )
   )
@@ -134,7 +134,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method new _
+    (method init _
       (@description = 1)
     )
     (method test _
@@ -146,7 +146,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method new @name
+    (method init @name
     )
   )
   ((new A 1).@name)
@@ -174,7 +174,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method new [@name = 1]
+    (method init [@name = 1]
     )
   )
   ((new A).@name)
@@ -192,7 +192,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (method new ^@name
+#     (method init ^@name
 #     )
 #   )
 #   ((new A ^name "x").@name)
@@ -200,7 +200,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (method new ^@name ^@...
+#     (method init ^@name ^@...
 #       # All properties except @name are added to the instance
 #     )
 #   )
@@ -209,7 +209,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (method new ^@name ^@x...
+#     (method init ^@name ^@x...
 #       # All properties except @name are added to the instance as @x
 #     )
 #   )
@@ -275,7 +275,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method new _
+    (method init _
       (@test = 1)
     )
   )
@@ -387,7 +387,7 @@ test_interpreter """
 #     cls
 #   )
 #   (my_class "A"
-#     (method new []
+#     (method init []
 #       (@description = "Class A")
 #     )
 #   )
@@ -407,7 +407,7 @@ test_interpreter """
 #     )
 #   )
 #   (object Config < A
-#     (method new _
+#     (method init _
 #       (@name = "Config")
 #     )
 #   )

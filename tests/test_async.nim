@@ -96,7 +96,7 @@ test_interpreter """
 #     1
 #   catch AssertionError
 #     2
-#   catch _
+#   catch *
 #     3
 #   )
 # """, 2
@@ -111,7 +111,7 @@ test_interpreter """
       (async (throw))
     )
     1
-  catch _
+  catch *
     2
   )
 """, 2
@@ -158,7 +158,7 @@ test_interpreter """
   (try
     (await (f))
     1
-  catch _
+  catch *
     2
   )
 """, 2

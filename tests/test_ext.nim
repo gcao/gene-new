@@ -65,7 +65,7 @@ suite "Extension":
   test_extension """
     (try
       (test (throw "error"))
-    catch _
+    catch *
       $ex/.message
     )
   """, "error"

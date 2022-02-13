@@ -75,7 +75,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method new _
+    (method init _
       (@prop = 1)
     )
   )
@@ -85,7 +85,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method new _
+    (method init _
       (@prop = 1)
     )
   )

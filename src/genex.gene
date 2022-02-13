@@ -41,7 +41,7 @@
   )
 
   (class Response
-    (method new [code body]
+    (method init [code body]
       (@code = code)
       (@body = body)
     )
@@ -69,7 +69,7 @@
   )
 
   (class TestSuite
-    (method new [parent = nil, name]
+    (method init [parent = nil, name]
       (@parent = parent)
       (@name = name)
       (@tests = [])
@@ -89,7 +89,7 @@
   )
 
   (class TestCase
-    (method new [parent = nil, name, body]
+    (method init [parent = nil, name, body]
       (@parent = parent)
       (@name = name)
       (@body = body)
@@ -162,7 +162,7 @@
 
 (ns genex/html
   (class Tag
-    (method new [name attrs = {} children = []]
+    (method init [name attrs = {} children = []]
       (@name     = name)
       (@attrs    = attrs)
       (@children = children)

@@ -238,7 +238,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method new []
+    (method init []
       (@description = "Class A")
     )
   )

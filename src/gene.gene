@@ -292,7 +292,7 @@
 )
 
 (class gene/File
-  (method new _
+  (method init _
     (not_allowed "File objects can not be created with (new File ...)")
   )
 

@@ -598,7 +598,7 @@ proc init*() =
 
     (ns genex/html
       (class Tag
-        (method new [name attrs = {} children = []]
+        (method init [name attrs = {} children = []]
           (@name     = name)
           (@attrs    = attrs)
           (@children = children)

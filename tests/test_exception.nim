@@ -25,7 +25,7 @@ import ./helpers
 # (fn f []  # converted to (try ...)
 #   ...
 #   catch ExceptionX ...
-#   catch _ ...
+#   catch * ...
 #   finally ...
 # )
 
@@ -46,7 +46,7 @@ test_interpreter """
   (try
     (throw)
     1
-  catch _
+  catch *
     2
   )
 """, 2
@@ -58,7 +58,7 @@ test_interpreter """
     1
   catch TestException
     2
-  catch _
+  catch *
     3
   )
 """, 2
@@ -70,7 +70,7 @@ test_interpreter """
     1
   catch TestException
     2
-  catch _
+  catch *
     3
   )
 """, 3
@@ -78,7 +78,7 @@ test_interpreter """
 test_interpreter """
   (try
     (throw "test")
-  catch _
+  catch *
     $ex
   )
 """, proc(r: Value) =
@@ -88,7 +88,7 @@ test_interpreter """
   (try
     (throw)
     1
-  catch _
+  catch *
     2
   finally
     3   # value is discarded
@@ -100,7 +100,7 @@ test_interpreter """
 # test_interpreter """
 #   (throw)
 #   1
-#   catch _
+#   catch *
 #   2
 #   finally
 #   3
@@ -116,7 +116,7 @@ test_interpreter """
 #   (try
 #     (throw)
 #     1
-#   catch _
+#   catch *
 #     2
 #   finally
 #     (return 3)  # not allowed
@@ -127,7 +127,7 @@ test_interpreter """
 #   (try
 #     (throw)
 #     1
-#   catch _
+#   catch *
 #     2
 #   finally
 #     (break)  # not allowed
@@ -139,7 +139,7 @@ test_interpreter """
   (try
     (throw)
     (a = 1)
-  catch _
+  catch *
     (a = 2)
   finally
     (a = 3)
@@ -152,7 +152,7 @@ test_interpreter """
 #   (fn f _
 #     (throw)
 #     1
-#   catch _
+#   catch *
 #     2
 #   finally
 #     3
@@ -164,7 +164,7 @@ test_interpreter """
 #   (macro m _
 #     (throw)
 #     1
-#   catch _
+#   catch *
 #     2
 #   finally
 #     3
@@ -180,7 +180,7 @@ test_interpreter """
 #     (->
 #       (throw)
 #       1
-#     catch _
+#     catch *
 #       2
 #     finally
 #       3
@@ -192,7 +192,7 @@ test_interpreter """
 #   (do
 #     (throw)
 #     1
-#   catch _
+#   catch *
 #     2
 #   finally
 #     3

@@ -149,7 +149,7 @@ test_interpreter """
 # #   (try
 # #     (assert true)  # assert is not inherited any more
 # #     1
-# #   catch _
+# #   catch *
 # #     2
 # #   )
 # # """, 2

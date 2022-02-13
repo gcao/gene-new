@@ -136,7 +136,7 @@ type
   Class* = ref object
     parent*: Class
     name*: string
-    constructor*: Method
+    constructor*: Value
     methods*: Table[MapKey, Method]
     on_extended*: Value
     # method_missing*: Value
@@ -1117,7 +1117,7 @@ proc new_class*(name: string): Class =
     parent = ObjectClass.class
   new_class(name, parent)
 
-proc get_constructor*(self: Class): Method =
+proc get_constructor*(self: Class): Value =
   if self.constructor.is_nil:
     if not self.parent.is_nil:
       return self.parent.get_constructor()
@@ -1239,18 +1239,10 @@ proc def_native_method*(self: Value, name: string, m: NativeMethod2) =
   )
 
 proc def_native_constructor*(self: Value, f: NativeFn) =
-  self.class.constructor = Method(
-    class: self.class,
-    name: "new",
-    callable: Value(kind: VkNativeFn, native_fn: f),
-  )
+  self.class.constructor = Value(kind: VkNativeFn, native_fn: f)
 
 proc def_native_constructor*(self: Value, f: NativeFn2) =
-  self.class.constructor = Method(
-    class: self.class,
-    name: "new",
-    callable: Value(kind: VkNativeFn2, native_fn2: f),
-  )
+  self.class.constructor = Value(kind: VkNativeFn2, native_fn2: f)
 
 #################### Method ######################
 
