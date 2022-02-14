@@ -1139,11 +1139,12 @@ proc new_class*(name: string): Class =
   new_class(name, parent)
 
 proc get_constructor*(self: Class): Value =
-  if self.constructor.is_nil:
-    if not self.parent.is_nil:
-      return self.parent.get_constructor()
-  else:
-    return self.constructor
+  self.constructor
+  # if self.constructor.is_nil:
+  #   if not self.parent.is_nil:
+  #     return self.parent.get_constructor()
+  # else:
+  #   return self.constructor
 
 proc get_method*(self: Class, name: MapKey): Method =
   if self.methods.has_key(name):
@@ -1161,8 +1162,8 @@ proc get_super_method*(self: Class, name: MapKey): Method =
 
 proc get_class*(val: Value): Class =
   case val.kind:
-  # of VkApplication:
-  #   return VM.gene_ns.ns[APPLICATION_CLASS_KEY].class
+  of VkApplication:
+    return ApplicationClass.class
   of VkPackage:
     return PackageClass.class
   of VkInstance:
@@ -1211,10 +1212,10 @@ proc get_class*(val: Value): Class =
     return SetClass.class
   of VkGene:
     return GeneClass.class
-  # of VkRegex:
-  #   return VM.gene_ns.ns[REGEX_CLASS_KEY].class
-  # of VkRange:
-  #   return VM.gene_ns.ns[RANGE_CLASS_KEY].class
+  of VkRegex:
+    return RegexClass.class
+  of VkRange:
+    return RangeClass.class
   of VkDate:
     return DateClass.class
   of VkDateTime:
@@ -1224,9 +1225,12 @@ proc get_class*(val: Value): Class =
   of VkFunction:
     return FunctionClass.class
   # of VkTimezone:
-  #   return VM.gene_ns.ns[TIMEZONE_CLASS_KEY].class
-  # of VkAny:
-  #   todo("get_class " & $val.kind)
+  #   return TimezoneClass.class
+  of VkAny:
+    if val.any_class == nil:
+      return ObjectClass.class
+    else:
+      return val.any_class
   of VkCustom:
     if val.custom_class == nil:
       return ObjectClass.class
@@ -1537,6 +1541,12 @@ proc new_gene_exception*(instance: Value): ref Exception =
 proc new_gene_exception*(): ref Exception =
   return new_gene_exception(DEFAULT_ERROR_MESSAGE, nil)
 
+proc new_gene_processor*(name: string, translator: Translator): Value =
+  return Value(
+    kind: VkGeneProcessor,
+    gene_processor: GeneProcessor(name: name, translator: translator),
+  )
+
 proc new_gene_processor*(translator: Translator): Value =
   return Value(
     kind: VkGeneProcessor,
@@ -1566,12 +1576,14 @@ proc is_truthy*(self: Value): bool =
 
 # proc is_empty*(self: Value): bool =
 #   case self.kind:
-#   of VkNil:
+#   of VkVoid, VkNil:
 #     return true
 #   of VkVector:
 #     return self.vec.len == 0
 #   of VkMap:
 #     return self.map.len == 0
+#   of VkSet:
+#     return self.set.len == 0
 #   of VkString:
 #     return self.str.len == 0
 #   else:
@@ -1606,28 +1618,16 @@ proc merge*(self: var Value, value: Value) =
 
 # proc get_member*(self: Value, name: string): Value =
 #   case self.kind:
-#   of VkInternal:
-#     case self.internal.kind:
-#     of VkNamespace:
-#       return self.internal.ns[name.to_key]
-#     of VkClass:
-#       return self.internal.class.ns[name.to_key]
-#     of VkEnum:
-#       return self.internal.enum[name]
-#     of VkEnumMember:
-#       case name:
-#       of "parent":
-#         return self.internal.enum_member.parent
-#       of "name":
-#         return self.internal.enum_member.name
-#       of "value":
-#         return self.internal.enum_member.value
-#       else:
-#         not_allowed()
-#     else:
-#       todo()
+#   of VkNamespace:
+#     return self.ns[name.to_key]
+#   of VkClass:
+#     return self.class.ns[name.to_key]
+#   of VkMixin:
+#     return self.mixin.ns[name.to_key]
+#   of VkEnum:
+#     return self.enum[name]
 #   else:
-#     todo()
+#     todo("get_member " & $self.kind & " " & name)
 
 proc table_equals*(this, that: OrderedTable): bool =
   return this.len == 0 and that.len == 0 or

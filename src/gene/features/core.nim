@@ -191,5 +191,5 @@ proc init*() =
   GeneTranslators["$tap"] = translate_tap
 
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GLOBAL_NS.ns["assert"] = new_gene_processor(translate_assert)
+    GLOBAL_NS.ns["assert"] = new_gene_processor("assert", translate_assert)
     GENE_NS.ns["assert"] = GLOBAL_NS.ns["assert"]

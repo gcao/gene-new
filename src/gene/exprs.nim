@@ -167,10 +167,6 @@ type
   ExSymbol* = ref object of Expr
     name*: MapKey
 
-  # Special case
-  # ExName* = ref object of Expr
-  #   name*: MapKey
-
   ExNames* = ref object of Expr
     names*: seq[MapKey]
 
@@ -202,9 +198,6 @@ type
     name*: MapKey
     value*: Expr
 
-  # ExGetProp* = ref object of Expr
-  #   name*: MapKey
-
 proc eval_set_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var value = cast[ExSetProp](expr).value
   result = self.eval(frame, value)
@@ -216,15 +209,6 @@ proc new_ex_set_prop*(name: string, value: Expr): ExSetProp =
     name: name.to_key,
     value: value,
   )
-
-# proc eval_get_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-#   frame.self.instance_props[cast[ExGetProp](expr).name]
-
-# proc new_ex_get_prop*(name: string): ExGetProp =
-#   ExGetProp(
-#     evaluator: eval_get_prop,
-#     name: name.to_key,
-#   )
 
 #################### Selector ####################
 

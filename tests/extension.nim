@@ -45,8 +45,6 @@ proc init*(module: Module): Value {.wrap_exception.} =
   result.ns["new_extension"] = new_extension
   result.ns["get_i"] = NativeFn(get_i)
 
-  # result.ns["test"] = new_gene_processor(translate_wrap(translate_test))
-
   ExtensionClass = new_gene_class("Extension")
   result.ns["Extension"] = ExtensionClass
   ExtensionClass.def_native_constructor(fn_wrap(new_extension))
