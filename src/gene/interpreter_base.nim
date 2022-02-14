@@ -422,7 +422,7 @@ proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref system.Exception)
   echo "An exception was thrown: " & e.msg
   echo "Opening debug console..."
   echo "Note: the exception can be accessed as $ex"
-  var ex = error_to_gene(e)
+  var ex = exception_to_value(e)
   frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
   result = repl(self, frame, eval, true)
 

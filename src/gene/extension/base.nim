@@ -1,4 +1,5 @@
 import gene/types
+import gene/exception
 import gene/interpreter_base except call
 
 var eval_catch*: EvalCatch

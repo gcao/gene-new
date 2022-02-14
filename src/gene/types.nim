@@ -713,48 +713,6 @@ proc not_allowed*(message: string) =
 proc not_allowed*() =
   not_allowed("Error: should not arrive here.")
 
-proc new_gene_custom*(c: CustomValue, class: Class): Value =
-  Value(
-    kind: VkCustom,
-    custom_class: class,
-    custom: c,
-  )
-
-proc new_gene_exception*(message: string, instance: Value): ref Exception =
-  var e = new_exception(Exception, message)
-  e.instance = instance
-  return e
-
-proc new_gene_exception*(message: string): ref Exception =
-  return new_gene_exception(message, nil)
-
-proc new_gene_exception*(instance: Value): ref Exception =
-  return new_gene_exception(DEFAULT_ERROR_MESSAGE, instance)
-
-proc new_gene_exception*(): ref Exception =
-  return new_gene_exception(DEFAULT_ERROR_MESSAGE, nil)
-
-proc new_gene_processor*(translator: Translator): Value =
-  return Value(
-    kind: VkGeneProcessor,
-    gene_processor: GeneProcessor(translator: translator),
-  )
-
-proc new_gene_class*(name: string): Value =
-  return Value(
-    kind: VkClass,
-    class: new_class(name),
-  )
-
-proc new_gene_future*(f: Future[Value]): Value =
-  return Value(
-    kind: VkFuture,
-    future: f,
-  )
-
-proc date*(self: Value): DateTime =
-  self.date_internal.data
-
 # https://forum.nim-lang.org/t/8516#55153
 macro name*(name: static string, f: untyped): untyped =
   f.expectKind(nnkLambda)
@@ -770,6 +728,7 @@ macro name*(name: static string, f: untyped): untyped =
 #################### Converters ##################
 
 converter to_gene*(v: int): Value                      = new_gene_int(v)
+converter to_gene*(v: int64): Value                    = new_gene_int(v)
 converter to_gene*(v: bool): Value                     = new_gene_bool(v)
 converter to_gene*(v: float): Value                    = new_gene_float(v)
 converter to_gene*(v: string): Value                   = new_gene_string(v)
@@ -793,12 +752,16 @@ converter to_bool*(v: Value): bool =
   else:
     return true
 
-converter int_to_gene*(v: int): Value = new_gene_int(v)
-converter int_to_gene*(v: int64): Value = new_gene_int(v)
 converter biggest_to_int*(v: BiggestInt): int = cast[int](v)
 
 converter seq_to_gene*(v: seq[Value]): Value {.gcsafe.} = new_gene_vec(v)
 converter str_to_gene*(v: string): Value {.gcsafe.} = new_gene_string(v)
+
+converter file_to_gene*(file: File): Value =
+  Value(
+    kind: VkFile,
+    file: file,
+  )
 
 converter to_map*(self: OrderedTable[string, Value]): OrderedTable[MapKey, Value] {.inline.} =
   for k, v in self:
@@ -807,6 +770,12 @@ converter to_map*(self: OrderedTable[string, Value]): OrderedTable[MapKey, Value
 converter to_string_map*(self: OrderedTable[MapKey, Value]): OrderedTable[string, Value] {.inline.} =
   for k, v in self:
     result[k.to_s] = v
+
+converter to_gene*(v: OrderedTable[string, Value]): Value =
+  return Value(
+    kind: VkMap,
+    map: v,
+  )
 
 converter int_to_scope_index*(v: int): NameIndexScope = cast[NameIndexScope](v)
 converter scope_index_to_int*(v: NameIndexScope): int = cast[int](v)
@@ -1327,7 +1296,10 @@ proc add_member*(self: var Enum, name: string, value: int) =
 proc `==`*(this, that: EnumMember): bool =
   return this.parent == that.parent and this.name == that.name
 
-#################### Time ####################
+#################### Date & Time #################
+
+proc date*(self: Value): DateTime =
+  self.date_internal.data
 
 proc `==`*(this, that: Time): bool =
   return this.hour == that.hour and
@@ -1335,7 +1307,253 @@ proc `==`*(this, that: Time): bool =
     this.second == that.second and
     this.timezone == that.timezone
 
-#################### Value ###################
+#################### Value #######################
+
+proc new_gene_any*(v: pointer): Value =
+  return Value(kind: VkAny, any: v)
+
+proc new_gene_any*(v: pointer, class: Class): Value =
+  return Value(kind: VkAny, any: v, any_class: class)
+
+proc new_gene_custom*(c: CustomValue, class: Class): Value =
+  Value(
+    kind: VkCustom,
+    custom_class: class,
+    custom: c,
+  )
+
+proc new_gene_bool*(val: bool): Value {.inline.} =
+  case val
+  of true: return True
+  of false: return False
+  # of true: return Value(kind: VkBool, boolVal: true)
+  # of false: return Value(kind: VkBool, boolVal: false)
+
+proc new_gene_bool*(s: string): Value =
+  let parsed: bool = parseBool(s)
+  return new_gene_bool(parsed)
+
+proc new_gene_int*(s: string): Value =
+  return Value(kind: VkInt, int: parseBiggestInt(s))
+
+proc new_gene_int*(val: BiggestInt): Value {.inline.} =
+  # return Value(kind: VkInt, int: val)
+  if val > 100 or val < -10:
+    return Value(kind: VkInt, int: val)
+  else:
+    return Ints[val + 10]
+
+proc new_gene_ratio*(num, denom: BiggestInt): Value =
+  return Value(kind: VkRatio, ratio_num: num, ratio_denom: denom)
+
+proc new_gene_float*(s: string): Value =
+  return Value(kind: VkFloat, float: parseFloat(s))
+
+proc new_gene_float*(val: float): Value =
+  return Value(kind: VkFloat, float: val)
+
+proc new_gene_char*(c: char): Value =
+  return Value(kind: VkChar, char: c)
+
+proc new_gene_char*(c: Rune): Value =
+  return Value(kind: VkChar, rune: c)
+
+proc new_gene_string*(s: string): Value {.gcsafe.} =
+  return Value(kind: VkString, str: s)
+
+proc new_gene_string_move*(s: string): Value =
+  result = Value(kind: VkString)
+  shallowCopy(result.str, s)
+
+proc new_gene_symbol*(name: string): Value =
+  return Value(kind: VkSymbol, str: name)
+
+proc new_gene_complex_symbol*(strs: seq[string]): Value =
+  Value(
+    kind: VkComplexSymbol,
+    csymbol: strs,
+  )
+
+proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
+  var s = ""
+  for flag in flags:
+    case flag:
+    of RfIgnoreCase:
+      s &= "(?i)"
+    of RfMultiLine:
+      s &= "(?m)"
+    else:
+      todo($flag)
+  s &= regex
+  return Value(
+    kind: VkRegex,
+    regex: re(s),
+    regex_pattern: regex,
+    regex_flags: flags,
+  )
+
+proc new_gene_regex*(regex: string): Value =
+  return Value(
+    kind: VkRegex,
+    regex: re(regex),
+    regex_pattern: regex,
+  )
+
+proc new_gene_range*(start: Value, `end`: Value): Value =
+  return Value(
+    kind: VkRange,
+    range: Range(start: start, `end`: `end`),
+  )
+
+proc new_gene_date*(year, month, day: int): Value =
+  return Value(
+    kind: VkDate,
+    date_internal: DateTimeInternal(data: init_date_time(day, cast[Month](month), year, 0, 0, 0, utc())),
+  )
+
+proc new_gene_date*(date: DateTime): Value =
+  return Value(
+    kind: VkDate,
+    date_internal: DateTimeInternal(data: date),
+  )
+
+proc new_gene_datetime*(date: DateTime): Value =
+  return Value(
+    kind: VkDateTime,
+    date_internal: DateTimeInternal(data: date),
+  )
+
+proc new_gene_time*(hour, min, sec: int): Value =
+  return Value(
+    kind: VkTime,
+    time: Time(hour: hour, minute: min, second: sec, timezone: utc()),
+  )
+
+proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.} =
+  return Value(
+    kind: VkVector,
+    vec: items,
+  )
+
+proc new_gene_vec*(items: varargs[Value]): Value = new_gene_vec(@items)
+
+proc new_gene_stream*(items: seq[Value]): Value =
+  return Value(
+    kind: VkStream,
+    stream: items,
+  )
+
+proc new_gene_map*(): Value =
+  return Value(
+    kind: VkMap,
+    map: OrderedTable[MapKey, Value](),
+  )
+
+proc new_gene_map*(map: OrderedTable[MapKey, Value]): Value =
+  return Value(
+    kind: VkMap,
+    map: map,
+  )
+
+proc new_gene_set*(items: varargs[Value]): Value =
+  result = Value(
+    kind: VkSet,
+    set: OrderedSet[Value](),
+  )
+  for item in items:
+    result.set.incl(item)
+
+proc new_gene_gene*(): Value =
+  return Value(
+    kind: VkGene,
+    gene_type: Nil,
+  )
+
+proc new_gene_gene*(`type`: Value, children: varargs[Value]): Value =
+  return Value(
+    kind: VkGene,
+    gene_type: `type`,
+    gene_children: @children,
+  )
+
+proc new_gene_gene*(`type`: Value, props: OrderedTable[MapKey, Value], children: varargs[Value]): Value =
+  return Value(
+    kind: VkGene,
+    gene_type: `type`,
+    gene_props: props,
+    gene_children: @children,
+  )
+
+proc new_gene_enum_member*(m: EnumMember): Value =
+  return Value(
+    kind: VkEnumMember,
+    enum_member: m,
+  )
+
+proc new_mixin*(name: string): Mixin =
+  return Mixin(
+    name: name,
+    ns: new_namespace(nil, name),
+  )
+
+# Do not allow auto conversion between CatchableError and Value
+# because there are sub-classes of CatchableError that need to be
+# handled differently.
+proc exception_to_value*(ex: ref system.Exception): Value =
+  return Value(
+    kind: VkException,
+    exception: ex,
+  )
+
+proc new_gene_explode*(v: Value): Value =
+  return Value(
+    kind: VkExplode,
+    explode: v,
+  )
+
+proc new_gene_native_method*(meth: NativeMethod): Value =
+  return Value(
+    kind: VkNativeMethod,
+    native_method: meth,
+  )
+
+proc new_gene_native_fn*(fn: NativeFn): Value =
+  return Value(
+    kind: VkNativeFn,
+    native_fn: fn,
+  )
+
+proc new_gene_exception*(message: string, instance: Value): ref Exception =
+  var e = new_exception(Exception, message)
+  e.instance = instance
+  return e
+
+proc new_gene_exception*(message: string): ref Exception =
+  return new_gene_exception(message, nil)
+
+proc new_gene_exception*(instance: Value): ref Exception =
+  return new_gene_exception(DEFAULT_ERROR_MESSAGE, instance)
+
+proc new_gene_exception*(): ref Exception =
+  return new_gene_exception(DEFAULT_ERROR_MESSAGE, nil)
+
+proc new_gene_processor*(translator: Translator): Value =
+  return Value(
+    kind: VkGeneProcessor,
+    gene_processor: GeneProcessor(translator: translator),
+  )
+
+proc new_gene_class*(name: string): Value =
+  return Value(
+    kind: VkClass,
+    class: new_class(name),
+  )
+
+proc new_gene_future*(f: Future[Value]): Value =
+  return Value(
+    kind: VkFuture,
+    future: f,
+  )
 
 proc is_truthy*(self: Value): bool =
   case self.kind:
@@ -1613,227 +1831,6 @@ proc `[]`*(self: OrderedTable[MapKey, Value], key: string): Value =
 proc `[]=`*(self: var OrderedTable[MapKey, Value], key: string, value: Value) =
   self[key.to_key] = value
 
-#################### Constructors ################
-
-proc new_gene_any*(v: pointer): Value =
-  return Value(kind: VkAny, any: v)
-
-proc new_gene_any*(v: pointer, class: Class): Value =
-  return Value(kind: VkAny, any: v, any_class: class)
-
-proc new_gene_string*(s: string): Value {.gcsafe.} =
-  return Value(kind: VkString, str: s)
-
-proc new_gene_string_move*(s: string): Value =
-  result = Value(kind: VkString)
-  shallowCopy(result.str, s)
-
-proc new_gene_int*(s: string): Value =
-  return Value(kind: VkInt, int: parseBiggestInt(s))
-
-proc new_gene_int*(val: BiggestInt): Value {.inline.} =
-  # return Value(kind: VkInt, int: val)
-  if val > 100 or val < -10:
-    return Value(kind: VkInt, int: val)
-  else:
-    return Ints[val + 10]
-
-proc new_gene_ratio*(num, denom: BiggestInt): Value =
-  return Value(kind: VkRatio, ratio_num: num, ratio_denom: denom)
-
-proc new_gene_float*(s: string): Value =
-  return Value(kind: VkFloat, float: parseFloat(s))
-
-proc new_gene_float*(val: float): Value =
-  return Value(kind: VkFloat, float: val)
-
-proc new_gene_bool*(val: bool): Value {.inline.} =
-  case val
-  of true: return True
-  of false: return False
-  # of true: return Value(kind: VkBool, boolVal: true)
-  # of false: return Value(kind: VkBool, boolVal: false)
-
-proc new_gene_bool*(s: string): Value =
-  let parsed: bool = parseBool(s)
-  return new_gene_bool(parsed)
-
-proc new_gene_char*(c: char): Value =
-  return Value(kind: VkChar, char: c)
-
-proc new_gene_char*(c: Rune): Value =
-  return Value(kind: VkChar, rune: c)
-
-proc new_gene_symbol*(name: string): Value =
-  return Value(kind: VkSymbol, str: name)
-
-proc new_gene_complex_symbol*(strs: seq[string]): Value =
-  Value(
-    kind: VkComplexSymbol,
-    csymbol: strs,
-  )
-
-proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
-  var s = ""
-  for flag in flags:
-    case flag:
-    of RfIgnoreCase:
-      s &= "(?i)"
-    of RfMultiLine:
-      s &= "(?m)"
-    else:
-      todo($flag)
-  s &= regex
-  return Value(
-    kind: VkRegex,
-    regex: re(s),
-    regex_pattern: regex,
-    regex_flags: flags,
-  )
-
-proc new_gene_regex*(regex: string): Value =
-  return Value(
-    kind: VkRegex,
-    regex: re(regex),
-    regex_pattern: regex,
-  )
-
-proc new_gene_range*(start: Value, `end`: Value): Value =
-  return Value(
-    kind: VkRange,
-    range: Range(start: start, `end`: `end`),
-  )
-
-proc new_gene_date*(year, month, day: int): Value =
-  return Value(
-    kind: VkDate,
-    date_internal: DateTimeInternal(data: init_date_time(day, cast[Month](month), year, 0, 0, 0, utc())),
-  )
-
-proc new_gene_date*(date: DateTime): Value =
-  return Value(
-    kind: VkDate,
-    date_internal: DateTimeInternal(data: date),
-  )
-
-proc new_gene_datetime*(date: DateTime): Value =
-  return Value(
-    kind: VkDateTime,
-    date_internal: DateTimeInternal(data: date),
-  )
-
-proc new_gene_time*(hour, min, sec: int): Value =
-  return Value(
-    kind: VkTime,
-    time: Time(hour: hour, minute: min, second: sec, timezone: utc()),
-  )
-
-proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.} =
-  return Value(
-    kind: VkVector,
-    vec: items,
-  )
-
-proc new_gene_vec*(items: varargs[Value]): Value = new_gene_vec(@items)
-
-proc new_gene_stream*(items: seq[Value]): Value =
-  return Value(
-    kind: VkStream,
-    stream: items,
-  )
-
-proc new_gene_map*(): Value =
-  return Value(
-    kind: VkMap,
-    map: OrderedTable[MapKey, Value](),
-  )
-
-proc new_gene_map*(map: OrderedTable[MapKey, Value]): Value =
-  return Value(
-    kind: VkMap,
-    map: map,
-  )
-
-converter new_gene_map*(self: OrderedTable[string, Value]): Value =
-  return Value(
-    kind: VkMap,
-    map: self,
-  )
-
-proc new_gene_set*(items: varargs[Value]): Value =
-  result = Value(
-    kind: VkSet,
-    set: OrderedSet[Value](),
-  )
-  for item in items:
-    result.set.incl(item)
-
-proc new_gene_gene*(): Value =
-  return Value(
-    kind: VkGene,
-    gene_type: Nil,
-  )
-
-proc new_gene_gene*(`type`: Value, children: varargs[Value]): Value =
-  return Value(
-    kind: VkGene,
-    gene_type: `type`,
-    gene_children: @children,
-  )
-
-proc new_gene_gene*(`type`: Value, props: OrderedTable[MapKey, Value], children: varargs[Value]): Value =
-  return Value(
-    kind: VkGene,
-    gene_type: `type`,
-    gene_props: props,
-    gene_children: @children,
-  )
-
-proc new_gene_enum_member*(m: EnumMember): Value =
-  return Value(
-    kind: VkEnumMember,
-    enum_member: m,
-  )
-
-proc new_mixin*(name: string): Mixin =
-  return Mixin(
-    name: name,
-    ns: new_namespace(nil, name),
-  )
-
-# Do not allow auto conversion between CatchableError and Value
-# because there are sub-classes of CatchableError that need to be
-# handled differently.
-proc error_to_gene*(ex: ref system.Exception): Value =
-  return Value(
-    kind: VkException,
-    exception: ex,
-  )
-
-proc new_gene_explode*(v: Value): Value =
-  return Value(
-    kind: VkExplode,
-    explode: v,
-  )
-
-proc new_gene_native_method*(meth: NativeMethod): Value =
-  return Value(
-    kind: VkNativeMethod,
-    native_method: meth,
-  )
-
-proc new_gene_native_fn*(fn: NativeFn): Value =
-  return Value(
-    kind: VkNativeFn,
-    native_fn: fn,
-  )
-
-converter new_gene_file*(file: File): Value =
-  return Value(
-    kind: VkFile,
-    file: file,
-  )
-
 proc wrap_with_try*(body: seq[Value]): seq[Value] =
   var found_catch_or_finally = false
   for item in body:
@@ -2004,45 +2001,3 @@ proc method_wrap*(m: NativeMethod): NativeMethod2 =
     result = m(self, args)
     if result != nil and result.kind == VkException:
       raise result.exception
-
-proc exception_to_value*(ex: ref system.Exception): Value =
-  Value(kind: VkException, exception: ex)
-
-type
-  ExException* = ref object of Expr
-    ex*: ref system.Exception
-
-proc eval_exception(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  # raise cast[ExException](expr).ex
-  not_allowed("eval_exception")
-
-proc new_ex_exception*(ex: ref system.Exception): ExException =
-  ExException(
-    evaluator: eval_exception, # Should never be called
-    ex: ex,
-  )
-
-macro wrap_exception*(p: untyped): untyped =
-  if p.kind == nnkProcDef:
-    var convert: string
-    var ret_type = $p[3][0]
-    case ret_type:
-    of "Value":
-      convert = "exception_to_value"
-    of "Expr":
-      convert = "new_ex_exception"
-    else:
-      todo("wrap_exception does NOT support returning type of " & ret_type)
-
-    p[6] = nnkTryStmt.newTree(
-      p[6],
-      nnkExceptBranch.newTree(
-        infix(newDotExpr(ident"system", ident"Exception"), "as", ident"ex"),
-        nnkReturnStmt.newTree(
-          nnkCall.newTree(ident(convert), ident"ex"),
-        ),
-      ),
-    )
-    return p
-  else:
-    todo("ex2val " & $nnkProcDef)

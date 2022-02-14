@@ -264,7 +264,7 @@ proc add_failure_callback(self: Value, args: Value): Value =
   if self.future.finished:
     if self.future.failed:
       var callback_args = new_gene_gene()
-      var ex = error_to_gene(cast[ref system.Exception](self.future.read_error()))
+      var ex = exception_to_value(cast[ref system.Exception](self.future.read_error()))
       callback_args.gene_children.add(ex)
       var frame = Frame()
       discard VM.call(frame, args.gene_children[0], callback_args)
@@ -272,7 +272,7 @@ proc add_failure_callback(self: Value, args: Value): Value =
     self.future.add_callback proc() {.gcsafe.} =
       if self.future.failed:
         var callback_args = new_gene_gene()
-        var ex = error_to_gene(cast[ref system.Exception](self.future.read_error()))
+        var ex = exception_to_value(cast[ref system.Exception](self.future.read_error()))
         callback_args.gene_children.add(ex)
         var frame = Frame()
         discard VM.call(frame, args.gene_children[0], callback_args)

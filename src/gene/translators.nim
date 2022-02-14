@@ -2,6 +2,7 @@ import tables
 
 import ./map_key
 import ./types
+import ./exception
 import ./exprs
 
 var Translators*     = new_table[ValueKind, Translator]()

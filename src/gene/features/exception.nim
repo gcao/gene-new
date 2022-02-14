@@ -26,7 +26,7 @@ proc eval_try(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   try:
     result = self.eval(frame, expr.body)
   except types.Exception as ex:
-    frame.scope.def_member(CUR_EXCEPTION_KEY, error_to_gene(ex))
+    frame.scope.def_member(CUR_EXCEPTION_KEY, exception_to_value(ex))
     var handled = false
     if expr.catches.len > 0:
       for catch in expr.catches.mitems:
