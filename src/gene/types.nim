@@ -1770,6 +1770,8 @@ proc `$`*(node: Value): string =
     result = node.str
   of VkComplexSymbol:
     result = node.csymbol.join("/")
+  of VkRegex:
+    result = "#/" & node.regex_pattern & "/"
   of VkDate:
     result = node.date.format("yyyy-MM-dd")
   of VkDateTime:
@@ -1822,6 +1824,10 @@ proc `$`*(node: Value): string =
       result &= " "
       result &= $v
     result &= ")"
+  of VkQuote:
+    result = ":" & $node.quote
+  of VkUnquote:
+    result = "%" & $node.unquote
   else:
     result = $node.kind
 

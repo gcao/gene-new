@@ -6,10 +6,6 @@ import ../exprs
 import ../translators
 import ../interpreter_base
 
-let SELF_KEY*                 = add_key("self")
-let METHOD_KEY*               = add_key("method")
-# let ARGS_KEY*                 = add_key("args")
-
 let LESS_THAN = new_gene_symbol("<")
 
 type

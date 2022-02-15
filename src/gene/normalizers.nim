@@ -15,18 +15,18 @@ var Normalizers: seq[Normalizer]
 
 # Important: order of normalizers matters. normalize() should be tested as a whole
 
-Normalizers.add proc(self: Value): bool =
-  var `type` = self.gene_type
-  if `type`.kind == VkSymbol:
-    if `type`.str == ".":
-      self.gene_props[SELF_KEY] = new_gene_symbol("self")
-      self.gene_props[METHOD_KEY] = self.gene_children[0]
-      self.gene_children.delete 0
-      self.gene_type = new_gene_symbol("$invoke_dynamic")
-    elif `type`.str[0] == '.' and `type`.str != "...":  # (.method x y z)
-      self.gene_props[SELF_KEY] = new_gene_symbol("self")
-      self.gene_props[METHOD_KEY] = new_gene_string_move(`type`.str.substr(1))
-      self.gene_type = new_gene_symbol("$invoke_method")
+# Normalizers.add proc(self: Value): bool =
+#   var `type` = self.gene_type
+#   if `type`.kind == VkSymbol:
+#     if `type`.str == ".":
+#       self.gene_props[SELF_KEY] = new_gene_symbol("self")
+#       self.gene_props[METHOD_KEY] = self.gene_children[0]
+#       self.gene_children.delete 0
+#       self.gene_type = new_gene_symbol("$invoke_dynamic")
+#     elif `type`.str[0] == '.' and `type`.str != "...":  # (.method x y z)
+#       self.gene_props[SELF_KEY] = new_gene_symbol("self")
+#       self.gene_props[METHOD_KEY] = new_gene_string_move(`type`.str.substr(1))
+#       self.gene_type = new_gene_symbol("$invoke_method")
 
 # Normalizers.add proc(self: Value): bool =
 #   var `type` = self.gene_type
@@ -94,25 +94,25 @@ Normalizers.add proc(self: Value): bool =
     self.gene_type = first
     return true
 
-Normalizers.add proc(self: Value): bool =
-  if self.gene_children.len < 1:
-    return false
-  var `type` = self.gene_type
-  var first = self.gene_children[0]
-  if first.kind == VkSymbol:
-    if first.str == ".":
-      self.gene_props[SELF_KEY] = `type`
-      self.gene_children.delete 0
-      self.gene_props[METHOD_KEY] = self.gene_children[0]
-      self.gene_children.delete 0
-      self.gene_type = new_gene_symbol("$invoke_dynamic")
-      return true
-    elif first.str[0] == '.' and first.str != "...":
-      self.gene_props[SELF_KEY] = `type`
-      self.gene_props[METHOD_KEY] = new_gene_string_move(first.str.substr(1))
-      self.gene_children.delete 0
-      self.gene_type = new_gene_symbol("$invoke_method")
-      return true
+# Normalizers.add proc(self: Value): bool =
+#   if self.gene_children.len < 1:
+#     return false
+#   var `type` = self.gene_type
+#   var first = self.gene_children[0]
+#   if first.kind == VkSymbol:
+#     if first.str == ".":
+#       self.gene_props[SELF_KEY] = `type`
+#       self.gene_children.delete 0
+#       self.gene_props[METHOD_KEY] = self.gene_children[0]
+#       self.gene_children.delete 0
+#       self.gene_type = new_gene_symbol("$invoke_dynamic")
+#       return true
+#     elif first.str[0] == '.' and first.str != "...":
+#       self.gene_props[SELF_KEY] = `type`
+#       self.gene_props[METHOD_KEY] = new_gene_string_move(first.str.substr(1))
+#       self.gene_children.delete 0
+#       self.gene_type = new_gene_symbol("$invoke_method")
+#       return true
 
 Normalizers.add proc(self: Value): bool =
   if self.gene_children.len < 1:

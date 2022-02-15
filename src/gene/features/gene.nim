@@ -73,45 +73,82 @@ proc default_translator(value: Value): Expr =
     args: value,
   )
 
+proc translate_gene_default(value: Value): Expr {.inline.} =
+  ExGene(
+    evaluator: eval_gene,
+    `type`: translate(value.gene_type),
+    args: value,
+  )
+
 proc translate_gene(value: Value): Expr =
-  # normalize is inefficient.
-  if value.gene_type.kind == VkSymbol and value.gene_type.str.starts_with(".@"):
-    if value.gene_type.str.len == 2:
-      return translate_invoke_selector3(value)
+  var `type` = value.gene_type
+  case `type`.kind:
+  of VkSymbol:
+    case `type`.str:
+    of ".":
+      value.gene_props[SELF_KEY] = new_gene_symbol("self")
+      value.gene_props[METHOD_KEY] = value.gene_children[0]
+      value.gene_children.delete 0
+      value.gene_type = new_gene_symbol("$invoke_dynamic")
+    of "...":
+      discard
     else:
+      if `type`.str.starts_with(".@"): # (.@x)
+        if `type`.str.len == 2:
+          return translate_invoke_selector3(value)
+        else:
+          return translate_invoke_selector4(value)
+      elif `type`.str.starts_with("."): # (.method x y z)
+        value.gene_props[SELF_KEY] = new_gene_symbol("self")
+        value.gene_props[METHOD_KEY] = new_gene_string_move(`type`.str.substr(1))
+        value.gene_type = new_gene_symbol("$invoke_method")
+  of VkComplexSymbol:
+    if `type`.csymbol[0].starts_with(".@"):
       return translate_invoke_selector4(value)
-  elif value.gene_type.kind == VkSymbol and value.gene_type.str == "import":
+  else:
     discard
-  elif value.gene_type.kind == VkComplexSymbol and value.gene_type.csymbol[0].starts_with(".@"):
-    return translate_invoke_selector4(value)
-  elif value.gene_children.len >= 1:
-    var `type` = value.gene_type
+
+  if value.gene_children.len >= 1:
     var first = value.gene_children[0]
     case first.kind:
     of VkSymbol:
-      if COMPARISON_OPS.contains(first.str):
+      case first.str:
+      of ".": # (x . method ...) or (x . function ...)
+        value.gene_props[SELF_KEY] = value.gene_type
+        value.gene_children.delete 0
+        value.gene_props[METHOD_KEY] = value.gene_children[0]
+        value.gene_children.delete 0
+        value.gene_type = new_gene_symbol("$invoke_dynamic")
+      of "==", "!=", "<", "<=", ">", ">=":
         var data = value.gene_children
         data.insert(value.gene_type)
         return translate_comparisons(data)
-      elif LOGIC_OPS.contains(first.str):
+      of "&&", "||":
         var data = value.gene_children
         data.insert(value.gene_type)
         return translate_logic(data)
-      elif REGEX_OPS.contains(first.str):
+      of "=~", "!~":
         return translate_match(value)
-      elif arithmetic.BINARY_OPS.contains(first.str):
+      of "+", "-", "*", "/", "**":
         var data = value.gene_children
         data.insert(value.gene_type)
         return translate_arithmetic(data)
-      elif first.str == "=" and `type`.kind == VkSymbol and `type`.str.startsWith("@"): # (@p = 1)
-        return translate_prop_assignment(value)
-      elif first.str == "..":
+      of "..":
         return new_ex_range(translate(`type`), translate(value.gene_children[1]))
-      elif first.str.startsWith(".@"):
-        if first.str.len == 2:
-          return translate_invoke_selector(value)
-        else:
-          return translate_invoke_selector2(value)
+      of "=":
+        if `type`.kind == VkSymbol and `type`.str.startsWith("@"): # (@p = 1)
+          return translate_prop_assignment(value)
+      else:
+        if first.str.startsWith(".@"):
+          if first.str.len == 2:
+            return translate_invoke_selector(value)
+          else:
+            return translate_invoke_selector2(value)
+        elif first.str.startsWith("."):
+          value.gene_props[SELF_KEY] = `type`
+          value.gene_props[METHOD_KEY] = new_gene_string_move(first.str.substr(1))
+          value.gene_children.delete 0
+          value.gene_type = new_gene_symbol("$invoke_method")
     of VkComplexSymbol:
       if first.csymbol[0].startsWith(".@"):
         return translate_invoke_selector2(value)
