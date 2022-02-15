@@ -19,9 +19,6 @@ const ASSIGNMENT_OPS = [
   "&&=", "||=",
 ]
 
-proc arg_translator*(value: Value): Expr =
-  return translate_arguments(value)
-
 proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = new_gene_gene(target)
   var expr = cast[ExArguments](expr)
@@ -36,8 +33,8 @@ proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: va
       result.gene_children.add(r)
 
 proc eval_gene*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var e = cast[ExGene](expr)
-  var `type` = self.eval(frame, e.`type`)
+  var expr = cast[ExGene](expr)
+  var `type` = self.eval(frame, expr.`type`)
   var translator: Translator
   case `type`.kind:
   of VkFunction:
@@ -57,19 +54,19 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   of VkNativeMethod, VkNativeMethod2:
     translator = native_method_arg_translator
   of VkInstance:
-    e.args_expr = ExInvoke(
+    expr.args_expr = ExInvoke(
       evaluator: eval_invoke,
-      self: e.`type`,
+      self: expr.`type`,
       meth: CALL_KEY,
-      args: new_ex_arg(e.args),
+      args: new_ex_arg(expr.args),
     )
-    return self.eval_invoke(frame, `type`, e.args_expr)
+    return self.eval_invoke(frame, `type`, expr.args_expr)
   else:
-    e.args_expr = arg_translator(e.args)
-    return default_invoker(self, frame, `type`, e.args_expr)
+    expr.args_expr = translate_arguments(expr.args)
+    return default_invoker(self, frame, `type`, expr.args_expr)
 
-  e.args_expr = translator(e.args)
-  return e.args_expr.evaluator(self, frame, `type`, e.args_expr)
+  expr.args_expr = translator(expr.args)
+  return expr.args_expr.evaluator(self, frame, `type`, expr.args_expr)
 
 proc default_translator(value: Value): Expr =
   ExGene(
