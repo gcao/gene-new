@@ -1,7 +1,6 @@
 import tables
 
 import ../types
-import ../exprs
 import ../translators
 
 type

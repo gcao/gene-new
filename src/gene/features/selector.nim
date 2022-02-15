@@ -1,7 +1,6 @@
 import strutils, tables
 
 import ../types
-import ../exprs
 import ../translators
 import ../interpreter_base
 
