@@ -4,7 +4,6 @@ import tables
 import ../map_key
 import ../types
 import ../exprs
-import ../normalizers
 import ../translators
 import ./core
 import ./arithmetic
@@ -13,6 +12,12 @@ import ./selector
 import ./native
 import ./range
 import ./oop
+
+const ASSIGNMENT_OPS = [
+  "=",
+  "+=", "-=", "*=", "/=", "**=",
+  "&&=", "||=",
+]
 
 proc arg_translator*(value: Value): Expr =
   return translate_arguments(value)
@@ -73,12 +78,17 @@ proc default_translator(value: Value): Expr =
     args: value,
   )
 
-proc translate_gene_default(value: Value): Expr {.inline.} =
-  ExGene(
-    evaluator: eval_gene,
-    `type`: translate(value.gene_type),
-    args: value,
-  )
+proc handle_assignment_shortcuts(self: seq[Value]): Value =
+  if self.len mod 2 == 0:
+    raise new_gene_exception("Invalid right value for assignment " & $self)
+  if self.len == 1:
+    return self[0]
+  if self[1].kind == VkSymbol and self[1].str in ASSIGNMENT_OPS:
+    result = new_gene_gene(self[1])
+    result.gene_children.add(self[0])
+    result.gene_children.add(handle_assignment_shortcuts(self[2..^1]))
+  else:
+    raise new_gene_exception("Invalid right value for assignment " & $self)
 
 proc translate_gene(value: Value): Expr =
   var `type` = value.gene_type
@@ -133,11 +143,25 @@ proc translate_gene(value: Value): Expr =
         var data = value.gene_children
         data.insert(value.gene_type)
         return translate_arithmetic(data)
+      of "+=", "-=", "*=", "/=", "**=", "&&=", "||=":
+        value.gene_children.delete 0
+        value.gene_children = @[handle_assignment_shortcuts(value.gene_children)]
+        value.gene_children.insert value.gene_type, 0
+        value.gene_type = first
       of "..":
         return new_ex_range(translate(`type`), translate(value.gene_children[1]))
       of "=":
         if `type`.kind == VkSymbol and `type`.str.startsWith("@"): # (@p = 1)
           return translate_prop_assignment(value)
+        else:
+          value.gene_children.delete 0
+          value.gene_children = @[handle_assignment_shortcuts(value.gene_children)]
+          value.gene_children.insert value.gene_type, 0
+          value.gene_type = first
+      of "->":
+        value.gene_props[ARGS_KEY] = value.gene_type
+        value.gene_type = value.gene_children[0]
+        value.gene_children.delete 0
       else:
         if first.str.startsWith(".@"):
           if first.str.len == 2:
@@ -155,8 +179,6 @@ proc translate_gene(value: Value): Expr =
     else:
       discard
 
-  value.normalize()
-
   case value.gene_type.kind:
   of VkSymbol:
     var translator = GeneTranslators.get_or_default(value.gene_type.str, default_translator)
@@ -171,11 +193,7 @@ proc translate_gene(value: Value): Expr =
       args: value,
     )
   else:
-    return ExGene(
-      evaluator: eval_gene,
-      `type`: translate(value.gene_type),
-      args: value,
-    )
+    return default_translator(value)
 
 proc init*() =
   Translators[VkGene] = translate_gene
