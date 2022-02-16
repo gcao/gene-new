@@ -6,6 +6,7 @@ import ../types
 import ../translators
 import ./core
 import ./arithmetic
+import ./module
 import ./regex
 import ./selector
 import ./native
@@ -98,6 +99,8 @@ proc translate_gene(value: Value): Expr =
       value.gene_type = new_gene_symbol("$invoke_dynamic")
     of "...":
       discard
+    of "import":
+      return translate_import(value)
     else:
       if `type`.str.starts_with(".@"): # (.@x)
         if `type`.str.len == 2:

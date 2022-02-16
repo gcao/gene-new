@@ -59,7 +59,7 @@
       # No handler responded the request, return 404 Not found.
       (respond 404)
 
-   catch *
+    catch *
       # `catch` can appear on the top level of fn/method/macro/block.
       # `_` represents all catchable exceptions.
       # Log the exception and let it bubble up to be handled by a middleware or the

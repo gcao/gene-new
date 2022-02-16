@@ -55,14 +55,6 @@ type
   # ExMethodMissing* = ref object of Expr
   #   fn: Function
 
-proc arg_translator*(value: Value): Expr =
-  var e = new_ex_arg()
-  for k, v in value.gene_props:
-    e.props[k] = translate(v)
-  for v in value.gene_children[1..^1]:
-    e.children.add(translate(v))
-  return e
-
 proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExClass](expr)
   var class = new_class(e.name)
@@ -218,11 +210,16 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
       todo("eval_new " & $ctor.kind)
 
 proc translate_new(value: Value): Expr =
-  ExNew(
+  var r = ExNew(
     evaluator: eval_new,
     class: translate(value.gene_children[0]),
-    args: arg_translator(value),
+    args: new_ex_arg(),
   )
+  for k, v in value.gene_props:
+    cast[ExArguments](r.args).props[k] = translate(v)
+  for v in value.gene_children[1..^1]:
+    cast[ExArguments](r.args).children.add(translate(v))
+  return r
 
 # TODO: this is almost the same as to_function in fp.nim
 proc to_function(node: Value): Function =
@@ -441,16 +438,10 @@ proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
       raise
 
 proc translate_super(value: Value): Expr =
-  var r = ExSuper(
+  return ExSuper(
     evaluator: eval_super,
+    args: new_ex_arg(value),
   )
-  var args = new_ex_arg()
-  for k, v in value.gene_props:
-    args.props[k] = translate(v)
-  for v in value.gene_children:
-    args.children.add(translate(v))
-  r.args = args
-  result = r
 
 # proc eval_method_missing(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
 #   result = Value(

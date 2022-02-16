@@ -659,6 +659,7 @@ var RangeClass*    : Value
 var DateClass*     : Value
 var DatetimeClass* : Value
 var TimeClass*     : Value
+var TimezoneClass* : Value
 var SelectorClass* : Value
 var ExceptionClass*: Value
 var ClassClass*    : Value
@@ -1224,8 +1225,8 @@ proc get_class*(val: Value): Class =
     return TimeClass.class
   of VkFunction:
     return FunctionClass.class
-  # of VkTimezone:
-  #   return TimezoneClass.class
+  of VkTimezone:
+    return TimezoneClass.class
   of VkAny:
     if val.any_class == nil:
       return ObjectClass.class

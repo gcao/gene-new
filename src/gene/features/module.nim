@@ -7,7 +7,6 @@ import ../types
 import ../map_key
 import ../translators
 import ../interpreter_base
-import ./symbol
 
 let INHERIT_KEY*               = add_key("inherit")
 
@@ -230,7 +229,7 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
         self.modules[path.to_key] = ns
   self.import_from_ns(frame, ns, expr.matcher.children)
 
-proc translate_import(value: Value): Expr =
+proc translate_import*(value: Value): Expr =
   var matcher = new_import_matcher(value)
   var e = ExImport(
     evaluator: eval_import,
