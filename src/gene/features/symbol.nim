@@ -7,7 +7,6 @@ import ../translators
 import ../interpreter_base
 import ./oop
 import ./selector
-import ./gene
 
 type
   ExMember* = ref object of Expr
@@ -47,8 +46,12 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
     ns = self.class.ns
   of VkMixin:
     ns = self.mixin.ns
+  of VkInstance:
+    return self.instance_props[name]
+  of VkEnum:
+    return new_gene_enum_member(self.enum.members[name.to_s])
   else:
-    todo("get_member " & $self.kind)
+    todo("get_member " & $self.kind & " " & name.to_s)
 
   if ns.members.has_key(name):
     return ns.members[name]
@@ -72,13 +75,7 @@ proc new_ex_package(): Expr =
 proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var v = self.eval(frame, cast[ExMember](expr).container)
   var key = cast[ExMember](expr).name
-  case v.kind:
-  of VkNamespace, VkClass, VkMixin:
-    return v.get_member(key, self, frame)
-  of VkEnum:
-    return new_gene_enum_member(v.enum.members[key.to_s])
-  else:
-    todo("eval_member " & $v.kind & "/" & key.to_s)
+  return v.get_member(key, self, frame)
 
 proc translate*(name: string): Expr {.inline.} =
   if name.startsWith("@"):
@@ -129,12 +126,6 @@ proc translate*(names: seq[string]): Expr =
         self: translate(names[0..^2]),
         meth: name[1..^1].to_key,
         args: new_ex_arg(),
-      )
-    elif name == "!":
-      return ExGene(
-        evaluator: eval_gene,
-        `type`: translate(names[0..^2]),
-        args: new_gene_gene(),
       )
     else:
       return ExMember(

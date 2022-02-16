@@ -122,16 +122,20 @@ test_interpreter """
   ((new C).test)
 """, 1
 
-test_interpreter """
-  (fn f _
-    1
-  )
-  f/!
-""", 1
+# Change /! to /.call to remove unnecessary special syntax
+# test_interpreter """
+#   (fn f _
+#     1
+#   )
+#   # f/!
+#   f/.call
+# """, 1
 
-test_interpreter """
-  (fn f _
-    [1 2]
-  )
-  f/!/@0
-""", 1
+# Change /! to /.call to remove unnecessary special syntax
+# test_interpreter """
+#   (fn f _
+#     [1 2]
+#   )
+#   # f/!/@0
+#   f/.call/@0
+# """, 1

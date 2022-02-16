@@ -25,6 +25,16 @@ test_interpreter """
   check r.instance_class.name == "A"
 
 test_interpreter """
+  (class A
+    (method init _
+      (@p = 1)
+    )
+  )
+  (var a (new A))
+  a/p
+""", 1
+
+test_interpreter """
   (ns n)
   (class n/A)
   n/A
@@ -122,6 +132,15 @@ test_interpreter """
   )
   ((new A) .@description)
 """, "Class A"
+
+# test_interpreter """
+#   (class A
+#     (method init []
+#       (@description = "Class A")
+#     )
+#   )
+#   ((new A) ./description)
+# """, "Class A"
 
 test_interpreter """
   (class A
