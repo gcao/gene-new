@@ -186,6 +186,17 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
             m.is_prop = true
           else:
             m.name = v.str.to_key
+  of VkComplexSymbol:
+    if v.csymbol[0] == '^':
+      todo("parse " & $v)
+    else:
+      var m = new_matcher(self, MatchData)
+      var name = v.csymbol[1]
+      group.add(m)
+      m.name = name.to_key
+      m.is_prop = true
+      if name.ends_with("..."):
+        m.is_splat = true
   of VkVector:
     var i = 0
     while i < v.vec.len:

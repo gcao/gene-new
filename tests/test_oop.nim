@@ -35,6 +35,16 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  (class A
+    (method init _
+      (/p = 1)
+    )
+  )
+  (var a (new A))
+  a/p
+""", 1
+
+test_interpreter """
   (ns n)
   (class n/A)
   n/A
@@ -169,6 +179,17 @@ test_interpreter """
     )
   )
   ((new A 1).@name)
+""", 1
+
+test_interpreter """
+  (class A
+    (method init /p
+    )
+    (method test _
+      /p
+    )
+  )
+  ((new A 1).test)
 """, 1
 
 test_interpreter """

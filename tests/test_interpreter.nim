@@ -99,6 +99,23 @@ test_interpreter """
   a
 """, 2
 
+test_interpreter """
+  (ns n
+    (ns m)
+  )
+  (n/m/a = 1)
+  n/m/a
+""", 1
+
+test_interpreter """
+  (ns n
+    (ns m)
+  )
+  (n/m/a = 1)
+  (n/m/a += 1)
+  n/m/a
+""", 2
+
 test_interpreter "(1 == 1)", true
 test_interpreter "(1 == 2)", false
 test_interpreter "(1 < 0)", false
