@@ -23,6 +23,10 @@ let NS_EXPR = Expr()
 NS_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   Value(kind: VkNamespace, ns: frame.ns)
 
+let PKG_EXPR = Expr()
+PKG_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  Value(kind: VkPackage, pkg: frame.ns.package)
+
 proc eval_symbol_scope(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   frame.scope[cast[ExSymbol](expr).name]
 
@@ -64,14 +68,6 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
         return r
   raise new_exception(NotDefinedException, name.to_s & " is not defined")
 
-proc eval_pkg(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  Value(kind: VkPackage, pkg: frame.ns.package)
-
-proc new_ex_package(): Expr =
-  return ExPackage(
-    evaluator: eval_pkg,
-  )
-
 proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var v = self.eval(frame, cast[ExMember](expr).container)
   var key = cast[ExMember](expr).name
@@ -97,7 +93,7 @@ proc translate*(name: string): Expr {.inline.} =
   of "$ns":
     result = NS_EXPR
   of "$pkg":
-    result = new_ex_package()
+    result = PKG_EXPR
   else:
     result = ExMyMember(
       evaluator: eval_my_member,

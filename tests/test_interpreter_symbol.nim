@@ -9,6 +9,7 @@ import ./helpers
 # gene - standard library
 # genex - additional or experimental standard library
 # self
+# $vm
 # $app
 # $pkg
 # $module

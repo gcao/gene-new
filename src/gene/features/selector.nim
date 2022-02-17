@@ -259,6 +259,13 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
         else:
           for child in self.children:
             result = result or child.update(target.gene_props[m.name], value)
+      of VkNamespace:
+        if self.is_last:
+          target.ns.members[m.name] = value
+          result = true
+        else:
+          for child in self.children:
+            result = result or child.update(target.ns.members[m.name], value)
       of VkInstance:
         if self.is_last:
           target.instance_props[m.name] = value
@@ -456,7 +463,7 @@ proc translate_invoke_selector4*(value: Value): Expr =
     todo($value.gene_type.kind)
   return r
 
-proc eval_set(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_set*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExSet](expr)
   var target =
     if expr.target == nil:

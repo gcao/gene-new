@@ -5,9 +5,12 @@ import ../types
 import ../translators
 import ./arithmetic
 import ./symbol
+import ./selector
 
 # TODO: improve handling of below cases
 # (a = 1)
+# (/b = 1)
+# (a/b = 1)
 # (a += 1)
 # (@a = 1)
 # (@a += 1)
@@ -29,19 +32,24 @@ proc eval_assignment(self: VirtualMachine, frame: Frame, target: Value, expr: va
     frame.ns[name] = result
 
 proc translate_assignment(value: Value): Expr =
-  result = ExAssignment(
-    evaluator: eval_assignment,
-    name: value.gene_children[0].str.to_key,
-    value: translate(value.gene_children[1]),
-  )
-  # if value.gene_children[0].str[0] == "@":
-  #   result = new_ex_set_prop(value.gene_children[0].str[1..^1], translate(value.gene_children[1]))
-  # else:
-  #   result = ExAssignment(
-  #     evaluator: eval_assignment,
-  #     name: value.gene_children[0].str.to_key,
-  #     value: translate(value.gene_children[1]),
-  #   )
+  var first = value.gene_children[0]
+  case first.kind:
+  of VkSymbol:
+    result = ExAssignment(
+      evaluator: eval_assignment,
+      name: first.str.to_key,
+      value: translate(value.gene_children[1]),
+    )
+  of VkComplexSymbol:
+    var e = ExSet(
+      evaluator: eval_set,
+    )
+    e.target = translate(first.csymbol[0..^2])
+    e.selector = translate(new_gene_symbol("@" & first.csymbol[^1]))
+    e.value = translate(value.gene_children[1])
+    return e
+  else:
+    not_allowed("translate_assignment " & $first.kind)
 
 proc translate_op_eq(value: Value): Expr =
   var name = value.gene_children[0].str
