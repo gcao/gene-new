@@ -88,9 +88,15 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 proc get_child(self: Value, index: int, vm: VirtualMachine, frame: Frame): Value =
   case self.kind:
   of VkVector:
-    return self.vec[index]
+    if index < self.vec.len:
+      return self.vec[index]
+    else:
+      return Nil
   of VkGene:
-    return self.gene_children[index]
+    if index < self.gene_children.len:
+      return self.gene_children[index]
+    else:
+      return Nil
   else:
     todo("get_child " & $self & " " & $index)
 
