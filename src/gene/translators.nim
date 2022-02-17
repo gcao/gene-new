@@ -221,6 +221,13 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
         else:
           for child in self.children:
             result = result or child.update(target.vec[m.index], value)
+      of VkGene:
+        if self.is_last:
+          target.gene_children[m.index] = value
+          result = true
+        else:
+          for child in self.children:
+            result = result or child.update(target.gene_children[m.index], value)
       else:
         todo()
     of SmByName:

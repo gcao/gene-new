@@ -100,6 +100,12 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  (var a (_ 0))
+  (a/0 = 1)
+  a/0
+""", 1
+
+test_interpreter """
   (var a [1])
   (a/0 += 1)
   a/0
