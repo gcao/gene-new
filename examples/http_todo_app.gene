@@ -27,55 +27,55 @@
 )
 
 (class Orm
-  (method init @conn
+  (method init /conn
   )
 
   (method exec [query params...]
-    (/@conn .exec (query .to_s) params...)
+    (/conn .exec (query .to_s) params...)
   )
 )
 
 (class Query
-  (method init @table
+  (method init /table
   )
 
-  (method select @select...
+  (method select /select...
   )
 
   (method join join
-    (@joins = (/@joins || []))
-    (/@joins .add join)
+    (/joins ||= [])
+    (/joins .add join)
   )
 
-  (method where @where
+  (method where /where
   )
 
-  (method order_by @order_by
+  (method order_by /order_by
   )
 
   (method limit n
-    (@limit = n)
+    (/limit = n)
   )
 
   (method to_s _
     (var sql "SELECT ")
-    (if /@select
-      (sql .append (/@select .join ",") " ")
+    (if /select
+      (sql .append (/select .join ",") " ")
     else
       (sql .append "* ")
     )
-    (sql .append "FROM " /@table " ")
-    (if /@joins
-      (sql .append (/@joins .join " ") " ")
+    (sql .append "FROM " /table " ")
+    (if /joins
+      (sql .append (/joins .join " ") " ")
     )
-    (if /@where
-      (sql .append "WHERE " /@where " ")
+    (if /where
+      (sql .append "WHERE " /where " ")
     )
-    (if /@order_by
-      (sql .append "ORDER BY " /@order_by " ")
+    (if /order_by
+      (sql .append "ORDER BY " /order_by " ")
     )
-    (if /@limit
-      (sql .append "LIMIT " /@limit)
+    (if /limit
+      (sql .append "LIMIT " /limit)
     )
     sql
   )
@@ -85,7 +85,7 @@
   (.on_extended (fnx child
     (child .on_member_missing (fnx name
       (if (Record/.members .contains name)
-        (/.parent .@ name)
+        (/.parent ./ name)
       )
     ))
   ))
@@ -93,7 +93,7 @@
   (fn /from_row row
     (var props {})
     (for [i v] in row
-      ($set props (@ (/columns .@ i)) v)
+      ($set props (@ (/columns ./ i)) v)
     )
     (new self props)
   )
@@ -105,7 +105,7 @@
     (if (data/.size == 0)
       (throw ("Not found: " id))
     else
-      (. /from_row data/@0)
+      (. /from_row data/0)
     )
   )
 
@@ -116,7 +116,7 @@
     (data .map (row ->
       (var props {})
       (for [i v] in row
-        ($set props (@ (/columns .@ i)) v)
+        ($set props (@ (/columns ./ i)) v)
       )
       (new self props)
     ))
@@ -138,7 +138,7 @@
         "VALUES(" ((columns .map (col -> "?")) .join ", ") ")"
       )
     )
-    (var params (columns .map (col -> (.@ col))))
+    (var params (columns .map (col -> (./ col))))
     (/.class/orm .exec sql params...)
   )
 
@@ -146,12 +146,12 @@
     (var sql
       ("UPDATE " /.class/table " SET status = ? WHERE id = ?")
     )
-    (/.class/orm .exec sql /@status /@id)
+    (/.class/orm .exec sql /status /id)
   )
 
   # If no id, insert into the table, else update existing row.
   (method save _
-    (if not /@id
+    (if not /id
       /.insert
     else
       /.update
@@ -162,7 +162,7 @@
     (var sql
       ("DELETE FROM " /.class/table " WHERE id = ?")
     )
-    (/.class/orm .exec sql /@id)
+    (/.class/orm .exec sql /id)
   )
 )
 
@@ -171,33 +171,33 @@
   (var /columns ["id" "description" "status"])
 
   (method init props
-    (@id = props/@id)
-    (@description = props/@description)
-    (@status = (props/@status || 0))
+    (/id = props/id)
+    (/description = props/description)
+    (/status = (props/status || 0))
   )
 
   (method done _
-    (/@status/.to_s == "1")
+    (/status/.to_s == "1")
   )
 
   (method set_done _
-    (@status = 1)
+    (/status = 1)
   )
 
   (method set_todo _
-    (@status = 0)
+    (/status = 0)
   )
 
   (method to_html _
     (LI ^class ("py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item" (if /.done " done"))
       (DIV
-        (INPUT ^type "checkbox" ^id /@id ^class "cbx hidden" ^checked /.done)
-        (LABEL ^for /@id ^class "text-xl cbx__child")
-        (LABEL ^for /@id ^class "cbx__lbl text-white inline-block mt-1"
-          /@description
+        (INPUT ^type "checkbox" ^id /id ^class "cbx hidden" ^checked /.done)
+        (LABEL ^for /id ^class "text-xl cbx__child")
+        (LABEL ^for /id ^class "cbx__lbl text-white inline-block mt-1"
+          /description
         )
       )
-      (BUTTON ^type "button" ^class "flex items-center delete-button absolute right-0" ^data-id /@id
+      (BUTTON ^type "button" ^class "flex items-center delete-button absolute right-0" ^data-id /id
         (SVG ^class "feather feather-x" ^xmlns "http://www.w3.org/2000/svg" ^width "24" ^height "24" ^viewBox "0 0 24 24"
              ^fill "none" ^stroke "currentColor" ^stroke-width "2" ^stroke-linecap "round" ^stroke-linejoin "round"
           (LINE ^x1 "18" ^y1 "6" ^x2 "6" ^y2 "18")
@@ -210,8 +210,8 @@
 
 (class App
 
-  (method init @port
-    (@middlewares = [])
+  (method init /port
+    (/middlewares = [])
 
     # Open connection to the database
     (var conn (DB/open DB_HOST DB_USER DB_PASS DB_NAME))
@@ -222,20 +222,20 @@
   )
 
   (method construct_handler middleware_index
-    (if (middleware_index < /@middlewares/.size)
-      (var middleware (/@middlewares .@ middleware_index))
+    (if (middleware_index < /middlewares/.size)
+      (var middleware (/middlewares ./ middleware_index))
       (var handler    (.construct_handler (middleware_index + 1)))
       (middleware handler)
     else
-      /@handler
+      /handler
     )
   )
 
   (method start _
-    (println "Starting HTTP server at port" /@port "...")
+    (println "Starting HTTP server at port" /port "...")
 
     (var root_handler (.construct_handler 0))
-    (start_server /@port root_handler)
+    (start_server /port root_handler)
     (gene/run_forever)
   )
 )
@@ -579,7 +579,7 @@
   )
 
   (method delete req
-    (var id req/.body_params/@id)
+    (var id req/.body_params/id)
     (var todo (Todo . Todo/find id))
     (if not todo
       (throw ("Not found: " id))
@@ -590,37 +590,37 @@
 )
 
 (class Mapping
-  (method init [@path @controller @action @http_methods]
+  (method init [/path /controller /action /http_methods]
   )
 
   # Return bool: whether the path/method/... of the request matches
   (method match req
     (
-      (req/.path == /@path) &&
-      (/@http_methods/.empty || (/@http_methods .contains req/.method))
+      (req/.path == /path) &&
+      (/http_methods/.empty || (/http_methods .contains req/.method))
     )
   )
 )
 
 (class Router
   (method init _
-    (@mappings = [])
+    (/mappings = [])
   )
 
   (method map [^options... path controller action = "index"]
     (var http_methods [])
     (for method in ["GET" "POST" "PUT" "PATCH" "DELETE"]
-      (if (options .@ method)
+      (if (options ./ method)
         (http_methods .add method)
       )
     )
-    (/@mappings .add (new Mapping path controller action http_methods))
+    (/mappings .add (new Mapping path controller action http_methods))
   )
 
   (method call req
-    (for m in /@mappings
+    (for m in /mappings
       (if (m .match req)
-        (var result ((new m/@controller) . m/@action req))
+        (var result ((new m/controller) . m/action req))
         (if result
           (return result)
         )
@@ -644,7 +644,7 @@
 
   (var port
     (if ($cmd_args/.size > 1)
-      $cmd_args/@1/.to_i
+      $cmd_args/1/.to_i
     else
       2080
     )

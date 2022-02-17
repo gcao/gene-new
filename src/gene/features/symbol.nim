@@ -13,6 +13,10 @@ type
     container*: Expr
     name*: MapKey
 
+  ExChild* = ref object of Expr
+    container*: Expr
+    index*: int
+
   # member of self
   ExMyMember* = ref object of Expr
     name*: MapKey
@@ -50,6 +54,11 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
     ns = self.class.ns
   of VkMixin:
     ns = self.mixin.ns
+  of VkMap:
+    if self.map.has_key(name):
+      return self.map[name]
+    else:
+      return Nil
   of VkInstance:
     if self.instance_props.has_key(name):
       return self.instance_props[name]
@@ -75,6 +84,20 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   var v = self.eval(frame, cast[ExMember](expr).container)
   var key = cast[ExMember](expr).name
   return v.get_member(key, self, frame)
+
+proc get_child(self: Value, index: int, vm: VirtualMachine, frame: Frame): Value =
+  case self.kind:
+  of VkVector:
+    return self.vec[index]
+  of VkGene:
+    return self.gene_children[index]
+  else:
+    todo("get_child " & $self & " " & $index)
+
+proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var v = self.eval(frame, cast[ExMember](expr).container)
+  var i = cast[ExChild](expr).index
+  return v.get_child(i, self, frame)
 
 proc translate*(name: string): Expr {.inline.} =
   if name.startsWith("@"):
@@ -108,18 +131,7 @@ proc translate*(names: seq[string]): Expr =
     return translate(names[0])
   else:
     var name = names[^1]
-    if name.starts_with("@"):
-      var r = ExSelectorInvoker2(
-        evaluator: eval_selector_invoker2,
-      )
-      r.selector = ExSelector2(
-        evaluator: eval_selector2,
-        parallel_mode: false,
-      )
-      cast[ExSelector2](r.selector).data.add(handle_item(name[1..^1]))
-      r.target = translate(names[0..^2])
-      return r
-    elif name.starts_with("."):
+    if name.starts_with("."):
       return ExInvoke(
         evaluator: eval_invoke,
         self: translate(names[0..^2]),
@@ -127,11 +139,19 @@ proc translate*(names: seq[string]): Expr =
         args: new_ex_arg(),
       )
     else:
-      return ExMember(
-        evaluator: eval_member,
-        container: translate(names[0..^2]),
-        name: name.to_key,
-      )
+      try:
+        var index = name.parse_int()
+        return ExChild(
+          evaluator: eval_child,
+          container: translate(names[0..^2]),
+          index: index,
+        )
+      except ValueError:
+        return ExMember(
+          evaluator: eval_member,
+          container: translate(names[0..^2]),
+          name: name.to_key,
+        )
 
 proc translate_symbol(value: Value): Expr =
   translate(value.str)

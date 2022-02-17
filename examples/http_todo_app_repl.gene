@@ -4,7 +4,7 @@
 
 (var port
   (if ($cmd_args/.size > 1)
-    $cmd_args/@1/.to_i
+    $cmd_args/1/.to_i
   else
     2080
   )

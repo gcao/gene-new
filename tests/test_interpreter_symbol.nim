@@ -22,15 +22,15 @@ import ./helpers
 
 # a       # variable in current scope or namespace
 # $ns/a   # member of namespace
-# @prop   # property of self object
-# @0      # first entry of self.gene_children, or self.vec etc
-# @-1     # last entry of self.gene_children, or self.vec etc
+# /prop   # property of self object
+# /0      # first entry of self.gene_children, or self.vec etc
+# /-1     # last entry of self.gene_children, or self.vec etc
 
-# TODO: Unify @prop, @1 and generic selector feature
+# TODO: Unify access of properties, children and generic selector feature
 
 # n/f     # member of namespace like objects (namespace, class, mixin)
 # e/X     # member of enum
-# x/@prop     # prop of x (instance or gene or map)
+# x/prop     # prop of x (instance or gene or map)
 # x/.meth     # call meth on x  (shortcut for calling method without arguments)
 # self/.meth  # call meth on self
 
@@ -77,21 +77,21 @@ test_interpreter """
 test_interpreter """
   (class C
     (method init _
-      (@prop = 1)
+      (/prop = 1)
     )
   )
   (var c (new C))
-  c/@prop
+  c/prop
 """, 1
 
 test_interpreter """
   (class C
     (method init _
-      (@prop = 1)
+      (/prop = 1)
     )
   )
   (var c (new C))
-  ($with c /@prop)
+  ($with c /prop)
 """, 1
 
 test_interpreter """
@@ -117,26 +117,22 @@ test_interpreter """
 test_interpreter """
   (class C
     (method test _
-      (@p = 1)
+      (/p = 1)
     )
   )
   ((new C).test)
 """, 1
 
-# Change /! to /.call to remove unnecessary special syntax
 # test_interpreter """
 #   (fn f _
 #     1
 #   )
-#   # f/!
 #   f/.call
 # """, 1
 
-# Change /! to /.call to remove unnecessary special syntax
 # test_interpreter """
 #   (fn f _
 #     [1 2]
 #   )
-#   # f/!/@0
-#   f/.call/@0
+#   f/.call/0
 # """, 1

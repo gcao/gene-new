@@ -102,12 +102,7 @@ proc translate_gene(value: Value): Expr =
     of "import":
       return translate_import(value)
     else:
-      if `type`.str.starts_with(".@"): # (.@x)
-        if `type`.str.len == 2:
-          return translate_invoke_selector3(value)
-        else:
-          return translate_invoke_selector4(value)
-      elif `type`.str.starts_with("."): # (.method x y z)
+      if `type`.str.starts_with("."): # (.method x y z)
         value.gene_props[SELF_KEY] = new_gene_symbol("self")
         value.gene_props[METHOD_KEY] = new_gene_string_move(`type`.str.substr(1))
         value.gene_type = new_gene_symbol("$invoke_method")
@@ -153,24 +148,16 @@ proc translate_gene(value: Value): Expr =
       of "..":
         return new_ex_range(translate(`type`), translate(value.gene_children[1]))
       of "=":
-        if `type`.kind == VkSymbol and `type`.str.startsWith("@"): # (@p = 1)
-          return translate_prop_assignment(value)
-        else:
-          value.gene_children.delete 0
-          value.gene_children = @[handle_assignment_shortcuts(value.gene_children)]
-          value.gene_children.insert value.gene_type, 0
-          value.gene_type = first
+        value.gene_children.delete 0
+        value.gene_children = @[handle_assignment_shortcuts(value.gene_children)]
+        value.gene_children.insert value.gene_type, 0
+        value.gene_type = first
       of "->":
         value.gene_props[ARGS_KEY] = value.gene_type
         value.gene_type = value.gene_children[0]
         value.gene_children.delete 0
       else:
-        if first.str.startsWith(".@"):
-          if first.str.len == 2:
-            return translate_invoke_selector(value)
-          else:
-            return translate_invoke_selector2(value)
-        elif first.str.startsWith("."):
+        if first.str.startsWith("."):
           value.gene_props[SELF_KEY] = `type`
           value.gene_props[METHOD_KEY] = new_gene_string_move(first.str.substr(1))
           value.gene_children.delete 0

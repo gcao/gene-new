@@ -72,21 +72,13 @@ proc translate_op_eq(value: Value): Expr =
 
   case first.kind:
   of VkSymbol:
-    var name = first.str
-    if name[0] == '@':
-      # (@a ||= x)  =>  (@a = (/@a || x))
-      var selector: seq[string] = @["", first.str]
-      value_expr.op1 = translate(selector)
-      value_expr.op2 = translate(second)
-      return new_ex_set_prop(name[1..^1], value_expr)
-    else:
-      value_expr.op1 = translate(first)
-      value_expr.op2 = translate(second)
-      return ExAssignment(
-        evaluator: eval_assignment,
-        name: name.to_key,
-        value: value_expr,
-      )
+    value_expr.op1 = translate(first)
+    value_expr.op2 = translate(second)
+    return ExAssignment(
+      evaluator: eval_assignment,
+      name: first.str.to_key,
+      value: value_expr,
+    )
   of VkComplexSymbol:
     value_expr.op1 = translate(first)
     value_expr.op2 = translate(second)
