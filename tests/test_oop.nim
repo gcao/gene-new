@@ -27,16 +27,6 @@ test_interpreter """
 test_interpreter """
   (class A
     (method init _
-      (@p = 1)
-    )
-  )
-  (var a (new A))
-  a/p
-""", 1
-
-test_interpreter """
-  (class A
-    (method init _
       (/p = 1)
     )
   )
@@ -63,7 +53,7 @@ test_interpreter """
 test_interpreter """
   (class A
     (method test _
-      (@a ||= 1)
+      (/a ||= 1)
     )
   )
   ((new A).test)
@@ -80,7 +70,7 @@ test_interpreter """
 test_interpreter """
   (class A
     (method init _
-      (@a = 1)
+      (/a = 1)
     )
     # gene/native/test2 is defined in tests/helpers.nim:init_all()
     (method test2 = gene/native/test2)
@@ -127,7 +117,7 @@ test_interpreter """
 test_interpreter """
   (class A
     (method init []
-      (@description = "Class A")
+      (/description = "Class A")
     )
   )
   (new A)
@@ -137,48 +127,27 @@ test_interpreter """
 test_interpreter """
   (class A
     (method init []
-      (@description = "Class A")
+      (/description = "Class A")
     )
   )
-  ((new A) .@description)
+  ((new A) ./description)
 """, "Class A"
-
-# test_interpreter """
-#   (class A
-#     (method init []
-#       (@description = "Class A")
-#     )
-#   )
-#   ((new A) ./description)
-# """, "Class A"
 
 test_interpreter """
   (class A
     (method init description
-      (@description = description)
+      (/description = description)
     )
   )
-  ((new A "test") .@description)
+  ((new A "test") ./description)
 """, "test"
 
 test_interpreter """
   (class A
-    (method init _
-      (@description = 1)
-    )
-    (method test _
-      (@description)
+    (method init /name
     )
   )
-  ((new A).test)
-""", 1
-
-test_interpreter """
-  (class A
-    (method init @name
-    )
-  )
-  ((new A 1).@name)
+  ((new A 1)./name)
 """, 1
 
 test_interpreter """
@@ -194,66 +163,85 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test @name
+    (method test /name
     )
   )
   (var a (new A))
   (a .test 1)
-  a/@name
+  a/name
 """, 1
 
 test_interpreter """
   (class A
-    (method test @name
+    (method test /name
     )
   )
   (var a (new A))
   (a . "test" 1)
-  a/@name
+  a/name
 """, 1
 
 test_interpreter """
   (class A
-    (method init [@name = 1]
+    (method init [/name = 1]
     )
   )
-  ((new A).@name)
+  ((new A)./name)
 """, 1
 
 test_interpreter """
   (class A
-    (method test @x...
+    (method init [/p = 1]
+    )
+    (method test _
+      /p
+    )
+  )
+  ((new A).test)
+""", 1
+
+test_interpreter """
+  (class A
+    (method init [/p = 1]
+    )
+  )
+  ((new A)./p)
+""", 1
+
+test_interpreter """
+  (class A
+    (method test /x...
     )
   )
   (var a (new A))
   (a . "test" 1 2)
-  a/@x
+  a/x
 """, @[1, 2]
 
 # test_interpreter """
 #   (class A
-#     (method init ^@name
+#     (method init ^/name
 #     )
 #   )
-#   ((new A ^name "x").@name)
+#   ((new A ^name "x")./name)
 # """, "x"
 
 # test_interpreter """
 #   (class A
-#     (method init ^@name ^@...
-#       # All properties except @name are added to the instance
+#     (method init ^/name ^/...
+#       # All properties except name are added to the instance
 #     )
 #   )
-#   ((new A ^prop "x").@prop)
+#   ((new A ^prop "x")./prop)
 # """, "x"
 
 # test_interpreter """
 #   (class A
-#     (method init ^@name ^@x...
-#       # All properties except @name are added to the instance as @x
+#     (method init ^/name ^/x...
+#       # All properties except name are added to the instance as x
 #     )
 #   )
-#   (((new A ^prop 1).@x).@prop)
+#   (((new A ^prop 1)./x)./prop)
 # """, 1
 
 test_interpreter """
@@ -316,11 +304,11 @@ test_interpreter """
 test_interpreter """
   (class A
     (method init _
-      (@test = 1)
+      (/test = 1)
     )
   )
   (class B < A)
-  ((new B).@test)
+  ((new B)./test)
 """, 1
 
 test_interpreter """
@@ -428,10 +416,10 @@ test_interpreter """
 #   )
 #   (my_class "A"
 #     (method init []
-#       (@description = "Class A")
+#       (/description = "Class A")
 #     )
 #   )
-#   ((new A) .@description)
+#   ((new A) ./description)
 # """, proc(r: Value) =
 #   check r.str == "Class A"
 
@@ -443,12 +431,12 @@ test_interpreter """
 # test_interpreter """
 #   (class A
 #     (method test _
-#       ("" (.@name) ".test")
+#       ("" (./name) ".test")
 #     )
 #   )
 #   (object Config < A
 #     (method init _
-#       (@name = "Config")
+#       (/name = "Config")
 #     )
 #   )
 #   (Config .test)

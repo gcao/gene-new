@@ -51,7 +51,10 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
   of VkMixin:
     ns = self.mixin.ns
   of VkInstance:
-    return self.instance_props[name]
+    if self.instance_props.has_key(name):
+      return self.instance_props[name]
+    else:
+      return Nil
   of VkEnum:
     return new_gene_enum_member(self.enum.members[name.to_s])
   else:

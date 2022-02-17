@@ -112,8 +112,11 @@ proc translate_gene(value: Value): Expr =
         value.gene_props[METHOD_KEY] = new_gene_string_move(`type`.str.substr(1))
         value.gene_type = new_gene_symbol("$invoke_method")
   of VkComplexSymbol:
-    if `type`.csymbol[0].starts_with(".@"):
-      return translate_invoke_selector4(value)
+    if `type`.csymbol[0] == ".":
+      if `type`.csymbol[1] == "":
+        return translate_invoke_selector3(value)
+      else:
+        return translate_invoke_selector4(value)
   else:
     discard
 
@@ -173,8 +176,11 @@ proc translate_gene(value: Value): Expr =
           value.gene_children.delete 0
           value.gene_type = new_gene_symbol("$invoke_method")
     of VkComplexSymbol:
-      if first.csymbol[0].startsWith(".@"):
-        return translate_invoke_selector2(value)
+      if first.csymbol[0] == ".":
+        if first.csymbol[1] == "":
+          return translate_invoke_selector(value)
+        else:
+          return translate_invoke_selector2(value)
     else:
       discard
 

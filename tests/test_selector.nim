@@ -91,79 +91,79 @@ import ./helpers
 # * Remove
 
 test_interpreter """
-  ({^a "A"} .@ "a")
+  ({^a "A"} ./ "a")
 """, "A"
 
 test_interpreter """
-  ({} .@ "a")
+  ({} ./ "a")
 """, Nil
 
 test_interpreter """
-  ({} .@ "a" 1)
+  ({} ./ "a" 1)
 """, Nil
 
 test_interpreter """
-  ({^a "A"} .@a)
+  ({^a "A"} ./a)
 """, "A"
 
 test_interpreter """
-  ((_ ^a "A") .@ "a")
+  ((_ ^a "A") ./ "a")
 """, "A"
 
 test_interpreter """
-  ([1 2] .@ 0)
+  ([1 2] ./ 0)
 """, 1
 
 test_interpreter """
-  ([1 2] .@0)
+  ([1 2] ./0)
 """, 1
 
 test_interpreter """
-  ([0 1 2 -2 -1] .@ (0 .. 1))
+  ([0 1 2 -2 -1] ./ (0 .. 1))
 """, @[0, 1]
 
 test_interpreter """
-  ([0 1 2 -2 -1] .@ (0 .. -2))
+  ([0 1 2 -2 -1] ./ (0 .. -2))
 """, @[0, 1, 2, -2]
 
 test_interpreter """
-  ([0 1 2 -2 -1] .@ (-2 .. -1))
+  ([0 1 2 -2 -1] ./ (-2 .. -1))
 """, @[-2, -1]
 
 test_interpreter """
-  ([0 1 2 -2 -1] .@ (-1 .. -1))
+  ([0 1 2 -2 -1] ./ (-1 .. -1))
 """, @[-1]
 
 test_interpreter """
-  ([0 1 2 -2 -1] .@ (6 .. -1))
+  ([0 1 2 -2 -1] ./ (6 .. -1))
 """, @[]
 
 test_interpreter """
-  ([] .@ (0 .. 1))
+  ([] ./ (0 .. 1))
 """, @[]
 
 test_interpreter """
-  ([] .@ (-2 .. -1))
+  ([] ./ (-2 .. -1))
 """, @[]
 
 test_interpreter """
-  ([1] .@ (-2 .. -1))
+  ([1] ./ (-2 .. -1))
 """, @[1]
 
 test_interpreter """
-  ((_ 0 1 2 -2 -1) .@ (0 .. -2))
+  ((_ 0 1 2 -2 -1) ./ (0 .. -2))
 """, @[0, 1, 2, -2]
 
 test_interpreter """
-  ((_) .@ (-2 .. -1))
+  ((_) ./ (-2 .. -1))
 """, @[]
 
 test_interpreter """
-  ((_) .@ (0 .. -2))
+  ((_) ./ (0 .. -2))
 """, @[]
 
 test_interpreter """
-  ((_ 1) .@ (-2 .. -1))
+  ((_ 1) ./ (-2 .. -1))
 """, @[1]
 
 test_interpreter """
@@ -187,22 +187,22 @@ test_interpreter """
 """, 1
 
 test_interpreter """
-  ([{^test 1}] .@ 0 "test")
+  ([{^test 1}] ./ 0 "test")
 """, 1
 
 test_interpreter """
-  ([{^test 1}] .@0/test)
+  ([{^test 1}] ./0/test)
 """, 1
 
 test_interpreter """
   ($with [{^test 1}]
-    (.@ 0 "test")
+    (./ 0 "test")
   )
 """, 1
 
 test_interpreter """
   ($with [{^test 1}]
-    (.@0/test)
+    (./0/test)
   )
 """, 1
 
@@ -233,13 +233,13 @@ test_interpreter """
   )
   (var a (new A))
   (a .test 1)
-  a/@x
+  a/x
 """, 1
 
 test_interpreter """
   (class A
     (method init []
-      (@description = "Class A")
+      (/description = "Class A")
     )
   )
   (new A)
@@ -300,11 +300,11 @@ test_interpreter """
 # """, @[2]
 
 # test_interpreter """
-#   ([] .@ 0 ^default 123)
+#   ([] ./ 0 ^default 123)
 # """, 123
 
 # test_interpreter """
-#   ([] .@0 ^default 123)
+#   ([] ./0 ^default 123)
 # """, 123
 
 # test_interpreter """

@@ -334,7 +334,7 @@ proc eval_selector_invoker2*(self: VirtualMachine, frame: Frame, target: Value, 
   var selector = self.eval(frame, expr.selector)
   selector.selector.search(value)
 
-# (x .@ a b)
+# (x ./ a b)
 proc translate_invoke_selector*(value: Value): Expr =
   var r = ExSelectorInvoker2(
     evaluator: eval_selector_invoker2,
@@ -348,8 +348,8 @@ proc translate_invoke_selector*(value: Value): Expr =
     cast[ExSelector2](r.selector).data.add(translate(item))
   return r
 
-# (x .@a)
-# (x .@a/0)
+# (x ./a)
+# (x ./a/0)
 proc translate_invoke_selector2*(value: Value): Expr =
   var r = ExSelectorInvoker2(
     evaluator: eval_selector_invoker2,
@@ -360,17 +360,14 @@ proc translate_invoke_selector2*(value: Value): Expr =
     parallel_mode: false,
   )
   case value.gene_children[0].kind:
-  of VkSymbol:
-    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_children[0].str[2..^1]))
   of VkComplexSymbol:
-    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_children[0].csymbol[0][2..^1]))
     for item in value.gene_children[0].csymbol[1..^1]:
       cast[ExSelector2](r.selector).data.add(handle_item(item))
   else:
     todo($value.gene_children[0].kind)
   return r
 
-# (.@ a b)
+# (./ a b)
 proc translate_invoke_selector3*(value: Value): Expr =
   var r = ExSelectorInvoker2(
     evaluator: eval_selector_invoker2,
@@ -383,8 +380,8 @@ proc translate_invoke_selector3*(value: Value): Expr =
     cast[ExSelector2](r.selector).data.add(translate(item))
   return r
 
-# (.@a)
-# (.@a/0)
+# (./a)
+# (./a/0)
 proc translate_invoke_selector4*(value: Value): Expr =
   var r = ExSelectorInvoker2(
     evaluator: eval_selector_invoker2,
@@ -394,10 +391,7 @@ proc translate_invoke_selector4*(value: Value): Expr =
     parallel_mode: false,
   )
   case value.gene_type.kind:
-  of VkSymbol:
-    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_type.str[2..^1]))
   of VkComplexSymbol:
-    cast[ExSelector2](r.selector).data.add(handle_item(value.gene_type.csymbol[0][2..^1]))
     for item in value.gene_type.csymbol[1..^1]:
       cast[ExSelector2](r.selector).data.add(handle_item(item))
   else:

@@ -289,26 +289,26 @@ proc eval_set*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
     else:
       self.eval(frame, expr.target)
   var selector = self.eval(frame, expr.selector)
-  var value = self.eval(frame, expr.value)
+  result = self.eval(frame, expr.value)
   case selector.kind:
   of VkSelector:
-    var success = selector.selector.update(target, value)
+    var success = selector.selector.update(target, result)
     if not success:
       todo("Update by selector failed.")
   of VkInt:
     case target.kind:
     of VkGene:
-      target.gene_children[selector.int] = value
+      target.gene_children[selector.int] = result
     of VkVector:
-      target.vec[selector.int] = value
+      target.vec[selector.int] = result
     else:
       todo($target.kind)
   of VkString:
     case target.kind:
     of VkGene:
-      target.gene_props[selector.str] = value
+      target.gene_props[selector.str] = result
     of VkMap:
-      target.map[selector.str] = value
+      target.map[selector.str] = result
     else:
       todo($target.kind)
   else:

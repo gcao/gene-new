@@ -191,12 +191,14 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
       todo("parse " & $v)
     else:
       var m = new_matcher(self, MatchData)
-      var name = v.csymbol[1]
       group.add(m)
-      m.name = name.to_key
       m.is_prop = true
+      var name = v.csymbol[1]
       if name.ends_with("..."):
         m.is_splat = true
+        m.name = name[0..^4].to_key
+      else:
+        m.name = name.to_key
   of VkVector:
     var i = 0
     while i < v.vec.len:

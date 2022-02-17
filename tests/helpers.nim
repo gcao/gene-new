@@ -72,16 +72,6 @@ proc test_read_all*(code: string, callback: proc(result: seq[Value])) =
   test "Parser / read_all: " & code:
     callback read_all(code)
 
-# proc test_normalize*(code: string, r: Value) =
-#   var code = cleanup(code)
-#   test "normalize: " & code:
-#     var parsed = read(code)
-#     parsed.normalize
-#     check parsed == r
-
-# proc test_normalize*(code: string, r: string) =
-#   test_normalize(code, read(r))
-
 proc test_interpreter*(code: string) =
   var code = cleanup(code)
   test "Interpreter / eval: " & code:
