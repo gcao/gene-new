@@ -93,6 +93,12 @@ test_interpreter """
   a
 """, 1
 
+test_interpreter """
+  ($ns/a = 1)
+  ($ns/a += 1)
+  a
+""", 2
+
 test_interpreter "(1 == 1)", true
 test_interpreter "(1 == 2)", false
 test_interpreter "(1 < 0)", false

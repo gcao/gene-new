@@ -21,11 +21,6 @@ type
     selector*: Expr
     target*: Expr
 
-  ExSet* = ref object of Expr
-    target*: Expr
-    selector*: Expr
-    value*: Expr
-
 proc search*(self: Selector, target: Value, r: SelectorResult)
 
 proc search_first(self: SelectorMatcher, target: Value): Value =
@@ -228,60 +223,6 @@ proc search*(self: Selector, target: Value): Value =
   except NoResult:
     result = Nil
 
-proc update(self: SelectorItem, target: Value, value: Value): bool =
-  for m in self.matchers:
-    case m.kind:
-    of SmByIndex:
-      # TODO: handle negative number
-      case target.kind:
-      of VkVector:
-        if self.is_last:
-          target.vec[m.index] = value
-          result = true
-        else:
-          for child in self.children:
-            result = result or child.update(target.vec[m.index], value)
-      else:
-        todo()
-    of SmByName:
-      case target.kind:
-      of VkMap:
-        if self.is_last:
-          target.map[m.name] = value
-          result = true
-        else:
-          for child in self.children:
-            result = result or child.update(target.map[m.name], value)
-      of VkGene:
-        if self.is_last:
-          target.gene_props[m.name] = value
-          result = true
-        else:
-          for child in self.children:
-            result = result or child.update(target.gene_props[m.name], value)
-      of VkNamespace:
-        if self.is_last:
-          target.ns.members[m.name] = value
-          result = true
-        else:
-          for child in self.children:
-            result = result or child.update(target.ns.members[m.name], value)
-      of VkInstance:
-        if self.is_last:
-          target.instance_props[m.name] = value
-          result = true
-        else:
-          for child in self.children:
-            result = result or child.update(target.instance_props[m.name], value)
-      else:
-        todo($target.kind)
-    else:
-      todo()
-
-proc update*(self: Selector, target: Value, value: Value): bool =
-  for child in self.children:
-    result = result or child.update(target, value)
-
 proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExSelectorInvoker](expr)
   var selector = target.selector
@@ -462,52 +403,6 @@ proc translate_invoke_selector4*(value: Value): Expr =
   else:
     todo($value.gene_type.kind)
   return r
-
-proc eval_set*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExSet](expr)
-  var target =
-    if expr.target == nil:
-      frame.self
-    else:
-      self.eval(frame, expr.target)
-  var selector = self.eval(frame, expr.selector)
-  var value = self.eval(frame, expr.value)
-  case selector.kind:
-  of VkSelector:
-    var success = selector.selector.update(target, value)
-    if not success:
-      todo("Update by selector failed.")
-  of VkInt:
-    case target.kind:
-    of VkGene:
-      target.gene_children[selector.int] = value
-    of VkVector:
-      target.vec[selector.int] = value
-    else:
-      todo($target.kind)
-  of VkString:
-    case target.kind:
-    of VkGene:
-      target.gene_props[selector.str] = value
-    of VkMap:
-      target.map[selector.str] = value
-    else:
-      todo($target.kind)
-  else:
-    todo($selector.kind)
-
-proc translate_set*(value: Value): Expr =
-  var e = ExSet(
-    evaluator: eval_set,
-  )
-  if value.gene_children.len == 2:
-    e.selector = translate(value.gene_children[0])
-    e.value = translate(value.gene_children[1])
-  else:
-    e.target = translate(value.gene_children[0])
-    e.selector = translate(value.gene_children[1])
-    e.value = translate(value.gene_children[2])
-  return e
 
 proc init*() =
   GeneTranslators["@"] = translate_selector

@@ -5,7 +5,6 @@ import ../types
 import ../translators
 import ./arithmetic
 import ./symbol
-import ./selector
 
 # TODO: improve handling of below cases
 # (a = 1)
@@ -52,7 +51,8 @@ proc translate_assignment(value: Value): Expr =
     not_allowed("translate_assignment " & $first.kind)
 
 proc translate_op_eq(value: Value): Expr =
-  var name = value.gene_children[0].str
+  var first = value.gene_children[0]
+  var second = value.gene_children[1]
   var value_expr: ExBinOp
   case value.gene_type.str:
   of "+=":
@@ -70,20 +70,35 @@ proc translate_op_eq(value: Value): Expr =
   else:
     todo("translate_op_eq " & $value.gene_type.str)
 
-  if value.gene_children[0].str[0] == '@':
-    # (@a ||= x)  =>  (@a = (/@a || x))
-    var selector: seq[string] = @["", value.gene_children[0].str]
-    value_expr.op1 = translate(selector)
-    value_expr.op2 = translate(value.gene_children[1])
-    return new_ex_set_prop(name[1..^1], value_expr)
-  else:
-    value_expr.op1 = translate(value.gene_children[0])
-    value_expr.op2 = translate(value.gene_children[1])
-    return ExAssignment(
-      evaluator: eval_assignment,
-      name: name.to_key,
-      value: value_expr,
+  case first.kind:
+  of VkSymbol:
+    var name = first.str
+    if name[0] == '@':
+      # (@a ||= x)  =>  (@a = (/@a || x))
+      var selector: seq[string] = @["", first.str]
+      value_expr.op1 = translate(selector)
+      value_expr.op2 = translate(second)
+      return new_ex_set_prop(name[1..^1], value_expr)
+    else:
+      value_expr.op1 = translate(first)
+      value_expr.op2 = translate(second)
+      return ExAssignment(
+        evaluator: eval_assignment,
+        name: name.to_key,
+        value: value_expr,
+      )
+  of VkComplexSymbol:
+    value_expr.op1 = translate(first)
+    value_expr.op2 = translate(second)
+    var e = ExSet(
+      evaluator: eval_set,
     )
+    e.target = translate(first.csymbol[0..^2])
+    e.selector = translate(new_gene_symbol("@" & first.csymbol[^1]))
+    e.value = value_expr
+    return e
+  else:
+    not_allowed("translate_op_eq " & $value)
 
 proc init*() =
   GeneTranslators["="] = translate_assignment

@@ -5,7 +5,6 @@ import ./types
 import ./json
 import ./map_key
 import ./interpreter_base
-import ./features/oop
 
 proc object_class(self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.get_class())
