@@ -261,10 +261,17 @@ proc eval_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var 
   new_gene_selector(selector)
 
 proc new_ex_selector*(name: string): ExSelector =
-  return ExSelector(
-    evaluator: eval_selector,
-    data: new_ex_literal(new_gene_string(name)),
-  )
+  try:
+    var index = name.parse_int()
+    return ExSelector(
+      evaluator: eval_selector,
+      data: new_ex_literal(index),
+    )
+  except ValueError:
+    return ExSelector(
+      evaluator: eval_selector,
+      data: new_ex_literal(new_gene_string(name)),
+    )
 
 proc eval_selector2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExSelector2](expr)

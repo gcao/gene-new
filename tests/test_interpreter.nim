@@ -94,6 +94,18 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  (var a [0])
+  (a/0 = 1)
+  a/0
+""", 1
+
+test_interpreter """
+  (var a [1])
+  (a/0 += 1)
+  a/0
+""", 2
+
+test_interpreter """
   ($ns/a = 1)
   ($ns/a += 1)
   a
