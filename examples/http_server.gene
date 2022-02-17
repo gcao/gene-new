@@ -8,30 +8,30 @@
 
    # Constructor
    # First arg is automatically stored as `port` property in the instance
-   (method init @port
+   (method init /port
       # Initializes `middleware` property as an empty array
-      (@middlewares = [])
+      (/middlewares = [])
    )
 
-   # Helper method for constructing handlers from @middlewares and @handler
+   # Helper method for constructing handlers from /middlewares and /handler
    (method construct_handler middleware_index
-      (if (middleware_index < /@middlewares/.size)
-         (var middleware (/@middlewares .@ middleware_index))
+      (if (middleware_index < /middlewares/.size)
+         (var middleware (/middlewares ./ middleware_index))
          (var handler    (.construct_handler (middleware_index + 1)))
          (middleware handler)
        else
-         /@handler
+         /handler
       )
    )
 
-   # Construct the root handler based on @middlewares and @handler
+   # Construct the root handler based on /middlewares and /handler
    # Start the HTTP server
    (method start _
       # Note: print and println inserts " " between arguments
-      (println "Starting HTTP server at port" /@port "...")
+      (println "Starting HTTP server at port" /port "...")
 
       (var root_handler (.construct_handler 0))
-      (start_server /@port root_handler)
+      (start_server /port root_handler)
       (gene/run_forever)
    )
 )
@@ -41,14 +41,14 @@
 
    # Constructor
    (method init _
-      (@handlers = [])
+      (/handlers = [])
    )
 
    # Define `call` method which enables the router to be invoked like any handler,
    # i.e. (<dummy router> req)
    (method call req
 
-      (for h in /@handlers
+      (for h in /handlers
          (var result (h req))
          (if result
             (println result/.status req/.method req/.url)
@@ -80,7 +80,7 @@
    (if (params .contains "name")
       # (respond "any string") will create a 200/OK respoonse with the string as body.
       # ("string" ...) will concatenate "string" and all arguments.
-      (respond ("Hello " params/@name "!"))
+      (respond ("Hello " params/name "!"))
     else
       (respond "Hello world!")
    )
@@ -111,7 +111,7 @@
 
       (var authenticated
          # Read and check passcode from Authorization header
-         ((gene/base64_decode req/.headers/@authorization) == passcode)
+         ((gene/base64_decode req/.headers/authorization) == passcode)
       )
       (if authenticated
          (handler req)
@@ -124,16 +124,16 @@
 # Server port defaults to 2080 but can be passed in the command line.
 (var port 2080)
 (if ($cmd_args/.size > 1)
-   (port = $cmd_args/@1/.to_i)
+   (port = $cmd_args/1/.to_i)
 )
 
 # Create and initialize the app
 # ($tap <value> <body>) will run <body> with `self` set to <value> and return <value>
 (var app ($tap (new App port)
-   (/@middlewares .add auth)
+   (/middlewares .add auth)
    ($set @handler ($tap (new DummyRouter)
-      (/@handlers .add hello)
-      (/@handlers .add secret)
+      (/handlers .add hello)
+      (/handlers .add secret)
    ))
 ))
 

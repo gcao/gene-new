@@ -196,31 +196,117 @@ proc new_ex_names*(self: Value): ExNames =
     e.names.add(s.to_key)
   result = e
 
-#################### ExSetProp ###################
-
-type
-  ExSetProp* = ref object of Expr
-    name*: MapKey
-    value*: Expr
-
-proc eval_set_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var value = cast[ExSetProp](expr).value
-  result = self.eval(frame, value)
-  frame.self.instance_props[cast[ExSetProp](expr).name] = result
-
-proc new_ex_set_prop*(name: string, value: Expr): ExSetProp =
-  ExSetProp(
-    evaluator: eval_set_prop,
-    name: name.to_key,
-    value: value,
-  )
-
 #################### Selector ####################
 
 type
+  ExSet* = ref object of Expr
+    target*: Expr
+    selector*: Expr
+    value*: Expr
+
   ExInvokeSelector* = ref object of Expr
     self*: Expr
     data*: seq[Expr]
+
+proc update(self: SelectorItem, target: Value, value: Value): bool =
+  for m in self.matchers:
+    case m.kind:
+    of SmByIndex:
+      # TODO: handle negative number
+      case target.kind:
+      of VkVector:
+        if self.is_last:
+          target.vec[m.index] = value
+          result = true
+        else:
+          for child in self.children:
+            result = result or child.update(target.vec[m.index], value)
+      else:
+        todo()
+    of SmByName:
+      case target.kind:
+      of VkMap:
+        if self.is_last:
+          target.map[m.name] = value
+          result = true
+        else:
+          for child in self.children:
+            result = result or child.update(target.map[m.name], value)
+      of VkGene:
+        if self.is_last:
+          target.gene_props[m.name] = value
+          result = true
+        else:
+          for child in self.children:
+            result = result or child.update(target.gene_props[m.name], value)
+      of VkNamespace:
+        if self.is_last:
+          target.ns.members[m.name] = value
+          result = true
+        else:
+          for child in self.children:
+            result = result or child.update(target.ns.members[m.name], value)
+      of VkInstance:
+        if self.is_last:
+          target.instance_props[m.name] = value
+          result = true
+        else:
+          for child in self.children:
+            result = result or child.update(target.instance_props[m.name], value)
+      else:
+        todo($target.kind)
+    else:
+      todo()
+
+proc update*(self: Selector, target: Value, value: Value): bool =
+  for child in self.children:
+    result = result or child.update(target, value)
+
+proc eval_set*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExSet](expr)
+  var target =
+    if expr.target == nil:
+      frame.self
+    else:
+      self.eval(frame, expr.target)
+  var selector = self.eval(frame, expr.selector)
+  result = self.eval(frame, expr.value)
+  case selector.kind:
+  of VkSelector:
+    var success = selector.selector.update(target, result)
+    if not success:
+      todo("Update by selector failed.")
+  of VkInt:
+    case target.kind:
+    of VkGene:
+      target.gene_children[selector.int] = result
+    of VkVector:
+      target.vec[selector.int] = result
+    else:
+      todo($target.kind)
+  of VkString:
+    case target.kind:
+    of VkGene:
+      target.gene_props[selector.str] = result
+    of VkMap:
+      target.map[selector.str] = result
+    else:
+      todo($target.kind)
+  else:
+    todo($selector.kind)
+
+proc translate_set*(value: Value): Expr =
+  var e = ExSet(
+    evaluator: eval_set,
+  )
+  if value.gene_children.len == 2:
+    e.selector = translate(value.gene_children[0])
+    e.value = translate(value.gene_children[1])
+  else:
+    e.target = translate(value.gene_children[0])
+    e.selector = translate(value.gene_children[1])
+    e.value = translate(value.gene_children[2])
+  return e
 
 ##################################################
 
@@ -276,11 +362,6 @@ proc translate_wrap*(translate: Translator): Translator =
     result = translate(value)
     if result != nil and result of ExException:
       raise cast[ExException](result).ex
-
-# (@p = 1)
-proc translate_prop_assignment*(value: Value): Expr =
-  var name = value.gene_type.str[1..^1]
-  return new_ex_set_prop(name, translate(value.gene_children[1]))
 
 proc new_ex_arg*(value: Value): ExArguments =
   result = ExArguments(

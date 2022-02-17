@@ -7,12 +7,15 @@ import ../translators
 import ../interpreter_base
 import ./oop
 import ./selector
-import ./gene
 
 type
   ExMember* = ref object of Expr
     container*: Expr
     name*: MapKey
+
+  ExChild* = ref object of Expr
+    container*: Expr
+    index*: int
 
   # member of self
   ExMyMember* = ref object of Expr
@@ -23,6 +26,10 @@ type
 let NS_EXPR = Expr()
 NS_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   Value(kind: VkNamespace, ns: frame.ns)
+
+let PKG_EXPR = Expr()
+PKG_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  Value(kind: VkPackage, pkg: frame.ns.package)
 
 proc eval_symbol_scope(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   frame.scope[cast[ExSymbol](expr).name]
@@ -47,8 +54,20 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
     ns = self.class.ns
   of VkMixin:
     ns = self.mixin.ns
+  of VkMap:
+    if self.map.has_key(name):
+      return self.map[name]
+    else:
+      return Nil
+  of VkInstance:
+    if self.instance_props.has_key(name):
+      return self.instance_props[name]
+    else:
+      return Nil
+  of VkEnum:
+    return new_gene_enum_member(self.enum.members[name.to_s])
   else:
-    todo("get_member " & $self.kind)
+    todo("get_member " & $self.kind & " " & name.to_s)
 
   if ns.members.has_key(name):
     return ns.members[name]
@@ -61,24 +80,30 @@ proc get_member(self: Value, name: MapKey, vm: VirtualMachine, frame: Frame): Va
         return r
   raise new_exception(NotDefinedException, name.to_s & " is not defined")
 
-proc eval_pkg(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  Value(kind: VkPackage, pkg: frame.ns.package)
-
-proc new_ex_package(): Expr =
-  return ExPackage(
-    evaluator: eval_pkg,
-  )
-
 proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var v = self.eval(frame, cast[ExMember](expr).container)
   var key = cast[ExMember](expr).name
-  case v.kind:
-  of VkNamespace, VkClass, VkMixin:
-    return v.get_member(key, self, frame)
-  of VkEnum:
-    return new_gene_enum_member(v.enum.members[key.to_s])
+  return v.get_member(key, self, frame)
+
+proc get_child(self: Value, index: int, vm: VirtualMachine, frame: Frame): Value =
+  case self.kind:
+  of VkVector:
+    if index < self.vec.len:
+      return self.vec[index]
+    else:
+      return Nil
+  of VkGene:
+    if index < self.gene_children.len:
+      return self.gene_children[index]
+    else:
+      return Nil
   else:
-    todo("eval_member " & $v.kind & "/" & key.to_s)
+    todo("get_child " & $self & " " & $index)
+
+proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var v = self.eval(frame, cast[ExMember](expr).container)
+  var i = cast[ExChild](expr).index
+  return v.get_child(i, self, frame)
 
 proc translate*(name: string): Expr {.inline.} =
   if name.startsWith("@"):
@@ -100,7 +125,7 @@ proc translate*(name: string): Expr {.inline.} =
   of "$ns":
     result = NS_EXPR
   of "$pkg":
-    result = new_ex_package()
+    result = PKG_EXPR
   else:
     result = ExMyMember(
       evaluator: eval_my_member,
@@ -112,36 +137,27 @@ proc translate*(names: seq[string]): Expr =
     return translate(names[0])
   else:
     var name = names[^1]
-    if name.starts_with("@"):
-      var r = ExSelectorInvoker2(
-        evaluator: eval_selector_invoker2,
-      )
-      r.selector = ExSelector2(
-        evaluator: eval_selector2,
-        parallel_mode: false,
-      )
-      cast[ExSelector2](r.selector).data.add(handle_item(name[1..^1]))
-      r.target = translate(names[0..^2])
-      return r
-    elif name.starts_with("."):
+    if name.starts_with("."):
       return ExInvoke(
         evaluator: eval_invoke,
         self: translate(names[0..^2]),
         meth: name[1..^1].to_key,
         args: new_ex_arg(),
       )
-    elif name == "!":
-      return ExGene(
-        evaluator: eval_gene,
-        `type`: translate(names[0..^2]),
-        args: new_gene_gene(),
-      )
     else:
-      return ExMember(
-        evaluator: eval_member,
-        container: translate(names[0..^2]),
-        name: name.to_key,
-      )
+      try:
+        var index = name.parse_int()
+        return ExChild(
+          evaluator: eval_child,
+          container: translate(names[0..^2]),
+          index: index,
+        )
+      except ValueError:
+        return ExMember(
+          evaluator: eval_member,
+          container: translate(names[0..^2]),
+          name: name.to_key,
+        )
 
 proc translate_symbol(value: Value): Expr =
   translate(value.str)

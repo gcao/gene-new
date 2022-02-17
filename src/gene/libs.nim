@@ -5,7 +5,6 @@ import ./types
 import ./json
 import ./map_key
 import ./interpreter_base
-import ./features/oop
 
 proc object_class(self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.get_class())
@@ -599,14 +598,14 @@ proc init*() =
     (ns genex/html
       (class Tag
         (method init [name attrs = {} children = []]
-          (@name     = name)
-          (@attrs    = attrs)
-          (@children = children)
+          (/name     = name)
+          (/attrs    = attrs)
+          (/children = children)
         )
 
         (method to_s _
-          ("<" /@name
-            ((/@attrs .map
+          ("<" /name
+            ((/attrs .map
               ([k v] ->
                 (if (v == false)
                   ""
@@ -625,12 +624,12 @@ proc init*() =
               )
             ).join)
             ">"
-            (if (/@children/.size > 0)
+            (if (/children/.size > 0)
               ("\n"
-                ((/@children .join "\n").trim)
+                ((/children .join "\n").trim)
               "\n")
             )
-            "</" /@name ">"
+            "</" /name ">"
           )
         )
       )
@@ -661,7 +660,7 @@ proc init*() =
       (fn style [^props...]
         (fnx node
           (if (node .contains "style")
-            ((node .@style).merge props)
+            (node/style .merge props)
           else
             ($set node @style props)
           )

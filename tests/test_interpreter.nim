@@ -88,6 +88,34 @@ test_interpreter """
 #   (var i 1 2)
 # """, 2
 
+test_interpreter """
+  ($ns/a = 1)
+  a
+""", 1
+
+test_interpreter """
+  ($ns/a = 1)
+  ($ns/a += 1)
+  a
+""", 2
+
+test_interpreter """
+  (ns n
+    (ns m)
+  )
+  (n/m/a = 1)
+  n/m/a
+""", 1
+
+test_interpreter """
+  (ns n
+    (ns m)
+  )
+  (n/m/a = 1)
+  (n/m/a += 1)
+  n/m/a
+""", 2
+
 test_interpreter "(1 == 1)", true
 test_interpreter "(1 == 2)", false
 test_interpreter "(1 < 0)", false
@@ -103,6 +131,8 @@ test_interpreter "(false && false)", false
 test_interpreter "(true || true)", true
 test_interpreter "(true || false)", true
 test_interpreter "(false || false)", false
+
+test_interpreter "(nil || 1)", 1
 
 test_interpreter "(var a 1) a", 1
 test_interpreter "(var a 1) (a = 2) a", 2

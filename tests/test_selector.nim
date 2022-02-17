@@ -55,18 +55,13 @@ import ./helpers
 # * Callbacks' does not return special list, thus discarded
 
 # @p        <=> (@ "p")
-# (@p)      <=> ((@ "p"))       <=> (self .@p)
+# (@p)      <=> ((@ "p"))       <=> (self ./p)
 # (@p)      <=> ((@ "p") self)
-# (@p = 1)  <=> ((@ "p") = 1)   <=> (self .@p = 1)
+# (@p = 1)  <=> ((@ "p") = 1)   <=> (self ./p = 1)
 # (@p += 1) <=> (@p = (@p + 1)) <=> ((@ "p") = ((@ "p") + 1))
 
-# (.@p)     <=> (self .@p)      <=> (self .@ "p")
-# (.@p = 1) <=> (self .@p = 1)  <=> (self .@ "p" = 1)
-
-# Do not allow (self @ ...) (obj @ ...) because they create confusion
-# (self @ p)       <=> (self .@ p)   # p will be evaluated to a property name
-# (self @ "p")     <=> (self .@ "p")
-# (self @ "p" = 1) <=> (self .@ "p" = 1)
+# (./p)     <=> (self ./p)      <=> (self ./ "p")
+# (/p = 1)  <=> ($set self @p 1)
 
 # (@ "test")             # target["test"]
 # @test                  # target["test"]
@@ -77,93 +72,93 @@ import ./helpers
 # (@ (range 0 3) :type)  # target[0..3].type
 # (@* [0 "test"] [1 "another"])  # target[0]["test"] + target[1]["another"]
 #
-# (.@ 0 "test")             # ((@ 0 "test") self)
-# (.@0/test)                # ((@ 0 "test") self)
-# (.@ :type)                # ((@ :type) self)
-# (obj .@ 0 "test")         # ((@ 0 "test") obj)
-# (.@* 0 1)                 # ((@* 0 1) self)
-# (.@ 0 "test" = "value")   # (assign self (@ 0 "test") "value")
-# (.@test)                  # ((@ "test") self)
-# (.@first/second)          # ((@ "first" "second") self)
+# (./ 0 "test")             # ((@ 0 "test") self)
+# (./0/test)                # ((@ 0 "test") self)
+# (./ :type)                # ((@ :type) self)
+# (obj ./ 0 "test")         # ((@ 0 "test") obj)
+# ((@* 0 1) self)
+# (./ 0 "test" = "value")   # (assign self (@ 0 "test") "value")
+# (./test)                  # ((@ "test") self)
+# (./first/second)          # ((@ "first" "second") self)
 #
 # * Search
 # * Update
 # * Remove
 
 test_interpreter """
-  ({^a "A"} .@ "a")
+  ({^a "A"} ./ "a")
 """, "A"
 
 test_interpreter """
-  ({} .@ "a")
+  ({} ./ "a")
 """, Nil
 
 test_interpreter """
-  ({} .@ "a" 1)
+  ({} ./ "a" 1)
 """, Nil
 
 test_interpreter """
-  ({^a "A"} .@a)
+  ({^a "A"} ./a)
 """, "A"
 
 test_interpreter """
-  ((_ ^a "A") .@ "a")
+  ((_ ^a "A") ./ "a")
 """, "A"
 
 test_interpreter """
-  ([1 2] .@ 0)
+  ([1 2] ./ 0)
 """, 1
 
 test_interpreter """
-  ([1 2] .@0)
+  ([1 2] ./0)
 """, 1
 
 test_interpreter """
-  ([0 1 2 -2 -1] .@ (0 .. 1))
+  ([0 1 2 -2 -1] ./ (0 .. 1))
 """, @[0, 1]
 
 test_interpreter """
-  ([0 1 2 -2 -1] .@ (0 .. -2))
+  ([0 1 2 -2 -1] ./ (0 .. -2))
 """, @[0, 1, 2, -2]
 
 test_interpreter """
-  ([0 1 2 -2 -1] .@ (-2 .. -1))
+  ([0 1 2 -2 -1] ./ (-2 .. -1))
 """, @[-2, -1]
 
 test_interpreter """
-  ([0 1 2 -2 -1] .@ (-1 .. -1))
+  ([0 1 2 -2 -1] ./ (-1 .. -1))
 """, @[-1]
 
 test_interpreter """
-  ([0 1 2 -2 -1] .@ (6 .. -1))
+  ([0 1 2 -2 -1] ./ (6 .. -1))
 """, @[]
 
 test_interpreter """
-  ([] .@ (0 .. 1))
+  ([] ./ (0 .. 1))
 """, @[]
 
 test_interpreter """
-  ([] .@ (-2 .. -1))
+  ([] ./ (-2 .. -1))
 """, @[]
 
 test_interpreter """
-  ([1] .@ (-2 .. -1))
+  ([1] ./ (-2 .. -1))
 """, @[1]
 
 test_interpreter """
-  ((_ 0 1 2 -2 -1) .@ (0 .. -2))
+  ((_ 0 1 2 -2 -1) ./ (0 .. -2))
 """, @[0, 1, 2, -2]
 
 test_interpreter """
-  ((_) .@ (-2 .. -1))
+  ((_) ./ (-2 .. -1))
 """, @[]
 
 test_interpreter """
-  ((_) .@ (0 .. -2))
+  ((_) ./ (0 .. -2))
 """, @[]
 
 test_interpreter """
-  ((_ 1) .@ (-2 .. -1))
+  ((_ 1) ./ (-2 .. -1))
 """, @[1]
 
 test_interpreter """
@@ -187,22 +182,22 @@ test_interpreter """
 """, 1
 
 test_interpreter """
-  ([{^test 1}] .@ 0 "test")
+  ([{^test 1}] ./ 0 "test")
 """, 1
 
 test_interpreter """
-  ([{^test 1}] .@0/test)
+  ([{^test 1}] ./0/test)
 """, 1
 
 test_interpreter """
   ($with [{^test 1}]
-    (.@ 0 "test")
+    (./ 0 "test")
   )
 """, 1
 
 test_interpreter """
   ($with [{^test 1}]
-    (.@0/test)
+    (./0/test)
   )
 """, 1
 
@@ -233,13 +228,13 @@ test_interpreter """
   )
   (var a (new A))
   (a .test 1)
-  a/@x
+  a/x
 """, 1
 
 test_interpreter """
   (class A
     (method init []
-      (@description = "Class A")
+      (/description = "Class A")
     )
   )
   (new A)
@@ -300,11 +295,11 @@ test_interpreter """
 # """, @[2]
 
 # test_interpreter """
-#   ([] .@ 0 ^default 123)
+#   ([] ./ 0 ^default 123)
 # """, 123
 
 # test_interpreter """
-#   ([] .@0 ^default 123)
+#   ([] ./0 ^default 123)
 # """, 123
 
 # test_interpreter """
