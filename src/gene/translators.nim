@@ -196,25 +196,6 @@ proc new_ex_names*(self: Value): ExNames =
     e.names.add(s.to_key)
   result = e
 
-#################### ExSetProp ###################
-
-type
-  ExSetProp* = ref object of Expr
-    name*: MapKey
-    value*: Expr
-
-proc eval_set_prop*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var value = cast[ExSetProp](expr).value
-  result = self.eval(frame, value)
-  frame.self.instance_props[cast[ExSetProp](expr).name] = result
-
-proc new_ex_set_prop*(name: string, value: Expr): ExSetProp =
-  ExSetProp(
-    evaluator: eval_set_prop,
-    name: name.to_key,
-    value: value,
-  )
-
 #################### Selector ####################
 
 type
@@ -381,11 +362,6 @@ proc translate_wrap*(translate: Translator): Translator =
     result = translate(value)
     if result != nil and result of ExException:
       raise cast[ExException](result).ex
-
-# (@p = 1)
-proc translate_prop_assignment*(value: Value): Expr =
-  var name = value.gene_type.str[1..^1]
-  return new_ex_set_prop(name, translate(value.gene_children[1]))
 
 proc new_ex_arg*(value: Value): ExArguments =
   result = ExArguments(
