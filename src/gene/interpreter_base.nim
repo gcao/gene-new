@@ -402,7 +402,7 @@ proc init_package*(self: VirtualMachine, dir: string) =
 
 proc eval_prepare*(self: VirtualMachine, pkg: Package): Frame =
   var module = new_module(pkg)
-  result = new_frame()
+  result = new_frame(FrModule)
   result.ns = module.ns
   result.scope = new_scope()
 
@@ -412,7 +412,7 @@ proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
 
 proc eval*(self: VirtualMachine, pkg: Package, code: string): Value =
   var module = new_module(pkg)
-  var frame = new_frame()
+  var frame = new_frame(FrModule)
   frame.ns = module.ns
   frame.scope = new_scope()
   self.eval(frame, code)
@@ -423,7 +423,7 @@ proc eval*(self: VirtualMachine, code: string): Value =
 proc run_file*(self: VirtualMachine, file: string): Value =
   var module = new_module(VM.app.pkg, file, self.app.pkg.ns)
   VM.main_module = module
-  var frame = new_frame()
+  var frame = new_frame(FrModule)
   frame.ns = module.ns
   frame.scope = new_scope()
   var code = read_file(file)

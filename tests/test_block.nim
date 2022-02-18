@@ -62,7 +62,7 @@ test_interpreter """
 """, 1
 
 test_interpreter """
-  (fn $ns/f block
+  (fn f block
     (block)
   )
   (class A

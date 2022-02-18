@@ -177,7 +177,9 @@ proc eval_define_ns_or_scope(self: VirtualMachine, frame: Frame, target: Value, 
   result = self.eval(frame, expr.value)
 
   var ns: Namespace
-  if frame.self != nil:
+  if frame.kind == FrModule:
+    ns = frame.ns
+  elif frame.self != nil:
     case frame.self.kind:
     of VkNamespace:
       ns = frame.self.ns

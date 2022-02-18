@@ -1,5 +1,5 @@
 (import upcase from "index" ^^native)
 
-(fn $ns/x _
+(fn x _
   1
 )
