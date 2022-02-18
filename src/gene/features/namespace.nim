@@ -1,6 +1,7 @@
 import tables
 
 import ../types
+import ../interpreter_base
 import ../translators
 
 type

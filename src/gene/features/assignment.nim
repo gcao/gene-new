@@ -2,6 +2,7 @@ import tables
 
 import ../map_key
 import ../types
+import ../interpreter_base
 import ../translators
 import ./arithmetic
 import ./symbol

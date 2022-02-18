@@ -2,7 +2,7 @@ import tables
 
 import ../types
 import ../map_key
-import ../translators
+import ../interpreter_base
 
 let INDEX_KEY* = add_key("index")
 let TOTAL_KEY* = add_key("total")

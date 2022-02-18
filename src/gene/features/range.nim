@@ -1,7 +1,7 @@
 import tables
 
 import ../types
-import ../translators
+import ../interpreter_base
 
 type
   ExRange* = ref object of Expr

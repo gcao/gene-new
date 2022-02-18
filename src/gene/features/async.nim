@@ -2,7 +2,7 @@ import tables
 import asyncdispatch
 
 import ../types
-import ../translators
+import ../interpreter_base
 
 type
   ExAsync* = ref object of Expr

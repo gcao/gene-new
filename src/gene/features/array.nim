@@ -1,7 +1,7 @@
 import tables
 
 import ../types
-import ../translators
+import ../interpreter_base
 
 type
   ExArray* = ref object of Expr

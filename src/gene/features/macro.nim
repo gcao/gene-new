@@ -2,8 +2,8 @@ import tables
 
 import ../map_key
 import ../types
-import ../translators
 import ../interpreter_base
+import ./symbol
 
 type
   ExMacro* = ref object of Expr
@@ -76,13 +76,11 @@ proc to_macro(node: Value): Macro =
 
 proc translate_macro(value: Value): Expr =
   var mac = to_macro(value)
-  var expr = new_ex_ns_def()
-  expr.name = mac.name.to_key
-  expr.value = ExMacro(
+  var mac_expr = ExMacro(
     evaluator: eval_macro,
     data: mac,
   )
-  return expr
+  return translate_definition(value.gene_children[0], mac_expr)
 
 proc eval_caller_eval(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var v = self.eval(frame, cast[ExCallerEval](expr).data)

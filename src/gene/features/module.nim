@@ -5,7 +5,6 @@ import dynlib
 import ../dynlib_mapping
 import ../types
 import ../map_key
-import ../translators
 import ../interpreter_base
 
 let INHERIT_KEY*               = add_key("inherit")

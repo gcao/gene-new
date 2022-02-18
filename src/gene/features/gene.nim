@@ -4,6 +4,7 @@ import tables
 import ../map_key
 import ../types
 import ../translators
+import ../interpreter_base
 import ./core
 import ./arithmetic
 import ./module
@@ -11,7 +12,6 @@ import ./regex
 import ./selector
 import ./native
 import ./range
-import ./oop
 
 const ASSIGNMENT_OPS = [
   "=",

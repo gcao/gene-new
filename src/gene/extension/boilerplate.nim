@@ -3,9 +3,7 @@ import asyncdispatch
 
 import gene/map_key
 import gene/types except eval, eval_catch, eval_wrap, translate_catch, translate_wrap, fn_wrap, method_catch, method_wrap
-import gene/exception
-import gene/translators except translate, translate_catch, translate_wrap
-import gene/interpreter_base
+import gene/interpreter_base except translate, translate_catch, translate_wrap
 import gene/extension/base
 
 # All extensions should include this module like below

@@ -2,7 +2,7 @@ import strutils, sequtils, tables
 
 import ../types
 import ../map_key
-import ../translators
+import ../interpreter_base
 
 type
   ExParseCmdArgs* = ref object of Expr

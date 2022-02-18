@@ -1,4 +1,5 @@
 import ../types
+import ../interpreter_base
 import ../translators
 
 proc eval_native_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =

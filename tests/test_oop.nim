@@ -25,6 +25,14 @@ test_interpreter """
   check r.instance_class.name == "A"
 
 test_interpreter """
+  (ns n
+    (ns m)
+  )
+  (class n/m/A)
+  n/m/A/.name
+""", "A"
+
+test_interpreter """
   (class A
     (method init _
       (/p = 1)

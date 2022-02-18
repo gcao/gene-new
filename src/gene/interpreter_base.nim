@@ -1,19 +1,28 @@
 import strutils, tables, os, sets, pathnorm
 import asyncdispatch
+import macros
 
 import ./map_key
 import ./types
 import ./parser
 import ./repl
-import ./translators
 
 type
+  ExArguments* = ref object of Expr
+    has_explode*: bool
+    props*: Table[MapKey, Expr]
+    children*: seq[Expr]
+
   Invoke* = proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
   InvokeWrap* = proc(invoke: Invoke): Invoke
 
 proc new_package*(dir: string): Package
 proc init_package*(self: VirtualMachine, dir: string)
 proc parse_deps(deps: seq[Value]): Table[string, Dependency]
+proc new_ex_arg*(): ExArguments
+proc check_explode*(self: var ExArguments)
+proc translate*(value: Value): Expr
+proc translate*(stmts: seq[Value]): Expr
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value
 proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value
@@ -343,6 +352,193 @@ proc match*(vm: VirtualMachine, frame: Frame, self: RootMatcher, input: Value): 
   for child in children:
     vm.match(frame, child, input, state, result)
   vm.match_prop_splat(frame, children, input, result)
+
+#################### ExLiteral ###################
+
+type
+  ExLiteral* = ref object of Expr
+    data*: Value
+
+proc eval_literal(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  cast[ExLiteral](expr).data
+
+proc new_ex_literal*(v: Value): ExLiteral =
+  ExLiteral(
+    evaluator: eval_literal,
+    data: v,
+  )
+
+#################### ExString ###################
+
+type
+  ExString* = ref object of Expr
+    data*: string
+
+proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  return "" & cast[ExString](expr).data
+
+proc new_ex_string*(v: Value): ExString =
+  ExString(
+    evaluator: eval_string,
+    data: v.str,
+  )
+
+#################### ExGroup #####################
+
+type
+  ExGroup* = ref object of Expr
+    children*: seq[Expr]
+
+proc eval_group*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  for item in cast[ExGroup](expr).children.mitems:
+    result = self.eval(frame, item)
+
+proc new_ex_group*(): ExGroup =
+  result = ExGroup(
+    evaluator: eval_group,
+  )
+
+#################### ExException #################
+
+type
+  ExException* = ref object of Expr
+    ex*: ref system.Exception
+
+proc eval_exception(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  # raise cast[ExException](expr).ex
+  not_allowed("eval_exception")
+
+proc new_ex_exception*(ex: ref system.Exception): ExException =
+  ExException(
+    evaluator: eval_exception, # Should never be called
+    ex: ex,
+  )
+
+macro wrap_exception*(p: untyped): untyped =
+  if p.kind == nnkProcDef:
+    var convert: string
+    var ret_type = $p[3][0]
+    case ret_type:
+    of "Value":
+      convert = "exception_to_value"
+    of "Expr":
+      convert = "new_ex_exception"
+    else:
+      todo("wrap_exception does NOT support returning type of " & ret_type)
+
+    p[6] = nnkTryStmt.newTree(
+      p[6],
+      nnkExceptBranch.newTree(
+        infix(newDotExpr(ident"system", ident"Exception"), "as", ident"ex"),
+        nnkReturnStmt.newTree(
+          nnkCall.newTree(ident(convert), ident"ex"),
+        ),
+      ),
+    )
+    return p
+  else:
+    todo("ex2val " & $nnkProcDef)
+
+#################### ExExplode ###################
+
+type
+  ExExplode* = ref object of Expr
+    data*: Expr
+
+proc eval_explode*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var data = self.eval(frame, cast[ExExplode](expr).data)
+  Value(
+    kind: VkExplode,
+    explode: data,
+  )
+
+proc new_ex_explode*(): ExExplode =
+  result = ExExplode(
+    evaluator: eval_explode,
+  )
+
+#################### ExArguments #################
+
+proc eval_args*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExArguments](expr)
+  result = new_gene_gene()
+  for k, v in expr.props.mpairs:
+    result.gene_props[k] = self.eval(frame, v)
+  for _, v in expr.children.mpairs:
+    var value = self.eval(frame, v)
+    if value.is_nil:
+      discard
+    elif value.kind == VkExplode:
+      for item in value.explode.vec:
+        result.gene_children.add(item)
+    else:
+      result.gene_children.add(value)
+
+proc new_ex_arg*(): ExArguments =
+  result = ExArguments(
+    evaluator: eval_args,
+  )
+
+proc new_ex_arg*(value: Value): ExArguments =
+  result = ExArguments(
+    evaluator: eval_args,
+  )
+  for k, v in value.gene_props:
+    result.props[k] = translate(v)
+  for v in value.gene_children:
+    result.children.add(translate(v))
+  result.check_explode()
+
+proc check_explode*(self: var ExArguments) =
+  for child in self.children:
+    if child of ExExplode:
+      self.has_explode = true
+      return
+
+#################### Translator ##################
+
+var Translators*     = new_table[ValueKind, Translator]()
+var GeneTranslators* = new_table[string, Translator]()
+
+proc default_translator(value: Value): Expr =
+  case value.kind:
+  of VkNil, VkBool, VkInt, VkFloat, VkRegex, VkTime:
+    return new_ex_literal(value)
+  of VkString:
+    return new_ex_string(value)
+  of VkStream:
+    return translate(value.stream)
+  else:
+    todo($value)
+
+proc translate*(value: Value): Expr =
+  var translator = Translators.get_or_default(value.kind, default_translator)
+  translator(value)
+
+proc translate*(stmts: seq[Value]): Expr =
+  case stmts.len:
+  of 0:
+    result = new_ex_literal(nil)
+  of 1:
+    result = translate(stmts[0])
+  else:
+    result = new_ex_group()
+    for stmt in stmts:
+      cast[ExGroup](result).children.add(translate(stmt))
+
+proc translate_catch*(value: Value): Expr =
+  try:
+    result = translate(value)
+  except system.Exception as e:
+    # echo e.msg
+    # echo e.get_stack_trace()
+    result = new_ex_exception(e)
+
+proc translate_wrap*(translate: Translator): Translator =
+  return proc(value: Value): Expr =
+    result = translate(value)
+    if result != nil and result of ExException:
+      raise cast[ExException](result).ex
 
 #################### VM ##########################
 
