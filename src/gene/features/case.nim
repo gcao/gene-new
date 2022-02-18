@@ -2,7 +2,7 @@ import tables, nre
 
 import ../map_key
 import ../types
-import ../translators
+import ../interpreter_base
 
 type
   CaseState = enum

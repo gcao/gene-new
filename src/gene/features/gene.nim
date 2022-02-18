@@ -4,6 +4,7 @@ import tables
 import ../map_key
 import ../types
 import ../translators
+import ../interpreter_base
 import ./core
 import ./arithmetic
 import ./module
@@ -11,7 +12,12 @@ import ./regex
 import ./selector
 import ./native
 import ./range
-import ./oop
+
+type
+  ExGene* = ref object of Expr
+    `type`*: Expr
+    args*: Value        # The unprocessed args
+    args_expr*: Expr    # The translated args
 
 const ASSIGNMENT_OPS = [
   "=",

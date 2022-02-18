@@ -3,7 +3,6 @@ import asyncdispatch
 
 import ./map_key
 import ./types
-import ./translators
 import ./interpreter_base
 
 # Design:

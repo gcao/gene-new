@@ -1,7 +1,8 @@
 import tables
 
 import ../types
-import ../translators
+import ../interpreter_base
+import ./symbol
 
 type
   ExNamespace* = ref object of Expr
@@ -37,7 +38,7 @@ proc translate_ns(value: Value): Expr =
   of VkSymbol:
     e.name = first.str
   of VkComplexSymbol:
-    e.container = new_ex_names(first)
+    e.container = translate(first.csymbol[0..^2])
     e.name = first.csymbol[^1]
   else:
     todo()

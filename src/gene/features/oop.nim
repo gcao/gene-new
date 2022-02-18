@@ -4,6 +4,7 @@ import ../map_key
 import ../types
 import ../translators
 import ../interpreter_base
+import ./symbol
 
 let LESS_THAN = new_gene_symbol("<")
 
@@ -38,11 +39,6 @@ type
   ExConstructor* = ref object of Expr
     fn*: Function
     value*: Expr
-
-  ExInvoke* = ref object of Expr
-    self*: Expr
-    meth*: MapKey
-    args*: Expr
 
   ExInvokeDynamic* = ref object of Expr
     self*: Expr
@@ -91,7 +87,7 @@ proc translate_class(value: Value): Expr =
   of VkSymbol:
     e.name = first.str
   of VkComplexSymbol:
-    e.container = new_ex_names(first)
+    e.container = translate(first.csymbol[0..^2])
     e.name = first.csymbol[^1]
   else:
     todo()
@@ -101,7 +97,7 @@ proc translate_class(value: Value): Expr =
     body_start = 3
     e.parent = translate(value.gene_children[2])
   e.body = translate(value.gene_children[body_start..^1])
-  result = e
+  return translate_definition(value.gene_children[0], e)
 
 proc eval_mixin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExMixin](expr)
@@ -128,7 +124,7 @@ proc translate_mixin(value: Value): Expr =
   of VkSymbol:
     e.name = first.str
   of VkComplexSymbol:
-    e.container = new_ex_names(first)
+    e.container = translate(first.csymbol[0..^2])
     e.name = first.csymbol[^1]
   else:
     todo()
@@ -316,35 +312,6 @@ proc translate_constructor(value: Value): Expr =
     r.fn = value.to_constructor()
   else:
     r.value = translate(value.gene_children[0])
-  result = r
-
-proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExInvoke](expr)
-  var instance: Value
-  var e = cast[ExInvoke](expr).self
-  if e == nil:
-    instance = frame.self
-  else:
-    instance = self.eval(frame, e)
-  if instance == nil:
-    raise new_exception(types.Exception, "Invoking " & expr.meth.to_s & " on nil.")
-
-  self.invoke(frame, instance, expr.meth, expr.args)
-
-proc translate_invoke(value: Value): Expr =
-  var r = ExInvoke(
-    evaluator: eval_invoke,
-  )
-  r.self = translate(value.gene_props.get_or_default(SELF_KEY, nil))
-  r.meth = value.gene_props[METHOD_KEY].str.to_key
-
-  var args = new_ex_arg()
-  for k, v in value.gene_props:
-    args.props[k] = translate(v)
-  for v in value.gene_children:
-    args.children.add(translate(v))
-  r.args = args
-
   result = r
 
 proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =

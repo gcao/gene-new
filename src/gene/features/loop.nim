@@ -2,13 +2,12 @@ import tables
 
 import ../map_key
 import ../types
+import ../interpreter_base
 import ../translators
 
 type
   ExLoop* = ref object of Expr
     data*: seq[Expr]
-
-  ExContinue* = ref object of Expr
 
   ExOnce* = ref object of Expr
     input*: Value
@@ -36,17 +35,10 @@ proc translate_loop(value: Value): Expr =
   result = r
 
 proc translate_break(value: Value): Expr =
-  new_ex_break()
-
-proc eval_continue(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var e: Continue
-  e.new
-  raise e
+  BREAK_EXPR
 
 proc translate_continue(value: Value): Expr =
-  result = ExContinue(
-    evaluator: eval_continue,
-  )
+  CONTINUE_EXPR
 
 proc eval_once(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExOnce](expr)

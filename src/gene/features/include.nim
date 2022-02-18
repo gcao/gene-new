@@ -1,6 +1,6 @@
 import ../types
 import ../parser
-import ../translators
+import ../interpreter_base
 
 type
   ExInclude* = ref object of Expr

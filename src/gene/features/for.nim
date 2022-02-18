@@ -2,7 +2,7 @@ import tables
 
 import ../types
 import ../map_key
-import ../translators
+import ../interpreter_base
 
 let LOOP_OUTPUT_KEY = add_key("z_loop_output")
 

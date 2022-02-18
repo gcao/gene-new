@@ -2,7 +2,6 @@ import tables
 
 import ../types
 import ../map_key
-import ../translators
 import ../interpreter_base
 
 type

@@ -1,6 +1,6 @@
 import ../types
-import ../translators
 import ../parser
+import ../interpreter_base
 
 type
   ExParse* = ref object of Expr

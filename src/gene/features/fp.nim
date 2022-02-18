@@ -4,6 +4,7 @@ import ../map_key
 import ../types
 import ../translators
 import ../interpreter_base
+import ./symbol
 
 type
   ExFn* = ref object of Expr
@@ -54,12 +55,10 @@ proc to_function(node: Value): Function =
   else:
     var first = node.gene_children[0]
     case first.kind:
-    of VkSymbol:
+    of VkSymbol, VkString:
       name = first.str
     of VkComplexSymbol:
       name = first.csymbol[^1]
-    of VkString:
-      name = first.str
     else:
       todo($first.kind)
 
@@ -77,13 +76,11 @@ proc to_function(node: Value): Function =
 
 proc translate_fn(value: Value): Expr =
   var fn = to_function(value)
-  var expr = new_ex_ns_def()
-  expr.name = fn.name.to_key
-  expr.value = ExFn(
+  var fn_expr = ExFn(
     evaluator: eval_fn,
     data: fn,
   )
-  return expr
+  return translate_definition(value.gene_children[0], fn_expr)
 
 proc translate_fnx(value: Value): Expr =
   var fn = to_function(value)

@@ -2,199 +2,19 @@ import tables
 
 import ./map_key
 import ./types
-import ./exception
+import ./interpreter_base
 
-var Translators*     = new_table[ValueKind, Translator]()
-var GeneTranslators* = new_table[string, Translator]()
-
-proc translate*(value: Value): Expr
-proc translate*(stmts: seq[Value]): Expr
-
-proc eval_todo*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  todo()
-
-proc eval_never*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  raise new_exception(types.Exception, "eval_never should never be called.")
-
-#################### ExLiteral ###################
-
-type
-  ExLiteral* = ref object of Expr
-    data*: Value
-
-proc eval_literal(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  cast[ExLiteral](expr).data
-
-proc new_ex_literal*(v: Value): ExLiteral =
-  ExLiteral(
-    evaluator: eval_literal,
-    data: v,
-  )
-
-#################### ExString ###################
-
-type
-  ExString* = ref object of Expr
-    data*: string
-
-proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  return "" & cast[ExString](expr).data
-
-proc new_ex_string*(v: Value): ExString =
-  ExString(
-    evaluator: eval_string,
-    data: v.str,
-  )
-
-#################### ExGroup #####################
-
-type
-  ExGroup* = ref object of Expr
-    children*: seq[Expr]
-
-proc eval_group*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  for item in cast[ExGroup](expr).children.mitems:
-    result = self.eval(frame, item)
-
-proc new_ex_group*(): ExGroup =
-  result = ExGroup(
-    evaluator: eval_group,
-  )
-
-#################### ExExplode ###################
-
-type
-  ExExplode* = ref object of Expr
-    data*: Expr
-
-proc eval_explode*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var data = self.eval(frame, cast[ExExplode](expr).data)
-  Value(
-    kind: VkExplode,
-    explode: data,
-  )
-
-proc new_ex_explode*(): ExExplode =
-  result = ExExplode(
-    evaluator: eval_explode,
-  )
-
-#################### ExSelf ######################
-
-type
-  ExSelf* = ref object of Expr
-
-proc eval_self(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  frame.self
-
-proc new_ex_self*(): ExSelf =
-  ExSelf(
-    evaluator: eval_self,
-  )
-
-#################### ExNsDef #####################
-
-type
-  ExNsDef* = ref object of Expr
-    name*: MapKey
-    value*: Expr
-
-proc eval_ns_def(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var e = cast[ExNsDef](expr)
-  result = self.eval(frame, e.value)
-  frame.ns[e.name] = result
-
-proc new_ex_ns_def*(): ExNsDef =
-  result = ExNsDef(
-    evaluator: eval_ns_def,
-  )
-
-#################### ExGene ######################
-
-type
-  ExGene* = ref object of Expr
-    `type`*: Expr
-    args*: Value        # The unprocessed args
-    args_expr*: Expr    # The translated args
-
-#################### ExArguments #################
-
-type
-  ExArguments* = ref object of Expr
-    has_explode*: bool
-    props*: Table[MapKey, Expr]
-    children*: seq[Expr]
-
-proc eval_args*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExArguments](expr)
-  result = new_gene_gene()
-  for k, v in expr.props.mpairs:
-    result.gene_props[k] = self.eval(frame, v)
-  for _, v in expr.children.mpairs:
-    var value = self.eval(frame, v)
-    if value.is_nil:
-      discard
-    elif value.kind == VkExplode:
-      for item in value.explode.vec:
-        result.gene_children.add(item)
-    else:
-      result.gene_children.add(value)
-
-proc new_ex_arg*(): ExArguments =
-  result = ExArguments(
-    evaluator: eval_args,
-  )
-
-proc check_explode*(self: var ExArguments) =
-  for child in self.children:
-    if child of ExExplode:
-      self.has_explode = true
-      return
-
-#################### ExBreak #####################
-
-type
-  ExBreak* = ref object of Expr
-
-proc eval_break*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+let BREAK_EXPR* = Expr()
+BREAK_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e: Break
   e.new
   raise e
 
-proc new_ex_break*(): ExBreak =
-  result = ExBreak(
-    evaluator: eval_break,
-  )
-
-##################################################
-
-type
-  ExSymbol* = ref object of Expr
-    name*: MapKey
-
-  ExNames* = ref object of Expr
-    names*: seq[MapKey]
-
-proc eval_names*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var e = cast[ExNames](expr)
-  case e.names[0]:
-  of GLOBAL_KEY:
-    result = GLOBAL_NS
-  else:
-    result = frame.scope[e.names[0]]
-
-  if result == nil:
-    result = frame.ns[e.names[0]]
-  # for name in e.names[1..^1]:
-  #   result = result.get_member(name)
-
-proc new_ex_names*(self: Value): ExNames =
-  var e = ExNames(
-    evaluator: eval_names,
-  )
-  for s in self.csymbol:
-    e.names.add(s.to_key)
-  result = e
+let CONTINUE_EXPR* = Expr()
+CONTINUE_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var e: Continue
+  e.new
+  raise e
 
 #################### Selector ####################
 
@@ -221,8 +41,23 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
         else:
           for child in self.children:
             result = result or child.update(target.vec[m.index], value)
+      of VkGene:
+        if self.is_last:
+          target.gene_children[m.index] = value
+          result = true
+        else:
+          for child in self.children:
+            result = result or child.update(target.gene_children[m.index], value)
       else:
-        todo()
+        var class = target.get_class()
+        if class.has_method(SET_CHILD_KEY):
+          var args: Expr = new_ex_arg()
+          cast[ExArguments](args).children.add(new_ex_literal(m.index))
+          cast[ExArguments](args).children.add(new_ex_literal(value))
+          var frame = Frame(scope: new_scope())
+          return VM.invoke(frame, target, SET_CHILD_KEY, args)
+        else:
+          not_allowed("set_child " & $target & " " & $m.index & " " & $value)
     of SmByName:
       case target.kind:
       of VkMap:
@@ -246,6 +81,13 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
         else:
           for child in self.children:
             result = result or child.update(target.ns.members[m.name], value)
+      of VkClass:
+        if self.is_last:
+          target.class.ns.members[m.name] = value
+          result = true
+        else:
+          for child in self.children:
+            result = result or child.update(target.class.ns.members[m.name], value)
       of VkInstance:
         if self.is_last:
           target.instance_props[m.name] = value
@@ -308,33 +150,44 @@ proc translate_set*(value: Value): Expr =
     e.value = translate(value.gene_children[2])
   return e
 
+#################### OOP #########################
+
+type
+  ExInvoke* = ref object of Expr
+    self*: Expr
+    meth*: MapKey
+    args*: Expr
+
+proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExInvoke](expr)
+  var instance: Value
+  var e = cast[ExInvoke](expr).self
+  if e == nil:
+    instance = frame.self
+  else:
+    instance = self.eval(frame, e)
+  if instance == nil:
+    raise new_exception(types.Exception, "Invoking " & expr.meth.to_s & " on nil.")
+
+  self.invoke(frame, instance, expr.meth, expr.args)
+
+proc translate_invoke*(value: Value): Expr =
+  var r = ExInvoke(
+    evaluator: eval_invoke,
+  )
+  r.self = translate(value.gene_props.get_or_default(SELF_KEY, nil))
+  r.meth = value.gene_props[METHOD_KEY].str.to_key
+
+  var args = new_ex_arg()
+  for k, v in value.gene_props:
+    args.props[k] = translate(v)
+  for v in value.gene_children:
+    args.children.add(translate(v))
+  r.args = args
+
+  result = r
+
 ##################################################
-
-proc default_translator(value: Value): Expr =
-  case value.kind:
-  of VkNil, VkBool, VkInt, VkFloat, VkRegex, VkTime:
-    return new_ex_literal(value)
-  of VkString:
-    return new_ex_string(value)
-  of VkStream:
-    return translate(value.stream)
-  else:
-    todo($value.kind)
-
-proc translate*(value: Value): Expr =
-  var translator = Translators.get_or_default(value.kind, default_translator)
-  translator(value)
-
-proc translate*(stmts: seq[Value]): Expr =
-  case stmts.len:
-  of 0:
-    result = new_ex_literal(nil)
-  of 1:
-    result = translate(stmts[0])
-  else:
-    result = new_ex_group()
-    for stmt in stmts:
-      cast[ExGroup](result).children.add(translate(stmt))
 
 proc translate_arguments*(value: Value): Expr =
   var r = new_ex_arg()
@@ -348,27 +201,3 @@ proc translate_arguments*(value: Value): Expr =
 proc translate_arguments*(value: Value, eval: Evaluator): Expr =
   result = translate_arguments(value)
   result.evaluator = eval
-
-proc translate_catch*(value: Value): Expr =
-  try:
-    result = translate(value)
-  except system.Exception as e:
-    # echo e.msg
-    # echo e.get_stack_trace()
-    result = new_ex_exception(e)
-
-proc translate_wrap*(translate: Translator): Translator =
-  return proc(value: Value): Expr =
-    result = translate(value)
-    if result != nil and result of ExException:
-      raise cast[ExException](result).ex
-
-proc new_ex_arg*(value: Value): ExArguments =
-  result = ExArguments(
-    evaluator: eval_args,
-  )
-  for k, v in value.gene_props:
-    result.props[k] = translate(v)
-  for v in value.gene_children:
-    result.children.add(translate(v))
-  result.check_explode()

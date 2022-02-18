@@ -1,7 +1,7 @@
 import tables
 
 import ../types
-import ../translators
+import ../interpreter_base
 
 type
   ExCast* = ref object of Expr

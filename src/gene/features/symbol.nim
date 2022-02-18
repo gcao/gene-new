@@ -5,10 +5,16 @@ import ../map_key
 import ../types
 import ../translators
 import ../interpreter_base
-import ./oop
 import ./selector
 
 type
+  ExSymbol* = ref object of Expr
+    name*: MapKey
+
+  ExDefineNsOrScope* = ref object of Expr
+    name*: MapKey
+    value*: Expr
+
   ExMember* = ref object of Expr
     container*: Expr
     name*: MapKey
@@ -22,6 +28,10 @@ type
     name*: MapKey
 
   ExPackage* = ref object of Expr
+
+let SELF_EXPR = Expr()
+SELF_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  frame.self
 
 let NS_EXPR = Expr()
 NS_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -86,19 +96,30 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   return v.get_member(key, self, frame)
 
 proc get_child(self: Value, index: int, vm: VirtualMachine, frame: Frame): Value =
+  var index = index
   case self.kind:
   of VkVector:
+    if index < 0:
+      index += self.vec.len
     if index < self.vec.len:
       return self.vec[index]
     else:
       return Nil
   of VkGene:
+    if index < 0:
+      index += self.gene_children.len
     if index < self.gene_children.len:
       return self.gene_children[index]
     else:
       return Nil
   else:
-    todo("get_child " & $self & " " & $index)
+    var class = self.get_class()
+    if class.has_method(GET_CHILD_KEY):
+      var args: Expr = new_ex_arg()
+      cast[ExArguments](args).children.add(new_ex_literal(index))
+      return vm.invoke(frame, self, GET_CHILD_KEY, args)
+    else:
+      not_allowed("get_child " & $self & " " & $index)
 
 proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var v = self.eval(frame, cast[ExMember](expr).container)
@@ -115,7 +136,7 @@ proc translate*(name: string): Expr {.inline.} =
 
   case name:
   of "", "self":
-    result = new_ex_self()
+    result = SELF_EXPR
   of "global":
     result = new_ex_literal(GLOBAL_NS)
   of "_":
@@ -167,6 +188,58 @@ proc translate_complex_symbol(value: Value): Expr =
     translate_csymbol_selector(value.csymbol)
   else:
     translate(value.csymbol)
+
+proc eval_define_ns_or_scope(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExDefineNsOrScope](expr)
+  result = self.eval(frame, expr.value)
+
+  var ns: Namespace
+  if frame.kind == FrModule:
+    ns = frame.ns
+  elif frame.self != nil:
+    case frame.self.kind:
+    of VkNamespace:
+      ns = frame.self.ns
+    of VkClass:
+      ns = frame.self.class.ns
+    of VkMixin:
+      ns = frame.self.mixin.ns
+    else:
+      discard
+
+  if ns == nil:
+    frame.scope.def_member(expr.name, result)
+    if result.kind == VkFunction:
+      # Ensure the function itself can be accessed from its body.
+      var fn = result.fn
+      fn.parent_scope_max = cast[int](fn.parent_scope_max) + 1
+  else:
+    ns[expr.name] = result
+
+# For (fn f ...)(macro m ...)(ns n)(class C)(mixin M) etc,
+# If self is a Namespace like object (e.g. module, namespace, class, mixin),
+#   they are defined as a member on the namespace,
+# Else they are defined on the current scope
+#
+# (fn n/m/f ...) will add f to n/m no matter what n/m is
+proc translate_definition*(name: Value, value: Expr): Expr =
+  case name.kind:
+  of VkSymbol, VkString:
+    return ExDefineNsOrScope(
+      evaluator: eval_define_ns_or_scope,
+      name: name.str.to_key,
+      value: value,
+    )
+  of VkComplexSymbol:
+    var e = ExSet(
+      evaluator: eval_set,
+    )
+    e.target = translate(name.csymbol[0..^2])
+    e.selector = translate(new_gene_symbol("@" & name.csymbol[^1]))
+    e.value = value
+    return e
+  else:
+    todo("translate_definition " & $name)
 
 proc init*() =
   Translators[VkSymbol] = translate_symbol

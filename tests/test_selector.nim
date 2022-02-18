@@ -196,6 +196,17 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  (var a [0])
+  (a/0 = 1)
+  a/0
+""", 1
+
+test_interpreter """
+  (var a [0])
+  a/-1
+""", 0
+
+test_interpreter """
   ($with [{^test 1}]
     (./0/test)
   )
@@ -207,11 +218,11 @@ test_interpreter """
   (@test a)
 """, 1
 
-# test_interpreter """
-#   (var a [0])
-#   ($set a @0 1)
-#   a
-# """, @[1]
+test_interpreter """
+  (var a [0])
+  ($set a @0 1)
+  a
+""", @[1]
 
 test_interpreter """
   (class A)

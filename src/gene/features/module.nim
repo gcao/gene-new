@@ -5,7 +5,6 @@ import dynlib
 import ../dynlib_mapping
 import ../types
 import ../map_key
-import ../translators
 import ../interpreter_base
 
 let INHERIT_KEY*               = add_key("inherit")
@@ -91,7 +90,7 @@ proc import_module*(self: VirtualMachine, pkg: Package, name: MapKey, code: stri
     return self.modules[name]
 
   var module = new_module(pkg, name.to_s)
-  var frame = new_frame()
+  var frame = new_frame(FrModule)
   frame.ns = module.ns
   frame.scope = new_scope()
   discard self.eval(frame, code)
@@ -100,7 +99,7 @@ proc import_module*(self: VirtualMachine, pkg: Package, name: MapKey, code: stri
 
 proc import_module*(self: VirtualMachine, pkg: Package, name: MapKey, code: string, inherit: Namespace): Namespace =
   var module = new_module(pkg, name.to_s, inherit)
-  var frame = new_frame()
+  var frame = new_frame(FrModule)
   frame.ns = module.ns
   frame.scope = new_scope()
   discard self.eval(frame, code)
