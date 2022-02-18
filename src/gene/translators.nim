@@ -16,34 +16,6 @@ CONTINUE_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value
   e.new
   raise e
 
-type
-  ExSymbol* = ref object of Expr
-    name*: MapKey
-
-  ExNames* = ref object of Expr
-    names*: seq[MapKey]
-
-proc eval_names*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var e = cast[ExNames](expr)
-  case e.names[0]:
-  of GLOBAL_KEY:
-    result = GLOBAL_NS
-  else:
-    result = frame.scope[e.names[0]]
-
-  if result == nil:
-    result = frame.ns[e.names[0]]
-  # for name in e.names[1..^1]:
-  #   result = result.get_member(name)
-
-proc new_ex_names*(self: Value): ExNames =
-  var e = ExNames(
-    evaluator: eval_names,
-  )
-  for s in self.csymbol:
-    e.names.add(s.to_key)
-  result = e
-
 #################### Selector ####################
 
 type

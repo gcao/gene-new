@@ -8,6 +8,9 @@ import ../interpreter_base
 import ./selector
 
 type
+  ExSymbol* = ref object of Expr
+    name*: MapKey
+
   ExDefineNsOrScope* = ref object of Expr
     name*: MapKey
     value*: Expr

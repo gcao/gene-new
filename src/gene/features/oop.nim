@@ -87,7 +87,7 @@ proc translate_class(value: Value): Expr =
   of VkSymbol:
     e.name = first.str
   of VkComplexSymbol:
-    e.container = new_ex_names(first)
+    e.container = translate(first.csymbol[0..^2])
     e.name = first.csymbol[^1]
   else:
     todo()
@@ -124,7 +124,7 @@ proc translate_mixin(value: Value): Expr =
   of VkSymbol:
     e.name = first.str
   of VkComplexSymbol:
-    e.container = new_ex_names(first)
+    e.container = translate(first.csymbol[0..^2])
     e.name = first.csymbol[^1]
   else:
     todo()
