@@ -13,6 +13,12 @@ import ./selector
 import ./native
 import ./range
 
+type
+  ExGene* = ref object of Expr
+    `type`*: Expr
+    args*: Value        # The unprocessed args
+    args_expr*: Expr    # The translated args
+
 const ASSIGNMENT_OPS = [
   "=",
   "+=", "-=", "*=", "/=", "**=",

@@ -26,6 +26,10 @@ type
 
   ExPackage* = ref object of Expr
 
+let SELF_EXPR = Expr()
+SELF_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  frame.self
+
 let NS_EXPR = Expr()
 NS_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   Value(kind: VkNamespace, ns: frame.ns)
@@ -118,7 +122,7 @@ proc translate*(name: string): Expr {.inline.} =
 
   case name:
   of "", "self":
-    result = new_ex_self()
+    result = SELF_EXPR
   of "global":
     result = new_ex_literal(GLOBAL_NS)
   of "_":

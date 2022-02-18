@@ -4,43 +4,17 @@ import ./map_key
 import ./types
 import ./interpreter_base
 
-#################### ExSelf ######################
-
-type
-  ExSelf* = ref object of Expr
-
-proc eval_self(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  frame.self
-
-proc new_ex_self*(): ExSelf =
-  ExSelf(
-    evaluator: eval_self,
-  )
-
-#################### ExGene ######################
-
-type
-  ExGene* = ref object of Expr
-    `type`*: Expr
-    args*: Value        # The unprocessed args
-    args_expr*: Expr    # The translated args
-
-#################### ExBreak #####################
-
-type
-  ExBreak* = ref object of Expr
-
-proc eval_break*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+let BREAK_EXPR* = Expr()
+BREAK_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e: Break
   e.new
   raise e
 
-proc new_ex_break*(): ExBreak =
-  result = ExBreak(
-    evaluator: eval_break,
-  )
-
-##################################################
+let CONTINUE_EXPR* = Expr()
+CONTINUE_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var e: Continue
+  e.new
+  raise e
 
 type
   ExSymbol* = ref object of Expr
