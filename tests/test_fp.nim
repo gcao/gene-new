@@ -55,6 +55,14 @@ test_interpreter "(fn f _)", proc(r: Value) =
   check r.fn.matcher.children.len == 0
 
 test_interpreter """
+  (ns n
+    (ns m)
+  )
+  (fn n/m/f _ 1)
+  (n/m/f)
+""", 1
+
+test_interpreter """
   (fn f [] 1)
   (f)
 """, 1

@@ -253,6 +253,13 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
         else:
           for child in self.children:
             result = result or child.update(target.ns.members[m.name], value)
+      of VkClass:
+        if self.is_last:
+          target.class.ns.members[m.name] = value
+          result = true
+        else:
+          for child in self.children:
+            result = result or child.update(target.class.ns.members[m.name], value)
       of VkInstance:
         if self.is_last:
           target.instance_props[m.name] = value

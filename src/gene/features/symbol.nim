@@ -9,6 +9,10 @@ import ./oop
 import ./selector
 
 type
+  ExDefineNsOrScope* = ref object of Expr
+    name*: MapKey
+    value*: Expr
+
   ExMember* = ref object of Expr
     container*: Expr
     name*: MapKey
@@ -167,6 +171,56 @@ proc translate_complex_symbol(value: Value): Expr =
     translate_csymbol_selector(value.csymbol)
   else:
     translate(value.csymbol)
+
+proc eval_define_ns_or_scope(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExDefineNsOrScope](expr)
+  result = self.eval(frame, expr.value)
+
+  var ns: Namespace
+  if frame.self != nil:
+    case frame.self.kind:
+    of VkNamespace:
+      ns = frame.self.ns
+    of VkClass:
+      ns = frame.self.class.ns
+    of VkMixin:
+      ns = frame.self.mixin.ns
+    else:
+      discard
+
+  if ns == nil:
+    frame.scope.def_member(expr.name, result)
+    if result.kind == VkFunction:
+      # Ensure the function itself can be accessed from its body.
+      var fn = result.fn
+      fn.parent_scope_max = cast[int](fn.parent_scope_max) + 1
+  else:
+    ns[expr.name] = result
+
+# For (fn f ...)(macro m ...)(ns n)(class C)(mixin M) etc,
+# If self is a Namespace like object (e.g. module, namespace, class, mixin),
+#   they are defined as a member on the namespace,
+# Else they are defined on the current scope
+#
+# (fn n/m/f ...) will add f to n/m no matter what n/m is
+proc translate_definition*(name: Value, value: Expr): Expr =
+  case name.kind:
+  of VkSymbol, VkString:
+    return ExDefineNsOrScope(
+      evaluator: eval_define_ns_or_scope,
+      name: name.str.to_key,
+      value: value,
+    )
+  of VkComplexSymbol:
+    var e = ExSet(
+      evaluator: eval_set,
+    )
+    e.target = translate(name.csymbol[0..^2])
+    e.selector = translate(new_gene_symbol("@" & name.csymbol[^1]))
+    e.value = value
+    return e
+  else:
+    todo("translate_definition " & $name)
 
 proc init*() =
   Translators[VkSymbol] = translate_symbol

@@ -425,14 +425,16 @@ type
     evaluator*: Evaluator
 
   FrameKind* = enum
+    FrDefault
+    FrModule
     FrFunction
     FrMacro
     FrMethod
-    FrModule
-    FrBody
 
   FrameExtra* = ref object
     case kind*: FrameKind
+    of FrModule:
+      `mod`*: Module
     of FrFunction:
       fn*: Function
     of FrMacro:
@@ -441,14 +443,15 @@ type
       `method`*: Method
     else:
       discard
+    args*: Value # This is only available in some frames (e.g. function/macro/block)
     props*: Table[MapKey, Value]
 
   Frame* = ref object
     parent*: Frame
+    kind*: FrameKind  # this is in both Frame and FrameExtra and must be kept in sync.
     self*: Value
     ns*: Namespace
     scope*: Scope
-    args*: Value # This is only available in some frames (e.g. function/macro/block)
     extra*: FrameExtra
 
   Scope* = ref object
@@ -1053,6 +1056,11 @@ proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.inline.} =
 
 proc new_frame*(): Frame = Frame(
   self: Nil,
+)
+
+proc new_frame*(kind: FrameKind): Frame = Frame(
+  self: Nil,
+  kind: kind,
 )
 
 proc reset*(self: var Frame) {.inline.} =
