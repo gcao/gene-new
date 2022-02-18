@@ -1155,6 +1155,12 @@ proc get_constructor*(self: Class): Value =
   # else:
   #   return self.constructor
 
+proc has_method*(self: Class, name: MapKey): bool =
+  if self.methods.has_key(name):
+    return true
+  elif self.parent != nil:
+    return self.parent.has_method(name)
+
 proc get_method*(self: Class, name: MapKey): Method =
   if self.methods.has_key(name):
     return self.methods[name]

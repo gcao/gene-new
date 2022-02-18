@@ -113,7 +113,13 @@ proc get_child(self: Value, index: int, vm: VirtualMachine, frame: Frame): Value
     else:
       return Nil
   else:
-    todo("get_child " & $self & " " & $index)
+    var class = self.get_class()
+    if class.has_method(GET_CHILD_KEY):
+      var args: Expr = new_ex_arg()
+      cast[ExArguments](args).children.add(new_ex_literal(index))
+      return vm.invoke(frame, self, GET_CHILD_KEY, args)
+    else:
+      not_allowed("get_child " & $self & " " & $index)
 
 proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var v = self.eval(frame, cast[ExMember](expr).container)

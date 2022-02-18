@@ -49,7 +49,15 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
           for child in self.children:
             result = result or child.update(target.gene_children[m.index], value)
       else:
-        todo()
+        var class = target.get_class()
+        if class.has_method(SET_CHILD_KEY):
+          var args: Expr = new_ex_arg()
+          cast[ExArguments](args).children.add(new_ex_literal(m.index))
+          cast[ExArguments](args).children.add(new_ex_literal(value))
+          var frame = Frame(scope: new_scope())
+          return VM.invoke(frame, target, SET_CHILD_KEY, args)
+        else:
+          not_allowed("set_child " & $target & " " & $m.index & " " & $value)
     of SmByName:
       case target.kind:
       of VkMap:
