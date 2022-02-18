@@ -906,6 +906,52 @@ proc call_member_missing*(self: VirtualMachine, frame: Frame, obj: Value, target
     else:
       raise
 
+proc get_member*(self: Value, name: MapKey): Value =
+  var ns: Namespace
+  case self.kind:
+  of VkNamespace:
+    ns = self.ns
+  of VkClass:
+    ns = self.class.ns
+  of VkMixin:
+    ns = self.mixin.ns
+  of VkMap:
+    if self.map.has_key(name):
+      return self.map[name]
+    else:
+      return Nil
+  of VkEnum:
+    return new_gene_enum_member(self.enum.members[name.to_s])
+  of VkInstance:
+    var class = self.instance_class
+    if class.has_method(GET_KEY):
+      var args: Expr = new_ex_arg()
+      cast[ExArguments](args).children.add(new_ex_literal(name.to_s))
+      return VM.invoke(new_frame(), self, GET_KEY, args)
+    elif self.instance_props.has_key(name):
+      return self.instance_props[name]
+    else:
+      return Nil
+  else:
+    var class = self.get_class()
+    if class.has_method(GET_KEY):
+      var args: Expr = new_ex_arg()
+      cast[ExArguments](args).children.add(new_ex_literal(name.to_s))
+      return VM.invoke(new_frame(), self, GET_KEY, args)
+    else:
+      todo("get_member " & $self.kind & " " & name.to_s)
+
+  if ns.members.has_key(name):
+    return ns.members[name]
+  elif ns.on_member_missing.len > 0:
+    var args = new_gene_gene()
+    args.gene_children.add(name.to_s)
+    for v in ns.on_member_missing:
+      var r = VM.call_member_missing(new_frame(), self, v, args)
+      if r != nil:
+        return r
+  raise new_exception(NotDefinedException, name.to_s & " is not defined")
+
 proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   try:
     result = self.call(frame, target, args)
