@@ -210,6 +210,19 @@ test_interpreter """
 
 test_interpreter """
   (class A
+    (method init _
+      ($set_prop "data" {^p 1})
+    )
+    (method test _
+      (($get_prop "data") ./p)
+    )
+  )
+  (var a (new A))
+  a/.test
+""", 1
+
+test_interpreter """
+  (class A
     (method init [/p = 1]
     )
   )

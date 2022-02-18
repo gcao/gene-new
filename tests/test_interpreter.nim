@@ -312,12 +312,6 @@ test_interpreter """
 # # TODO: (caller_eval ...) = (eval ^context caller_context ...)
 
 # test_interpreter """
-#   (var a (:test 1))
-#   ($set a 0 2)
-#   ($get a 0)
-# """, 2
-
-# test_interpreter """
 #   (var i 1) # first i
 #   (fn f _
 #     i       # reference to first i
