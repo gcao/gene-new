@@ -96,13 +96,18 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   return v.get_member(key, self, frame)
 
 proc get_child(self: Value, index: int, vm: VirtualMachine, frame: Frame): Value =
+  var index = index
   case self.kind:
   of VkVector:
+    if index < 0:
+      index += self.vec.len
     if index < self.vec.len:
       return self.vec[index]
     else:
       return Nil
   of VkGene:
+    if index < 0:
+      index += self.gene_children.len
     if index < self.gene_children.len:
       return self.gene_children[index]
     else:
