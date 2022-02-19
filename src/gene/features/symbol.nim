@@ -60,32 +60,6 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   var key = cast[ExMember](expr).name
   return v.get_member(key)
 
-proc get_child(self: Value, index: int, vm: VirtualMachine, frame: Frame): Value =
-  var index = index
-  case self.kind:
-  of VkVector:
-    if index < 0:
-      index += self.vec.len
-    if index < self.vec.len:
-      return self.vec[index]
-    else:
-      return Nil
-  of VkGene:
-    if index < 0:
-      index += self.gene_children.len
-    if index < self.gene_children.len:
-      return self.gene_children[index]
-    else:
-      return Nil
-  else:
-    var class = self.get_class()
-    if class.has_method(GET_CHILD_KEY):
-      var args: Expr = new_ex_arg()
-      cast[ExArguments](args).children.add(new_ex_literal(index))
-      return vm.invoke(frame, self, GET_CHILD_KEY, args)
-    else:
-      not_allowed("get_child " & $self & " " & $index)
-
 proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var v = self.eval(frame, cast[ExMember](expr).container)
   var i = cast[ExChild](expr).index

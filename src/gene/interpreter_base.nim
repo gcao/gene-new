@@ -880,32 +880,6 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: M
   else:
     todo()
 
-proc call_member_missing*(self: VirtualMachine, frame: Frame, obj: Value, target: Value, args: Value): Value =
-  var fn_scope = new_scope()
-  var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
-  new_frame.parent = frame
-  new_frame.self = obj
-
-  self.process_args(new_frame, target.fn.matcher, args)
-
-  if target.fn.body_compiled == nil:
-    target.fn.body_compiled = translate(target.fn.body)
-
-  try:
-    result = self.eval(new_frame, target.fn.body_compiled)
-  except Return as r:
-    # return's frame is the same as new_frame(current function's frame)
-    if r.frame == new_frame:
-      result = r.val
-    else:
-      raise
-  except system.Exception as e:
-    if self.repl_on_error:
-      result = repl_on_error(self, frame, e)
-      discard
-    else:
-      raise
-
 proc get_member*(self: Value, name: MapKey): Value =
   var ns: Namespace
   case self.kind:
@@ -947,10 +921,36 @@ proc get_member*(self: Value, name: MapKey): Value =
     var args = new_gene_gene()
     args.gene_children.add(name.to_s)
     for v in ns.on_member_missing:
-      var r = VM.call_member_missing(new_frame(), self, v, args)
+      var r = VM.call(new_frame(), self, v, args)
       if r != nil:
         return r
   raise new_exception(NotDefinedException, name.to_s & " is not defined")
+
+proc get_child*(self: Value, index: int, vm: VirtualMachine, frame: Frame): Value =
+  var index = index
+  case self.kind:
+  of VkVector:
+    if index < 0:
+      index += self.vec.len
+    if index < self.vec.len:
+      return self.vec[index]
+    else:
+      return Nil
+  of VkGene:
+    if index < 0:
+      index += self.gene_children.len
+    if index < self.gene_children.len:
+      return self.gene_children[index]
+    else:
+      return Nil
+  else:
+    var class = self.get_class()
+    if class.has_method(GET_CHILD_KEY):
+      var args: Expr = new_ex_arg()
+      cast[ExArguments](args).children.add(new_ex_literal(index))
+      return vm.invoke(frame, self, GET_CHILD_KEY, args)
+    else:
+      not_allowed("get_child " & $self & " " & $index)
 
 proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   try:

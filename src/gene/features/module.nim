@@ -119,7 +119,7 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
         var args = new_gene_gene()
         args.gene_children.add(m.name.to_s)
         for v in source.on_member_missing:
-          var r = self.call_member_missing(frame, ns, v, args)
+          var r = self.call(frame, ns, v, args)
           if r != nil:
             value = r
             break

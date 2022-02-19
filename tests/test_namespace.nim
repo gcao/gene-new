@@ -107,7 +107,7 @@ test_interpreter """
         else
           # What should we do here, in order to pass to the next namespace to search for the name?
           # Option 1: ($get_member /.parent name)
-          # Option 2: ($not_found)
+          # Option 2: ($not_found name)
           # Option 3: (throw (new MemberNotFound name))
         )
       )
