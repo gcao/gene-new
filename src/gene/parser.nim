@@ -62,7 +62,7 @@ type
 
   DelimitedListResult = object
     list: seq[Value]
-    map: OrderedTable[MapKey, Value]
+    map: Table[MapKey, Value]
 
 const non_constituents: seq[char] = @[]
 
@@ -442,7 +442,7 @@ proc read_gene_type(self: var Parser): Value =
         inc(count)
         break
 
-proc read_map(self: var Parser, mode: MapKind): OrderedTable[MapKey, Value] =
+proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
   var ch: char
   var key: string
   var state = PropState.PropKey

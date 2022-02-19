@@ -90,15 +90,34 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
             result = result or child.update(target.class.ns.members[m.name], value)
       of VkInstance:
         if self.is_last:
-          target.instance_props[m.name] = value
           result = true
+          var class = target.instance_class
+          if class.has_method(SET_KEY):
+            var args: Expr = new_ex_arg()
+            cast[ExArguments](args).children.add(new_ex_literal(m.name.to_s))
+            cast[ExArguments](args).children.add(new_ex_literal(value))
+            return VM.invoke(new_frame(), target, SET_KEY, args)
+          else:
+            target.instance_props[m.name] = value
         else:
           for child in self.children:
-            result = result or child.update(target.instance_props[m.name], value)
+            result = result or child.update(target.get_member(m.name), value)
       else:
-        todo($target.kind)
+        if self.is_last:
+          result = true
+          var class = target.get_class()
+          if class.has_method(SET_KEY):
+            var args: Expr = new_ex_arg()
+            cast[ExArguments](args).children.add(new_ex_literal(m.name.to_s))
+            cast[ExArguments](args).children.add(new_ex_literal(value))
+            return VM.invoke(new_frame(), target, SET_KEY, args)
+          else:
+            not_allowed("update " & $target & " " & m.name.to_s & " " & $value)
+        else:
+          for child in self.children:
+            result = result or child.update(target.get_member(m.name), value)
     else:
-      todo()
+      todo("update " & $m.kind & " " & $target & " " & $value)
 
 proc update*(self: Selector, target: Value, value: Value): bool =
   for child in self.children:

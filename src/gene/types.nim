@@ -120,14 +120,14 @@ type
     of VkTimezone:
       timezone*: Timezone
     of VkMap:
-      map*: OrderedTable[MapKey, Value]
+      map*: Table[MapKey, Value]
     of VkVector:
       vec*: seq[Value]
     of VkSet:
       set*: OrderedSet[Value]
     of VkGene:
       gene_type*: Value
-      gene_props*: OrderedTable[MapKey, Value]
+      gene_props*: Table[MapKey, Value]
       gene_children*: seq[Value]
     of VkEnum:
       `enum`*: Enum
@@ -201,7 +201,7 @@ type
 
   Document* = ref object
     `type`: Value
-    props*: OrderedTable[MapKey, Value]
+    props*: Table[MapKey, Value]
     children*: seq[Value]
 
   # applicable to numbers, characters
@@ -262,7 +262,7 @@ type
     app*: Application
     runtime*: Runtime
     main_module*: Module
-    modules*: OrderedTable[MapKey, Namespace]
+    modules*: Table[MapKey, Namespace]
     repl_on_error*: bool
 
   # VirtualMachine depends on a Runtime
@@ -414,7 +414,7 @@ type
 
   Enum* = ref object
     name*: string
-    members*: OrderedTable[string, EnumMember]
+    members*: Table[string, EnumMember]
 
   EnumMember* = ref object
     parent*: Enum
@@ -472,10 +472,6 @@ type
   Return* = ref object of CatchableError
     frame*: Frame
     val*: Value
-
-  MatchMode* = enum
-    MatchDefault
-    MatchArgs
 
   MatchingMode* = enum
     MatchArguments # (fn f [a b] ...)
@@ -689,7 +685,7 @@ proc new_gene_string_move*(s: string): Value
 proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
 proc new_gene_vec*(items: varargs[Value]): Value
 proc new_gene_map*(): Value
-proc new_gene_map*(map: OrderedTable[MapKey, Value]): Value
+proc new_gene_map*(map: Table[MapKey, Value]): Value
 proc new_namespace*(): Namespace
 proc new_namespace*(name: string): Namespace
 proc new_namespace*(parent: Namespace): Namespace
@@ -702,8 +698,6 @@ proc new_arg_matcher*(): RootMatcher
 proc hint*(self: RootMatcher): MatchingHint {.inline.}
 
 ##################################################
-
-proc identity*[T](v: T): T = v
 
 proc todo*() =
   raise new_exception(Exception, "TODO")
@@ -738,7 +732,7 @@ converter to_gene*(v: float): Value                    = new_gene_float(v)
 converter to_gene*(v: string): Value                   = new_gene_string(v)
 converter to_gene*(v: char): Value                     = new_gene_char(v)
 converter to_gene*(v: Rune): Value                     = new_gene_char(v)
-converter to_gene*(v: OrderedTable[MapKey, Value]): Value = new_gene_map(v)
+converter to_gene*(v: Table[MapKey, Value]): Value = new_gene_map(v)
 
 # Below converter causes problem with the hash function
 # converter to_gene*(v: seq[Value]): Value           = new_gene_vec(v)
@@ -767,15 +761,15 @@ converter file_to_gene*(file: File): Value =
     file: file,
   )
 
-converter to_map*(self: OrderedTable[string, Value]): OrderedTable[MapKey, Value] {.inline.} =
+converter to_map*(self: Table[string, Value]): Table[MapKey, Value] {.inline.} =
   for k, v in self:
     result[k.to_key] = v
 
-converter to_string_map*(self: OrderedTable[MapKey, Value]): OrderedTable[string, Value] {.inline.} =
+converter to_string_map*(self: Table[MapKey, Value]): Table[string, Value] {.inline.} =
   for k, v in self:
     result[k.to_s] = v
 
-converter to_gene*(v: OrderedTable[string, Value]): Value =
+converter to_gene*(v: Table[string, Value]): Value =
   return Value(
     kind: VkMap,
     map: v,
@@ -1465,10 +1459,10 @@ proc new_gene_stream*(items: seq[Value]): Value =
 proc new_gene_map*(): Value =
   return Value(
     kind: VkMap,
-    map: OrderedTable[MapKey, Value](),
+    map: Table[MapKey, Value](),
   )
 
-proc new_gene_map*(map: OrderedTable[MapKey, Value]): Value =
+proc new_gene_map*(map: Table[MapKey, Value]): Value =
   return Value(
     kind: VkMap,
     map: map,
@@ -1495,7 +1489,7 @@ proc new_gene_gene*(`type`: Value, children: varargs[Value]): Value =
     gene_children: @children,
   )
 
-proc new_gene_gene*(`type`: Value, props: OrderedTable[MapKey, Value], children: varargs[Value]): Value =
+proc new_gene_gene*(`type`: Value, props: Table[MapKey, Value], children: varargs[Value]): Value =
   return Value(
     kind: VkGene,
     gene_type: `type`,
@@ -1644,7 +1638,7 @@ proc merge*(self: var Value, value: Value) =
 #   else:
 #     todo("get_member " & $self.kind & " " & name)
 
-proc table_equals*(this, that: OrderedTable): bool =
+proc table_equals*(this, that: Table): bool =
   return this.len == 0 and that.len == 0 or
     this.len > 0 and that.len > 0 and this == that
 
@@ -1846,10 +1840,10 @@ proc `$`*(node: Value): string =
   else:
     result = $node.kind
 
-proc `[]`*(self: OrderedTable[MapKey, Value], key: string): Value =
+proc `[]`*(self: Table[MapKey, Value], key: string): Value =
   self[key.to_key]
 
-proc `[]=`*(self: var OrderedTable[MapKey, Value], key: string, value: Value) =
+proc `[]=`*(self: var Table[MapKey, Value], key: string, value: Value) =
   self[key.to_key] = value
 
 proc wrap_with_try*(body: seq[Value]): seq[Value] =

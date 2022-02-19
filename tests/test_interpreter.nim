@@ -45,8 +45,8 @@ test_interpreter "1 2 3", 3
 test_interpreter "[]", new_gene_vec()
 test_interpreter "[1 2]", new_gene_vec(1, 2)
 
-test_interpreter "{}", OrderedTable[string, Value]()
-test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
+test_interpreter "{}", Table[string, Value]()
+test_interpreter "{^a 1}", {"a": new_gene_int(1)}.toTable
 
 # test_interpreter "(:test 1 2)", proc(r: Value) =
 #   check r.gene_type == new_gene_symbol("test")
@@ -312,12 +312,6 @@ test_interpreter """
 # # TODO: (caller_eval ...) = (eval ^context caller_context ...)
 
 # test_interpreter """
-#   (var a (:test 1))
-#   ($set a 0 2)
-#   ($get a 0)
-# """, 2
-
-# test_interpreter """
 #   (var i 1) # first i
 #   (fn f _
 #     i       # reference to first i
@@ -344,7 +338,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native function (test)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], children: seq[Value]): Value =
+#   VM.app.ns["test"] = proc(props: Table[MapKey, Value], children: seq[Value]): Value =
 #     1
 #   var code = cleanup """
 #     (test)
@@ -353,7 +347,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native function (test 1 2)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: OrderedTable[MapKey, Value], children: seq[Value]): Value =
+#   VM.app.ns["test"] = proc(props: Table[MapKey, Value], children: seq[Value]): Value =
 #     children[0].int + children[1].int
 #   var code = cleanup """
 #     (test 1 2)

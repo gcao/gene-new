@@ -9,7 +9,7 @@ test_interpreter """
   (gene/json/parse
     "{\"a\": true}"
   )
-""", {"a": True}.toOrderedTable
+""", {"a": True}.toTable
 
 test_interpreter """
   ([1 2].to_json)

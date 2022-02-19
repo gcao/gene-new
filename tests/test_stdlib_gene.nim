@@ -10,7 +10,7 @@ test_interpreter """
 
 test_interpreter """
   (:(1 ^a 2 3 4) .props)
-""", {"a": new_gene_int(2)}.toOrderedTable
+""", {"a": new_gene_int(2)}.toTable
 
 test_interpreter """
   (:(1 ^a 2 3 4) .children)

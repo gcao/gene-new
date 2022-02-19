@@ -210,6 +210,19 @@ test_interpreter """
 
 test_interpreter """
   (class A
+    (method init _
+      ($set_prop "data" {^p 1})
+    )
+    (method test _
+      (($get_prop "data") ./p)
+    )
+  )
+  (var a (new A))
+  a/.test
+""", 1
+
+test_interpreter """
+  (class A
     (method init [/p = 1]
     )
   )
@@ -389,7 +402,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native method":
 #   init_all()
-#   VM.app.ns["test_fn"] = proc(self: Value, props: OrderedTable[MapKey, Value], children: seq[Value]): Value =
+#   VM.app.ns["test_fn"] = proc(self: Value, props: Table[MapKey, Value], children: seq[Value]): Value =
 #     children[0].int + children[1].int
 #   var code = cleanup """
 #     (class A
