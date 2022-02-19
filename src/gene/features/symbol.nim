@@ -62,7 +62,7 @@ proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var v = self.eval(frame, cast[ExMember](expr).container)
   var i = cast[ExChild](expr).index
-  return v.get_child(i, self, frame)
+  return v.get_child(i)
 
 proc translate*(name: string): Expr {.inline.} =
   if name.startsWith("@"):

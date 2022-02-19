@@ -18,6 +18,7 @@ proc get_member*(self: Value, name: MapKey): Value
 proc translate*(value: Value): Expr
 proc translate*(stmts: seq[Value]): Expr
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
+proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value
 proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args: Value): Value
 proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value
@@ -33,16 +34,87 @@ proc to_s*(self: Value): string =
     of VkString:
       return self.str
     of VkInstance:
-      var method_key = "to_s".to_key
-      var m = self.instance_class.get_method(method_key)
+      var m = self.instance_class.get_method(TO_S_KEY)
       if m.class != ObjectClass.class:
         var frame = new_frame()
         var args = new_gene_gene()
-        return VM.invoke(frame, self, method_key, args).str
+        return VM.invoke(frame, self, TO_S_KEY, args).str
     else:
       discard
 
   return $self
+
+proc get_member*(self: Value, name: MapKey): Value =
+  var ns: Namespace
+  case self.kind:
+  of VkNamespace:
+    ns = self.ns
+  of VkClass:
+    ns = self.class.ns
+  of VkMixin:
+    ns = self.mixin.ns
+  of VkMap:
+    if self.map.has_key(name):
+      return self.map[name]
+    else:
+      return Nil
+  of VkEnum:
+    return new_gene_enum_member(self.enum.members[name.to_s])
+  of VkInstance:
+    var class = self.instance_class
+    if class.has_method(GET_KEY):
+      var args = new_gene_gene()
+      args.gene_children.add(name.to_s)
+      return VM.invoke(new_frame(), self, GET_KEY, args)
+    elif self.instance_props.has_key(name):
+      return self.instance_props[name]
+    else:
+      return Nil
+  else:
+    var class = self.get_class()
+    if class.has_method(GET_KEY):
+      var args = new_gene_gene()
+      args.gene_children.add(name.to_s)
+      return VM.invoke(new_frame(), self, GET_KEY, args)
+    else:
+      todo("get_member " & $self.kind & " " & name.to_s)
+
+  if ns.members.has_key(name):
+    return ns.members[name]
+  elif ns.on_member_missing.len > 0:
+    var args = new_gene_gene()
+    args.gene_children.add(name.to_s)
+    for v in ns.on_member_missing:
+      var r = VM.call(new_frame(), self, v, args)
+      if r != nil:
+        return r
+  raise new_exception(NotDefinedException, name.to_s & " is not defined")
+
+proc get_child*(self: Value, index: int): Value =
+  var index = index
+  case self.kind:
+  of VkVector:
+    if index < 0:
+      index += self.vec.len
+    if index < self.vec.len:
+      return self.vec[index]
+    else:
+      return Nil
+  of VkGene:
+    if index < 0:
+      index += self.gene_children.len
+    if index < self.gene_children.len:
+      return self.gene_children[index]
+    else:
+      return Nil
+  else:
+    var class = self.get_class()
+    if class.has_method(GET_CHILD_KEY):
+      var args = new_gene_gene()
+      args.gene_children.add(index)
+      return VM.invoke(new_frame(), self, GET_CHILD_KEY, args)
+    else:
+      not_allowed("get_child " & $self & " " & $index)
 
 #################### Package #####################
 
@@ -964,62 +1036,7 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
     self.process_args(new_frame, matcher, args)
 
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
-  case target.kind:
-  of VkFunction:
-    var fn_scope = new_scope()
-    fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
-    var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
-    new_frame.parent = frame
-
-    self.process_args(new_frame, target.fn.matcher, args)
-    result = self.call_fn_skip_args(new_frame, target)
-  of VkBlock:
-    var scope = new_scope()
-    scope.set_parent(target.block.parent_scope, target.block.parent_scope_max)
-    var new_frame = Frame(ns: target.block.ns, scope: scope)
-    new_frame.parent = frame
-
-    case target.block.matching_hint.mode:
-    of MhSimpleData:
-      for _, v in args.gene_props.mpairs:
-        todo()
-      for i, v in args.gene_children.mpairs:
-        let field = target.block.matcher.children[i]
-        new_frame.scope.def_member(field.name, v)
-    of MhNone:
-      discard
-    else:
-      todo()
-
-    try:
-      result = self.eval(new_frame, target.block.body_compiled)
-    except Return as r:
-      result = r.val
-    except system.Exception as e:
-      if self.repl_on_error:
-        result = repl_on_error(self, frame, e)
-        discard
-      else:
-        raise
-  of VkInstance:
-    var class = target.instance_class
-    var meth = class.get_method(CALL_KEY)
-    var fn = meth.callable.fn
-    var fn_scope = new_scope()
-    fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
-    var new_frame = Frame(ns: fn.ns, scope: fn_scope)
-    new_frame.self = target
-    new_frame.parent = frame
-
-    self.process_args(new_frame, fn.matcher, args)
-    result = self.call_fn_skip_args(new_frame, meth.callable)
-  else:
-    # TODO: Support
-    # VkInstance => call "call" method on the instance class
-    # VkAny / VkCustom => similar to VkInstance
-    # VkClass => create instance and call the constructor
-    # VkNativeFn/VkNativeFn2 => call the native function/procedure
-    todo($target.kind)
+  self.call(frame, nil, target, args)
 
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value =
   if target.fn.body_compiled == nil:
@@ -1148,78 +1165,6 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: M
         raise
   else:
     todo()
-
-proc get_member*(self: Value, name: MapKey): Value =
-  var ns: Namespace
-  case self.kind:
-  of VkNamespace:
-    ns = self.ns
-  of VkClass:
-    ns = self.class.ns
-  of VkMixin:
-    ns = self.mixin.ns
-  of VkMap:
-    if self.map.has_key(name):
-      return self.map[name]
-    else:
-      return Nil
-  of VkEnum:
-    return new_gene_enum_member(self.enum.members[name.to_s])
-  of VkInstance:
-    var class = self.instance_class
-    if class.has_method(GET_KEY):
-      var args = new_gene_gene()
-      args.gene_children.add(name.to_s)
-      return VM.invoke(new_frame(), self, GET_KEY, args)
-    elif self.instance_props.has_key(name):
-      return self.instance_props[name]
-    else:
-      return Nil
-  else:
-    var class = self.get_class()
-    if class.has_method(GET_KEY):
-      var args = new_gene_gene()
-      args.gene_children.add(name.to_s)
-      return VM.invoke(new_frame(), self, GET_KEY, args)
-    else:
-      todo("get_member " & $self.kind & " " & name.to_s)
-
-  if ns.members.has_key(name):
-    return ns.members[name]
-  elif ns.on_member_missing.len > 0:
-    var args = new_gene_gene()
-    args.gene_children.add(name.to_s)
-    for v in ns.on_member_missing:
-      var r = VM.call(new_frame(), self, v, args)
-      if r != nil:
-        return r
-  raise new_exception(NotDefinedException, name.to_s & " is not defined")
-
-proc get_child*(self: Value, index: int, vm: VirtualMachine, frame: Frame): Value =
-  var index = index
-  case self.kind:
-  of VkVector:
-    if index < 0:
-      index += self.vec.len
-    if index < self.vec.len:
-      return self.vec[index]
-    else:
-      return Nil
-  of VkGene:
-    if index < 0:
-      index += self.gene_children.len
-    if index < self.gene_children.len:
-      return self.gene_children[index]
-    else:
-      return Nil
-  else:
-    var class = self.get_class()
-    if class.has_method(GET_CHILD_KEY):
-      var args = new_gene_gene()
-      args.gene_children.add(index)
-      return vm.invoke(frame, self, GET_CHILD_KEY, args)
-    else:
-      not_allowed("get_child " & $self & " " & $index)
 
 proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
   try:
