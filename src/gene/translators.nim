@@ -51,11 +51,10 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
       else:
         var class = target.get_class()
         if class.has_method(SET_CHILD_KEY):
-          var args: Expr = new_ex_arg()
-          cast[ExArguments](args).children.add(new_ex_literal(m.index))
-          cast[ExArguments](args).children.add(new_ex_literal(value))
-          var frame = Frame(scope: new_scope())
-          return VM.invoke(frame, target, SET_CHILD_KEY, args)
+          var args = new_gene_gene()
+          args.gene_children.add(m.index)
+          args.gene_children.add(value)
+          return VM.invoke(new_frame(), target, SET_CHILD_KEY, args)
         else:
           not_allowed("set_child " & $target & " " & $m.index & " " & $value)
     of SmByName:
@@ -93,9 +92,9 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
           result = true
           var class = target.instance_class
           if class.has_method(SET_KEY):
-            var args: Expr = new_ex_arg()
-            cast[ExArguments](args).children.add(new_ex_literal(m.name.to_s))
-            cast[ExArguments](args).children.add(new_ex_literal(value))
+            var args = new_gene_gene()
+            args.gene_children.add(m.name.to_s)
+            args.gene_children.add(value)
             return VM.invoke(new_frame(), target, SET_KEY, args)
           else:
             target.instance_props[m.name] = value

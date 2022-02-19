@@ -25,6 +25,7 @@ proc translate*(value: Value): Expr
 proc translate*(stmts: seq[Value]): Expr
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args: Value): Value
 proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value
 
 #################### Value #######################
@@ -42,7 +43,7 @@ proc to_s*(self: Value): string =
       var m = self.instance_class.get_method(method_key)
       if m.class != ObjectClass.class:
         var frame = new_frame()
-        var args: Expr = new_ex_arg()
+        var args = new_gene_gene()
         return VM.invoke(frame, self, method_key, args).str
     else:
       discard
@@ -827,6 +828,58 @@ proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Valu
     future.complete(result)
     result = new_gene_future(future)
 
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args: Value): Value =
+  var class = instance.get_class
+  var meth = class.get_method(method_name)
+  # var is_method_missing = false
+  var callable: Value
+  if meth == nil:
+    not_allowed("No method available: " & class.name & "." & method_name.to_s)
+    # if class.method_missing == nil:
+    #   not_allowed("No method available: " & expr.meth.to_s)
+    # else:
+    #   is_method_missing = true
+    #   callable = class.method_missing
+  else:
+    callable = meth.callable
+
+  case callable.kind:
+  of VkNativeMethod, VkNativeMethod2:
+    if callable.kind == VkNativeMethod:
+      result = meth.callable.native_method(instance, args)
+    else:
+      result = meth.callable.native_method2(instance, args)
+
+  of VkFunction:
+    var fn_scope = new_scope()
+    # if is_method_missing:
+    #   fn_scope.def_member("$method_name".to_key, expr.meth.to_s)
+    var new_frame = Frame(ns: callable.fn.ns, scope: fn_scope)
+    new_frame.parent = frame
+    new_frame.self = instance
+    new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
+
+    if callable.fn.body_compiled == nil:
+      callable.fn.body_compiled = translate(callable.fn.body)
+
+    try:
+      self.process_args(new_frame, callable.fn.matcher, args)
+      result = self.eval(new_frame, callable.fn.body_compiled)
+    except Return as r:
+      # return's frame is the same as new_frame(current function's frame)
+      if r.frame == new_frame:
+        result = r.val
+      else:
+        raise
+    except system.Exception as e:
+      if self.repl_on_error:
+        result = repl_on_error(self, frame, e)
+        discard
+      else:
+        raise
+  else:
+    todo()
+
 proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value =
   var class = instance.get_class
   var meth = class.get_method(method_name)
@@ -899,8 +952,8 @@ proc get_member*(self: Value, name: MapKey): Value =
   of VkInstance:
     var class = self.instance_class
     if class.has_method(GET_KEY):
-      var args: Expr = new_ex_arg()
-      cast[ExArguments](args).children.add(new_ex_literal(name.to_s))
+      var args = new_gene_gene()
+      args.gene_children.add(name.to_s)
       return VM.invoke(new_frame(), self, GET_KEY, args)
     elif self.instance_props.has_key(name):
       return self.instance_props[name]
@@ -909,8 +962,8 @@ proc get_member*(self: Value, name: MapKey): Value =
   else:
     var class = self.get_class()
     if class.has_method(GET_KEY):
-      var args: Expr = new_ex_arg()
-      cast[ExArguments](args).children.add(new_ex_literal(name.to_s))
+      var args = new_gene_gene()
+      args.gene_children.add(name.to_s)
       return VM.invoke(new_frame(), self, GET_KEY, args)
     else:
       todo("get_member " & $self.kind & " " & name.to_s)
@@ -946,8 +999,8 @@ proc get_child*(self: Value, index: int, vm: VirtualMachine, frame: Frame): Valu
   else:
     var class = self.get_class()
     if class.has_method(GET_CHILD_KEY):
-      var args: Expr = new_ex_arg()
-      cast[ExArguments](args).children.add(new_ex_literal(index))
+      var args = new_gene_gene()
+      args.gene_children.add(index)
       return vm.invoke(frame, self, GET_CHILD_KEY, args)
     else:
       not_allowed("get_child " & $self & " " & $index)
@@ -963,6 +1016,6 @@ proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value)
 
 proc call_wrap*(invoke: Invoke): Invoke =
   return proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
-    result = invoke(self, frame, target, args)
+    result = self.invoke(frame, target, args)
     if result != nil and result.kind == VkException:
       raise result.exception
