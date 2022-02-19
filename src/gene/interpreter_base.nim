@@ -270,7 +270,7 @@ proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], inp
   if input == nil or self.prop_splat == EMPTY_STRING_KEY:
     return
 
-  var map: OrderedTable[MapKey, Value]
+  var map: Table[MapKey, Value]
   case input.kind:
   of VkMap:
     map = input.map
@@ -279,7 +279,7 @@ proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], inp
   else:
     return
 
-  var splat = OrderedTable[MapKey, Value]()
+  var splat = Table[MapKey, Value]()
   for k, v in map:
     if k notin self.props:
       splat[k] = v

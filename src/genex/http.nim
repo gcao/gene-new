@@ -146,7 +146,7 @@ proc translate_respond(value: Value): Expr {.wrap_exception.} =
   if value.gene_type.str == "redirect":
     new_stmt.gene_children.add(new_gene_int(302))
     new_stmt.gene_children.add(new_gene_string(""))
-    new_stmt.gene_children.add(new_gene_map({"Location": value.gene_children[0]}.toOrderedTable()))
+    new_stmt.gene_children.add(new_gene_map({"Location": value.gene_children[0]}.toTable()))
   else:
     for v in value.gene_children:
       new_stmt.gene_children.add(v)

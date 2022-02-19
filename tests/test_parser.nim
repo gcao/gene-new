@@ -108,8 +108,8 @@ test_parser "2020-12-02T10:11:12Z",
   new_gene_datetime(init_date_time(02, cast[Month](12), 2020, 10, 11, 12, utc()))
 test_parser "10:11:12", new_gene_time(10, 11, 12)
 
-test_parser "{}", OrderedTable[string, Value]()
-test_parser "{^a 1}", {"a": new_gene_int(1)}.toOrderedTable
+test_parser "{}", Table[string, Value]()
+test_parser "{^a 1}", {"a": new_gene_int(1)}.toTable
 
 test_parser "[]", new_gene_vec()
 test_parser "[,]", new_gene_vec()
@@ -147,27 +147,27 @@ test_parser """
 
 test_parser "(1 ^a 2 3 4)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_props == {"a": new_gene_int(2)}.toOrderedTable
+  check r.gene_props == {"a": new_gene_int(2)}.toTable
   check r.gene_children == @[3, 4]
 
 test_parser "(1 2 ^a 3 4)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_props == {"a": new_gene_int(3)}.toOrderedTable
+  check r.gene_props == {"a": new_gene_int(3)}.toTable
   check r.gene_children == @[2, 4]
 
 test_parser "(1 ^^a 2 3)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_props == {"a": True}.toOrderedTable
+  check r.gene_props == {"a": True}.toTable
   check r.gene_children == @[2, 3]
 
 test_parser "(1 ^!a 2 3)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_props == {"a": False}.toOrderedTable
+  check r.gene_props == {"a": False}.toTable
   check r.gene_children == @[2, 3]
 
 test_parser "{^^x ^!y ^^z}", proc(r: Value) =
   check r.kind == VkMap
-  check r.map == {"x": True, "y": False, "z": True}.toOrderedTable
+  check r.map == {"x": True, "y": False, "z": True}.toTable
 
 test_parser ":foo", proc(r: Value) =
   check r.kind == VkQuote

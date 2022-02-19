@@ -18,18 +18,18 @@ import ./helpers
 # * Continuation - is it possible?
 #
 # * Native function
-#   proc(props: OrderedTable[string, Value], children: openarray[Value]): Value
+#   proc(props: Table[string, Value], children: openarray[Value]): Value
 # * Native method
 #   Simple: proc(
 #     self: Value,
-#     props: OrderedTable[string, Value],
+#     props: Table[string, Value],
 #     children: openarray[Value],
 #   ): Value
 #   Complex: proc(
 #     caller: Frame,
 #     options: Table[FnOption, Value],
 #     self: Value,
-#     props: OrderedTable[string, Value],
+#     props: Table[string, Value],
 #     children: openarray[Value],
 #   ): Value
 #
