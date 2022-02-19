@@ -124,7 +124,7 @@ type
     of VkVector:
       vec*: seq[Value]
     of VkSet:
-      set*: HashSet[Value]
+      set*: OrderedSet[Value]
     of VkGene:
       gene_type*: Value
       gene_props*: Table[MapKey, Value]
@@ -1471,7 +1471,7 @@ proc new_gene_map*(map: Table[MapKey, Value]): Value =
 proc new_gene_set*(items: varargs[Value]): Value =
   result = Value(
     kind: VkSet,
-    set: HashSet[Value](),
+    set: OrderedSet[Value](),
   )
   for item in items:
     result.set.incl(item)

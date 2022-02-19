@@ -572,7 +572,7 @@ proc read_vector(self: var Parser): Value =
 proc read_set(self: var Parser): Value =
   result = Value(
     kind: VkSet,
-    set: HashSet[Value](),
+    set: OrderedSet[Value](),
   )
   let list_result = self.read_delimited_list(']', true)
   for item in list_result.list:
