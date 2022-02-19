@@ -2,7 +2,6 @@ when isMainModule:
   import times
 
   import ./gene/types
-  import ./gene/translators
   import ./gene/interpreter
 
   init_app_and_vm()
