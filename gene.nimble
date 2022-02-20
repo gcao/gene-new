@@ -31,6 +31,7 @@ before test:
 
 task test, "Runs the test suite":
   exec "nim c -r tests/test_parser.nim"
+  exec "nim c -r tests/test_parser_macro.nim"
   exec "nim c -r tests/test_interpreter.nim"
   exec "nim c -r tests/test_scope.nim"
   exec "nim c -r tests/test_interpreter_symbol.nim"

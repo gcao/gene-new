@@ -11,16 +11,25 @@ import ./types
 let SET = new_gene_symbol("#Set")
 let DEBUG = new_gene_symbol("debug")
 
+var DEFAULT_UNITS = {
+  "m": new_gene_int(60), # m = minute
+  "s": new_gene_int(1), # s = second - default
+  "ms": new_gene_float(0.001), # ms = millisecond
+  "ns": new_gene_float(1e-9), # ns = nanosecond
+}.to_table()
+
 type
   ParseOptions* = object
     eof_is_error*: bool
     eof_value*: Value
     suppress_read*: bool
+    units*: Table[string, Value]
 
   Parser* = object of BaseLexer
     options*: ParseOptions
     filename: string
     str: string
+    num_with_units: seq[(TokenKind, string, string)] # token kind + number + unit
     document*: Document
     token*: TokenKind
     error: ParseErrorKind
@@ -37,6 +46,7 @@ type
     TkString
     TkInt
     TkFloat
+    TkNumberWithUnit
     TkDate
     TkDateTime
     TkTime
@@ -80,6 +90,12 @@ proc skip_block_comment(self: var Parser)
 converter to_int(c: char): int = result = ord(c)
 
 proc new_parser*(options: ParseOptions): Parser =
+  var options = options
+  options.units = DEFAULT_UNITS
+  # var units: Table[string, Value] = init_table[string, Value]()
+  # units.merge(DEFAULT_UNITS)
+  # units.merge(options.units)
+  # options.units = units
   return Parser(
     document: Document(),
     options: options,
@@ -91,6 +107,7 @@ proc new_parser*(): Parser =
     options: ParseOptions(
       eof_is_error: false,
       suppress_read: false,
+      units: DEFAULT_UNITS,
     ),
   )
 
@@ -763,6 +780,15 @@ proc parse_number(self: var Parser): TokenKind =
     while buf[pos] in Digits:
       add(self.str, buf[pos])
       inc(pos)
+  elif buf[pos] in {'%', 'a' .. 'z', 'A' .. 'Z'}:
+    var num = self.str
+    self.str = ""
+    self.bufpos = pos
+    var unit = self.read_token(false)
+    self.str = ""
+    self.num_with_units.add((result, num, unit))
+    result = TkNumberWithUnit
+
   self.bufpos = pos
 
 let DATE_FORMAT = init_time_format("yyyy-MM-dd")
@@ -812,6 +838,19 @@ proc read_number(self: var Parser): Value =
       result = new_gene_int(self.str)
   of TkFloat:
     result = new_gene_float(self.str)
+  of TkNumberWithUnit:
+    var (kind, num, unit) = self.num_with_units[0]
+    var unit_base = self.options.units[unit]
+    if kind == TkFloat:
+      if unit_base.kind == VkInt:
+        result = new_gene_float(num.parse_float() * unit_base.int.to_float())
+      else:
+        result = new_gene_float(num.parse_float() * unit_base.float)
+    else:
+      if unit_base.kind == VkInt:
+        result = new_gene_int(num.parse_int() * unit_base.int.int())
+      else:
+        result = new_gene_float(num.parse_int().to_float() * unit_base.float)
   of TkError:
     raise new_exception(ParseError, "Error reading a number: " & self.str)
   else:

@@ -1,3 +1,7 @@
+import gene/types
+
+import ./helpers
+
 # Support macro language
 #
 # * Operate on Gene input and system resources (e.g. environment,
@@ -17,8 +21,10 @@
 # #Map
 # #Gene
 
-# #Set
 # #Push
+
+# #SetParserOption
+# #GetParserOption
 
 # test_parser """
 #   (#Fn f _ 1)
@@ -26,6 +32,30 @@
 # """, 1
 
 # test_parser """
-#   (#Var a [1])
+#   (#Var a 1)
 #   #a
-# """, @[1]
+# """, 1
+
+# Unit conversion
+test_parser """
+  1m # 1m = 1 minute = 60 seconds (1 = 1s = 1 second)
+""", 60
+# test_parser """
+#   1s
+# """, 1
+# test_parser """
+#   1ms
+# """, 0.001
+# test_parser """
+#   (#Unit "m" 1)  # 1m = 1 meter (meter is defined as the default unit for length)
+#   1m
+# """, 1
+# test_parser """
+#   1m30s
+# """, 90
+# test_parser """
+#   1s500ms
+# """, 1.5
+# test_parser """
+#   1m30
+# """, 90
