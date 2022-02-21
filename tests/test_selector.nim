@@ -55,10 +55,10 @@ import ./helpers
 # * Callbacks' does not return special list, thus discarded
 
 # @p        <=> (@ "p")
-# (@p)      <=> ((@ "p"))       <=> (self ./p)
+# (@p)      <=> ((@ "p"))       <=> /p        <=> (self ./p)
 # (@p)      <=> ((@ "p") self)
-# (@p = 1)  <=> ((@ "p") = 1)   <=> (self ./p = 1)
-# (@p += 1) <=> (@p = (@p + 1)) <=> ((@ "p") = ((@ "p") + 1))
+# (/p = 1)  <=> ((@ "p") = 1)   <=> (self ./p = 1)
+# (/p += 1) <=> (/p = (/p + 1)) <=> ((@ "p") = ((@ "p") + 1))
 
 # (./p)     <=> (self ./p)      <=> (self ./ "p")
 # (/p = 1)  <=> ($set self @p 1)
@@ -72,6 +72,7 @@ import ./helpers
 # (@ (range 0 3) :type)  # target[0..3].type
 # (@* [0 "test"] [1 "another"])  # target[0]["test"] + target[1]["another"]
 #
+# /0/test                   # ((@ 0 "test") self)
 # (./ 0 "test")             # ((@ 0 "test") self)
 # (./0/test)                # ((@ 0 "test") self)
 # (./ :type)                # ((@ :type) self)

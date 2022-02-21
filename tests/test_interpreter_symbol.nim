@@ -123,16 +123,16 @@ test_interpreter """
   ((new C).test)
 """, 1
 
-# test_interpreter """
-#   (fn f _
-#     1
-#   )
-#   f/.call
-# """, 1
+test_interpreter """
+  (fn f _
+    1
+  )
+  f/.call
+""", 1
 
-# test_interpreter """
-#   (fn f _
-#     [1 2]
-#   )
-#   f/.call/0
-# """, 1
+test_interpreter """
+  (fn f _
+    [1 2]
+  )
+  f/.call/0
+""", 1
