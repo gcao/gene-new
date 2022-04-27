@@ -1043,19 +1043,24 @@ proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Valu
     target.fn.body_compiled = translate(target.fn.body)
 
   try:
-    result = self.eval(frame, target.fn.body_compiled)
+    if target.fn.ret.is_nil:
+      result = self.eval(frame, target.fn.body_compiled)
+    else:
+      discard self.eval(frame, target.fn.body_compiled)
   except Return as r:
     # return's frame is the same as new_frame(current function's frame)
     if r.frame == frame:
-      result = r.val
+      if target.fn.ret.is_nil:
+        result = r.val
     else:
       raise
   except system.Exception as e:
     if self.repl_on_error:
-      result = repl_on_error(self, frame, e)
-      discard
+      if target.fn.ret.is_nil:
+        result = repl_on_error(self, frame, e)
     else:
       raise
+
   if target.fn.async and result.kind != VkFuture:
     var future = new_future[Value]()
     future.complete(result)
