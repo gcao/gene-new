@@ -4,6 +4,10 @@ import ./helpers
 
 # Support macro language
 #
+# It's hard to create a powerful macro system without making parsing
+# very complex. And macro support has to be implemented in all Gene
+# parsers. So maybe this is not a good idea!
+#
 # * Operate on Gene input and system resources (e.g. environment,
 #   file system, socket connection, databases, other IO devices etc)
 # * Output can be Gene data or string / stream / binary output ?!
@@ -14,17 +18,64 @@ import ./helpers
 # Built in functions, variables etc
 # #Fn
 # #Var
-# #Type
-# #Props
-# #Children
+
 # #Array
 # #Map
 # #Gene
+# #Range
+# #Symbol
+# #ComplexSymbol
+
+# #If
+# #IfNot
+# #While
+# #Repeat
+
+# #GetType
+# #GetProps
+# #GetChildren
+# #Get
+# #Set
+# #Add
+# #Sub
+# #Mul
+# #Div
+# #Mod
+# #Inc
+# #Dec
+
+# #And
+# #Or
+# #Xor
+# #Not
+# #Eq
+# #Ne
+# #Le
+# #Lt
+# #Ge
+# #Gt
+
+# #Each
+# #Size
+# #IsEmpty
 
 # #Push
+# #Pop
+# #Insert
+# #Delete
 
 # #SetParserOption
 # #GetParserOption
+# #PushParserOption
+# #PopParserOption
+
+# #Env
+# #Env/HOME
+
+# (#Var x {^name "a"})
+# #x/name => a
+# (#Set #x/name "b")
+# #x/name => b
 
 # test_parser """
 #   (#Fn f _ 1)
