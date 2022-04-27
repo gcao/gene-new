@@ -68,6 +68,11 @@ test_interpreter """
   a
 """, 1
 
+# test_interpreter """
+#   (match /a [1])
+#   a
+# """, 1
+
 test_interpreter """
   (match [a] [1])
   a

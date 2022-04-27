@@ -484,7 +484,7 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
         elif self.buf[self.bufPos] == '!':
           self.bufPos.inc()
           key = self.read_token(false)
-          result[key.to_key] = False
+          result[key.to_key] = Nil
         else:
           key = self.read_token(false)
           state = PropState.PropValue

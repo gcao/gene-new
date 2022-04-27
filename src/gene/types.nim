@@ -387,6 +387,7 @@ type
     matching_hint*: MatchingHint
     body*: seq[Value]
     body_compiled*: Expr
+    ret*: Expr
 
   BoundFunction* = ref object of GeneProcessor
     target*: Value

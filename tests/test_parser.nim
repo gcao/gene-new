@@ -162,12 +162,12 @@ test_parser "(1 ^^a 2 3)", proc(r: Value) =
 
 test_parser "(1 ^!a 2 3)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_props == {"a": False}.toTable
+  check r.gene_props == {"a": Nil}.toTable()
   check r.gene_children == @[2, 3]
 
 test_parser "{^^x ^!y ^^z}", proc(r: Value) =
   check r.kind == VkMap
-  check r.map == {"x": True, "y": False, "z": True}.toTable
+  check r.map == {"x": True, "y": Nil, "z": True}.toTable
 
 test_parser ":foo", proc(r: Value) =
   check r.kind == VkQuote

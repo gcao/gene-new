@@ -53,8 +53,7 @@
   (method order_by /order_by
   )
 
-  (method limit n
-    (/limit = n)
+  (method limit /limit
   )
 
   (method to_s _
@@ -131,6 +130,7 @@
     )
     columns
   )
+
   (method insert _
     (var columns (/.class . /.class/columns_except_id))
     (var sql
