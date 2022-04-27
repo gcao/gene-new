@@ -233,13 +233,13 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
       var m = new_matcher(self, MatchProp)
       if v.str.ends_with("..."):
         m.is_splat = true
-        if v.str[1] == '@':
+        if v.str[1] == '^':
           m.name = v.str[2..^4].to_key
           m.is_prop = true
         else:
           m.name = v.str[1..^4].to_key
       else:
-        if v.str[1] == '@':
+        if v.str[1] == '^':
           m.name = v.str[2..^1].to_key
           m.is_prop = true
         else:
@@ -251,13 +251,13 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
       if v.str != "_":
         if v.str.endsWith("..."):
           m.is_splat = true
-          if v.str[0] == '@':
+          if v.str[0] == '^':
             m.name = v.str[1..^4].to_key
             m.is_prop = true
           else:
             m.name = v.str[0..^4].to_key
         else:
-          if v.str[0] == '@':
+          if v.str[0] == '^':
             m.name = v.str[1..^1].to_key
             m.is_prop = true
           else:
