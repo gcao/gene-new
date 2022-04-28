@@ -68,6 +68,15 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  (fn f _
+    # ^^return_nothing vs ^^return_nil vs ^return nil vs ^!return
+    ^!return
+    1
+  )
+  (f)
+""", Value(nil)
+
+test_interpreter """
   (fn f a (a + 1))
   (f 1)
 """, 2

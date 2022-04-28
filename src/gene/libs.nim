@@ -473,9 +473,13 @@ proc init*() =
     GeneClass.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"gene_contains".} =
       var s = args.gene_children[0].str
       result = self.gene_props.has_key(s.to_key)
-
     GENE_NS.ns["Gene"] = GeneClass
     GLOBAL_NS.ns["Gene"] = GeneClass
+
+    FunctionClass = Value(kind: VkClass, class: new_class("Function"))
+    FunctionClass.class.parent = ObjectClass.class
+    FunctionClass.def_native_method "call", proc(self: Value, args: Value): Value {.name:"function_call".} =
+      VM.call(new_frame(), self, args)
 
     FileClass = Value(kind: VkClass, class: new_class("File"))
     FileClass.class.parent = ObjectClass.class
