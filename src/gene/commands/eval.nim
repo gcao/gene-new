@@ -1,19 +1,16 @@
-import os, parseopt, times
+import tables, os, parseopt
 
 import ../types
 import ../interpreter
 import ./base
 
-const DEFAULT_COMMAND = "run"
+const DEFAULT_COMMAND = "eval"
 const COMMANDS = @[DEFAULT_COMMAND]
 
 type
   Options = ref object
-    benchmark: bool
     debugging: bool
-    print_result: bool
-    repl_on_error: bool
-    file: string
+    code: string
 
 proc handle*(cmd: string, args: seq[string]): string
 
@@ -21,15 +18,12 @@ proc init*(manager: CommandManager) =
   manager.register(COMMANDS, handle)
 
 let short_no_val = {'d'}
-let long_no_val = @[
-  "repl-on-error",
-]
+let long_no_val: seq[string] = @[]
+
 proc parse_options(): Options =
   result = Options()
   for kind, key, value in get_opt(command_line_params(), short_no_val, long_no_val):
     case kind
-    of cmdArgument:
-      result.file = key
     of cmdLongOption, cmdShortOption:
       case key
       of "d", "debug":
@@ -37,6 +31,8 @@ proc parse_options(): Options =
       else:
         echo "Unknown option: ", key
         discard
+    of cmdArgument:
+      result.code = key
     of cmdEnd:
       discard
 
@@ -45,15 +41,9 @@ proc handle*(cmd: string, args: seq[string]): string =
   setup_logger(options.debugging)
 
   init_app_and_vm()
-  VM.repl_on_error = options.repl_on_error
-
-  var file = options.file
-  let start = cpu_time()
-  let value = VM.run_file(file)
-  if options.print_result:
-    echo value.to_s
-  if options.benchmark:
-    echo "Time: " & $(cpu_time() - start)
+  var frame = VM.eval_prepare(VM.app.pkg)
+  VM.main_module = frame.ns.module
+  discard VM.eval(frame, options.code)
 
 when isMainModule:
   var cmd = DEFAULT_COMMAND

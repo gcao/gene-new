@@ -12,3 +12,13 @@ proc setup_logger*(debugging: bool) =
   console_logger.level_threshold = Level.lvlInfo
   if debugging:
     console_logger.level_threshold = Level.lvlDebug
+
+proc `[]`*(self: CommandManager, cmd: string): Command =
+  self.data[cmd]
+
+proc register*(self: CommandManager, c: string, cmd: Command) =
+  self.data[c] = cmd
+
+proc register*(self: CommandManager, cmds: seq[string], cmd: Command) =
+  for c in cmds:
+    self.data[c] = cmd
