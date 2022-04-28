@@ -3,6 +3,7 @@ import tables, logging
 type
   CommandManager* = ref object
     data*: Table[string, Command]
+    help*: string
 
   Command* = proc(cmd: string, args: seq[string]): string
 
@@ -22,3 +23,6 @@ proc register*(self: CommandManager, c: string, cmd: Command) =
 proc register*(self: CommandManager, cmds: seq[string], cmd: Command) =
   for c in cmds:
     self.data[c] = cmd
+
+proc add_help*(self: CommandManager, help: string) =
+  self.help &= help & "\n"

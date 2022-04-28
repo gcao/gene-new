@@ -29,6 +29,7 @@ proc handle*(cmd: string, args: seq[string]): string
 
 proc init*(manager: CommandManager) =
   manager.register(COMMANDS, handle)
+  manager.add_help("\nProject related commands\ninit: initialize a project\nbuild: build the project\nclean: remove generated assets\n")
 
 let short_no_val = {'d'}
 let long_no_val: seq[string] = @[]

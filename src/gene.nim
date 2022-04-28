@@ -10,9 +10,18 @@ import "./gene/commands/repl" as repl_cmd; repl_cmd.init(CommandMgr)
 
 import "./gene/commands/project" as project_cmd; project_cmd.init(CommandMgr)
 
+const HELP = """Usage: gene <command> <optional arguments specific to command>
+
+Available commands:
+"""
+
 when isMainModule:
   var args = command_line_params()
-  var cmd = args[0]
-  args.delete(0)
-  var handler = CommandMgr[cmd]
-  discard handler(cmd, args)
+  if args.len == 0:
+    echo HELP
+    echo CommandMgr.help
+  else:
+    var cmd = args[0]
+    args.delete(0)
+    var handler = CommandMgr[cmd]
+    discard handler(cmd, args)

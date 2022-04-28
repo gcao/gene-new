@@ -16,6 +16,7 @@ proc handle*(cmd: string, args: seq[string]): string
 
 proc init*(manager: CommandManager) =
   manager.register(COMMANDS, handle)
+  manager.add_help("eval '<code>': parse and execute <code>")
 
 let short_no_val = {'d'}
 let long_no_val: seq[string] = @[]

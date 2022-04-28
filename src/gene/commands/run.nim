@@ -19,6 +19,7 @@ proc handle*(cmd: string, args: seq[string]): string
 
 proc init*(manager: CommandManager) =
   manager.register(COMMANDS, handle)
+  manager.add_help("run <file>: parse and execute <file>")
 
 let short_no_val = {'d'}
 let long_no_val = @[
