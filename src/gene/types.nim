@@ -583,6 +583,7 @@ type
     SmSelfAndDescendants
     SmDescendants
     SmCallback
+    SmInvoke
 
   SelectorMatcher* = ref object
     root*: Selector
@@ -597,6 +598,9 @@ type
       by_type*: Value
     of SmCallback:
       callback*: Value
+    of SmInvoke:
+      invoke_name*: MapKey
+      invoke_args*: Value
     else: discard
 
   SelectResultMode* = enum
