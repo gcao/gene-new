@@ -1,5 +1,6 @@
 import os, strutils
 
+import ./gene/types
 import ./gene/commands/base
 
 let CommandMgr = CommandManager()
@@ -14,6 +15,11 @@ const HELP = """Usage: gene <command> <optional arguments specific to command>
 
 Available commands:
 """
+
+proc version*(cmd: string, args: seq[string]): string =
+  echo VM.runtime.pkg.version
+
+CommandMgr.register("version", version)
 
 when isMainModule:
   var args = command_line_params()
