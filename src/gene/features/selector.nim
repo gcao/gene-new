@@ -1,5 +1,6 @@
 import strutils, tables
 
+import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -12,6 +13,10 @@ type
   ExSelector2* = ref object of Expr
     parallel_mode*: bool
     data*: seq[Expr]
+
+  ExInvokeSelector* = ref object of Expr
+    name*: Expr
+    args*: Expr
 
   ExSelectorInvoker* = ref object of Expr
     data*: Expr
@@ -74,6 +79,9 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
           return item
     else:
       todo($target.kind)
+  of SmInvoke:
+    var args = new_gene_gene(Nil)
+    return VM.invoke(new_frame(), target, self.invoke_name, args)
   else:
     todo()
 
@@ -163,6 +171,9 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
         result.add(v)
     else:
       result.add(v)
+  of SmInvoke:
+    var args = new_gene_gene(Nil)
+    result.add(VM.invoke(new_frame(), target, self.invoke_name, args))
   else:
     todo("search " & $self.kind)
 
@@ -310,9 +321,40 @@ proc new_ex_selector*(parallel_mode: bool, data: seq[Value]): Expr =
       r.data.add(translate(item))
     return r
 
+proc eval_invoke_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var expr = cast[ExInvokeSelector](expr)
+  var selector = new_selector()
+  selector.translator = selector_arg_translator
+  var item = SelectorItem()
+  var name = self.eval(frame, expr.name).str.to_key
+  item.matchers.add(SelectorMatcher(kind: SmInvoke, invoke_name: name))
+  selector.children.add(item);
+  new_gene_selector(selector)
+
+proc new_ex_invoke_selector*(value: Value): Expr =
+  var e = ExInvokeSelector(
+    evaluator: eval_invoke_selector,
+  )
+  e.name = translate(value.gene_children[0])
+  var args = new_ex_arg()
+  for k, v in value.gene_props.mpairs:
+    args.props[k] = translate(v)
+  var is_first = true
+  for item in value.gene_children.mitems:
+    if is_first:
+      is_first = false
+      args.children.add(translate(item))
+    else:
+      is_first = true
+  e.args = args
+  return e
+
 proc translate_selector(value: Value): Expr =
-  var parallel_mode = value.gene_type.str == "@*"
-  return new_ex_selector(parallel_mode, value.gene_children)
+  if value.gene_type.str == "@.":
+    return new_ex_invoke_selector(value)
+  else:
+    var parallel_mode = value.gene_type.str == "@*"
+    return new_ex_selector(parallel_mode, value.gene_children)
 
 proc handle_item*(item: string): Expr =
   try:
@@ -407,5 +449,6 @@ proc translate_invoke_selector4*(value: Value): Expr =
 proc init*() =
   GeneTranslators["@"] = translate_selector
   GeneTranslators["@*"] = translate_selector
+  GeneTranslators["@."] = translate_selector
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     self.app.ns["$set"] = new_gene_processor(translate_set)

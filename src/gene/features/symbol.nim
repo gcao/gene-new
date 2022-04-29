@@ -64,7 +64,9 @@ proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   return v.get_child(i)
 
 proc translate*(name: string): Expr {.inline.} =
-  if name.startsWith("@"):
+  if name.starts_with("@"):
+    # if name[1] == ".":
+    #   todo("translate " & name)
     return new_ex_selector(name[1..^1])
   if name.endsWith("..."):
     var r = new_ex_explode()

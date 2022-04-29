@@ -278,6 +278,24 @@ test_interpreter """
 """, @[1, 2]
 
 test_interpreter """
+  (class A
+    (method test _
+      1
+    )
+  )
+  ((@. "test") (new A))
+""", 1
+
+# test_interpreter """
+#   (class A
+#     (method test _
+#       1
+#     )
+#   )
+#   (@.test (new A))
+# """, 1
+
+test_interpreter """
   ((@ :TEST 0)
     (_ (:TEST 1))
   )

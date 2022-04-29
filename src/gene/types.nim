@@ -1929,7 +1929,7 @@ proc is_singular*(self: SelectorItem): bool =
   of SiDefault:
     if self.matchers.len > 1:
       return false
-    if self.matchers[0].kind notin [SmByIndex, SmByName]:
+    if self.matchers[0].kind notin [SmByIndex, SmByName, SmInvoke]:
       return false
     case self.children.len:
     of 0:
