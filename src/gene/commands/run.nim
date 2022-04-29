@@ -1,4 +1,4 @@
-import os, parseopt, times
+import parseopt, times
 
 import ../types
 import ../interpreter
@@ -14,6 +14,7 @@ type
     print_result: bool
     repl_on_error: bool
     file: string
+    args: seq[string]
 
 proc handle*(cmd: string, args: seq[string]): string
 
@@ -25,28 +26,40 @@ let short_no_val = {'d'}
 let long_no_val = @[
   "repl-on-error",
 ]
-proc parse_options(): Options =
+proc parse_options(args: seq[string]): Options =
   result = Options()
-  for kind, key, value in get_opt(command_line_params(), short_no_val, long_no_val):
+  var found_file = false
+  for kind, key, value in get_opt(args, short_no_val, long_no_val):
     case kind
     of cmdArgument:
-      result.file = key
+      if not found_file:
+        found_file = true
+        result.file = key
+      result.args.add(key)
     of cmdLongOption, cmdShortOption:
-      case key
-      of "d", "debug":
-        result.debugging = true
+      if found_file:
+        result.args.add(key)
+        if value != "":
+          result.args.add(value)
       else:
-        echo "Unknown option: ", key
-        discard
+        case key
+        of "d", "debug":
+          result.debugging = true
+        of "repl-on-error":
+          result.repl_on_error = true
+        else:
+          echo "Unknown option: ", key
+          discard
     of cmdEnd:
       discard
 
 proc handle*(cmd: string, args: seq[string]): string =
-  var options = parse_options()
+  var options = parse_options(args)
   setup_logger(options.debugging)
 
   init_app_and_vm()
   VM.repl_on_error = options.repl_on_error
+  VM.app.args = options.args
 
   var file = options.file
   let start = cpu_time()

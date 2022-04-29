@@ -1,4 +1,4 @@
-import tables, os, parseopt
+import parseopt
 
 import ../types
 import ../interpreter
@@ -34,9 +34,9 @@ proc init*(manager: CommandManager) =
 let short_no_val = {'d'}
 let long_no_val: seq[string] = @[]
 
-proc parse_options(): Options =
+proc parse_options(args: seq[string]): Options =
   result = Options()
-  for kind, key, value in get_opt(command_line_params(), short_no_val, long_no_val):
+  for kind, key, value in get_opt(args, short_no_val, long_no_val):
     case kind
     of cmdLongOption, cmdShortOption:
       case key
@@ -51,7 +51,7 @@ proc parse_options(): Options =
       discard
 
 proc handle*(cmd: string, args: seq[string]): string =
-  var options = parse_options()
+  var options = parse_options(args)
   setup_logger(options.debugging)
 
   init_app_and_vm()

@@ -123,7 +123,7 @@ proc translate_debug(value: Value): Expr =
   return r
 
 proc eval_if_main(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  if VM.main_module == frame.ns.get_module():
+  if VM.app.main_module == frame.ns.get_module():
     result = self.eval(frame, cast[ExIfMain](expr).body)
 
 proc translate_if_main(value: Value): Expr =

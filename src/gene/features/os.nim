@@ -1,7 +1,6 @@
-import std/os, sequtils, tables
+import std/os, tables
 
 import ../types
-import ../map_key
 import ../interpreter_base
 
 type
@@ -67,7 +66,5 @@ proc init*() =
   GeneTranslators["exit"] = translate_exit
 
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    var cmd_args = command_line_params().map(str_to_gene)
-    GLOBAL_NS.ns[CMD_ARGS_KEY] = cmd_args
     GLOBAL_NS.ns["$env"] = new_gene_processor(translate_env)
     GLOBAL_NS.ns["$set_env"] = new_gene_processor(translate_set_env)

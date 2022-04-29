@@ -261,7 +261,6 @@ type
   VirtualMachine* = ref object
     app*: Application
     runtime*: Runtime
-    main_module*: Module
     modules*: Table[MapKey, Namespace]
     repl_on_error*: bool
 
@@ -300,6 +299,7 @@ type
     ns*: Namespace
     cmd*: string
     args*: seq[string]
+    main_module*: Module
     dep_root*: DependencyRoot
     props*: Table[string, Value]  # Additional properties
 
@@ -342,7 +342,14 @@ type
     root*: DependencyRoot
     children*: Table[string, DependencyNode]
 
+  SourceType* = enum
+    StFile
+    StRepl
+    StEval
+    StInline
+
   Module* = ref object
+    source_type*: SourceType
     pkg*: Package         # Package in which the module is defined
     name*: string
     ns*: Namespace

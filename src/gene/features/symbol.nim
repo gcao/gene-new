@@ -1,5 +1,4 @@
-import strutils
-import tables
+import strutils, sequtils, tables
 
 import ../map_key
 import ../types
@@ -85,6 +84,8 @@ proc translate*(name: string): Expr {.inline.} =
     result = NS_EXPR
   of "$pkg":
     result = PKG_EXPR
+  of "$cmd_args":
+    result = new_ex_literal(VM.app.args.map(str_to_gene))
   else:
     result = ExMyMember(
       evaluator: eval_my_member,

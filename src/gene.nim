@@ -1,4 +1,4 @@
-import os
+import os, strutils
 
 import ./gene/commands/base
 
@@ -22,6 +22,10 @@ when isMainModule:
     echo CommandMgr.help
   else:
     var cmd = args[0]
-    args.delete(0)
     var handler = CommandMgr[cmd]
+    if cmd.ends_with(".gene") or handler.is_nil:
+      cmd = "run"
+      handler = CommandMgr[cmd]
+    else:
+      args.delete(0)
     discard handler(cmd, args)

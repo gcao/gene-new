@@ -833,6 +833,7 @@ proc translate_wrap*(translate: Translator): Translator =
 
 proc init_app_and_vm*() =
   var app = new_app()
+  app.cmd = "TODO" # combine get_app_filename() and command_line_params()
   VM = new_vm(app)
 
   let gene_home = get_env("GENE_HOME", parent_dir(get_app_dir()))
@@ -907,7 +908,7 @@ proc eval*(self: VirtualMachine, code: string): Value =
 
 proc run_file*(self: VirtualMachine, file: string): Value =
   var module = new_module(VM.app.pkg, file, self.app.pkg.ns)
-  VM.main_module = module
+  VM.app.main_module = module
   var frame = new_frame(FrModule)
   frame.ns = module.ns
   frame.scope = new_scope()

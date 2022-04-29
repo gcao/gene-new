@@ -15,7 +15,8 @@ proc setup_logger*(debugging: bool) =
     console_logger.level_threshold = Level.lvlDebug
 
 proc `[]`*(self: CommandManager, cmd: string): Command =
-  self.data[cmd]
+  if self.data.has_key(cmd):
+    return self.data[cmd]
 
 proc register*(self: CommandManager, c: string, cmd: Command) =
   self.data[c] = cmd
