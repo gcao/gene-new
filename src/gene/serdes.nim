@@ -18,7 +18,13 @@ proc serialize*(value: Value): Serialization =
 
 proc serialize*(self: Serialization, value: Value): string =
   case value.kind:
-  of VkInt:
+  of VkInt, VkString:
+    return $value
+  of VkVector:
+    return $value
+  of VkMap:
+    return $value
+  of VkGene:
     return $value
   else:
     todo()
