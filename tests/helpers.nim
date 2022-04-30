@@ -4,6 +4,7 @@ import gene/map_key
 import gene/types
 import gene/parser
 import gene/interpreter
+import gene/serdes
 
 # Uncomment below lines to see logs
 # import logging
@@ -173,3 +174,12 @@ proc test_jsgen*(code: string, result: Value) =
     #   echo "===================="
     var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)
     check output == result
+
+proc test_serdes*(code: string, callback: proc(result: Value)) =
+  var code = cleanup(code)
+  test "Interpreter / eval: " & code:
+    init_all()
+    var value = VM.eval(code)
+    var s = serialize(value)
+    var value2 = deserialize(s)
+    callback(value2)
