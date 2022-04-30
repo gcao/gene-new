@@ -331,6 +331,13 @@ proc eval_invoke_selector(self: VirtualMachine, frame: Frame, target: Value, exp
   selector.children.add(item);
   new_gene_selector(selector)
 
+proc new_ex_invoke_selector*(s: string): Expr =
+  return ExInvokeSelector(
+    evaluator: eval_invoke_selector,
+    name: new_ex_literal(s),
+    args: new_ex_arg(),
+  )
+
 proc new_ex_invoke_selector*(value: Value): Expr =
   var e = ExInvokeSelector(
     evaluator: eval_invoke_selector,
@@ -357,6 +364,8 @@ proc translate_selector(value: Value): Expr =
     return new_ex_selector(parallel_mode, value.gene_children)
 
 proc handle_item*(item: string): Expr =
+  if item.starts_with("."):
+    return new_ex_invoke_selector(item[1..^1])
   try:
     result = translate(item.parse_int())
   except ValueError:

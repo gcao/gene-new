@@ -65,9 +65,10 @@ proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 
 proc translate*(name: string): Expr {.inline.} =
   if name.starts_with("@"):
-    # if name[1] == ".":
-    #   todo("translate " & name)
-    return new_ex_selector(name[1..^1])
+    if name[1] == '.':
+      return new_ex_invoke_selector(name[2..^1])
+    else:
+      return new_ex_selector(name[1..^1])
   if name.endsWith("..."):
     var r = new_ex_explode()
     r.data = translate(new_gene_symbol(name[0..^4]))
