@@ -180,6 +180,6 @@ proc test_serdes*(code: string, callback: proc(result: Value)) =
   test "Interpreter / eval: " & code:
     init_all()
     var value = VM.eval(code)
-    var s = serialize(value)
+    var s = serialize(value).to_s
     var value2 = deserialize(s)
     callback(value2)
