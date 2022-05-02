@@ -5,37 +5,51 @@ import ./parser
 
 type
   Serialization* = ref object
-    types*: Table[string, Value]
-    data*: string
+    types*: Table[string, SerdesBase]
+    data*: Value
 
-proc serialize*(self: Serialization, value: Value): string
+  SerdesBase* = ref object of RootObj
+    serializer*: Serializer
+    deserializer*: Deserializer
+
+  Serializer*   = proc(self: Serialization, value: Value): Value
+  Deserializer* = proc(self: Serialization, value: Value): Value
+
+proc serialize*(self: Serialization, value: Value): Value
 
 proc serialize*(value: Value): Serialization =
   result = Serialization(
-    types: Table[string, Value](),
+    types: Table[string, SerdesBase](),
   )
   result.data = result.serialize(value)
 
-proc serialize*(self: Serialization, value: Value): string =
+proc serialize*(self: Serialization, value: Value): Value =
   case value.kind:
   of VkInt, VkString:
-    return $value
+    return value
   of VkVector:
-    return $value
+    return value
   of VkMap:
-    return $value
+    return value
   of VkGene:
-    return $value
+    return value
   else:
     todo()
 
 proc to_s*(self: Serialization): string =
   result = "(gene/Serialization "
-  result &= self.data
+  result &= $self.data
   result &= ")"
 
 #################### Deserialization #############
 
+proc deserialize*(self: Serialization, value: Value): Value
+
 proc deserialize*(s: string): Value =
-  var parsed = read(s)
-  parsed.gene_children[0]
+  var ser = Serialization(
+    types: Table[string, SerdesBase](),
+  )
+  ser.deserialize(read(s))
+
+proc deserialize*(self: Serialization, value: Value): Value =
+  value.gene_children[0]
