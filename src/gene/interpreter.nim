@@ -42,5 +42,6 @@ import "./features/parse_cmd_args" as parse_cmd_args_feature; parse_cmd_args_fea
 import "./features/os" as os_feature; os_feature.init()
 
 import "./libs" as libs; libs.init()
+import "./serdes" as serdes; serdes.init()
 import "../genex/js" as js; js.init()
 import "../genex/css" as css; css.init()
