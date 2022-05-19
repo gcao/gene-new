@@ -1582,6 +1582,13 @@ proc new_gene_class*(name: string): Value =
     class: new_class(name),
   )
 
+proc new_gene_instance*(class: Class, props: Table[MapKey, Value]): Value =
+  return Value(
+    kind: VkInstance,
+    instance_class: class,
+    instance_props: props,
+  )
+
 proc new_gene_future*(f: Future[Value]): Value =
   return Value(
     kind: VkFuture,

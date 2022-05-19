@@ -15,6 +15,7 @@ type
 
 proc serialize*(self: Serialization, value: Value): Value
 proc to_path*(self: Value): string
+proc to_path*(self: Class): string
 
 proc new_ref(path: string): Value =
   new_gene_gene(new_gene_complex_symbol(@["gene", "ref"]), new_gene_string(path))
@@ -24,6 +25,9 @@ proc serialize*(value: Value): Serialization =
     references: Table[string, Value](),
   )
   result.data = result.serialize(value)
+
+proc serialize(self: Serialization, class: Class): Value =
+  new_ref(class.to_path())
 
 proc serialize*(self: Serialization, value: Value): Value =
   case value.kind:
@@ -36,18 +40,24 @@ proc serialize*(self: Serialization, value: Value): Value =
   of VkGene:
     return value
   of VkClass:
-    return new_ref(value.to_path())
+    return self.serialize(value.class)
+  of VkInstance:
+    result = new_gene_gene(new_gene_complex_symbol(@["gene", "instance"]))
+    result.gene_children.add(self.serialize(value.instance_class))
   else:
     todo()
 
 proc to_path*(self: Module): string =
-  return self.name
+  self.name
 
 proc to_path*(self: Namespace): string =
   if self.module.is_nil:
     return self.parent.to_path & "/" & self.name
   else:
     return self.module.to_path & ":"
+
+proc to_path*(self: Class): string =
+  self.ns.parent.to_path & "/" & self.name
 
 # Paths can not be inferred for all values.
 # When a path can not be inferred, developer should use
@@ -107,6 +117,10 @@ proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value 
         return self.deserialize(vm, value.gene_children[0])
       of "gene/ref":
         return self.deref(vm, value.gene_children[0].str)
+      of "gene/instance":
+        var class = self.deserialize(vm, value.gene_children[0]).class
+        var props = Table[MapKey, Value]()
+        return new_gene_instance(class, props)
       else:
         return value
     else:
