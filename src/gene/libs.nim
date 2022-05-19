@@ -366,6 +366,13 @@ proc init*() =
     GENE_NS.ns["Exception"] = ExceptionClass
     GLOBAL_NS.ns["Exception"] = ExceptionClass
 
+    ModuleClass = Value(kind: VkClass, class: new_class("Module"))
+    ModuleClass.class.parent = ObjectClass.class
+    ModuleClass.def_native_method "name", proc(self: Value, args: Value): Value =
+      self.module.name
+    ModuleClass.def_native_method "set_name", proc(self: Value, args: Value): Value =
+      self.module.name = args.gene_children[0].str
+
     NamespaceClass = Value(kind: VkClass, class: new_class("Namespace"))
     NamespaceClass.class.parent = ObjectClass.class
     NamespaceClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =

@@ -39,6 +39,10 @@ let PKG_EXPR = Expr()
 PKG_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   Value(kind: VkPackage, pkg: frame.ns.package)
 
+let MOD_EXPR = Expr()
+MOD_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  Value(kind: VkModule, module: frame.ns.module)
+
 proc eval_symbol_scope(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   frame.scope[cast[ExSymbol](expr).name]
 
@@ -87,6 +91,8 @@ proc translate*(name: string): Expr {.inline.} =
     result = NS_EXPR
   of "$pkg":
     result = PKG_EXPR
+  of "$mod":
+    result = MOD_EXPR
   of "$cmd_args":
     result = new_ex_literal(VM.app.args.map(str_to_gene))
   else:

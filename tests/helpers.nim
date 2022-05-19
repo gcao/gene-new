@@ -181,7 +181,7 @@ proc test_serdes*(code: string, result: Value) =
     init_all()
     var value = VM.eval(code)
     var s = serialize(value).to_s
-    var value2 = deserialize(s)
+    var value2 = VM.deserialize(s)
     check value2 == result
 
 proc test_serdes*(code: string, callback: proc(result: Value)) =
@@ -190,5 +190,5 @@ proc test_serdes*(code: string, callback: proc(result: Value)) =
     init_all()
     var value = VM.eval(code)
     var s = serialize(value).to_s
-    var value2 = deserialize(s)
+    var value2 = VM.deserialize(s)
     callback(value2)

@@ -159,6 +159,8 @@ type
       app*: Application
     of VkPackage:
       pkg*: Package
+    of VkModule:
+      module*: Module
     of VkNamespace:
       ns*: Namespace
     of VkFunction:

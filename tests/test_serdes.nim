@@ -28,8 +28,9 @@ test_serdes """
   check r.gene_props == {"a": new_gene_int(2)}.toTable
   check r.gene_children == @[3, 4]
 
-# test_serdes """
-#   (class A)
-#   (new A)
-# """, proc(r: Value) =
-#   check r.class.name == "A"
+test_interpreter """
+  (class A)
+  (var x (gene/serdes/serialize A))
+  (var A* (gene/serdes/deserialize x))
+  A*/.name
+""", "A"
