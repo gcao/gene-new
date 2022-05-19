@@ -26,9 +26,6 @@ proc serialize*(value: Value): Serialization =
   )
   result.data = result.serialize(value)
 
-proc serialize(self: Serialization, class: Class): Value =
-  new_ref(class.to_path())
-
 proc serialize*(self: Serialization, value: Value): Value =
   case value.kind:
   of VkInt, VkString:
@@ -39,11 +36,11 @@ proc serialize*(self: Serialization, value: Value): Value =
     return value
   of VkGene:
     return value
-  of VkClass:
-    return self.serialize(value.class)
+  of VkClass, VkFunction:
+    return new_ref(value.to_path())
   of VkInstance:
     result = new_gene_gene(new_gene_complex_symbol(@["gene", "instance"]))
-    result.gene_children.add(self.serialize(value.instance_class))
+    result.gene_children.add(new_ref(value.instance_class.to_path()))
     var props = new_gene_map()
     for k, v in value.instance_props:
       props.map[k] = self.serialize(v)
@@ -70,8 +67,9 @@ proc to_path*(self: Class): string =
 proc to_path*(self: Value): string =
   case self.kind:
   of VkClass:
-    var class = self.class
-    return class.ns.parent.to_path & "/" & class.name
+    return self.class.to_path()
+  of VkFunction:
+    return self.fn.ns.to_path() & "/" & self.fn.name
   else:
     not_allowed("value_to_path " & $self)
 
@@ -91,19 +89,19 @@ proc deref*(self: Serialization, vm: VirtualMachine, s: string): Value =
   var parts = s.split(":")
   var module_name = parts[0]
   var ns_path = parts[1].split("/")
-  ns_path.delete(0)
   var ns = vm.modules[module_name.to_key]
-  while ns_path.len > 0:
-    var key = ns_path[0].to_key
+  while ns_path.len > 1:
     ns_path.delete(0)
+    var key = ns_path[0].to_key
     result = ns[key]
-    case result.kind:
-    of VkNamespace:
-      ns = result.ns
-    of VkClass:
-      ns = result.class.ns
-    else:
-      not_allowed("deref " & s & " " & $result.kind)
+    if ns_path.len > 1:
+      case result.kind:
+      of VkNamespace:
+        ns = result.ns
+      of VkClass:
+        ns = result.class.ns
+      else:
+        not_allowed("deref " & s & " " & $result.kind)
 
 proc deserialize*(vm: VirtualMachine, s: string): Value =
   var ser = Serialization(

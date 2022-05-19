@@ -51,3 +51,10 @@ test_interpreter """
   (var a* (gene/serdes/deserialize x))
   a*/test
 """, 1
+
+test_interpreter """
+  (fn f _ 1)
+  (var x (gene/serdes/serialize f))
+  (var f* (gene/serdes/deserialize x))
+  (f)
+""", 1
