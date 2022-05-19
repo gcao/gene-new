@@ -42,3 +42,12 @@ test_interpreter """
   (var a* (gene/serdes/deserialize x))
   a*/.class/.name
 """, "A"
+
+test_interpreter """
+  (class A)
+  (var a (new A))
+  (a/test = 1)
+  (var x (gene/serdes/serialize a))
+  (var a* (gene/serdes/deserialize x))
+  a*/test
+""", 1

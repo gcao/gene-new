@@ -1,4 +1,4 @@
-import tables, strutils, sequtils
+import tables, strutils
 
 import ./map_key
 import ./types
@@ -44,6 +44,10 @@ proc serialize*(self: Serialization, value: Value): Value =
   of VkInstance:
     result = new_gene_gene(new_gene_complex_symbol(@["gene", "instance"]))
     result.gene_children.add(self.serialize(value.instance_class))
+    var props = new_gene_map()
+    for k, v in value.instance_props:
+      props.map[k] = self.serialize(v)
+    result.gene_children.add(props)
   else:
     todo()
 
@@ -120,6 +124,8 @@ proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value 
       of "gene/instance":
         var class = self.deserialize(vm, value.gene_children[0]).class
         var props = Table[MapKey, Value]()
+        for k, v in value.gene_children[1].map:
+          props[k] = self.deserialize(vm, v)
         return new_gene_instance(class, props)
       else:
         return value
