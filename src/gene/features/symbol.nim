@@ -91,7 +91,7 @@ proc translate*(name: string): Expr {.inline.} =
     result = NS_EXPR
   of "$pkg":
     result = PKG_EXPR
-  of "$mod":
+  of "$module":
     result = MOD_EXPR
   of "$cmd_args":
     result = new_ex_literal(VM.app.args.map(str_to_gene))
