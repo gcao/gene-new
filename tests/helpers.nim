@@ -77,25 +77,25 @@ proc test_interpreter*(code: string) =
   var code = cleanup(code)
   test "Interpreter / eval: " & code:
     init_all()
-    discard VM.eval(code)
+    discard VM.eval(code, "test_code")
 
 proc test_interpreter*(code: string, result: Value) =
   var code = cleanup(code)
   test "Interpreter / eval: " & code:
     init_all()
-    check VM.eval(code) == result
+    check VM.eval(code, "test_code") == result
 
 proc test_interpreter*(code: string, callback: proc(result: Value)) =
   var code = cleanup(code)
   test "Interpreter / eval: " & code:
     init_all()
-    callback VM.eval(code)
+    callback VM.eval(code, "test_code")
 
 proc test_interpreter_error*(code: string) =
   var code = cleanup(code)
   test "Interpreter / eval - error expected: " & code:
     try:
-      discard VM.eval(code)
+      discard VM.eval(code, "test_code")
       fail()
     except ParseError:
       discard
@@ -159,7 +159,7 @@ proc test_jsgen*(code: string, result: Value) =
   var code = cleanup(code)
   test "JS generation: " & code:
     init_all()
-    var generated = VM.eval(code).to_s
+    var generated = VM.eval(code, "test_code").to_s
     # if exists_env("SHOW_JS"):
     #   echo "--------------------"
     #   echo generated
@@ -179,7 +179,7 @@ proc test_serdes*(code: string, result: Value) =
   var code = cleanup(code)
   test "Interpreter / eval: " & code:
     init_all()
-    var value = VM.eval(code)
+    var value = VM.eval(code, "test_code")
     var s = serialize(value).to_s
     var value2 = VM.deserialize(s)
     check value2 == result
@@ -188,7 +188,7 @@ proc test_serdes*(code: string, callback: proc(result: Value)) =
   var code = cleanup(code)
   test "Interpreter / eval: " & code:
     init_all()
-    var value = VM.eval(code)
+    var value = VM.eval(code, "test_code")
     var s = serialize(value).to_s
     var value2 = VM.deserialize(s)
     callback(value2)

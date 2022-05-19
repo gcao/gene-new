@@ -896,15 +896,23 @@ proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
   var expr = translate(self.prepare(code))
   result = self.eval(frame, expr)
 
-proc eval*(self: VirtualMachine, pkg: Package, code: string): Value =
-  var module = new_module(pkg)
+proc eval*(self: VirtualMachine, pkg: Package, code: string, module_name: string): Value =
+  var module = new_module(pkg, module_name)
+  if module.name.len > 0:
+    self.modules[module.name.to_key] = module.ns
   var frame = new_frame(FrModule)
   frame.ns = module.ns
   frame.scope = new_scope()
   self.eval(frame, code)
 
+proc eval*(self: VirtualMachine, pkg: Package, code: string): Value =
+  self.eval(pkg, code, "")
+
 proc eval*(self: VirtualMachine, code: string): Value =
   self.eval(VM.app.pkg, code)
+
+proc eval*(self: VirtualMachine, code: string, module_name: string): Value =
+  self.eval(VM.app.pkg, code, module_name)
 
 proc run_file*(self: VirtualMachine, file: string): Value =
   var module = new_module(VM.app.pkg, file, self.app.pkg.ns)

@@ -1,5 +1,6 @@
-import tables, strutils
+import tables, strutils, sequtils
 
+import ./map_key
 import ./types
 import ./parser
 import ./interpreter_base
@@ -72,12 +73,23 @@ proc to_s*(self: Serialization): string =
 
 proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value
 
-proc deref*(s: string): Value =
-  # var parts = s.split(":")
-  # var mod_name = parts[0]
-  # var local = parts[1]
-  # if mod_name =
-  todo()
+proc deref*(self: Serialization, vm: VirtualMachine, s: string): Value =
+  var parts = s.split(":")
+  var module_name = parts[0]
+  var ns_path = parts[1].split("/")
+  ns_path.delete(0)
+  var ns = vm.modules[module_name.to_key]
+  while ns_path.len > 0:
+    var key = ns_path[0].to_key
+    ns_path.delete(0)
+    result = ns[key]
+    case result.kind:
+    of VkNamespace:
+      ns = result.ns
+    of VkClass:
+      ns = result.class.ns
+    else:
+      not_allowed("deref " & s & " " & $result.kind)
 
 proc deserialize*(vm: VirtualMachine, s: string): Value =
   var ser = Serialization(
@@ -94,7 +106,7 @@ proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value 
       of "gene/serialization":
         return self.deserialize(vm, value.gene_children[0])
       of "gene/ref":
-        todo()
+        return self.deref(vm, value.gene_children[0].str)
       else:
         return value
     else:
