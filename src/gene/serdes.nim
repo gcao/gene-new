@@ -13,6 +13,10 @@ type
   Deserializer* = proc(self: Serialization, value: Value): Value
 
 proc serialize*(self: Serialization, value: Value): Value
+proc to_path*(self: Value): string
+
+proc new_ref(path: string): Value =
+  new_gene_gene(new_gene_complex_symbol(@["gene", "ref"]), new_gene_string(path))
 
 proc serialize*(value: Value): Serialization =
   result = Serialization(
@@ -31,7 +35,7 @@ proc serialize*(self: Serialization, value: Value): Value =
   of VkGene:
     return value
   of VkClass:
-    return value
+    return new_ref(value.to_path())
   else:
     todo()
 
@@ -39,10 +43,10 @@ proc to_path*(self: Module): string =
   return self.name
 
 proc to_path*(self: Namespace): string =
-  if self.parent.is_nil:
-    return self.module.to_path & ":"
-  else:
+  if self.module.is_nil:
     return self.parent.to_path & "/" & self.name
+  else:
+    return self.module.to_path & ":"
 
 # Paths can not be inferred for all values.
 # When a path can not be inferred, developer should use
@@ -52,7 +56,7 @@ proc to_path*(self: Value): string =
   case self.kind:
   of VkClass:
     var class = self.class
-    return class.ns.to_path & "/" & class.name
+    return class.ns.parent.to_path & "/" & class.name
   else:
     not_allowed("value_to_path " & $self)
 
@@ -60,7 +64,7 @@ proc path_to_value*(path: string): Value =
   todo()
 
 proc to_s*(self: Serialization): string =
-  result = "(gene/Serialization "
+  result = "(gene/serialization "
   result &= $self.data
   result &= ")"
 
@@ -88,7 +92,7 @@ proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value 
     of VkComplexSymbol:
       case $value.gene_type:
       of "gene/serialization":
-        return value.gene_children[0]
+        return self.deserialize(vm, value.gene_children[0])
       of "gene/ref":
         todo()
       else:
@@ -101,26 +105,11 @@ proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value 
 #################### Expr & eval #################
 
 type
-  ExReference* = ref object of Expr
-    path*: string
-    value*: Expr
-
   ExSer* = ref object of Expr
     value*: Expr
 
   ExDeser* = ref object of Expr
     value*: Expr
-
-proc eval_ref(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  # var expr = cast[ExReference](expr)
-  todo()
-
-proc translate_ref(value: Value): Expr =
-  return ExReference(
-    evaluator: eval_ref,
-    path: value.gene_children[0].str,
-    value: translate(value.gene_children[0]),
-  )
 
 proc eval_ser(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExSer](expr)
@@ -145,7 +134,6 @@ proc translate_deser(value: Value): Expr =
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     var serdes = new_namespace("serdes")
-    serdes["ref"] = new_gene_processor(translate_ref)
     serdes["serialize"] = new_gene_processor(translate_ser)
     serdes["deserialize"] = new_gene_processor(translate_deser)
     GENE_NS.ns["serdes"] = Value(kind: VkNamespace, ns: serdes)

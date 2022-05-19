@@ -31,6 +31,7 @@ test_serdes """
 test_interpreter """
   (class A)
   (var x (gene/serdes/serialize A))
+  (println x)
   (var A* (gene/serdes/deserialize x))
   A*/.name
 """, "A"
