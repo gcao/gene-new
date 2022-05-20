@@ -10,15 +10,20 @@ type
     references*: Table[string, Value]
     data*: Value
 
-  Serializer*   = proc(self: Serialization, value: Value): Value
-  Deserializer* = proc(self: Serialization, value: Value): Value
-
 proc serialize*(self: Serialization, value: Value): Value
 proc to_path*(self: Value): string
 proc to_path*(self: Class): string
 
 proc new_ref(path: string): Value =
   new_gene_gene(new_gene_complex_symbol(@["gene", "ref"]), new_gene_string(path))
+
+# For values not serializable, there are several ways to handle it:
+# 1. throw an error and abort during serialization
+# 2. replace unserializable value with some special value, throw an error
+#    when the special value was used/invoked etc.
+# 3. replace with nil
+#
+# These can be controlled by options passed in.
 
 proc serialize*(value: Value): Serialization =
   result = Serialization(
@@ -60,10 +65,11 @@ proc to_path*(self: Namespace): string =
 proc to_path*(self: Class): string =
   self.ns.parent.to_path & "/" & self.name
 
+# A path looks like
+# Class C => "pkgP:modM:nsN/C"
 # Paths can not be inferred for all values.
 # When a path can not be inferred, developer should use
 # (gene/serdes/ref path value) to explicitly assign a path
-# Class C => "pkgP:modM:nsN/C" or ":modM:nsN/C" or "::nsN/C" or "::C"
 proc to_path*(self: Value): string =
   case self.kind:
   of VkClass:
