@@ -207,6 +207,29 @@ test_parser_error """
 
 test_parser_error "{^ratio 1/-2}"
 
+# Unit conversion
+test_parser """
+  1m # 1m = 1 minute = 60 seconds (1 = 1s = 1 second)
+""", 60
+test_parser """
+  1s
+""", 1
+test_parser """
+  1ms
+""", 0.001
+# test_parser """
+#   (#Unit "m" 1)  # 1m = 1 meter (meter is defined as the default unit for length)
+#   1m
+# """, 1
+# test_parser """
+#   1m30s
+# """, 90
+# test_parser """
+#   1s500ms
+# """, 1.5
+# test_parser """
+#   1m30
+# """, 90
 # Support decorator from the parser. It can appear anywhere except property names.
 # Pros:
 #   Easier to write

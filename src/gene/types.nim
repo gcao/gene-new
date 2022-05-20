@@ -32,6 +32,7 @@ type
     VkInt
     VkRatio
     VkFloat
+    # VkPercent # xx.xx%
     VkChar
     VkString
     VkSymbol
