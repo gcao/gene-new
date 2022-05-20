@@ -784,9 +784,16 @@ proc parse_number(self: var Parser): TokenKind =
     var num = self.str
     self.str = ""
     self.bufpos = pos
-    var unit = self.read_token(false)
-    self.str = ""
+    var unit = ""
+    while true:
+      add(unit, self.buf[pos])
+      inc(pos)
+      if buf[pos] notin {'a' .. 'z', 'A' .. 'Z'}:
+        break
+    self.bufpos = pos
     self.num_with_units.add((result, num, unit))
+    if buf[pos] in {'.', '0' .. '9'}: # handle something like 1m30s
+      discard self.parse_number()
     result = TkNumberWithUnit
   self.bufpos = pos
 
@@ -840,18 +847,25 @@ proc read_number(self: var Parser): Value =
   of TkError:
     raise new_exception(ParseError, "Error reading a number: " & self.str)
   of TkNumberWithUnit:
-    var (kind, num, unit) = self.num_with_units[0]
-    var unit_base = self.options.units[unit]
-    if kind == TkFloat:
-      if unit_base.kind == VkInt:
-        result = new_gene_float(num.parse_float() * unit_base.int.to_float())
+    result = new_gene_int()
+    for (kind, num, unit) in self.num_with_units:
+      var unit_base = self.options.units[unit]
+      if kind == TkInt:
+        if result.kind == VkInt:
+          if unit_base.kind == VkInt:
+            result.int += num.parse_int() * unit_base.int.int()
+          else:
+            result = new_gene_float(result.int.to_float())
+            result.float += num.parse_int().to_float() * unit_base.float
+        else:
+          result.float += num.parse_int().to_float() * unit_base.float
       else:
-        result = new_gene_float(num.parse_float() * unit_base.float)
-    else:
-      if unit_base.kind == VkInt:
-        result = new_gene_int(num.parse_int() * unit_base.int.int())
-      else:
-        result = new_gene_float(num.parse_int().to_float() * unit_base.float)
+        if result.kind == VkInt:
+          result = new_gene_float(result.int.to_float())
+        if unit_base.kind == VkInt:
+          result.float += num.parse_float() * unit_base.int.to_float()
+        else:
+          result.float += num.parse_float() * unit_base.float
   else:
     raise new_exception(ParseError, "Error reading a number (?): " & self.str)
 

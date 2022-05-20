@@ -221,12 +221,12 @@ test_parser """
 #   (#Unit "m" 1)  # 1m = 1 meter (meter is defined as the default unit for length)
 #   1m
 # """, 1
-# test_parser """
-#   1m30s
-# """, 90
-# test_parser """
-#   1s500ms
-# """, 1.5
+test_parser """
+  1m30s
+""", 90
+test_parser """
+  1s500ms
+""", 1.5
 # test_parser """
 #   1m30
 # """, 90

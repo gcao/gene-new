@@ -1361,6 +1361,9 @@ proc new_gene_bool*(s: string): Value =
   let parsed: bool = parseBool(s)
   return new_gene_bool(parsed)
 
+proc new_gene_int*(): Value =
+  return Value(kind: VkInt, int: 0)
+
 proc new_gene_int*(s: string): Value =
   return Value(kind: VkInt, int: parseBiggestInt(s))
 
