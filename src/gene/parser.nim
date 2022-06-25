@@ -746,6 +746,36 @@ proc close*(self: var Parser) {.inline.} =
 # proc get_filename(self: Parser): string =
 #   result = self.filename
 
+proc parse_bin(self: var Parser): Value =
+  var bytes: seq[uint8] = @[]
+  var byte: uint8 = 0
+  var size: uint = 0
+  while self.buf[self.bufpos] in ['0', '1']:
+    size += 1
+    byte = byte.shl(1)
+    if self.buf[self.bufpos] == '1':
+      byte = byte.or(1)
+    if size mod 8 == 0:
+      bytes.add(byte)
+  if size mod 8 != 0:
+    # Add last partial byte
+    bytes.add(byte)
+
+  if size == 0:
+    not_allowed("parse_bin: input length is zero.")
+  elif size <= 8:
+    return Value(
+      kind: VkByte,
+      byte: bytes[0],
+      byte_bit_size: size,
+    )
+  else:
+    return Value(
+      kind: VkBin,
+      bin: bytes,
+      bin_bit_size: size,
+    )
+
 proc parse_number(self: var Parser): TokenKind =
   result = TokenKind.TkEof
   var pos = self.bufpos
@@ -801,6 +831,11 @@ let DATE_FORMAT = init_time_format("yyyy-MM-dd")
 let DATETIME_FORMAT = init_time_format("yyyy-MM-dd'T'HH:mm:sszzz")
 
 proc read_number(self: var Parser): Value =
+  if self.buf[self.bufpos] == '0':
+    if self.buf[self.bufpos + 1] == '!':
+      self.bufpos += 2
+      return self.parse_bin()
+
   var num_result = self.parse_number()
   let opts = self.options
   case num_result

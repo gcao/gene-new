@@ -32,6 +32,10 @@ type
     VkInt
     VkRatio
     VkFloat
+    VkBin
+    VkBin64
+    VkByte
+    VkBytes
     # VkPercent # xx.xx%
     VkChar
     VkString
@@ -55,6 +59,10 @@ type
     VkGene
     VkStream
     VkDocument
+    VkTextualFile
+    VkBinaryFile
+    VkArchiveFile
+    VkDirectory
     # Internal types
     VkException = 128
     VkGeneProcessor
@@ -99,6 +107,18 @@ type
       ratio_denom*: BiggestInt
     of VkFloat:
       float*: float
+    of VkBin:
+      bin*: seq[uint8]
+      bin_bit_size*: uint
+    of VkBin64:
+      bin64*: uint64
+      bin64_bit_size*: uint
+    of VkByte:
+      byte*: uint8
+      byte_bit_size*: uint
+    of VkBytes:
+      bytes*: seq[uint8]
+      # bytes_size*: uint # size is the len of bytes
     of VkChar:
       char*: char
       rune*: Rune
@@ -139,6 +159,26 @@ type
       stream*: seq[Value]
       stream_index*: BiggestInt
       stream_ended*: bool
+    of VkDocument:
+      document_type*: Value
+      document_props*: Table[MapKey, Value]
+      document_children*: seq[Value]
+    of VkTextualFile:
+      txt_file_name*: string
+      txt_file_content*: Value
+      txt_file_permissions*: string
+    of VkBinaryFile:
+      bin_file_name*: string
+      bin_file_content*: Value
+      bin_file_permissions*: string
+    of VkArchiveFile:
+      arc_file_name*: string
+      arc_file_children*: seq[Value]
+      arc_file_permissions*: string
+    of VkDirectory:
+      dir_name*: string
+      dir_children*: seq[Value]
+      dir_permissions*: string
     of VkQuote:
       quote*: Value
     of VkUnquote:
