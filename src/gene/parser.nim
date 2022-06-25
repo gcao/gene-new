@@ -757,6 +757,8 @@ proc parse_bin(self: var Parser): Value =
       byte = byte.or(1)
     if size mod 8 == 0:
       bytes.add(byte)
+      byte = 0
+    self.bufpos += 1
   if size mod 8 != 0:
     # Add last partial byte
     bytes.add(byte)

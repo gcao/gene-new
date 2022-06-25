@@ -212,6 +212,16 @@ test_parser "0!11", proc(r: Value) =
   check r.byte_bit_size == 2
   check r.byte == 3
 
+test_parser "0!11110000", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 240
+
+test_parser "0!000011110000", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 12
+  check r.bin == @[uint8(15), uint8(0)]
+
 # Unit conversion
 test_parser """
   1m # 1m = 1 minute = 60 seconds (1 = 1s = 1 second)
