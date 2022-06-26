@@ -18,6 +18,13 @@ var DEFAULT_UNITS = {
   "ns": new_gene_float(1e-9),   # ns = nanosecond
 }.to_table()
 
+let HEX = {
+  '0': 0u8, '1': 1u8, '2': 2u8, '3': 3u8, '4': 4u8,
+  '5': 5u8, '6': 6u8, '7': 7u8, '8': 8u8, '9': 9u8,
+  'a': 10u8, 'b': 11u8, 'c': 12u8, 'd': 13u8, 'e': 14u8, 'f': 15u8,
+  'A': 10u8, 'B': 11u8, 'C': 12u8, 'D': 13u8, 'E': 14u8, 'F': 15u8,
+}.to_table()
+
 type
   ParseOptions* = object
     eof_is_error*: bool
@@ -778,6 +785,39 @@ proc parse_bin(self: var Parser): Value =
       bin_bit_size: size,
     )
 
+proc parse_hex(self: var Parser): Value =
+  var bytes: seq[uint8] = @[]
+  var byte: uint8 = 0
+  var size: uint = 0
+  var ch = self.buf[self.bufpos]
+  while ch in '0'..'9' or ch in 'A'..'F' or ch in 'a'..'f':
+    size += 4
+    byte = byte.shl(4)
+    byte += HEX[ch]
+    if size mod 8 == 0:
+      bytes.add(byte)
+      byte = 0
+    self.bufpos += 1
+    ch = self.buf[self.bufpos]
+  if size mod 8 != 0:
+    # Add last partial byte
+    bytes.add(byte)
+
+  if size == 0:
+    not_allowed("parse_bin: input length is zero.")
+  elif size <= 8:
+    return Value(
+      kind: VkByte,
+      byte: bytes[0],
+      byte_bit_size: size,
+    )
+  else:
+    return Value(
+      kind: VkBin,
+      bin: bytes,
+      bin_bit_size: size,
+    )
+
 proc parse_number(self: var Parser): TokenKind =
   result = TokenKind.TkEof
   var pos = self.bufpos
@@ -834,9 +874,16 @@ let DATETIME_FORMAT = init_time_format("yyyy-MM-dd'T'HH:mm:sszzz")
 
 proc read_number(self: var Parser): Value =
   if self.buf[self.bufpos] == '0':
-    if self.buf[self.bufpos + 1] == '!':
+    let ch = self.buf[self.bufpos + 1]
+    case ch:
+    of '!':
       self.bufpos += 2
       return self.parse_bin()
+    of '*':
+      self.bufpos += 2
+      return self.parse_hex()
+    else:
+      discard
 
   var num_result = self.parse_number()
   let opts = self.options
