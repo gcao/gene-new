@@ -232,6 +232,11 @@ test_parser "0*a003", proc(r: Value) =
   check r.bin_bit_size == 16
   check r.bin == @[uint8(160), uint8(3)]
 
+test_parser "0#ABCD", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 24
+  check r.bin == @[uint8(0), uint8(16), uint8(131)]
+
 # Unit conversion
 test_parser """
   1m # 1m = 1 minute = 60 seconds (1 = 1s = 1 second)

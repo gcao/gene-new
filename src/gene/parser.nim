@@ -3,7 +3,7 @@
 # created by Roland Sadowski.
 # 1. https://github.com/rosado/edn.nim
 
-import lexbase, streams, strutils, unicode, tables, sets, times, nre
+import lexbase, streams, strutils, unicode, tables, sets, times, nre, base64
 
 import ./map_key
 import ./types
@@ -818,6 +818,32 @@ proc parse_hex(self: var Parser): Value =
       bin_bit_size: size,
     )
 
+proc add(self: var seq[uint8], str: string) =
+  for c in str:
+    self.add(uint8(c))
+
+proc parse_base64(self: var Parser): Value =
+  var bytes: seq[uint8] = @[]
+  var ch = self.buf[self.bufpos]
+  var s = ""
+  while ch in '0'..'9' or ch in 'A'..'Z' or ch in 'a'..'z' or ch in ['+', '/', '=']:
+    s &= ch
+    self.bufpos += 1
+    ch = self.buf[self.bufpos]
+    if s.len == 4:
+      echo s
+      bytes.add(decode(s))
+      s = ""
+
+  if s.len > 0:
+    bytes.add(decode(s))
+
+  return Value(
+    kind: VkBin,
+    bin: bytes,
+    bin_bit_size: uint(bytes.len * 8),
+  )
+
 proc parse_number(self: var Parser): TokenKind =
   result = TokenKind.TkEof
   var pos = self.bufpos
@@ -882,6 +908,9 @@ proc read_number(self: var Parser): Value =
     of '*':
       self.bufpos += 2
       return self.parse_hex()
+    of '#':
+      self.bufpos += 2
+      return self.parse_base64()
     else:
       discard
 
