@@ -466,6 +466,24 @@ proc read_gene_type(self: var Parser): Value =
         inc(count)
         break
 
+proc to_keys(self: string): seq[string] =
+  # let parts = self.split("^")
+  # return parts
+  var pos = 0
+  var key = ""
+  var last: char = EndOfFile
+  while pos < self.len:
+    var ch = self[pos]
+    if ch == '^' and last != '^':
+      result.add(key)
+      key = ""
+    else:
+      key.add(ch)
+    last = ch
+    pos.inc
+
+  result.add(key)
+
 proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
   var ch: char
   var key: string
@@ -500,13 +518,22 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
         else:
           key = self.read_token(false)
           if key.contains('^'):
-            let parts = key.split("^")
+            let parts = key.to_keys()
             map = result.addr
             for part in parts[0..^2]:
               let new_map = new_gene_map()
               map[][part] = new_map
               map = new_map.map.addr
             key = parts[^1]
+            case key[0]:
+            of '^':
+              map[][key[1..^1]] = true
+              continue
+            of '!':
+              map[][key[1..^1]] = false
+              continue
+            else:
+              discard
           state = PropState.PropValue
       elif mode == MkGene or mode == MkDocument:
         # Do not consume ')'
