@@ -521,9 +521,12 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
             let parts = key.to_keys()
             map = result.addr
             for part in parts[0..^2]:
-              let new_map = new_gene_map()
-              map[][part] = new_map
-              map = new_map.map.addr
+              if map[].has_key(part.to_key):
+                map = map[][part].map.addr
+              else:
+                var new_map = new_gene_map()
+                map[][part] = new_map
+                map = new_map.map.addr
             key = parts[^1]
             case key[0]:
             of '^':

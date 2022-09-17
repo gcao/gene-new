@@ -114,6 +114,8 @@ test_parser "{^a 1}", {"a": new_gene_int(1)}.toTable
 test_parser "{^a^b 1}", {"a": new_gene_map({"b": new_gene_int(1)}.toTable)}.toTable
 test_parser "{^a^^b}", {"a": new_gene_map({"b": True}.toTable)}.toTable
 test_parser "{^a^!b}", {"a": new_gene_map({"b": False}.toTable)}.toTable
+test_parser "{^a^b 1 ^a^c 2}", {"a": new_gene_map({"b": new_gene_int(1), "c": new_gene_int(2)}.toTable)}.toTable
+test_parser "{^a^^b ^a^c 2}", {"a": new_gene_map({"b": True, "c": new_gene_int(2)}.toTable)}.toTable
 
 test_parser "[]", new_gene_vec()
 test_parser "[,]", new_gene_vec()
