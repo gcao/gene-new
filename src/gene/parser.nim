@@ -470,6 +470,10 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
   var ch: char
   var key: string
   var state = PropState.PropKey
+
+  result = init_table[MapKey, Value]()
+  var map = result.addr
+
   while true:
     self.skip_ws()
     ch = self.buf[self.bufpos]
@@ -480,6 +484,7 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
         raise new_exception(ParseError, "EOF while reading ")
     elif ch == ']' or (mode == MkGene and ch == '}') or (mode == MkMap and ch == ')'):
       raise new_exception(ParseError, "Unmatched delimiter: " & self.buf[self.bufpos])
+
     case state:
     of PropKey:
       if ch == '^':
@@ -494,6 +499,14 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
           result[key.to_key] = Nil
         else:
           key = self.read_token(false)
+          if key.contains('^'):
+            let parts = key.split("^")
+            map = result.addr
+            for part in parts[0..^2]:
+              let new_map = new_gene_map()
+              map[][part] = new_map
+              map = new_map.map.addr
+            key = parts[^1]
           state = PropState.PropValue
       elif mode == MkGene or mode == MkDocument:
         # Do not consume ')'
@@ -505,6 +518,7 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
         return
       else:
         raise new_exception(ParseError, "Expect key at " & $self.bufpos & " but found " & self.buf[self.bufpos])
+
     of PropState.PropValue:
       if ch == EndOfFile or ch == '^':
         raise new_exception(ParseError, "Expect value for " & key)
@@ -514,7 +528,8 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
       elif ch == '}':
         raise new_exception(ParseError, "Expect value for " & key)
       state = PropState.PropKey
-      result[key.to_key] = self.read()
+      map[][key.to_key] = self.read()
+      map = result.addr
 
 proc read_delimited_list(self: var Parser, delimiter: char, is_recursive: bool): DelimitedListResult =
   # the bufpos should be already be past the opening paren etc.

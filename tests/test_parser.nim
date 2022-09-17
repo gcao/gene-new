@@ -111,6 +111,8 @@ test_parser "10:11:12", new_gene_time(10, 11, 12)
 test_parser "{}", Table[string, Value]()
 test_parser "{^a 1}", {"a": new_gene_int(1)}.toTable
 
+test_parser "{^a^b 1}", {"a": new_gene_map({"b": new_gene_int(1)}.toTable)}.toTable
+
 test_parser "[]", new_gene_vec()
 test_parser "[,]", new_gene_vec()
 test_parser "[1 2]", new_gene_vec(new_gene_int(1), new_gene_int(2))
