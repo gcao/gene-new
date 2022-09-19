@@ -117,6 +117,12 @@ test_parser "{^a^!b}", {"a": new_gene_map({"b": False}.toTable)}.toTable
 test_parser "{^a^b 1 ^a^c 2}", {"a": new_gene_map({"b": new_gene_int(1), "c": new_gene_int(2)}.toTable)}.toTable
 test_parser "{^a^^b ^a^c 2}", {"a": new_gene_map({"b": True, "c": new_gene_int(2)}.toTable)}.toTable
 
+test_parser "(_ ^a^b 1)", proc(r: Value) =
+  assert r.gene_props["a"].map["b"] == 1
+test_parser "(_ ^a^^b 1)", proc(r: Value) =
+  assert r.gene_props["a"].map["b"] == True
+  assert r.gene_children[0] == 1
+
 test_parser "[]", new_gene_vec()
 test_parser "[,]", new_gene_vec()
 test_parser "[1 2]", new_gene_vec(new_gene_int(1), new_gene_int(2))
