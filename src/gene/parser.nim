@@ -558,7 +558,17 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
       elif ch == '}':
         raise new_exception(ParseError, "Expect value for " & key)
       state = PropState.PropKey
-      map[][key.to_key] = self.read()
+
+      var value = self.read()
+      if map[].has_key(key.to_key):
+        if value.kind == VkMap:
+          for k, v in value.map:
+            map[][key.to_key].map[k] = v
+        else:
+          raise new_exception(ParseError, "Bad input: mixing map with non-map")
+      else:
+        map[][key.to_key] = value
+
       map = result.addr
 
 proc read_delimited_list(self: var Parser, delimiter: char, is_recursive: bool): DelimitedListResult =
