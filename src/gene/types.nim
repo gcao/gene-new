@@ -319,7 +319,7 @@ type
   # network access, environment access, input/output device access etc.
   # Capabilities can be enabled/disabled on application, package, module level.
 
-  # environment: local/unittest/development/staging/production
+  # environment: local/unittest/development/staging/production/...
   # assertion: enabled/disabled
   # log level: fatal/error/warning/info/debug/trace
   # repl on error: true/false
@@ -328,12 +328,31 @@ type
   #   stdin/stdout/stderr/pipe: read/write
   #   gui:
   #   file system: read/write
-  #   os execution: read/write
+  #   os execution:
   #   database: read/write
   #   socket client: read/write
   #   socket server:
-  #   http: read/write
+  #   http: get/post/put/...
+  #   profile: read
+  #   location: read
+  #   notification: send
   #   custom capabilities provided by libraries
+  #
+  # Support on-demand capability request
+  # Ideally on-demand request should be non-blocking and can be rejected.
+
+  # Pseudo code for capabilities config (no hierarchy, evaluated in the order, rules defined later take precedence):
+  # disable all
+  # enable stdout [] write
+
+  # enable filesystem [/home/user] [read, write]
+  # disable filesystem [/home/user/.ssh]
+
+  # Group capabilities
+  # define X:
+  #   enable filesystem [/home/user] [read, write]
+  #   include Y
+  #   ...
 
   ## This is the root of a running application
   Application* = ref object
