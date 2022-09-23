@@ -466,10 +466,32 @@ proc read_gene_type(self: var Parser): Value =
         inc(count)
         break
 
+proc to_keys(self: string): seq[string] =
+  # let parts = self.split("^")
+  # return parts
+  var pos = 0
+  var key = ""
+  var last: char = EndOfFile
+  while pos < self.len:
+    var ch = self[pos]
+    if ch == '^' and last != '^':
+      result.add(key)
+      key = ""
+    else:
+      key.add(ch)
+    last = ch
+    pos.inc
+
+  result.add(key)
+
 proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
   var ch: char
   var key: string
   var state = PropState.PropKey
+
+  result = init_table[MapKey, Value]()
+  var map = result.addr
+
   while true:
     self.skip_ws()
     ch = self.buf[self.bufpos]
@@ -480,6 +502,7 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
         raise new_exception(ParseError, "EOF while reading ")
     elif ch == ']' or (mode == MkGene and ch == '}') or (mode == MkMap and ch == ')'):
       raise new_exception(ParseError, "Unmatched delimiter: " & self.buf[self.bufpos])
+
     case state:
     of PropKey:
       if ch == '^':
@@ -494,6 +517,26 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
           result[key.to_key] = Nil
         else:
           key = self.read_token(false)
+          if key.contains('^'):
+            let parts = key.to_keys()
+            map = result.addr
+            for part in parts[0..^2]:
+              if map[].has_key(part.to_key):
+                map = map[][part].map.addr
+              else:
+                var new_map = new_gene_map()
+                map[][part] = new_map
+                map = new_map.map.addr
+            key = parts[^1]
+            case key[0]:
+            of '^':
+              map[][key[1..^1]] = true
+              continue
+            of '!':
+              map[][key[1..^1]] = false
+              continue
+            else:
+              discard
           state = PropState.PropValue
       elif mode == MkGene or mode == MkDocument:
         # Do not consume ')'
@@ -505,6 +548,7 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
         return
       else:
         raise new_exception(ParseError, "Expect key at " & $self.bufpos & " but found " & self.buf[self.bufpos])
+
     of PropState.PropValue:
       if ch == EndOfFile or ch == '^':
         raise new_exception(ParseError, "Expect value for " & key)
@@ -514,7 +558,19 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
       elif ch == '}':
         raise new_exception(ParseError, "Expect value for " & key)
       state = PropState.PropKey
-      result[key.to_key] = self.read()
+
+      var value = self.read()
+      if map[].has_key(key.to_key):
+        raise new_exception(ParseError, "Bad input at " & $self.bufpos & " (conflict with property shortcut found earlier.)")
+        # if value.kind == VkMap:
+        #   for k, v in value.map:
+        #     map[][key.to_key].map[k] = v
+        # else:
+        #   raise new_exception(ParseError, "Bad input: mixing map with non-map")
+      else:
+        map[][key.to_key] = value
+
+      map = result.addr
 
 proc read_delimited_list(self: var Parser, delimiter: char, is_recursive: bool): DelimitedListResult =
   # the bufpos should be already be past the opening paren etc.
