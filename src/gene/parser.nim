@@ -561,11 +561,12 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
 
       var value = self.read()
       if map[].has_key(key.to_key):
-        if value.kind == VkMap:
-          for k, v in value.map:
-            map[][key.to_key].map[k] = v
-        else:
-          raise new_exception(ParseError, "Bad input: mixing map with non-map")
+        raise new_exception(ParseError, "Bad input at " & $self.bufpos & " (conflict with property shortcut found earlier.)")
+        # if value.kind == VkMap:
+        #   for k, v in value.map:
+        #     map[][key.to_key].map[k] = v
+        # else:
+        #   raise new_exception(ParseError, "Bad input: mixing map with non-map")
       else:
         map[][key.to_key] = value
 
