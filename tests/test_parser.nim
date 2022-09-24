@@ -242,6 +242,11 @@ test_parser "0*a0", proc(r: Value) =
   check r.byte_bit_size == 8
   check r.byte == 160
 
+test_parser "0*A0", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 160
+
 test_parser "0*a003", proc(r: Value) =
   check r.kind == VkBin
   check r.bin_bit_size == 16
@@ -407,3 +412,50 @@ test_parser "\"\"\"  \na\"\"\"", "a"
 # Trim whitespaces before closing """
 # E.g. """a\n   """ => "a\n"
 test_parser "\"\"\"a\n   \"\"\"", "a\n"
+
+test_parser """
+  (#File "f" "abc")
+""", proc(r: Value) =
+  check r.kind == VkTextualFile
+  check r.txt_file_name == "f"
+  check r.txt_file_content == "abc"
+
+test_parser """
+  (#File f "abc") # File name can be a symbol treated as a string literal
+""", proc(r: Value) =
+  check r.kind == VkTextualFile
+  check r.txt_file_name == "f"
+
+test_parser """
+  (#File "f" 0!11)
+""", proc(r: Value) =
+  check r.kind == VkBinaryFile
+  check r.bin_file_name == "f"
+  var content = r.bin_file_content
+  check content.kind == VkByte
+  check content.byte_bit_size == 2
+  check content.byte == 3
+
+test_parser """
+  (#Dir "d")
+""", proc(r: Value) =
+  check r.kind == VkDirectory
+  check r.dir_name == "d"
+
+test_parser """
+  (#Dir d) # Dir name can be a symbol treated as a string literal
+""", proc(r: Value) =
+  check r.kind == VkDirectory
+  check r.dir_name == "d"
+
+test_parser """
+  (#Dir "d"
+    (#File "f" "abc")
+  )
+""", proc(r: Value) =
+  check r.kind == VkDirectory
+  check r.dir_name == "d"
+  var file = r.dir_children[0]
+  check file.kind == VkTextualFile
+  check file.txt_file_name == "f"
+  check file.txt_file_content == "abc"

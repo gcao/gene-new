@@ -81,10 +81,14 @@ type
     list: seq[Value]
     map: Table[MapKey, Value]
 
+  Handler = proc(self: var Parser, input: Value): Value
+
 const non_constituents: seq[char] = @[]
 
 var macros: MacroArray
 var dispatch_macros: MacroArray
+
+var handlers: Table[string, Handler]
 
 #################### Interfaces ##################
 
@@ -632,12 +636,10 @@ proc read_gene(self: var Parser): Value =
   var result_list = self.read_delimited_list(')', true)
   result.gene_props = result_list.map
   result.gene_children = result_list.list
-  if result.gene_type == SET:
-    if result.gene_children[0] == DEBUG:
-      self.debug = result.gene_children[1].bool
-    else:
-      todo("#Set " & $result.gene_children[0])
-    return
+  if not result.gene_type.is_nil() and result.gene_type.kind == VkSymbol:
+    if handlers.has_key(result.gene_type.str):
+      let handler = handlers[result.gene_type.str]
+      return handler(self, result)
 
 proc read_map(self: var Parser): Value =
   result = Value(kind: VkMap)
@@ -786,9 +788,38 @@ proc init_dispatch_macro_array() =
   dispatch_macros['@'] = read_decorator
   # dispatch_macros['*'] = read_star
 
+proc handle_file(self: var Parser, value: Value): Value =
+  var is_text_file = value.gene_children[1].kind == VkString
+  if is_text_file:
+    result = Value(kind: VkTextualFile)
+    result.txt_file_name = value.gene_children[0].str
+    result.txt_file_content = value.gene_children[1]
+  else:
+    result = Value(kind: VkBinaryFile)
+    result.bin_file_name = value.gene_children[0].str
+    result.bin_file_content = value.gene_children[1]
+
+proc handle_dir(self: var Parser, value: Value): Value =
+  result = Value(kind: VkDirectory)
+  result.dir_name = value.gene_children[0].str
+  for child in value.gene_children[1..^1]:
+    result.dir_children.add(child)
+
+proc handle_set(self: var Parser, value: Value): Value =
+  if value.gene_children[0] == DEBUG:
+    self.debug = value.gene_children[1].bool
+  else:
+    todo("#Set " & $value.gene_children[0])
+
+proc init_handlers() =
+  handlers["#File"] = handle_file
+  handlers["#Dir"] = handle_dir
+  handlers["#Set"] = handle_set
+
 proc init_readers() =
   init_macro_array()
   init_dispatch_macro_array()
+  init_handlers()
 
 init_readers()
 
