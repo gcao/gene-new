@@ -1,4 +1,6 @@
 # Support macro language
+# See https://github.com/gcao/gene/blob/master/spec/gene/gene_macro_interpreter_spec.rb
+# for previous implementation as a reference.
 #
 # * Operate on Gene input and system resources (e.g. environment,
 #   file system, socket connection, databases, other IO devices etc)
@@ -20,7 +22,14 @@
 # #ReturnIf # (#ReturnIf condition result)
 # #Void # tell the function to not return a value
 
-# #Throw # should we support catching errors?
+# Should we support catching errors? maybe it's required to implement some flows?
+# #Throw name "message" # Throw an error that is a subclass of MacroError
+# #Throw name
+# #Throw "message"
+# #Catch * # catch all errors, including the system errors
+# #Catch _ # catch all errors thrown by the macro, including the unnamed errors, but not the system errors
+# #Catch name
+# #Catch [name1, name2]
 
 # #Import # can add a prefix to all imported functions etc
 # #Include
@@ -48,9 +57,11 @@
 # #PopOption
 
 # #Print, #PrintError
+# #Debug
 # #ReadFromFile, #ReadFromStdin
 # #WriteToFile
 
+# #Params # an optional key value map that is passed while parsing
 # #Env
 # #Today, #Now
 
@@ -81,6 +92,8 @@
 # #Size
 # #IndexOf
 # #Contains
+
+# NewSymbol
 
 # Regex functions
 # #NewRegex
