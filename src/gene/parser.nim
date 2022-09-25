@@ -844,7 +844,12 @@ proc parse_bin(self: var Parser): Value =
   var bytes: seq[uint8] = @[]
   var byte: uint8 = 0
   var size: uint = 0
-  while self.buf[self.bufpos] in ['0', '1']:
+  while self.buf[self.bufpos] in ['0', '1', '~']:
+    if self.buf[self.bufpos] == '~':
+      self.bufpos += 1
+      self.skip_ws()
+      continue
+
     size += 1
     byte = byte.shl(1)
     if self.buf[self.bufpos] == '1':
@@ -877,7 +882,13 @@ proc parse_hex(self: var Parser): Value =
   var byte: uint8 = 0
   var size: uint = 0
   var ch = self.buf[self.bufpos]
-  while ch in '0'..'9' or ch in 'A'..'F' or ch in 'a'..'f':
+  while ch in '0'..'9' or ch in 'A'..'F' or ch in 'a'..'f' or ch == '~':
+    if ch == '~':
+      self.bufpos += 1
+      self.skip_ws()
+      ch = self.buf[self.bufpos]
+      continue
+
     size += 4
     byte = byte.shl(4)
     byte += HEX[ch]
@@ -913,7 +924,13 @@ proc parse_base64(self: var Parser): Value =
   var bytes: seq[uint8] = @[]
   var ch = self.buf[self.bufpos]
   var s = ""
-  while ch in '0'..'9' or ch in 'A'..'Z' or ch in 'a'..'z' or ch in ['+', '/', '=']:
+  while ch in '0'..'9' or ch in 'A'..'Z' or ch in 'a'..'z' or ch in ['+', '/', '=', '~']:
+    if ch == '~':
+      self.bufpos += 1
+      self.skip_ws()
+      ch = self.buf[self.bufpos]
+      continue
+
     s &= ch
     self.bufpos += 1
     ch = self.buf[self.bufpos]

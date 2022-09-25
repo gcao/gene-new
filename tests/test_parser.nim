@@ -232,6 +232,11 @@ test_parser "0!11110000", proc(r: Value) =
   check r.byte_bit_size == 8
   check r.byte == 240
 
+test_parser "0!1111~ 0000", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 240
+
 test_parser "0!000011110000", proc(r: Value) =
   check r.kind == VkBin
   check r.bin_bit_size == 12
@@ -252,7 +257,17 @@ test_parser "0*a003", proc(r: Value) =
   check r.bin_bit_size == 16
   check r.bin == @[uint8(160), uint8(3)]
 
+test_parser "0*a0~ 03", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 16
+  check r.bin == @[uint8(160), uint8(3)]
+
 test_parser "0#ABCD", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 24
+  check r.bin == @[uint8(0), uint8(16), uint8(131)]
+
+test_parser "0#AB~ CD", proc(r: Value) =
   check r.kind == VkBin
   check r.bin_bit_size == 24
   check r.bin == @[uint8(0), uint8(16), uint8(131)]
