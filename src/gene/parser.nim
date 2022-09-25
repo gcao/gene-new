@@ -805,6 +805,12 @@ proc handle_dir(self: var Parser, value: Value): Value =
   for child in value.gene_children[1..^1]:
     result.dir_children.add(child)
 
+proc handle_arc(self: var Parser, value: Value): Value =
+  result = Value(kind: VkArchiveFile)
+  result.arc_file_name = value.gene_children[0].str
+  for child in value.gene_children[1..^1]:
+    result.arc_file_children.add(child)
+
 proc handle_set(self: var Parser, value: Value): Value =
   if value.gene_children[0] == DEBUG:
     self.debug = value.gene_children[1].bool
@@ -814,6 +820,7 @@ proc handle_set(self: var Parser, value: Value): Value =
 proc init_handlers() =
   handlers["#File"] = handle_file
   handlers["#Dir"] = handle_dir
+  handlers["#Gar"] = handle_arc
   handlers["#Set"] = handle_set
 
 proc init_readers() =
