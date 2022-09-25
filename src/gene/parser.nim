@@ -3,7 +3,7 @@
 # created by Roland Sadowski.
 # 1. https://github.com/rosado/edn.nim
 
-import lexbase, streams, strutils, unicode, tables, sets, times, nre, base64
+import lexbase, streams, strutils, unicode, tables, sets, times, nre, base64, os
 
 import ./map_key
 import ./types
@@ -1165,6 +1165,14 @@ proc read_all*(self: var Parser, buffer: string): seq[Value] =
 proc read_document*(self: var Parser, buffer: string): Document =
   self.document.children = self.read_all(buffer)
   return self.document
+
+proc read_archive*(self: var Parser, buffer: string): Value =
+  result = Value(kind: VkArchiveFile)
+  result.arc_file_children = self.read_all(buffer)
+
+proc read_archive_file*(self: var Parser, filename: string): Value =
+  result = self.read_archive(read_file(filename))
+  result.arc_file_name = extract_filename(filename)
 
 proc read*(s: Stream, filename: string): Value =
   var parser = new_parser()

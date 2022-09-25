@@ -54,6 +54,12 @@ proc test_parser*(code: string, callback: proc(result: Value)) =
   test "Parser / read: " & code:
     callback read(code)
 
+proc test_parse_archive*(code: string, callback: proc(result: Value)) =
+  var code = cleanup(code)
+  test "Parser / read: " & code:
+    var parser = new_parser()
+    callback parser.read_archive(code)
+
 proc test_parser_error*(code: string) =
   var code = cleanup(code)
   test "Parser error expected: " & code:

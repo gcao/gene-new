@@ -490,3 +490,16 @@ test_parser """
   check file.kind == VkTextualFile
   check file.txt_file_name == "f"
   check file.txt_file_content == "abc"
+
+test_parse_archive """
+  (#Dir "d"
+    (#File "f" "abc")
+  )
+""", proc(r: Value) =
+  check r.kind == VkArchiveFile
+  var dir = r.arc_file_children[0]
+  check dir.dir_name == "d"
+  var file = dir.dir_children[0]
+  check file.kind == VkTextualFile
+  check file.txt_file_name == "f"
+  check file.txt_file_content == "abc"
