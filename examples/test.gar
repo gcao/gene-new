@@ -15,7 +15,7 @@
 (#File index.gene
   """
   (println "Running index.gene")
-  (println (gene/File/read "d/df1"))
+  (println (gene/File/read "./d/df1"))
   (println "Done.")
   """
 )
