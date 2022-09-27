@@ -164,18 +164,22 @@ type
       document_props*: Table[MapKey, Value]
       document_children*: seq[Value]
     of VkTextualFile:
+      txt_file_parent*: Value
       txt_file_name*: string
       txt_file_content*: Value
       txt_file_permissions*: string
     of VkBinaryFile:
+      bin_file_parent*: Value
       bin_file_name*: string
       bin_file_content*: Value
       bin_file_permissions*: string
     of VkArchiveFile:
+      arc_file_parent*: Value
       arc_file_name*: string
       arc_file_children*: seq[Value]
       arc_file_permissions*: string
     of VkDirectory:
+      dir_parent*: Value
       dir_name*: string
       dir_children*: seq[Value]
       dir_permissions*: string

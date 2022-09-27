@@ -1,4 +1,4 @@
-import parseopt, times
+import parseopt, times, strutils
 
 import ../types
 import ../interpreter
@@ -63,7 +63,11 @@ proc handle*(cmd: string, args: seq[string]): string =
 
   var file = options.file
   let start = cpu_time()
-  let value = VM.run_file(file)
+  var value: Value
+  if file.ends_with(".gar"):
+    value = VM.run_archive_file(file)
+  else:
+    value = VM.run_file(file)
   if options.print_result:
     echo value.to_s
   if options.benchmark:

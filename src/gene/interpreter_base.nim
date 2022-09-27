@@ -924,6 +924,58 @@ proc run_file*(self: VirtualMachine, file: string): Value =
   result = self.eval(frame, code)
   self.wait_for_futures()
 
+proc seq_to_map*(self: seq[Value]): Table[string, Value] =
+  for child in self:
+    case child.kind:
+    of VkTextualFile:
+      result[child.txt_file_name] = child
+    of VkBinaryFile:
+      result[child.bin_file_name] = child
+    of VkDirectory:
+      result[child.dir_name] = child
+    else:
+      todo("seq_to_map: unknown child found - " & $child)
+
+proc find_main_module(parent: string, children: seq[Value]): Value =
+  if children.len == 0:
+    not_allowed("no module found")
+  elif children.len == 1:
+    var first = children[0]
+    if first.kind == VkTextualFile:
+      result = Value(kind: VkStream)
+      var parser = new_parser()
+      result.stream = parser.read_all(first.txt_file_content.str)
+    elif first.kind == VkDirectory:
+      return find_main_module(first.dir_name, first.dir_children)
+    else:
+      not_allowed("not a valid module - " & $first.kind)
+  else:
+    var map = seq_to_map(children)
+    if map.has_key("index.gene"):
+      var index = map["index.gene"]
+      result = Value(kind: VkStream)
+      var parser = new_parser()
+      result.stream = parser.read_all(index.txt_file_content.str)
+    else:
+      not_allowed("no main module found")
+
+proc run_archive_file*(self: VirtualMachine, file: string): Value =
+  var name = extract_filename(file)
+  if name.ends_with(".gar"):
+    name = name[0..^5]
+  var code = read_file(file)
+  var parser = new_parser()
+  var archive = parser.read_archive(code)
+  var expr = translate(find_main_module(name, archive.arc_file_children))
+
+  var module = new_module(VM.app.pkg, name, self.app.pkg.ns)
+  VM.app.main_module = module
+  var frame = new_frame(FrModule)
+  frame.ns = module.ns
+  frame.scope = new_scope()
+  result = self.eval(frame, expr)
+  self.wait_for_futures()
+
 proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref system.Exception): Value =
   echo "An exception was thrown: " & e.msg
   echo "Opening debug console..."
