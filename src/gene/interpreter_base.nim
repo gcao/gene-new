@@ -936,26 +936,37 @@ proc seq_to_map*(self: seq[Value]): Table[string, Value] =
     else:
       todo("seq_to_map: unknown child found - " & $child)
 
-proc find_main_module(parent: string, children: seq[Value]): Value =
+proc find_main_module(self: Value): Value =
+  var name: string
+  var children: seq[Value]
+  case self.kind:
+  of VkTextualFile:
+    return self
+  of VkArchiveFile:
+    name = extract_filename(self.arc_file_name)
+    if name.ends_with(".gar"):
+      name = name[0..^5]
+    children = self.arc_file_children
+  of VkDirectory:
+    name = self.dir_name
+    children = self.dir_children
+  else:
+    not_allowed("find_main_module " & $self)
+
   if children.len == 0:
     not_allowed("no module found")
   elif children.len == 1:
     var first = children[0]
     if first.kind == VkTextualFile:
-      result = Value(kind: VkStream)
-      var parser = new_parser()
-      result.stream = parser.read_all(first.txt_file_content.str)
+      return first
     elif first.kind == VkDirectory:
-      return find_main_module(first.dir_name, first.dir_children)
+      return find_main_module(first)
     else:
       not_allowed("not a valid module - " & $first.kind)
   else:
     var map = seq_to_map(children)
     if map.has_key("index.gene"):
-      var index = map["index.gene"]
-      result = Value(kind: VkStream)
-      var parser = new_parser()
-      result.stream = parser.read_all(index.txt_file_content.str)
+      return map["index.gene"]
     else:
       not_allowed("no main module found")
 
@@ -966,9 +977,13 @@ proc run_archive_file*(self: VirtualMachine, file: string): Value =
   var code = read_file(file)
   var parser = new_parser()
   var archive = parser.read_archive(code)
-  var expr = translate(find_main_module(name, archive.arc_file_children))
+  var module_source = find_main_module(archive)
+  var parsed = Value(kind: VkStream)
+  parsed.stream = parser.read_all(module_source.txt_file_content.str)
+  var expr = translate(parsed)
 
   var module = new_module(VM.app.pkg, name, self.app.pkg.ns)
+  module.source = module_source
   VM.app.main_module = module
   var frame = new_frame(FrModule)
   frame.ns = module.ns

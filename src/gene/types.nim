@@ -410,12 +410,14 @@ type
 
   SourceType* = enum
     StFile
+    StVirtualFile # e.g. a file embeded in the source code or an archive file.
+    StInline
     StRepl
     StEval
-    StInline
 
   Module* = ref object
     source_type*: SourceType
+    source*: Value
     pkg*: Package         # Package in which the module is defined
     name*: string
     ns*: Namespace

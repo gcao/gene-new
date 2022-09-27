@@ -803,6 +803,17 @@ proc handle_dir(self: var Parser, value: Value): Value =
   result = Value(kind: VkDirectory)
   result.dir_name = value.gene_children[0].str
   for child in value.gene_children[1..^1]:
+    case child.kind:
+    of VkTextualFile:
+      child.txt_file_parent = result
+    of VkBinaryFile:
+      child.bin_file_parent = result
+    of VkDirectory:
+      child.dir_parent = result
+    of VkArchiveFile:
+      child.arc_file_parent = result
+    else:
+      not_allowed("unknown child " & $child)
     result.dir_children.add(child)
 
 proc handle_arc(self: var Parser, value: Value): Value =
@@ -1169,6 +1180,18 @@ proc read_document*(self: var Parser, buffer: string): Document =
 proc read_archive*(self: var Parser, buffer: string): Value =
   result = Value(kind: VkArchiveFile)
   result.arc_file_children = self.read_all(buffer)
+  for child in result.arc_file_children:
+    case child.kind:
+    of VkTextualFile:
+      child.txt_file_parent = result
+    of VkBinaryFile:
+      child.bin_file_parent = result
+    of VkDirectory:
+      child.dir_parent = result
+    of VkArchiveFile:
+      child.arc_file_parent = result
+    else:
+      not_allowed("unknown child " & $child)
 
 proc read_archive_file*(self: var Parser, filename: string): Value =
   result = self.read_archive(read_file(filename))
