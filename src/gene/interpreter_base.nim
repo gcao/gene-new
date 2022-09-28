@@ -70,6 +70,10 @@ proc get_member*(self: Value, name: MapKey): Value =
       return self.instance_props[name]
     else:
       return Nil
+  of VkArchiveFile:
+    return self.arc_file_members[name.to_s]
+  of VkDirectory:
+    return self.dir_members[name.to_s]
   else:
     var class = self.get_class()
     if class.has_method(GET_KEY):
@@ -974,6 +978,8 @@ proc run_archive_file*(self: VirtualMachine, file: string): Value =
   VM.app.main_module = module
   var frame = new_frame(FrModule)
   frame.ns = module.ns
+  frame.ns["$dir"] = module_source.file_parent
+  frame.ns["$file"] = module_source
   frame.scope = new_scope()
   result = self.eval(frame, expr)
   self.wait_for_futures()

@@ -181,6 +181,8 @@ proc file_read(args: Value): Value =
   case file.kind:
   of VkString:
     result = read_file(file.str)
+  of VkFile:
+    result = file.file_content
   else:
     todo($file.kind)
 
