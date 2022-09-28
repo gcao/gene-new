@@ -1,4 +1,4 @@
-import parseopt, tables, os
+import parseopt, tables, os, strutils
 
 import ../types
 import ../parser
@@ -37,13 +37,17 @@ proc parse_options(args: seq[string]): Options =
       discard
 
 proc handle(dir: string, value: Value) =
+  var path = value.file_path()
+  path = dir & path[(path.find("/") + 1)..^1]
   case value.kind:
   of VkFile:
-    write_file(dir & value.file_path(), value.file_content.str)
+    write_file(path, value.file_content.str)
   of VkArchiveFile:
-    write_file(dir & value.file_path(), $value)
+    write_file(path, $value)
   of VkDirectory:
-    create_dir(dir & value.file_path())
+    create_dir(path)
+    for child in value.dir_members.values():
+      handle(dir, child)
   else:
     not_allowed("handle " & $value)
 
