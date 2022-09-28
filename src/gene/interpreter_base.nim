@@ -74,6 +74,10 @@ proc get_member*(self: Value, name: MapKey): Value =
     return self.arc_file_members[name.to_s]
   of VkDirectory:
     return self.dir_members[name.to_s]
+  of VkString:
+    return self.str & "/" & name.to_s
+  of VkSymbol:
+    return new_gene_symbol(self.str & "/" & name.to_s)
   else:
     var class = self.get_class()
     if class.has_method(GET_KEY):
