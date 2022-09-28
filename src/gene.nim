@@ -11,6 +11,8 @@ import "./gene/commands/repl" as repl_cmd; repl_cmd.init(CommandMgr)
 
 import "./gene/commands/project" as project_cmd; project_cmd.init(CommandMgr)
 
+import "./gene/commands/extract" as extract_cmd; extract_cmd.init(CommandMgr)
+
 const HELP = """Usage: gene <command> <optional arguments specific to command>
 
 Available commands:

@@ -1945,6 +1945,28 @@ proc wrap_with_try*(body: seq[Value]): seq[Value] =
 proc new_doc*(children: seq[Value]): Document =
   return Document(children: children)
 
+#################### File/Dir ####################
+
+proc file_path*(self: Value): string =
+  case self.kind:
+  of VkFile:
+    if self.file_parent.is_nil:
+      return self.file_name
+    else:
+      return self.file_parent.file_path() & "/" & self.file_name
+  of VkDirectory:
+    if self.dir_parent.is_nil:
+      return self.dir_name
+    else:
+      return self.dir_parent.file_path() & "/" & self.dir_name
+  of VkArchiveFile:
+    if self.arc_file_parent.is_nil:
+      return self.arc_file_name
+    else:
+      return self.arc_file_parent.file_path() & "/" & self.arc_file_name
+  else:
+    not_allowed("file_path: " & $self)
+
 #################### Selector ####################
 
 proc new_gene_selector*(selector: Selector): Value =
