@@ -185,7 +185,7 @@ proc file_read(args: Value): Value =
     todo($file.kind)
 
 proc file_read(self: Value, args: Value): Value =
-  self.file.read_all()
+  self.native_file.read_all()
 
 proc file_read_async(args: Value): Value =
   var file = args.gene_children[0]

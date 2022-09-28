@@ -924,51 +924,38 @@ proc run_file*(self: VirtualMachine, file: string): Value =
   result = self.eval(frame, code)
   self.wait_for_futures()
 
-proc seq_to_map*(self: seq[Value]): Table[string, Value] =
-  for child in self:
-    case child.kind:
-    of VkTextualFile:
-      result[child.txt_file_name] = child
-    of VkBinaryFile:
-      result[child.bin_file_name] = child
-    of VkDirectory:
-      result[child.dir_name] = child
+proc find_main_module(self: Table[string, Value]): Value =
+  if self.len == 0:
+    not_allowed("no module found")
+  elif self.len == 1:
+    for value in self.values():
+      if value.kind == VkFile:
+        return value
+      elif value.kind == VkDirectory:
+        return find_main_module(value.dir_members)
+      else:
+        not_allowed("not a valid module - " & $value.kind)
+  else:
+    if self.has_key("index.gene"):
+      return self["index.gene"]
     else:
-      todo("seq_to_map: unknown child found - " & $child)
+      not_allowed("no main module found")
 
 proc find_main_module(self: Value): Value =
   var name: string
-  var children: seq[Value]
   case self.kind:
-  of VkTextualFile:
+  of VkFile:
     return self
   of VkArchiveFile:
     name = extract_filename(self.arc_file_name)
     if name.ends_with(".gar"):
       name = name[0..^5]
-    children = self.arc_file_children
+    return find_main_module(self.arc_file_members)
   of VkDirectory:
     name = self.dir_name
-    children = self.dir_children
+    return find_main_module(self.dir_members)
   else:
     not_allowed("find_main_module " & $self)
-
-  if children.len == 0:
-    not_allowed("no module found")
-  elif children.len == 1:
-    var first = children[0]
-    if first.kind == VkTextualFile:
-      return first
-    elif first.kind == VkDirectory:
-      return find_main_module(first)
-    else:
-      not_allowed("not a valid module - " & $first.kind)
-  else:
-    var map = seq_to_map(children)
-    if map.has_key("index.gene"):
-      return map["index.gene"]
-    else:
-      not_allowed("no main module found")
 
 proc run_archive_file*(self: VirtualMachine, file: string): Value =
   var name = extract_filename(file)
@@ -979,7 +966,7 @@ proc run_archive_file*(self: VirtualMachine, file: string): Value =
   var archive = parser.read_archive(code)
   var module_source = find_main_module(archive)
   var parsed = Value(kind: VkStream)
-  parsed.stream = parser.read_all(module_source.txt_file_content.str)
+  parsed.stream = parser.read_all(module_source.file_content.str)
   var expr = translate(parsed)
 
   var module = new_module(VM.app.pkg, name, self.app.pkg.ns)

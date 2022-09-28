@@ -431,22 +431,22 @@ test_parser "\"\"\"a\n   \"\"\"", "a\n"
 test_parser """
   (#File "f" "abc")
 """, proc(r: Value) =
-  check r.kind == VkTextualFile
-  check r.txt_file_name == "f"
-  check r.txt_file_content == "abc"
+  check r.kind == VkFile
+  check r.file_name == "f"
+  check r.file_content == "abc"
 
 test_parser """
   (#File f "abc") # File name can be a symbol treated as a string literal
 """, proc(r: Value) =
-  check r.kind == VkTextualFile
-  check r.txt_file_name == "f"
+  check r.kind == VkFile
+  check r.file_name == "f"
 
 test_parser """
   (#File "f" 0!11)
 """, proc(r: Value) =
-  check r.kind == VkBinaryFile
-  check r.bin_file_name == "f"
-  var content = r.bin_file_content
+  check r.kind == VkFile
+  check r.file_name == "f"
+  var content = r.file_content
   check content.kind == VkByte
   check content.byte_bit_size == 2
   check content.byte == 3
@@ -470,10 +470,11 @@ test_parser """
 """, proc(r: Value) =
   check r.kind == VkDirectory
   check r.dir_name == "d"
-  var file = r.dir_children[0]
-  check file.kind == VkTextualFile
-  check file.txt_file_name == "f"
-  check file.txt_file_content == "abc"
+  check r.dir_members.len == 1
+  var file = r.dir_members["f"]
+  check file.kind == VkFile
+  check file.file_name == "f"
+  check file.file_content == "abc"
 
 test_parser """
   (#Gar x
@@ -485,11 +486,11 @@ test_parser """
 """, proc(r: Value) =
   check r.kind == VkArchiveFile
   check r.arc_file_name == "x"
-  check r.arc_file_children.len == 2
-  var file = r.arc_file_children[0]
-  check file.kind == VkTextualFile
-  check file.txt_file_name == "f"
-  check file.txt_file_content == "abc"
+  check r.arc_file_members.len == 2
+  var file = r.arc_file_members["f"]
+  check file.kind == VkFile
+  check file.file_name == "f"
+  check file.file_content == "abc"
 
 test_parse_archive """
   (#Dir "d"
@@ -497,9 +498,9 @@ test_parse_archive """
   )
 """, proc(r: Value) =
   check r.kind == VkArchiveFile
-  var dir = r.arc_file_children[0]
+  var dir = r.arc_file_members["d"]
   check dir.dir_name == "d"
-  var file = dir.dir_children[0]
-  check file.kind == VkTextualFile
-  check file.txt_file_name == "f"
-  check file.txt_file_content == "abc"
+  var file = dir.dir_members["f"]
+  check file.kind == VkFile
+  check file.file_name == "f"
+  check file.file_content == "abc"

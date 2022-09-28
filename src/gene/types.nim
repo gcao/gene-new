@@ -60,8 +60,7 @@ type
     VkGene
     VkStream
     VkDocument
-    VkTextualFile
-    VkBinaryFile
+    VkFile
     VkArchiveFile
     VkDirectory
     # Internal types
@@ -89,7 +88,7 @@ type
     VkExpr
     VkExplode
     VkFuture
-    VkFile
+    VkNativeFile
 
   Value* {.acyclic.} = ref object
     case kind*: ValueKind
@@ -164,25 +163,20 @@ type
       document_type*: Value
       document_props*: Table[MapKey, Value]
       document_children*: seq[Value]
-    of VkTextualFile:
-      txt_file_parent*: Value
-      txt_file_name*: string
-      txt_file_content*: Value
-      txt_file_permissions*: string
-    of VkBinaryFile:
-      bin_file_parent*: Value
-      bin_file_name*: string
-      bin_file_content*: Value
-      bin_file_permissions*: string
+    of VkFile:
+      file_parent*: Value
+      file_name*: string
+      file_content*: Value
+      file_permissions*: string
     of VkArchiveFile:
       arc_file_parent*: Value
       arc_file_name*: string
-      arc_file_children*: seq[Value]
+      arc_file_members*: Table[string, Value]
       arc_file_permissions*: string
     of VkDirectory:
       dir_parent*: Value
       dir_name*: string
-      dir_children*: seq[Value]
+      dir_members*: Table[string, Value]
       dir_permissions*: string
     of VkQuote:
       quote*: Value
@@ -242,8 +236,8 @@ type
       future*: Future[Value]
       ft_success_callbacks*: seq[Value]
       ft_failure_callbacks*: seq[Value]
-    of VkFile:
-      file*: File
+    of VkNativeFile:
+      native_file*: File
     else:
       discard
 
@@ -852,8 +846,8 @@ converter str_to_gene*(v: string): Value {.gcsafe.} = new_gene_string(v)
 
 converter file_to_gene*(file: File): Value =
   Value(
-    kind: VkFile,
-    file: file,
+    kind: VkNativeFile,
+    native_file: file,
   )
 
 converter to_map*(self: Table[string, Value]): Table[MapKey, Value] {.inline.} =
@@ -1282,7 +1276,7 @@ proc get_class*(val: Value): Class =
     return NamespaceClass.class
   of VkFuture:
     return FutureClass.class
-  of VkFile:
+  of VkNativeFile:
     return FileClass.class
   of VkException:
     var ex = val.exception

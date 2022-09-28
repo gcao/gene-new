@@ -789,38 +789,47 @@ proc init_dispatch_macro_array() =
   # dispatch_macros['*'] = read_star
 
 proc handle_file(self: var Parser, value: Value): Value =
-  var is_text_file = value.gene_children[1].kind == VkString
-  if is_text_file:
-    result = Value(kind: VkTextualFile)
-    result.txt_file_name = value.gene_children[0].str
-    result.txt_file_content = value.gene_children[1]
-  else:
-    result = Value(kind: VkBinaryFile)
-    result.bin_file_name = value.gene_children[0].str
-    result.bin_file_content = value.gene_children[1]
+    result = Value(kind: VkFile)
+    result.file_name = value.gene_children[0].str
+    result.file_content = value.gene_children[1]
 
 proc handle_dir(self: var Parser, value: Value): Value =
   result = Value(kind: VkDirectory)
   result.dir_name = value.gene_children[0].str
   for child in value.gene_children[1..^1]:
+    var child_name: string
     case child.kind:
-    of VkTextualFile:
-      child.txt_file_parent = result
-    of VkBinaryFile:
-      child.bin_file_parent = result
+    of VkFile:
+      child_name = child.file_name
+      child.file_parent = result
     of VkDirectory:
+      child_name = child.dir_name
       child.dir_parent = result
     of VkArchiveFile:
+      child_name = child.arc_file_name
       child.arc_file_parent = result
     else:
       not_allowed("unknown child " & $child)
-    result.dir_children.add(child)
+    result.dir_members[child_name] = child
 
 proc handle_arc(self: var Parser, value: Value): Value =
   result = Value(kind: VkArchiveFile)
   result.arc_file_name = value.gene_children[0].str
   for child in value.gene_children[1..^1]:
-    result.arc_file_children.add(child)
+    var child_name: string
+    case child.kind:
+    of VkFile:
+      child_name = child.file_name
+      child.file_parent = result
+    of VkDirectory:
+      child_name = child.dir_name
+      child.dir_parent = result
+    of VkArchiveFile:
+      child_name = child.arc_file_name
+      child.arc_file_parent = result
+    else:
+      not_allowed("unknown child " & $child)
+    result.arc_file_members[child_name] = child
 
 proc handle_set(self: var Parser, value: Value): Value =
   if value.gene_children[0] == DEBUG:
@@ -1179,19 +1188,22 @@ proc read_document*(self: var Parser, buffer: string): Document =
 
 proc read_archive*(self: var Parser, buffer: string): Value =
   result = Value(kind: VkArchiveFile)
-  result.arc_file_children = self.read_all(buffer)
-  for child in result.arc_file_children:
+  var children = self.read_all(buffer)
+  for child in children:
+    var child_name: string
     case child.kind:
-    of VkTextualFile:
-      child.txt_file_parent = result
-    of VkBinaryFile:
-      child.bin_file_parent = result
+    of VkFile:
+      child_name = child.file_name
+      child.file_parent = result
     of VkDirectory:
+      child_name = child.dir_name
       child.dir_parent = result
     of VkArchiveFile:
+      child_name = child.arc_file_name
       child.arc_file_parent = result
     else:
       not_allowed("unknown child " & $child)
+    result.arc_file_members[child_name] = child
 
 proc read_archive_file*(self: var Parser, filename: string): Value =
   result = self.read_archive(read_file(filename))

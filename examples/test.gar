@@ -15,7 +15,7 @@
 (#File index.gene
   """
   (println "Running index.gene")
-  (println (gene/File/read "./d/df1"))
+  (println (gene/File/read $dir/d/df1)) # $dir refers to the directory where current file resides
   (println "Done.")
   """
 )
