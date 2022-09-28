@@ -44,7 +44,6 @@ type
     VkRegex
     VkRegexMatch
     VkRange
-    VkPath
     VkSelector
     VkQuote
     VkUnquote
@@ -185,8 +184,6 @@ type
       unquote_discard*: bool
     of VkExplode:
       explode*: Value
-    of VkPath:
-      path*: Path
     of VkSelector:
       selector*: Selector
     of VkCast:
@@ -612,18 +609,6 @@ type
   MatchState* = ref object
     # prop_processed*: seq[MapKey]
     data_index*: int
-
-  PathKind* = enum
-    PkRoot
-    PkCurrent
-    PkParent
-    PkAny
-    PkExact
-
-  Path* = ref object
-    parent*: Path
-    kind*: PathKind
-    data*: Value
 
   SelectorNoResult* = object of Exception
 
