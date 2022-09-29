@@ -144,7 +144,7 @@ type
     of VkVector:
       vec*: seq[Value]
     of VkSet:
-      set*: OrderedSet[Value]
+      set*: HashSet[Value]
     of VkGene:
       gene_type*: Value
       gene_props*: Table[MapKey, Value]
@@ -1548,7 +1548,7 @@ proc new_gene_map*(map: Table[MapKey, Value]): Value =
 proc new_gene_set*(items: varargs[Value]): Value =
   result = Value(
     kind: VkSet,
-    set: OrderedSet[Value](),
+    set: HashSet[Value](),
   )
   for item in items:
     result.set.incl(item)
@@ -1759,7 +1759,13 @@ proc `==`*(this, that: Value): bool =
     of VkTimezone:
       return this.timezone == that.timezone
     of VkSet:
-      return this.set.len == that.set.len and (this.set.len == 0 or this.set == that.set)
+      if this.set.len == that.set.len:
+        for v in this.set.items:
+          if not that.set.contains(v):
+            return false
+        return true
+      else:
+        return false
     of VkGene:
       return this.gene_type == that.gene_type and
         this.gene_children == that.gene_children and

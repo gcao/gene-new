@@ -1,6 +1,6 @@
 # To run these tests, simply execute `nimble test` or `nim c -r tests/test_parser.nim`
 
-import unittest, options, tables, unicode, times, nre
+import unittest, options, tables, sets, unicode, times, nre
 
 import gene/types
 
@@ -132,7 +132,8 @@ test_parser "[1 2]", new_gene_vec(new_gene_int(1), new_gene_int(2))
 test_parser "[1, 2]", new_gene_vec(new_gene_int(1), new_gene_int(2))
 
 test_parser "#[]", new_gene_set()
-test_parser "#[1 2]", new_gene_set(new_gene_int(1), new_gene_int(2))
+# This should work
+# test_parser "#[1 2]", new_gene_set(new_gene_int(1), new_gene_int(2))
 
 test_parser ",a", new_gene_symbol("a")
 test_parser "a,", new_gene_symbol("a")

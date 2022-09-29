@@ -8,7 +8,6 @@ import lexbase, streams, strutils, unicode, tables, sets, times, nre, base64, os
 import ./map_key
 import ./types
 
-let SET = new_gene_symbol("#Set")
 let DEBUG = new_gene_symbol("debug")
 
 var DEFAULT_UNITS = {
@@ -26,10 +25,12 @@ let HEX = {
 }.to_table()
 
 type
-  ParseOptions* = object
-    eof_is_error*: bool
-    eof_value*: Value
-    suppress_read*: bool
+  ParseError* = object of CatchableError
+  ParseEofError* = object of ParseError
+
+  ParseOptions* {.acyclic.} = ref object
+    parent*: ParseOptions
+    data*: Table[string, Value]
     units*: Table[string, Value]
 
   Parser* = object of BaseLexer
@@ -38,13 +39,11 @@ type
     str: string
     num_with_units: seq[(TokenKind, string, string)] # token kind + number + unit
     document*: Document
-    token*: TokenKind
+    token_kind*: TokenKind
     error: ParseErrorKind
     # stored_references: Table[MapKey, Value]
     document_props_done: bool  # flag to tell whether we have read document properties
-    debug*: bool
 
-  ParseError* = object of CatchableError
   ParseInfo = tuple[line, col: int]
 
   TokenKind* = enum
@@ -92,6 +91,10 @@ var handlers: Table[string, Handler]
 
 #################### Interfaces ##################
 
+proc keys*(self: ParseOptions): HashSet[string]
+proc `[]`*(self: ParseOptions, name: string): Value
+proc unit_keys*(self: ParseOptions): HashSet[string]
+proc `unit`*(self: ParseOptions, name: string): Value
 proc read*(self: var Parser): Value
 proc skip_comment(self: var Parser)
 proc skip_block_comment(self: var Parser)
@@ -100,26 +103,72 @@ proc skip_block_comment(self: var Parser)
 
 converter to_int(c: char): int = result = ord(c)
 
+#################### ParseOptions ################
+
+proc default_options*(): ParseOptions =
+  result = ParseOptions()
+  for k, v in DEFAULT_UNITS:
+    result.units[k] = v
+
+proc new_options*(prototype: ParseOptions): ParseOptions =
+  result = ParseOptions()
+  for k in prototype.keys().items:
+    result.data[k] = prototype[k]
+  for k in prototype.unit_keys.items:
+    result.units[k] = prototype.unit(k)
+
+proc extend*(self: ParseOptions): ParseOptions =
+  ParseOptions(
+    parent: self,
+    data: init_table[string, Value](),
+    units: init_table[string, Value](),
+  )
+
+proc keys*(self: ParseOptions): HashSet[string] =
+  result = init_hash_set[string]()
+  for k in self.data.keys:
+    result.incl(k)
+  for k in self.parent.keys():
+    result.incl(k)
+
+proc `[]`*(self: ParseOptions, name: string): Value =
+  if self.data.has_key(name):
+    return self.data[name]
+  elif not self.parent.is_nil:
+    return self.parent[name]
+  else:
+    return nil
+
+proc `[]=`*(self: ParseOptions, name: string, value: Value) =
+  self.data[name] = value
+
+proc unit_keys*(self: ParseOptions): HashSet[string] =
+  result = init_hash_set[string]()
+  for k in self.units.keys:
+    result.incl(k)
+  for k in self.parent.unit_keys():
+    result.incl(k)
+
+proc `unit`*(self: ParseOptions, name: string): Value =
+  if self.units.has_key(name):
+    return self.units[name]
+  elif not self.parent.is_nil:
+    return self.parent.unit(name)
+  else:
+    return nil
+
+#################### Parser ######################
+
 proc new_parser*(options: ParseOptions): Parser =
-  var options = options
-  options.units = DEFAULT_UNITS
-  # var units: Table[string, Value] = init_table[string, Value]()
-  # units.merge(DEFAULT_UNITS)
-  # units.merge(options.units)
-  # options.units = units
   return Parser(
     document: Document(),
-    options: options,
+    options: new_options(options),
   )
 
 proc new_parser*(): Parser =
   return Parser(
     document: Document(),
-    options: ParseOptions(
-      eof_is_error: false,
-      suppress_read: false,
-      units: DEFAULT_UNITS,
-    ),
+    options: default_options(),
   )
 
 proc non_constituent(c: char): bool =
@@ -611,13 +660,13 @@ proc read_delimited_list(self: var Parser, delimiter: char, is_recursive: bool):
       let node = m(self)
       if node != nil:
         inc(count)
-        if self.debug: echo $node, "\n"
+        if self.options["debug"]: echo $node, "\n"
         list.add(node)
     else:
       let node = self.read()
       if node != nil:
         inc(count)
-        if self.debug: echo $node, "\n"
+        if self.options["debug"]: echo $node, "\n"
         list.add(node)
 
   result.list = list
@@ -654,7 +703,7 @@ proc read_vector(self: var Parser): Value =
 proc read_set(self: var Parser): Value =
   result = Value(
     kind: VkSet,
-    set: OrderedSet[Value](),
+    set: HashSet[Value](),
   )
   let list_result = self.read_delimited_list(']', true)
   for item in list_result.list:
@@ -833,7 +882,7 @@ proc handle_arc(self: var Parser, value: Value): Value =
 
 proc handle_set(self: var Parser, value: Value): Value =
   if value.gene_children[0] == DEBUG:
-    self.debug = value.gene_children[1].bool
+    self.options["debug"] = value.gene_children[1].bool
   else:
     todo("#Set " & $value.gene_children[0])
 
@@ -1046,13 +1095,9 @@ proc read_number(self: var Parser): Value =
       discard
 
   var num_result = self.parse_number()
-  let opts = self.options
   case num_result
   of TkEof:
-    if opts.eof_is_error:
-      raise new_exception(ParseError, "EOF while reading")
-    else:
-      result = nil
+    raise new_exception(ParseError, "EOF while reading")
   of TkInt:
     var c = self.buf[self.bufpos]
     case c:
@@ -1114,19 +1159,14 @@ proc read_number(self: var Parser): Value =
     raise new_exception(ParseError, "Error reading a number (?): " & self.str)
 
 proc read*(self: var Parser): Value =
-  setLen(self.str, 0)
+  set_len(self.str, 0)
   self.skip_ws()
   let ch = self.buf[self.bufpos]
-  let opts = self.options
   var token: string
   case ch
   of EndOfFile:
-    if opts.eof_is_error:
-      let position = (self.line_number, self.get_col_number(self.bufpos))
-      raise new_exception(ParseError, "EOF while reading " & $position)
-    else:
-      self.token = TkEof
-      return opts.eof_value
+    let position = (self.line_number, self.get_col_number(self.bufpos))
+    raise new_exception(ParseEofError, "EOF while reading " & $position)
   of '0'..'9':
     return read_number(self)
   elif is_macro(ch):
@@ -1142,10 +1182,7 @@ proc read*(self: var Parser): Value =
       return result
 
   token = self.read_token(true)
-  if opts.suppress_read:
-    result = nil
-  else:
-    result = interpret_token(token)
+  result = interpret_token(token)
 
 proc read_document_properties(self: var Parser) =
   if self.document_props_done:
@@ -1183,7 +1220,10 @@ proc read_all*(self: var Parser, buffer: string): seq[Value] =
       node = self.read()
 
 proc read_document*(self: var Parser, buffer: string): Document =
-  self.document.children = self.read_all(buffer)
+  try:
+    self.document.children = self.read_all(buffer)
+  except ParseEofError:
+    discard
   return self.document
 
 proc read_archive*(self: var Parser, buffer: string): Value =
