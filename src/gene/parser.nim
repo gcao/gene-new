@@ -904,6 +904,15 @@ proc open*(self: var Parser, input: Stream, filename: string) =
   self.filename = filename
   self.str = ""
 
+proc open*(self: var Parser, input: Stream) =
+  self.open(input, "<input>")
+
+proc open*(self: var Parser, code: string, filename: string) =
+  self.open(new_string_stream(code), filename)
+
+proc open*(self: var Parser, code: string) =
+  self.open(new_string_stream(code), "<input>")
+
 proc close*(self: var Parser) {.inline.} =
   lexbase.close(self)
 

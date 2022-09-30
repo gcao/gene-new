@@ -879,16 +879,6 @@ proc wait_for_futures*(self: VirtualMachine) =
     else:
       raise
 
-proc prepare*(self: VirtualMachine, code: string): Value =
-  var parsed = read_all(code)
-  case parsed.len:
-  of 0:
-    Nil
-  of 1:
-    parsed[0]
-  else:
-    new_gene_stream(parsed)
-
 proc init_package*(self: VirtualMachine, dir: string) =
   self.app.pkg = new_package(dir)
   self.app.pkg.reset_load_paths()
@@ -901,8 +891,18 @@ proc eval_prepare*(self: VirtualMachine, pkg: Package): Frame =
   result.scope = new_scope()
 
 proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
-  var expr = translate(self.prepare(code))
-  result = self.eval(frame, expr)
+  var parser = new_parser()
+  parser.open(code)
+  while true:
+    try:
+      var value = parser.read()
+      if value.is_nil:
+        continue
+      var expr = translate(value)
+      result = self.eval(frame, expr)
+    except ParseEofError:
+      parser.close()
+      break
 
 proc eval*(self: VirtualMachine, pkg: Package, code: string, module_name: string): Value =
   var module = new_module(pkg, module_name)
