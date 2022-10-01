@@ -1,8 +1,9 @@
 # To run these tests, simply execute `nimble test` or `nim c -r tests/test_parser.nim`
 
-import unittest, options, tables, sets, unicode, times, nre
+import unittest, options, tables, unicode, times, nre
 
 import gene/types
+import gene/parser
 
 import ./helpers
 
@@ -505,3 +506,16 @@ test_parse_archive """
   check file.kind == VkFile
   check file.file_name == "f"
   check file.file_content == "abc"
+
+test """Parser / read_stream:
+  1 2
+""":
+  var code = cleanup"""
+    1 2
+  """
+  var data = new_gene_vec()
+  proc handle(value: Value) =
+    data.vec.add(value)
+  var parser = new_parser()
+  parser.read_stream(code, handle)
+  check data == @[1, 2]

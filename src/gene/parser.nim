@@ -82,6 +82,8 @@ type
 
   Handler = proc(self: var Parser, input: Value): Value
 
+  StreamHandler = proc(value: Value)
+
 const non_constituents: seq[char] = @[]
 
 var macros: MacroArray
@@ -1227,6 +1229,19 @@ proc read_all*(self: var Parser, buffer: string): seq[Value] =
       break
     else:
       node = self.read()
+
+proc read_stream*(self: var Parser, buffer: string, stream_handler: StreamHandler) =
+  var s = new_string_stream(buffer)
+  self.open(s, "<input>")
+  defer: self.close()
+  var node = self.read()
+  while true:
+    if not node.is_nil:
+      stream_handler(node)
+    try:
+      node = self.read()
+    except ParseEofError:
+      break
 
 proc read_document*(self: var Parser, buffer: string): Document =
   try:
