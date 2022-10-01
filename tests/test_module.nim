@@ -77,6 +77,17 @@ test_interpreter """
   (g)
 """, 1
 
+# test_interpreter """
+#   (import * from "tests/fixtures/mod_break")
+#   (before_break)
+#   (try
+#     (after_break)
+#     (fail "after_break should not be available")
+#   catch *
+#     # pass
+#   )
+# """, 1
+
 # # test "Interpreter / eval: import":
 # #   init_all()
 # #   discard VM.import_module("file1", """

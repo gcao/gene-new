@@ -246,3 +246,7 @@ proc translate_import*(value: Value): Expr =
 
 proc init*() =
   GeneTranslators["import"] = translate_import
+  # $break_from_module is for early exit from a module
+  # GeneTranslators["$break_from_module"] = translate_break_from_module
+  # Q: Should we have generic support for early exit from module, class body etc?
+  # A: probably not
