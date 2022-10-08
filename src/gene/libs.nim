@@ -6,6 +6,25 @@ import ./json
 import ./map_key
 import ./interpreter_base
 
+type
+  ResourceNotFoundError* = object of CatchableError
+
+  ResourceType* = enum
+    RtDefault
+    RtOnDemand
+
+  Resource* = ref object of CustomValue
+    case `type`*: ResourceType
+    of RtOnDemand:
+      parameterized*: bool
+    else:
+      discard
+    data*: Value
+    dependencies*: seq[string]
+
+  Registry* = ref object of CustomValue
+    data*: Table[string, Resource]
+
 proc object_class(self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.get_class())
 
@@ -537,10 +556,26 @@ proc init*() =
 
     RegistryClass = Value(kind: VkClass, class: new_class("Registry"))
     RegistryClass.class.parent = ObjectClass.class
+    RegistryClass.def_native_constructor proc(args: Value): Value {.name:"registry_new".} =
+      Value(
+        kind: VkCustom,
+        custom: Registry(),
+        custom_class: RegistryClass.class,
+      )
     RegistryClass.def_native_method "register", proc(self: Value, args: Value): Value {.name:"registry_register".} =
-      todo()
+      var name = args.gene_children[0].str
+      var resource = Resource(
+        data: args.gene_children[1],
+      )
+      ((Registry)self.custom).data[name] = resource
+
     RegistryClass.def_native_method "request", proc(self: Value, args: Value): Value {.name:"registry_request".} =
-      todo()
+      var name = args.gene_children[0].str
+      var resource = ((Registry)self.custom).data[name]
+      if resource.is_nil:
+        raise new_exception(ResourceNotFoundError, name)
+      else:
+        return resource.data
     GENEX_NS.ns["Registry"] = RegistryClass
 
     discard self.eval(self.runtime.pkg, """
