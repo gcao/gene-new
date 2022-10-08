@@ -746,6 +746,7 @@ var MacroClass*    : Value
 var BlockClass*    : Value
 var FutureClass*   : Value
 var FileClass*     : Value
+var RegistryClass* : Value
 
 #################### Definitions #################
 

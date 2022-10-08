@@ -535,6 +535,14 @@ proc init*() =
     GENE_NS.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
     GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
 
+    RegistryClass = Value(kind: VkClass, class: new_class("Registry"))
+    RegistryClass.class.parent = ObjectClass.class
+    RegistryClass.def_native_method "register", proc(self: Value, args: Value): Value {.name:"registry_register".} =
+      todo()
+    RegistryClass.def_native_method "request", proc(self: Value, args: Value): Value {.name:"registry_request".} =
+      todo()
+    GENEX_NS.ns["Registry"] = RegistryClass
+
     discard self.eval(self.runtime.pkg, """
     ($with gene/String
       (method lines _
