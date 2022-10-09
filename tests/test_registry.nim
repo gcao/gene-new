@@ -84,3 +84,16 @@ test_interpreter """
   (registry .register "x" 1)
   (registry .request "x")
 """, 1
+
+test_interpreter """
+  (var registry (new genex/Registry))
+  (var result)
+  ((registry .req_async "x")
+    .on_success (value ->
+      (result = value)
+    )
+  )
+  (registry .register "x" 1)
+  ($await_all)
+  result
+""", 1

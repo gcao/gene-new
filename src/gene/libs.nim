@@ -25,6 +25,10 @@ type
   Registry* = ref object of CustomValue
     data*: Table[string, Resource]
 
+proc `[]`*(self: Registry, name: string): Resource =
+  if self.data.has_key(name):
+    return self.data[name]
+
 proc object_class(self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.get_class())
 
@@ -568,7 +572,6 @@ proc init*() =
         data: args.gene_children[1],
       )
       ((Registry)self.custom).data[name] = resource
-
     RegistryClass.def_native_method "request", proc(self: Value, args: Value): Value {.name:"registry_request".} =
       var name = args.gene_children[0].str
       var resource = ((Registry)self.custom).data[name]
@@ -576,6 +579,24 @@ proc init*() =
         raise new_exception(ResourceNotFoundError, name)
       else:
         return resource.data
+    RegistryClass.def_native_method "req_async", proc(self: Value, args: Value): Value {.name:"registry_req_async".} =
+      var name = args.gene_children[0].str
+      var future = new_future[Value]()
+      result = new_gene_future(future)
+
+      var resource = ((Registry)self.custom)[name]
+      if not resource.is_nil:
+        future.complete(resource.data)
+        return result
+
+      var f = sleep_async(100)
+      f.add_callback proc() {.gcsafe.} =
+        if not f.failed:
+          var resource = ((Registry)self.custom).data[name]
+          if resource.is_nil:
+            f = sleep_async(100)
+          else:
+            future.complete(resource.data)
     GENEX_NS.ns["Registry"] = RegistryClass
 
     discard self.eval(self.runtime.pkg, """
