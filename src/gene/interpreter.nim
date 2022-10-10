@@ -43,5 +43,6 @@ import "./features/os" as os_feature; os_feature.init()
 
 import "./libs" as libs; libs.init()
 import "./serdes" as serdes; serdes.init()
+import "../genex/registry" as registry; registry.init()
 import "../genex/js" as js; js.init()
 import "../genex/css" as css; css.init()

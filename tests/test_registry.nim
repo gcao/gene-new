@@ -40,9 +40,32 @@ import ./helpers
 #            the registry what to do when a resource at some location is
 #            requested. The resource can be lazily created on request.
 # request  - the action that a consumer asks for a resource at a given location.
+# middleware - some program that can perform some action when a request is
+#            received.
 
-# A resource can depend on other resources. They can be explicitly listed on
-# registration. A dependency tree can be generated.
+# Middleware design
+# A registry-wide list of middlewares are stored.
+# Each middleware takes a list of paths or path patterns and an action.
+# Middleware type: before/after/around
+# BEFORE middleware: can exit prematurely(by throwing a special error?)
+# AFTER  middleware: can alter result etc.
+# AROUND middleware: can do everything BEFORE/AFTER supports plus more.
+
+# Middleware list is a static list. No items can be removed after an item is
+# added. However an item can be replaced with nil when it's not needed any more.
+# Middleware is aware of its own position and can tell the registry to go to the
+# next one or exit prematurely.
+
+# When a request is made, if a list of middleware is available, middlewares
+# applicable to the request are stored in a path<=>middlewares mapping cache and
+# applied in the order.
+# When a new middleware is defined, all existing mappings are validated and
+# cleared if necessary.
+
+# A registry can work without a producer and let middlewares do all the magic.
+
+# A resource can depend on other resources. Dependencies can be explicitly listed
+# on registration. A dependency tree can be generated using this information.
 
 # State machine concepts
 # State
