@@ -7,10 +7,19 @@ import ../gene/map_key
 type
   ResourceNotFoundError* = object of CatchableError
 
+  # registry
+  Registry* = ref object of CustomValue
+    data*: Table[string, Resource]
+    middlewares_before*: seq[Middleware]
+    middlewares_around*: seq[Middleware]
+    middlewares_after*: seq[Middleware]
+    not_found_callbacks*: seq[Value]
+
   ResourceType* = enum
     RtDefault
     RtOnDemand
 
+  # resource
   Resource* = ref object of CustomValue
     case `type`*: ResourceType
     of RtOnDemand:
@@ -20,8 +29,52 @@ type
     data*: Value
     dependencies*: seq[string]
 
-  Registry* = ref object of CustomValue
-    data*: Table[string, Resource]
+  RequestType* = enum
+    RqDefault
+    RqMultiple
+
+  Request* = ref object of CustomValue
+    `type`*: RequestType
+    async*: bool
+    path*: Value
+    props*: Table[MapKey, Value]
+    children*: seq[Value]
+
+  ResponseType* = enum
+    RsDefault
+    RsMultiple
+    RsNotFound
+
+  Response* = ref object of CustomValue
+    req*: Request
+    case `type`*: ResponseType
+    of RsDefault:
+      value*: Value
+    of RsMultiple:
+      values*: seq[Value]
+    else:
+      discard
+
+  MiddlewareType* = enum
+    MtBefore
+    MtAround
+    MtAfter
+
+  # A proxy stores position of current middleware and can be used to access other
+  # middlewares or the producer.
+  # (proxy .request) - Will use the original request
+  # (proxy .request "path" ...) - Will create a new request object
+  Proxy* = ref object of CustomValue
+    middleware*: Middleware
+    req*: Request
+
+  # middleware
+  Middleware* = ref object of CustomValue
+    `type`*: MiddlewareType
+    active*: bool
+    registry*: Registry
+    path*: Value
+    callback*: Value
 
 proc `[]`*(self: Registry, name: string): Resource =
   if self.data.has_key(name):

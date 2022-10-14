@@ -475,3 +475,39 @@ test_interpreter """
   (class B < A)
   A/children/.size
 """, 1
+
+# test_interpreter """
+#   ($object a
+#     (method test _
+#       1
+#     )
+#   )
+#   a/.test
+# """, 1
+
+# test_interpreter """
+#   ($object a
+#     (method init _
+#       (/test = 1)
+#     )
+
+#     (method test _
+#       /test
+#     )
+#   )
+#   a/.test
+# """, 1
+
+# test_interpreter """
+#   (class A
+#     (method test _
+#       1
+#     )
+#   )
+#   ($object a < A
+#     (method test _
+#       ((super) + 1)
+#     )
+#   )
+#   a/.test
+# """, 2

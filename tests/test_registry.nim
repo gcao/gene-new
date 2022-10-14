@@ -30,18 +30,21 @@ import ./helpers
 #            permanent resources are always available unless the producers
 #            take them off from the registry.
 # Location - an addressable location inside the registry.
-#            location and its address are interchangeable term.
-#            location can be static or dynamic.
-#            static locations: /index.html
-#            dynamic locations: /users/?/profile.html
+#            location, path and address are interchangeable term.
+#            location should be static but a request can include additional
+#            parameters which is used to generate a resource.
+#            locations: /index.html
+#            locations that are dynamic-ish: /users/:user_id/profile.html
+#            it'll be up to the user of the registry to design the location
+#            scheme.
+# Middleware - some program that can perform some action when a request is
+#            received.
 # Producer - something that produces resources, e.g. a database
 # Consumer - something that consumes resources, e.g. a front end for a database
 # register - the action that a producer puts a resource at a location, or tells
 #            the registry what to do when a resource at some location is
 #            requested. The resource can be lazily created on request.
 # request  - the action that a consumer asks for a resource at a given location.
-# middleware - some program that can perform some action when a request is
-#            received.
 
 # Middleware design
 # A registry-wide list of middlewares are stored.
@@ -64,6 +67,9 @@ import ./helpers
 
 # A registry can work without a producer and let middlewares do all the magic.
 
+# not_found_callbacks: one or multiple not_found event handlers can be registered.
+# If one handler generates a resource, other handlers are skipped.
+
 # A resource can depend on other resources. Dependencies can be explicitly listed
 # on registration. A dependency tree can be generated using this information.
 
@@ -77,11 +83,12 @@ import ./helpers
 # Similarities and differences between producer/consumer and pub/sub systems.
 
 # Similarities:
-# Registry - Dispatcher
-# Resource - Message
-# Location - Message type
-# Producer - publisher
-# Consumer - Subscriber
+# Registry   - Dispatcher
+# Resource   - Message
+# Location   - Message type
+# Middleware - ???
+# Producer   - publisher
+# Consumer   - Subscriber
 
 # Differences:
 # In producer/consumer system, the consumer is the one that triggers chain of
@@ -120,3 +127,13 @@ test_interpreter """
   ($await_all)
   result
 """, 1
+
+# test_interpreter """
+#   (var registry (new genex/Registry))
+#   (registry .register "x" 1)
+#   # Add a middleware that runs after a resource is obtained.
+#   (registry .after "x"
+#     (res -> (res .set_value (res/.value + 1)))
+#   )
+#   (registry .request "x")
+# """, 2
