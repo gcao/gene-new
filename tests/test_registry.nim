@@ -128,12 +128,12 @@ test_interpreter """
   result
 """, 1
 
-# test_interpreter """
-#   (var registry (new genex/Registry))
-#   (registry .register "x" 1)
-#   # Add a middleware that runs after a resource is obtained.
-#   (registry .after "x"
-#     (res -> (res .set_value (res/.value + 1)))
-#   )
-#   (registry .request "x")
-# """, 2
+test_interpreter """
+  (var registry (new genex/Registry))
+  (registry .register "x" 1)
+  # Add a middleware that runs after a resource is obtained.
+  (registry .after "x"
+    ([registry req res] -> (res .set_value (res/.value + 1)))
+  )
+  (registry .request "x")
+""", 2

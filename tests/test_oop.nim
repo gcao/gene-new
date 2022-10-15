@@ -208,18 +208,18 @@ test_interpreter """
   ((new A).test)
 """, 1
 
-test_interpreter """
-  (class A
-    (method init _
-      ($set_prop "data" {^p 1})
-    )
-    (method test _
-      (($get_prop "data") ./p)
-    )
-  )
-  (var a (new A))
-  a/.test
-""", 1
+# test_interpreter """
+#   (class A
+#     (method init _
+#       ($set_prop "data" {^p 1})
+#     )
+#     (method test _
+#       (($get_prop "data") ./p)
+#     )
+#   )
+#   (var a (new A))
+#   a/.test
+# """, 1
 
 test_interpreter """
   (class A
@@ -476,38 +476,38 @@ test_interpreter """
   A/children/.size
 """, 1
 
-# test_interpreter """
-#   ($object a
-#     (method test _
-#       1
-#     )
-#   )
-#   a/.test
-# """, 1
+test_interpreter """
+  ($object a
+    (method test _
+      1
+    )
+  )
+  a/.test
+""", 1
 
-# test_interpreter """
-#   ($object a
-#     (method init _
-#       (/test = 1)
-#     )
+test_interpreter """
+  ($object a
+    (method init _
+      (/test = 1)
+    )
 
-#     (method test _
-#       /test
-#     )
-#   )
-#   a/.test
-# """, 1
+    (method test _
+      /test
+    )
+  )
+  a/.test
+""", 1
 
-# test_interpreter """
-#   (class A
-#     (method test _
-#       1
-#     )
-#   )
-#   ($object a < A
-#     (method test _
-#       ((super) + 1)
-#     )
-#   )
-#   a/.test
-# """, 2
+test_interpreter """
+  (class A
+    (method test _
+      1
+    )
+  )
+  ($object a < A
+    (method test _
+      ((super) + 1)
+    )
+  )
+  a/.test
+""", 2
