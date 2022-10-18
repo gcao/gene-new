@@ -6,7 +6,7 @@ import ../gene/map_key
 import ../gene/interpreter_base
 
 type
-  ResourceNotFoundError* = object of CatchableError
+  ResourceNotFoundError* = object of types.Exception
 
   # registry
   Registry* = ref object of CustomValue
@@ -28,6 +28,7 @@ type
     else:
       discard
     data*: Value
+    is_callback*: bool
     dependencies*: seq[string]
 
   RequestType* = enum
@@ -38,8 +39,8 @@ type
     `type`*: RequestType
     async*: bool
     path*: Value
-    props*: Table[MapKey, Value]
-    children*: seq[Value]
+    params*: Table[MapKey, Value]
+    args*: seq[Value]
 
   ResponseType* = enum
     RsDefault
@@ -103,6 +104,21 @@ var RegistryClass*   : Value
 var RequestClass*    : Value
 var ResponseClass*   : Value
 
+proc handle_request(self: Value, req: Value): Response =
+  var registry = (Registry)self.custom
+  var request = (Request)req.custom
+  var resource = registry.data[request.path.str]
+  if resource.is_nil:
+    return Response(`type`: RsNotFound)
+  elif resource.is_callback:
+    var args = new_gene_gene()
+    args.gene_children.add(self)
+    args.gene_children.add(req)
+    var frame = Frame()
+    return Response(`type`: RsDefault, value: VM.call(frame, resource.data, args))
+  else:
+    return Response(`type`: RsDefault, value: resource.data)
+
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     RegistryClass = Value(kind: VkClass, class: new_class("Registry"))
@@ -119,23 +135,32 @@ proc init*() =
         data: args.gene_children[1],
       )
       ((Registry)self.custom).data[name] = resource
+    RegistryClass.def_native_method "register_callback", proc(self: Value, args: Value): Value {.name:"registry_register_callback".} =
+      var name = args.gene_children[0].str
+      var resource = Resource(
+        is_callback: true,
+        data: args.gene_children[1],
+      )
+      ((Registry)self.custom).data[name] = resource
+
     RegistryClass.def_native_method "request", proc(self: Value, args: Value): Value {.name:"registry_request".} =
       var name = args.gene_children[0].str
-      var req = Request(`type`: RqDefault, path: name)
+      var req = Request(
+        `type`: RqDefault,
+        path: name,
+        params: args.gene_props,
+        args: args.gene_children[1..^1],
+      )
+
       var req_value = new_gene_custom(req, RequestClass.class)
       var registry = (Registry)self.custom
       # TODO: invokes BEFORE middlewares
       # TODO: invokes AROUND middlewares
 
-      var resource = registry.data[name]
+      var response = self.handle_request(req_value)
 
       # invokes AFTER middlewares
       if registry.middlewares_after.len > 0:
-        var response: Response
-        if resource.is_nil:
-          response = Response(`type`: RsNotFound)
-        else:
-          response = Response(`type`: RsDefault, value: resource.data)
         var res_value = new_gene_custom(response, ResponseClass.class)
         for middleware in registry.middlewares_after:
           var callback = middleware.callback
@@ -146,19 +171,11 @@ proc init*() =
           var frame = Frame()
           discard VM.call(frame, callback, args)
 
-        case response.type:
-        of RsDefault:
-          return response.value
-        of RsNotFound:
-          raise new_exception(ResourceNotFoundError, name)
-        else:
-          todo("register_request: " & $response.type)
-
+      case response.type:
+      of RsNotFound:
+        raise new_exception(ResourceNotFoundError, name)
       else:
-        if resource.is_nil:
-          raise new_exception(ResourceNotFoundError, name)
-        else:
-          return resource.data
+        return response.value
 
     RegistryClass.def_native_method "req_async", proc(self: Value, args: Value): Value {.name:"registry_req_async".} =
       var name = args.gene_children[0].str
@@ -191,3 +208,11 @@ proc init*() =
     ResponseClass.def_native_method "set_value", proc(self: Value, args: Value): Value {.name:"response_set_value".} =
       var res = (Response)self.custom
       res.value = args.gene_children[0]
+
+    RequestClass.def_native_method "args", proc(self: Value, args: Value): Value {.name:"request_args".} =
+      var req = (Request)self.custom
+      return req.args
+
+    RequestClass.def_native_method "not_found", proc(self: Value, args: Value): Value {.name:"request_not_found".} =
+      var req = (Request)self.custom
+      raise new_exception(ResourceNotFoundError, $req.path)

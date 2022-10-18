@@ -137,3 +137,13 @@ test_interpreter """
   )
   (registry .request "x")
 """, 2
+
+test_interpreter """
+  (var registry (new genex/Registry))
+  (registry .register_callback "x"
+    ([registry req] ->
+      (req/.args/0 + 10)
+    )
+  )
+  (registry .request "x" 1)
+""", 11
