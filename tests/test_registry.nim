@@ -116,6 +116,11 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  (var registry (new genex/Registry "test"))
+  registry/.name
+""", "test"
+
+test_interpreter """
   (var registry (new genex/Registry))
   (var result)
   ((registry .req_async "x")
@@ -127,6 +132,17 @@ test_interpreter """
   ($await_all)
   result
 """, 1
+
+test_interpreter """
+  (var registry (new genex/Registry))
+  (var a 1)
+  (registry .register "x" 100)
+  (registry .before "x"
+    ([middleware req] -> (a += 10))
+  )
+  (registry .request "x")
+  a
+""", 11
 
 test_interpreter """
   (var registry (new genex/Registry))

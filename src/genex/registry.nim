@@ -11,8 +11,8 @@ type
   # registry
   Registry* = ref object of CustomValue
     name*: string
-    description*: string
-    props*: Table[string, Value]
+    # description*: string
+    # props*: Table[string, Value]
     resources_map*: Table[string, Resource]
     resources_by_pattern*: seq[(Regex, Resource)]
     middlewares_before*: seq[Middleware]
@@ -166,7 +166,14 @@ proc init*() =
     GENEX_NS.ns["Registry"] = RegistryClass
     RegistryClass.class.parent = ObjectClass.class
     RegistryClass.def_native_constructor proc(args: Value): Value {.name:"registry_new".} =
-      new_gene_custom(Registry(), RegistryClass.class)
+      var name = ""
+      if args.gene_children.len > 0:
+        name = args.gene_children[0].to_s
+      new_gene_custom(Registry(name: name), RegistryClass.class)
+
+    RegistryClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"registry_name".} =
+      ((Registry)self.custom).name
+
     RegistryClass.def_native_method "register", proc(self: Value, args: Value): Value {.name:"registry_register".} =
       var resource = Resource(
         data: args.gene_children[1],
@@ -202,7 +209,15 @@ proc init*() =
       var registry = (Registry)self.custom
       var response: Response
 
-      # TODO: invokes BEFORE middlewares
+      # invokes BEFORE middlewares
+      if registry.middlewares_before.len > 0:
+        for middleware in registry.middlewares_before:
+          var callback = middleware.callback
+          var args = new_gene_gene()
+          args.gene_children.add(self)
+          args.gene_children.add(req_value)
+          var frame = Frame()
+          discard VM.call(frame, callback, args)
 
       # invokes AROUND middlewares
       if registry.middlewares_around.len > 0:
@@ -243,6 +258,11 @@ proc init*() =
             f = sleep_async(100)
           else:
             future.complete(resource.data)
+
+    RegistryClass.def_native_method "before", proc(self: Value, args: Value): Value {.name:"registry_before".} =
+      var path = args.gene_children[0]
+      var callback = args.gene_children[1]
+      ((Registry)self.custom).add_middleware(MtBefore, path, callback)
 
     RegistryClass.def_native_method "around", proc(self: Value, args: Value): Value {.name:"registry_around".} =
       var path = args.gene_children[0]
