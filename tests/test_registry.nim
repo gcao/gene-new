@@ -159,3 +159,9 @@ test_interpreter """
   )
   (registry .request "x" 1)
 """, 11
+
+test_interpreter """
+  (var registry (new genex/Registry))
+  (registry .register #/x/ 1)
+  (registry .request "x")
+""", 1

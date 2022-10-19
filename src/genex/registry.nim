@@ -1,4 +1,4 @@
-import tables
+import tables, nre
 import asyncdispatch
 
 import ../gene/types
@@ -13,7 +13,8 @@ type
     name*: string
     description*: string
     props*: Table[string, Value]
-    data*: Table[string, Resource]
+    resources_map*: Table[string, Resource]
+    resources_by_pattern*: seq[(Regex, Resource)]
     middlewares_before*: seq[Middleware]
     middlewares_around*: seq[Middleware]
     middlewares_after*: seq[Middleware]
@@ -86,8 +87,12 @@ proc to_response(self: Value): Response =
     Response(`type`: RsDefault, value: self)
 
 proc `[]`*(self: Registry, name: string): Resource =
-  if self.data.has_key(name):
-    return self.data[name]
+  if self.resources_map.has_key(name):
+    return self.resources_map[name]
+  else:
+    for pair in self.resources_by_pattern:
+      if name.match(pair[0]).is_some():
+        return pair[1]
 
 proc add_middleware(self: var Registry, `type`: MiddlewareType, path: Value, callback: Value) =
   var pos = case `type`:
@@ -132,7 +137,7 @@ proc next_applicable(self: Middleware, req: Request): Middleware =
 proc handle_request(self: Value, req: Value): Response =
   var registry = (Registry)self.custom
   var request = (Request)req.custom
-  var resource = registry.data[request.path.str]
+  var resource = registry[request.path.str]
   if resource.is_nil:
     return Response(`type`: RsNotFound)
   elif resource.is_callback:
@@ -163,18 +168,26 @@ proc init*() =
     RegistryClass.def_native_constructor proc(args: Value): Value {.name:"registry_new".} =
       new_gene_custom(Registry(), RegistryClass.class)
     RegistryClass.def_native_method "register", proc(self: Value, args: Value): Value {.name:"registry_register".} =
-      var name = args.gene_children[0].str
       var resource = Resource(
         data: args.gene_children[1],
       )
-      ((Registry)self.custom).data[name] = resource
+
+      var first = args.gene_children[0]
+      case first.kind:
+      of VkRegex:
+        ((Registry)self.custom).resources_by_pattern.add((first.regex, resource))
+      of VkString:
+        var path = first.str
+        ((Registry)self.custom).resources_map[path] = resource
+      else:
+        not_allowed("registry_register: " & $first.kind)
     RegistryClass.def_native_method "register_callback", proc(self: Value, args: Value): Value {.name:"registry_register_callback".} =
       var name = args.gene_children[0].str
       var resource = Resource(
         is_callback: true,
         data: args.gene_children[1],
       )
-      ((Registry)self.custom).data[name] = resource
+      ((Registry)self.custom).resources_map[name] = resource
 
     RegistryClass.def_native_method "request", proc(self: Value, args: Value): Value {.name:"registry_request".} =
       var path = args.gene_children[0].str
@@ -225,7 +238,7 @@ proc init*() =
       var f = sleep_async(100)
       f.add_callback proc() {.gcsafe.} =
         if not f.failed:
-          var resource = ((Registry)self.custom).data[name]
+          var resource = ((Registry)self.custom)[name]
           if resource.is_nil:
             f = sleep_async(100)
           else:
