@@ -10,6 +10,9 @@ type
 
   # registry
   Registry* = ref object of CustomValue
+    name*: string
+    description*: string
+    props*: Table[string, Value]
     data*: Table[string, Resource]
     middlewares_before*: seq[Middleware]
     middlewares_around*: seq[Middleware]
@@ -67,28 +70,35 @@ type
     `type`*: MiddlewareType
     active*: bool
     registry*: Registry
+    pos*: int # 0-based index of my position in the list of middlewares
     path*: Value
     callback*: Value
 
-  # Proxy is used by around_callbacks to call the producer or other middlewares
-  # to obtain the resource.
-  # A proxy stores position of current middleware and can be used to access other
-  # middlewares or the producer.
-  # (proxy .request) - Will use the original request
-  # (proxy .request "path" ...) - Will create a new request object
-  Proxy* = ref object of CustomValue
-    middleware*: Middleware
-    req*: Request
+var RegistryClass*   : Value
+var RequestClass*    : Value
+var ResponseClass*   : Value
+var MiddlewareClass* : Value
+
+proc to_response(self: Value): Response =
+  if self.is_nil:
+    Response(`type`: RsNotFound)
+  else:
+    Response(`type`: RsDefault, value: self)
 
 proc `[]`*(self: Registry, name: string): Resource =
   if self.data.has_key(name):
     return self.data[name]
 
 proc add_middleware(self: var Registry, `type`: MiddlewareType, path: Value, callback: Value) =
+  var pos = case `type`:
+    of MtBefore: self.middlewares_before.len
+    of MtAround: self.middlewares_around.len
+    of MtAfter: self.middlewares_after.len
   var middleware = Middleware(
     `type`: type,
     active: true,
     registry: self,
+    pos: pos,
     path: path,
     callback: callback,
   )
@@ -100,9 +110,24 @@ proc add_middleware(self: var Registry, `type`: MiddlewareType, path: Value, cal
   of MtAfter:
     self.middlewares_after.add(middleware)
 
-var RegistryClass*   : Value
-var RequestClass*    : Value
-var ResponseClass*   : Value
+proc call(self: Middleware, req: Request): Response =
+  var args = new_gene_gene()
+  args.gene_children.add(new_gene_custom(self, MiddlewareClass.class))
+  args.gene_children.add(new_gene_custom(req, RequestClass.class))
+  var frame = Frame()
+  var value = VM.call(frame, self.callback, args)
+  return value.to_response()
+
+proc next(self: seq[Middleware], i: int, req: Request): Middleware =
+  while i < self.len - 1:
+    return self[i + 1]
+
+proc next_applicable(self: Middleware, req: Request): Middleware =
+  var pos = self.pos
+  case self.type:
+  of MtBefore: self.registry.middlewares_before.next(pos, req)
+  of MtAround: self.registry.middlewares_around.next(pos, req)
+  of MtAfter:  self.registry.middlewares_after .next(pos, req)
 
 proc handle_request(self: Value, req: Value): Response =
   var registry = (Registry)self.custom
@@ -119,11 +144,19 @@ proc handle_request(self: Value, req: Value): Response =
   else:
     return Response(`type`: RsDefault, value: resource.data)
 
+proc handle_response(self: var Registry, req: Request, res: Response): Value =
+  case res.type:
+  of RsNotFound:
+    raise new_exception(ResourceNotFoundError, $req.path)
+  else:
+    return res.value
+
 proc init*() =
   VmCreatedCallbacks.add proc(self: VirtualMachine) =
     RegistryClass = Value(kind: VkClass, class: new_class("Registry"))
     RequestClass  = Value(kind: VkClass, class: new_class("Request"))
     ResponseClass = Value(kind: VkClass, class: new_class("Response"))
+    MiddlewareClass = Value(kind: VkClass, class: new_class("Middleware"))
 
     GENEX_NS.ns["Registry"] = RegistryClass
     RegistryClass.class.parent = ObjectClass.class
@@ -144,20 +177,26 @@ proc init*() =
       ((Registry)self.custom).data[name] = resource
 
     RegistryClass.def_native_method "request", proc(self: Value, args: Value): Value {.name:"registry_request".} =
-      var name = args.gene_children[0].str
+      var path = args.gene_children[0].str
       var req = Request(
         `type`: RqDefault,
-        path: name,
+        path: path,
         params: args.gene_props,
         args: args.gene_children[1..^1],
       )
 
       var req_value = new_gene_custom(req, RequestClass.class)
       var registry = (Registry)self.custom
-      # TODO: invokes BEFORE middlewares
-      # TODO: invokes AROUND middlewares
+      var response: Response
 
-      var response = self.handle_request(req_value)
+      # TODO: invokes BEFORE middlewares
+
+      # invokes AROUND middlewares
+      if registry.middlewares_around.len > 0:
+        var middleware = registry.middlewares_around[0]
+        response = middleware.call(req)
+      else:
+        response = self.handle_request(req_value)
 
       # invokes AFTER middlewares
       if registry.middlewares_after.len > 0:
@@ -171,11 +210,7 @@ proc init*() =
           var frame = Frame()
           discard VM.call(frame, callback, args)
 
-      case response.type:
-      of RsNotFound:
-        raise new_exception(ResourceNotFoundError, name)
-      else:
-        return response.value
+      return registry.handle_response(req, response)
 
     RegistryClass.def_native_method "req_async", proc(self: Value, args: Value): Value {.name:"registry_req_async".} =
       var name = args.gene_children[0].str
@@ -195,6 +230,11 @@ proc init*() =
             f = sleep_async(100)
           else:
             future.complete(resource.data)
+
+    RegistryClass.def_native_method "around", proc(self: Value, args: Value): Value {.name:"registry_around".} =
+      var path = args.gene_children[0]
+      var callback = args.gene_children[1]
+      ((Registry)self.custom).add_middleware(MtAround, path, callback)
 
     RegistryClass.def_native_method "after", proc(self: Value, args: Value): Value {.name:"registry_after".} =
       var path = args.gene_children[0]
@@ -216,3 +256,17 @@ proc init*() =
     RequestClass.def_native_method "not_found", proc(self: Value, args: Value): Value {.name:"request_not_found".} =
       var req = (Request)self.custom
       raise new_exception(ResourceNotFoundError, $req.path)
+
+    MiddlewareClass.def_native_method "call_next", proc(self: Value, args: Value): Value {.name:"middleware_handle".} =
+      var middleware = (Middleware)self.custom
+      var registry = new_gene_custom(middleware.registry, RegistryClass.class)
+      var req = args.gene_children[0]
+      if middleware.type != MtAround:
+        not_allowed("middleware_handle: " & $middleware.type)
+      var next = middleware.next_applicable((Request)req.custom)
+      var response: Response
+      if next.is_nil:
+        response = registry.handle_request(req)
+      else:
+        response = next.call((Request)req.custom)
+      return middleware.registry.handle_response((Request)req.custom, response)
