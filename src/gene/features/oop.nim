@@ -14,6 +14,12 @@ type
     name*: string
     body*: Expr
 
+  ExObject* = ref object of Expr
+    parent*: Expr
+    container*: Expr
+    name*: string
+    body*: Expr
+
   ExMixin* = ref object of Expr
     container*: Expr
     name*: string
@@ -47,14 +53,14 @@ type
   ExSuper* = ref object of Expr
     args*: Expr
 
-  ExGetProp* = ref object of Expr
-    self*: Expr
-    name*: Expr
+  # ExGetProp* = ref object of Expr
+  #   self*: Expr
+  #   name*: Expr
 
-  ExSetProp* = ref object of Expr
-    self*: Expr
-    name*: Expr
-    value*: Expr
+  # ExSetProp* = ref object of Expr
+  #   self*: Expr
+  #   name*: Expr
+  #   value*: Expr
 
   # ExMethodMissing* = ref object of Expr
   #   fn: Function
@@ -89,6 +95,60 @@ proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 proc translate_class(value: Value): Expr =
   var e = ExClass(
     evaluator: eval_class,
+  )
+  var first = value.gene_children[0]
+  case first.kind
+  of VkSymbol:
+    e.name = first.str
+  of VkComplexSymbol:
+    e.container = translate(first.csymbol[0..^2])
+    e.name = first.csymbol[^1]
+  else:
+    todo()
+
+  var body_start = 1
+  if value.gene_children.len >= 3 and value.gene_children[1] == LESS_THAN:
+    body_start = 3
+    e.parent = translate(value.gene_children[2])
+  e.body = translate(value.gene_children[body_start..^1])
+  return translate_definition(value.gene_children[0], e)
+
+proc eval_object(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var e = cast[ExObject](expr)
+  var class = new_class(e.name)
+  var class_val = Value(kind: VkClass, class: class)
+  result = new_gene_instance(class, Table[MapKey, Value]())
+  if e.parent == nil:
+    class.parent = ObjectClass.class
+  else:
+    var parent = self.eval(frame, e.parent)
+    class.parent = parent.class
+    if not parent.class.on_extended.is_nil:
+      var f = new_frame()
+      f.self = parent
+      var args = new_gene_gene()
+      args.gene_children.add(class_val)
+      discard VM.call(f, parent, parent.class.on_extended, args)
+  class.ns.parent = frame.ns
+  # TODO
+  # var container = frame.ns
+  # if e.container != nil:
+  #   container = self.eval(frame, e.container).ns
+  # container[e.name] = result
+
+  var new_frame = new_frame()
+  new_frame.ns = class.ns
+  new_frame.scope = new_scope()
+  new_frame.self = class_val
+  discard self.eval(new_frame, e.body)
+
+  var init = class.get_method(INIT_KEY)
+  if init != nil:
+    discard self.invoke(frame, result, INIT_KEY, Nil)
+
+proc translate_object(value: Value): Expr =
+  var e = ExObject(
+    evaluator: eval_object,
   )
   var first = value.gene_children[0]
   case first.kind
@@ -418,62 +478,62 @@ proc translate_super(value: Value): Expr =
     args: new_ex_arg(value),
   )
 
-proc eval_get_prop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExGetProp](expr)
-  var name = self.eval(frame, expr.name)
-  var obj =
-    if expr.self == nil:
-      frame.self
-    else:
-      self.eval(frame, expr.self)
-  case obj.kind:
-  of VkInstance:
-    return obj.instance_props[name.str.to_key]
-  else:
-    todo("eval_get_prop " & $obj & " " & name.to_s)
+# proc eval_get_prop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+#   var expr = cast[ExGetProp](expr)
+#   var name = self.eval(frame, expr.name)
+#   var obj =
+#     if expr.self == nil:
+#       frame.self
+#     else:
+#       self.eval(frame, expr.self)
+#   case obj.kind:
+#   of VkInstance:
+#     return obj.instance_props[name.str.to_key]
+#   else:
+#     todo("eval_get_prop " & $obj & " " & name.to_s)
 
-proc translate_get_prop(value: Value): Expr =
-  if value.gene_children.len == 1:
-    return ExGetProp(
-      evaluator: eval_get_prop,
-      name: translate(value.gene_children[0]),
-    )
-  else:
-    return ExGetProp(
-      evaluator: eval_get_prop,
-      self: translate(value.gene_children[0]),
-      name: translate(value.gene_children[1]),
-    )
+# proc translate_get_prop(value: Value): Expr =
+#   if value.gene_children.len == 1:
+#     return ExGetProp(
+#       evaluator: eval_get_prop,
+#       name: translate(value.gene_children[0]),
+#     )
+#   else:
+#     return ExGetProp(
+#       evaluator: eval_get_prop,
+#       self: translate(value.gene_children[0]),
+#       name: translate(value.gene_children[1]),
+#     )
 
-proc eval_set_prop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExSetProp](expr)
-  var name = self.eval(frame, expr.name)
-  result = self.eval(frame, expr.value)
-  var obj =
-    if expr.self == nil:
-      frame.self
-    else:
-      self.eval(frame, expr.self)
-  case obj.kind:
-  of VkInstance:
-    obj.instance_props[name.str.to_key] = result
-  else:
-    todo("eval_set_prop " & $obj & " " & name.to_s)
+# proc eval_set_prop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+#   var expr = cast[ExSetProp](expr)
+#   var name = self.eval(frame, expr.name)
+#   result = self.eval(frame, expr.value)
+#   var obj =
+#     if expr.self == nil:
+#       frame.self
+#     else:
+#       self.eval(frame, expr.self)
+#   case obj.kind:
+#   of VkInstance:
+#     obj.instance_props[name.str.to_key] = result
+#   else:
+#     todo("eval_set_prop " & $obj & " " & name.to_s)
 
-proc translate_set_prop(value: Value): Expr =
-  if value.gene_children.len == 2:
-    return ExSetProp(
-      evaluator: eval_set_prop,
-      name: translate(value.gene_children[0]),
-      value: translate(value.gene_children[1]),
-    )
-  else:
-    return ExSetProp(
-      evaluator: eval_set_prop,
-      self: translate(value.gene_children[0]),
-      name: translate(value.gene_children[1]),
-      value: translate(value.gene_children[2]),
-    )
+# proc translate_set_prop(value: Value): Expr =
+#   if value.gene_children.len == 2:
+#     return ExSetProp(
+#       evaluator: eval_set_prop,
+#       name: translate(value.gene_children[0]),
+#       value: translate(value.gene_children[1]),
+#     )
+#   else:
+#     return ExSetProp(
+#       evaluator: eval_set_prop,
+#       self: translate(value.gene_children[0]),
+#       name: translate(value.gene_children[1]),
+#       value: translate(value.gene_children[2]),
+#     )
 
 # proc eval_method_missing(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
 #   result = Value(
@@ -513,6 +573,7 @@ proc init*() =
   GeneTranslators["super"] = translate_super
   GeneTranslators["$invoke_method"] = translate_invoke
   GeneTranslators["$invoke_dynamic"] = translate_invoke_dynamic
-  GeneTranslators["$get_prop"] = translate_get_prop
-  GeneTranslators["$set_prop"] = translate_set_prop
+  # GeneTranslators["$get_prop"] = translate_get_prop
+  # GeneTranslators["$set_prop"] = translate_set_prop
   # GeneTranslators["method_missing"] = translate_method_missing
+  GeneTranslators["$object"] = translate_object

@@ -162,3 +162,11 @@ test_interpreter """
     2
   )
 """, 2
+
+test_interpreter """
+  (var result 0)
+  ((gene/sleep_async 1000).on_success(-> (result = 1000)))
+  ((gene/sleep_async 500 ).on_success(-> (result = 500)))
+  ($await_all)
+  result
+""", 1000
