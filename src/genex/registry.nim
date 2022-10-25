@@ -19,6 +19,7 @@ type
     middlewares_around*: seq[Middleware]
     middlewares_after*: seq[Middleware]
     not_found_callbacks*: seq[Value]
+    middlewares_cache*: Table[string, (seq[Middleware], seq[Middleware], seq[Middleware])]
 
   ResourceType* = enum
     RtDefault

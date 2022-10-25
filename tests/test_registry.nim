@@ -110,15 +110,15 @@ import ./helpers
 # Messages are transient.
 
 test_interpreter """
+  (var registry (new genex/Registry "test"))
+  registry/.name
+""", "test"
+
+test_interpreter """
   (var registry (new genex/Registry))
   (registry .register "x" 1)
   (registry .request "x")
 """, 1
-
-test_interpreter """
-  (var registry (new genex/Registry "test"))
-  registry/.name
-""", "test"
 
 test_interpreter """
   (var registry (new genex/Registry))
@@ -134,6 +134,7 @@ test_interpreter """
 """, 1
 
 test_interpreter """
+  # <BEFORE> middleware should work
   (var registry (new genex/Registry))
   (var a 1)
   (registry .register "x" 100)
@@ -145,6 +146,7 @@ test_interpreter """
 """, 11
 
 test_interpreter """
+  # <AROUND> middleware should work
   (var registry (new genex/Registry))
   (registry .register "x" 1)
   # Add a middleware that runs after a resource is obtained.
@@ -157,6 +159,7 @@ test_interpreter """
 """, 11
 
 test_interpreter """
+  # <AFTER> middleware should work
   (var registry (new genex/Registry))
   (registry .register "x" 1)
   # Add a middleware that runs after a resource is obtained.
@@ -167,6 +170,7 @@ test_interpreter """
 """, 11
 
 test_interpreter """
+  # producer that uses a callback should work
   (var registry (new genex/Registry))
   (registry .register_callback "x"
     ([registry req] ->
@@ -179,5 +183,13 @@ test_interpreter """
 test_interpreter """
   (var registry (new genex/Registry))
   (registry .register #/x/ 1)
+  (registry .request "x")
+""", 1
+
+test_interpreter """
+  # Exact path takes precedence over pattern
+  (var registry (new genex/Registry))
+  (registry .register "x" 1)
+  (registry .register #/x/ 2)
   (registry .request "x")
 """, 1
