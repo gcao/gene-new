@@ -25,45 +25,6 @@ let HEX = {
 }.to_table()
 
 type
-  ParseError* = object of CatchableError
-  ParseEofError* = object of ParseError
-
-  ParseOptions* {.acyclic.} = ref object
-    parent*: ParseOptions
-    data*: Table[string, Value]
-    units*: Table[string, Value]
-
-  Parser* = object of BaseLexer
-    options*: ParseOptions
-    filename: string
-    str: string
-    num_with_units: seq[(TokenKind, string, string)] # token kind + number + unit
-    document*: Document
-    token_kind*: TokenKind
-    error: ParseErrorKind
-    # stored_references: Table[MapKey, Value]
-    document_props_done: bool  # flag to tell whether we have read document properties
-
-  ParseInfo = tuple[line, col: int]
-
-  TokenKind* = enum
-    TkError
-    TkEof
-    TkString
-    TkInt
-    TkFloat
-    TkNumberWithUnit
-    TkDate
-    TkDateTime
-    TkTime
-
-  ParseErrorKind* = enum
-    ErrNone
-    ErrInvalidToken
-    ErrEofExpected
-    ErrQuoteExpected
-    ErrRegexEndExpected
-
   MacroReader = proc(p: var Parser): Value
   MacroArray = array[char, MacroReader]
 

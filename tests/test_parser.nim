@@ -33,6 +33,9 @@ import ./helpers
 # [(#Push x 1) (#Set x 2)] (#Get x) -> 2
 # ...
 
+# Parsing from a stream (like a log file that is being written to continually, or an incoming socket)
+# Parsing can be interrupted in these cases - what is the best way to stop?
+
 test_parser "nil", Nil
 test_parser "true", true
 test_parser "false", false
