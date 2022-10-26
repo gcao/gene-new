@@ -63,6 +63,7 @@ type
     VkArchiveFile
     VkDirectory
     # Internal types
+    VkParserIgnore # used by some parser macros to not output something in the parsed document
     VkException = 128
     VkGeneProcessor
     VkApplication

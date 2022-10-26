@@ -888,11 +888,15 @@ proc handle_set(self: var Parser, value: Value): Value =
   else:
     todo("#Set " & $value.gene_children[0])
 
+proc handle_ignore(self: var Parser, value: Value): Value =
+  Value(kind: VkParserIgnore)
+
 proc init_handlers() =
   handlers["#File"] = handle_file
   handlers["#Dir"] = handle_dir
   handlers["#Gar"] = handle_arc
   handlers["#Set"] = handle_set
+  handlers["#Ignore"] = handle_ignore
 
 proc init_readers() =
   init_macro_array()
@@ -1183,17 +1187,24 @@ proc read*(self: var Parser): Value =
   elif is_macro(ch):
     let m = macros[ch] # save line:col metadata here?
     inc(self.bufpos)
-    return m(self)
+    result = m(self)
+    if result.kind == VkParserIgnore:
+      result = self.read()
+    return result
   elif ch in ['+', '-']:
     if isDigit(self.buf[self.bufpos + 1]):
       return self.read_number()
     else:
       token = self.read_token(false)
       result = interpret_token(token)
+      if result.kind == VkParserIgnore:
+        result = self.read()
       return result
 
   token = self.read_token(true)
   result = interpret_token(token)
+  if result.kind == VkParserIgnore:
+    result = self.read()
 
 proc read_document_properties(self: var Parser) =
   if self.document_props_done:

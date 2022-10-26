@@ -519,3 +519,7 @@ test """Parser / read_stream:
   var parser = new_parser()
   parser.read_stream(code, handle)
   check data == @[1, 2]
+
+test_parser """
+  (#Ignore) 1
+""", 1
