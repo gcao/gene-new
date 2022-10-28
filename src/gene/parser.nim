@@ -24,7 +24,58 @@ let HEX = {
   'A': 10u8, 'B': 11u8, 'C': 12u8, 'D': 13u8, 'E': 14u8, 'F': 15u8,
 }.to_table()
 
+let Ignore = Value(kind: VkCustom, custom: CustomValue())
+
 type
+  ParseError* = object of CatchableError
+  ParseEofError* = object of ParseError
+
+  ParseMode* = enum
+    PmDefault
+    PmDocument
+    PmStream
+    PmFirst
+    PmPackage
+    PmArchive
+
+  ParseOptions* {.acyclic.} = ref object
+    parent*: ParseOptions
+    data*: Table[string, Value]
+    units*: Table[string, Value]
+
+  Parser* = object of BaseLexer
+    options*: ParseOptions
+    filename*: string
+    str*: string
+    num_with_units*: seq[(TokenKind, string, string)] # token kind + number + unit
+    document*: Document
+    token_kind*: TokenKind
+    error*: ParseErrorKind
+    # stored_references*: Table[MapKey, Value]
+    document_props_done*: bool  # flag to tell whether we have read document properties
+
+  TokenKind* = enum
+    TkError
+    TkEof
+    TkString
+    TkInt
+    TkFloat
+    TkNumberWithUnit
+    TkDate
+    TkDateTime
+    TkTime
+
+  ParseErrorKind* = enum
+    ErrNone
+    ErrInvalidToken
+    ErrEofExpected
+    ErrQuoteExpected
+    ErrRegexEndExpected
+
+  ParseInfo* = tuple[line, col: int]
+
+  ParserFunction* = proc(self: var Parser, props: Table[MapKey, Value], children: seq[Value]): Value
+
   MacroReader = proc(p: var Parser): Value
   MacroArray = array[char, MacroReader]
 
@@ -850,7 +901,7 @@ proc handle_set(self: var Parser, value: Value): Value =
     todo("#Set " & $value.gene_children[0])
 
 proc handle_ignore(self: var Parser, value: Value): Value =
-  Value(kind: VkParserIgnore)
+  Ignore
 
 proc init_handlers() =
   handlers["#File"] = handle_file
@@ -1149,7 +1200,7 @@ proc read*(self: var Parser): Value =
     let m = macros[ch] # save line:col metadata here?
     inc(self.bufpos)
     result = m(self)
-    if result.kind == VkParserIgnore:
+    if result == Ignore:
       result = self.read()
     return result
   elif ch in ['+', '-']:
@@ -1158,13 +1209,13 @@ proc read*(self: var Parser): Value =
     else:
       token = self.read_token(false)
       result = interpret_token(token)
-      if result.kind == VkParserIgnore:
+      if result == Ignore:
         result = self.read()
       return result
 
   token = self.read_token(true)
   result = interpret_token(token)
-  if result.kind == VkParserIgnore:
+  if result == Ignore:
     result = self.read()
 
 proc read_document_properties(self: var Parser) =

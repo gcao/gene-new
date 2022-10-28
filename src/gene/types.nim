@@ -1,4 +1,3 @@
-import lexbase
 import os, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm
 import nre
 import asyncdispatch
@@ -10,55 +9,6 @@ import ./map_key
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
 
 type
-  ParseError* = object of CatchableError
-  ParseEofError* = object of ParseError
-
-  ParseMode* = enum
-    PmDefault
-    PmDocument
-    PmStream
-    PmFirst
-    PmPackage
-    PmArchive
-
-  ParseOptions* {.acyclic.} = ref object
-    parent*: ParseOptions
-    data*: Table[string, Value]
-    units*: Table[string, Value]
-
-  Parser* = object of BaseLexer
-    options*: ParseOptions
-    filename*: string
-    str*: string
-    num_with_units*: seq[(TokenKind, string, string)] # token kind + number + unit
-    document*: Document
-    token_kind*: TokenKind
-    error*: ParseErrorKind
-    # stored_references*: Table[MapKey, Value]
-    document_props_done*: bool  # flag to tell whether we have read document properties
-
-  TokenKind* = enum
-    TkError
-    TkEof
-    TkString
-    TkInt
-    TkFloat
-    TkNumberWithUnit
-    TkDate
-    TkDateTime
-    TkTime
-
-  ParseErrorKind* = enum
-    ErrNone
-    ErrInvalidToken
-    ErrEofExpected
-    ErrQuoteExpected
-    ErrRegexEndExpected
-
-  ParseInfo* = tuple[line, col: int]
-
-  ParserFunction* = proc(self: var Parser, props: Table[MapKey, Value], children: seq[Value]): Value
-
   RegexFlag* = enum
     RfIgnoreCase
     RfMultiLine
@@ -113,8 +63,6 @@ type
     VkArchiveFile
     VkDirectory
     # Internal types
-    VkParserIgnore # used by some parser macros to not output something in the parsed document
-    VkParserFunction
     VkException = 128
     VkGeneProcessor
     VkApplication
@@ -244,8 +192,6 @@ type
     # Internal types
     of VkException:
       exception*: ref system.Exception
-    of VkParserFunction:
-      parser_fn*: ParserFunction
     of VkGeneProcessor:
       gene_processor*: GeneProcessor
     of VkApplication:
@@ -1840,6 +1786,8 @@ proc `==`*(this, that: Value): bool =
       return this.enum == that.enum
     of VkEnumMember:
       return this.enum_member == that.enum_member
+    of VkCustom:
+      return this.custom_class == that.custom_class and this.custom == that.custom
     else:
       todo($this.kind)
 
