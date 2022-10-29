@@ -20,7 +20,27 @@
 # #Fn # result of the last expression is returned
 # #Return
 # #ReturnIf # (#ReturnIf condition result)
-# #Void # tell the function to not return a value
+# #Void   # tell the function to not return a value and the caller should not add
+#         # anything to the output.
+
+# #Macro # can be used to define for-loops etc
+# E.g.
+# (#Macro #for [#name in #list #block...]
+#   # logic goes here...
+# )
+# (#for #x in [1 2 3] (#Println #x))
+
+# Optional argument is supported, but default value is not supported.
+# Inside function/macro's body, it can check and set optional argument's value.
+
+# For simplicity's sake, #Fn and #Macro don't support keyword arguments. If a
+# key-value map must be passed in, it is recommended to be passed as the first or
+# last positional argument.
+# E.g.
+# (#Fn #f [#first #options]
+#   (#Add #first #options/x)
+# )
+# (#f 1 {^x 2})
 
 # Should we support catching errors? maybe it's required to implement some flows?
 # #Throw name "message" # Throw an error that is a subclass of MacroError
@@ -31,7 +51,9 @@
 # #Catch name
 # #Catch [name1, name2]
 
-# #Import # can add a prefix to all imported functions etc
+# #Import # can add a prefix to all imported functions etc.
+#         # if no prefix is given, members to be imported must be explicitly specified.
+
 # #Include
 
 # #Var
@@ -46,23 +68,44 @@
 # #Set
 # #Get
 # #ToString # return a human readable string representation. The format is not strictly defined.
-# #Serialize # serialize a Gene value to a string
+# #Serialize # serialize a Gene value to a Gene string
 # #Parse # parse a Gene string to a Gene value
 # #ParseJson # parse a JSON string to a Gene value
 
+# Maybe we do not rely on parsing options, but using special members in the scope
+# to control the behavior of the parser?
+# Pro:
+#   we don't rely on another complex component to manage the options
+# Con:
+#   Q: can scope logic change and become incompatible with how options are supposed to work?
+#   A: yes it's possible
+
 # Parsing options
 # #SetOption
+# #ResetOption
 # #GetOption
 # #PushOption
-# #PopOption
+# #PopOption - called automatically unless it's called explicitly
+
+# #SetOption vs #PushOption
+# We need to know whether an option is set or pushed.
+# After an option is pushed, we should not allow setting that option any more.
+# So SetOption is used for the top level option only.
+# PushOption can be used on the top level or any where.
+# PopOption is automatically called at the end of a gene / array unless it's
+#   explicitly called.
+# ResetOption can be called manually to clear the option.
 
 # #Print, #PrintError
+# #Println
 # #Debug
-# #ReadFromFile, #ReadFromStdin
-# #WriteToFile
+# #Read # Read from file
+# #ReadFromStdin
+# #Write # Write to file
 
 # #Params # an optional key value map that is passed while parsing
 # #Env
+# #Cwd # current working dir
 # #Today, #Now
 
 # #If, #IfNot
@@ -73,9 +116,6 @@
 # #Lt, #Lte
 # #Gt, #Gte
 
-# #Map
-# #Each
-# #Filter
 # #While
 # #Loop
 # #Yield # Yield a value to the array or the gene's children
@@ -84,44 +124,52 @@
 # #Continue, #ContinueIf
 
 # Number functions
-# #Add, #Sub, #Mul, #Div, #Mod, #Pow
+# #Add, #Sub, #Mul, #Div, #Mod, #Pow, #Sqrt
+# #Inc, #Dec
 # #Log, #Log2, #Log10, #Ln
+# #Rand
+# #Sin, #Cos, #Tan, #Atan
+# #E, #PI
 
 # String functions
-# #NewString
-# #Size
-# #IndexOf
-# #Contains
+# #String/new
+# #String/size
+# #String/index
+# #String/contains
 
-# NewSymbol
+# #Symbol/new
 
 # Regex functions
-# #NewRegex
-# #Match
+# #Regex/new
+# #Regex/match
 
 # Array functions
-# #NewArray
-# #Sort
-# #Insert
-# #Append
-# #Prepend
-# #Delete
-# #IndexOf
-# #Join
+# #Array/new
+# #Array/sort
+# #Array/insert
+# #Array/push, #Array/pop
+# #Array/prepend
+# #Array/delete
+# #Array/index
+# #Array/join
+# #Array/map
+# #Array/each
+# #Array/filter
 
 # Map functions
-# #NewMap
-# #MapKeys
-# #MapValues
-# #HasKey
-# #Delete
+# #Map/new
+# #Map/keys
+# #Map/values
+# #Map/hasKey
+# #Map/delete
+# #Map/each
 
 # Gene functions
-# #NewGene
-# #GetType
-# #GetProps
-# #GetChildren
-# #SetType
+# #Gene/new
+# #Gene/type
+# #Gene/props
+# #Gene/children
+# #Gene/setType
 
 # Date & time functions
 

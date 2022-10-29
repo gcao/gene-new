@@ -74,7 +74,25 @@ type
 
   ParseInfo* = tuple[line, col: int]
 
-  ParserFunction* = proc(self: var Parser, props: Table[MapKey, Value], children: seq[Value]): Value
+  ParseScope* = ref object
+    parent*: ParseScope
+    mappings*: Table[MapKey, Value]
+
+  ParseFunction* = proc(self: var Parser, scope: ParseScope, props: Table[MapKey, Value], children: seq[Value]): Value
+
+  ParseHandlerType* = enum
+    PhDefault
+    PhNativeFn
+
+  ParseHandler* = ref object of CustomValue
+    is_macro*: bool  # if true, do not evaluate arguments before calling function
+    case `type`*: ParseHandlerType
+    of PhNativeFn:
+      native_fn: ParseFunction
+    else:
+      scope*: ParseScope
+      args*: seq[Value]
+      body*: seq[Value]
 
   MacroReader = proc(p: var Parser): Value
   MacroArray = array[char, MacroReader]
