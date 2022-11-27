@@ -37,7 +37,7 @@ proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: va
     else:
       result.gene_children.add(r)
 
-proc eval_gene*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_gene*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExGene](expr)
   var `type` = self.eval(frame, expr.`type`)
   var translator: Translator
@@ -92,7 +92,7 @@ proc handle_assignment_shortcuts(self: seq[Value]): Value =
   else:
     raise new_gene_exception("Invalid right value for assignment " & $self)
 
-proc translate_gene(value: Value): Expr =
+proc translate_gene(value: Value): Expr {.gcsafe.} =
   var `type` = value.gene_type
   case `type`.kind:
   of VkSymbol:
@@ -178,8 +178,9 @@ proc translate_gene(value: Value): Expr =
 
   case value.gene_type.kind:
   of VkSymbol:
-    var translator = GeneTranslators.get_or_default(value.gene_type.str, default_translator)
-    return translator(value)
+    {.cast(gcsafe).}:
+      var translator = GeneTranslators.get_or_default(value.gene_type.str, default_translator)
+      return translator(value)
   of VkString:
     return translate_string(value)
   of VkFunction:

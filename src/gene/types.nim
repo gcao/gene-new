@@ -274,20 +274,20 @@ type
   # index of a name in a scope
   NameIndexScope* = distinct int
 
-  Translator* = proc(value: Value): Expr
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
+  Translator* = proc(value: Value): Expr {.gcsafe.}
+  Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.}
 
-  EvalCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
+  EvalCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.}
   EvalWrap* = proc(eval: Evaluator): Evaluator
 
-  TranslateCatch* = proc(value: Value): Expr
+  TranslateCatch* = proc(value: Value): Expr {.gcsafe.}
   TranslateWrap* = proc(translate: Translator): Translator
 
-  NativeFn* = proc(args: Value): Value {.nimcall.}
-  NativeFn2* = proc(args: Value): Value
+  NativeFn* = proc(args: Value): Value {.gcsafe, nimcall.}
+  NativeFn2* = proc(args: Value): Value {.gcsafe.}
   NativeFnWrap* = proc(f: NativeFn): NativeFn2
-  NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
-  NativeMethod2* = proc(self: Value, args: Value): Value
+  NativeMethod* = proc(self: Value, args: Value): Value {.gcsafe, nimcall.}
+  NativeMethod2* = proc(self: Value, args: Value): Value {.gcsafe.}
   NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
@@ -299,11 +299,13 @@ type
     name*: string
     translator*: Translator
 
-  VirtualMachine* = ref object
+  VirtualMachineData = object
     app*: Application
     runtime*: Runtime
     modules*: Table[MapKey, Namespace]
     repl_on_error*: bool
+
+  VirtualMachine* = ptr VirtualMachineData
 
   # VirtualMachine depends on a Runtime
   Runtime* = ref object
@@ -749,40 +751,40 @@ var FileClass*     : Value
 
 #################### Definitions #################
 
-proc new_gene_bool*(val: bool): Value {.inline.}
-proc new_gene_int*(val: BiggestInt): Value {.inline.}
-proc new_gene_float*(val: float): Value
-proc new_gene_char*(c: char): Value
-proc new_gene_char*(c: Rune): Value
+proc new_gene_bool*(val: bool): Value {.gcsafe, inline.}
+proc new_gene_int*(val: BiggestInt): Value {.gcsafe, inline.}
+proc new_gene_float*(val: float): Value {.gcsafe.}
+proc new_gene_char*(c: char): Value {.gcsafe.}
+proc new_gene_char*(c: Rune): Value {.gcsafe.}
 proc new_gene_string*(s: string): Value {.gcsafe.}
-proc new_gene_string_move*(s: string): Value
+proc new_gene_string_move*(s: string): Value {.gcsafe.}
 proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
-proc new_gene_vec*(items: varargs[Value]): Value
-proc new_gene_map*(): Value
-proc new_gene_map*(map: Table[MapKey, Value]): Value
-proc new_namespace*(): Namespace
-proc new_namespace*(name: string): Namespace
-proc new_namespace*(parent: Namespace): Namespace
-proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.inline.}
-proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.}
-proc new_class*(name: string): Class
-proc new_class*(name: string, parent: Class): Class
-proc new_match_matcher*(): RootMatcher
-proc new_arg_matcher*(): RootMatcher
-proc hint*(self: RootMatcher): MatchingHint {.inline.}
+proc new_gene_vec*(items: varargs[Value]): Value {.gcsafe.}
+proc new_gene_map*(): Value {.gcsafe.}
+proc new_gene_map*(map: Table[MapKey, Value]): Value {.gcsafe.}
+proc new_namespace*(): Namespace {.gcsafe.}
+proc new_namespace*(name: string): Namespace {.gcsafe.}
+proc new_namespace*(parent: Namespace): Namespace {.gcsafe.}
+proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.gcsafe, inline.}
+proc `[]=`*(self: var Namespace, key: string, val: Value) {.gcsafe, inline.}
+proc new_class*(name: string): Class {.gcsafe.}
+proc new_class*(name: string, parent: Class): Class {.gcsafe.}
+proc new_match_matcher*(): RootMatcher {.gcsafe.}
+proc new_arg_matcher*(): RootMatcher {.gcsafe.}
+proc hint*(self: RootMatcher): MatchingHint {.gcsafe, inline.}
 
 ##################################################
 
-proc todo*() =
+proc todo*() {.gcsafe.} =
   raise new_exception(Exception, "TODO")
 
-proc todo*(message: string) =
+proc todo*(message: string) {.gcsafe.} =
   raise new_exception(Exception, "TODO: " & message)
 
-proc not_allowed*(message: string) =
+proc not_allowed*(message: string) {.gcsafe.} =
   raise new_exception(Exception, message)
 
-proc not_allowed*() =
+proc not_allowed*() {.gcsafe.} =
   not_allowed("Error: should not arrive here.")
 
 # https://forum.nim-lang.org/t/8516#55153
@@ -799,19 +801,19 @@ macro name*(name: static string, f: untyped): untyped =
 
 #################### Converters ##################
 
-converter to_gene*(v: int): Value                      = new_gene_int(v)
-converter to_gene*(v: int64): Value                    = new_gene_int(v)
-converter to_gene*(v: bool): Value                     = new_gene_bool(v)
-converter to_gene*(v: float): Value                    = new_gene_float(v)
-converter to_gene*(v: string): Value                   = new_gene_string(v)
-converter to_gene*(v: char): Value                     = new_gene_char(v)
-converter to_gene*(v: Rune): Value                     = new_gene_char(v)
-converter to_gene*(v: Table[MapKey, Value]): Value = new_gene_map(v)
+converter to_gene*(v: int): Value {.gcsafe.}                      = new_gene_int(v)
+converter to_gene*(v: int64): Value {.gcsafe.}                    = new_gene_int(v)
+converter to_gene*(v: bool): Value {.gcsafe.}                     = new_gene_bool(v)
+converter to_gene*(v: float): Value {.gcsafe.}                    = new_gene_float(v)
+converter to_gene*(v: string): Value {.gcsafe.}                   = new_gene_string(v)
+converter to_gene*(v: char): Value {.gcsafe.}                     = new_gene_char(v)
+converter to_gene*(v: Rune): Value {.gcsafe.}                     = new_gene_char(v)
+converter to_gene*(v: Table[MapKey, Value]): Value {.gcsafe.}     = new_gene_map(v)
 
 # Below converter causes problem with the hash function
 # converter to_gene*(v: seq[Value]): Value           = new_gene_vec(v)
 
-converter to_bool*(v: Value): bool =
+converter to_bool*(v: Value): bool {.gcsafe.} =
   if v.isNil:
     return false
   case v.kind:
@@ -829,21 +831,21 @@ converter biggest_to_int*(v: BiggestInt): int = cast[int](v)
 converter seq_to_gene*(v: seq[Value]): Value {.gcsafe.} = new_gene_vec(v)
 converter str_to_gene*(v: string): Value {.gcsafe.} = new_gene_string(v)
 
-converter file_to_gene*(file: File): Value =
+converter file_to_gene*(file: File): Value {.gcsafe.} =
   Value(
     kind: VkNativeFile,
     native_file: file,
   )
 
-converter to_map*(self: Table[string, Value]): Table[MapKey, Value] {.inline.} =
+converter to_map*(self: Table[string, Value]): Table[MapKey, Value] {.gcsafe, inline.} =
   for k, v in self:
     result[k.to_key] = v
 
-converter to_string_map*(self: Table[MapKey, Value]): Table[string, Value] {.inline.} =
+converter to_string_map*(self: Table[MapKey, Value]): Table[string, Value] {.gcsafe, inline.} =
   for k, v in self:
     result[k.to_s] = v
 
-converter to_gene*(v: Table[string, Value]): Value =
+converter to_gene*(v: Table[string, Value]): Value {.gcsafe.} =
   return Value(
     kind: VkMap,
     map: v,
@@ -852,34 +854,35 @@ converter to_gene*(v: Table[string, Value]): Value =
 converter int_to_scope_index*(v: int): NameIndexScope = cast[NameIndexScope](v)
 converter scope_index_to_int*(v: NameIndexScope): int = cast[int](v)
 
-converter gene_to_ns*(v: Value): Namespace = todo()
+converter gene_to_ns*(v: Value): Namespace {.gcsafe.} = todo()
 
 #################### VM ##########################
 
-proc new_vm*(app: Application): VirtualMachine =
-  result = VirtualMachine(
+proc new_vm*(app: Application): VirtualMachine {.gcsafe.} =
+  var vm = VirtualMachineData(
     app: app,
   )
+  return vm.addr
 
 #################### Application #################
 
-proc new_app*(): Application =
+proc new_app*(): Application {.gcsafe.} =
   result = Application()
   var global = new_namespace("global")
   result.ns = global
 
 #################### Package #####################
 
-proc normalize(self: Package, path: string): string =
+proc normalize(self: Package, path: string): string {.gcsafe.} =
   normalize_path(self.dir & "/" & path)
 
-proc add_load_path*(self: Package, path: string) =
+proc add_load_path*(self: Package, path: string) {.gcsafe.} =
   var i = self.load_paths.find(path)
   if i >= 0:
     self.load_paths.delete(i)
   self.load_paths.insert(path, 0)
 
-proc reset_load_paths*(self: Package, test_mode = false) =
+proc reset_load_paths*(self: Package, test_mode = false) {.gcsafe.} =
   self.load_paths = @[normalize(self.dir)]
   if self.src_path == "":
     self.src_path = "src"
@@ -894,7 +897,7 @@ proc reset_load_paths*(self: Package, test_mode = false) =
 
 #################### Module ######################
 
-proc new_module*(pkg: Package, name: string): Module =
+proc new_module*(pkg: Package, name: string): Module {.gcsafe.} =
   result = Module(
     pkg: pkg,
     name: name,
@@ -902,10 +905,10 @@ proc new_module*(pkg: Package, name: string): Module =
   )
   result.ns.module = result
 
-proc new_module*(pkg: Package): Module =
+proc new_module*(pkg: Package): Module {.gcsafe.} =
   result = new_module(pkg, "<unknown>")
 
-proc new_module*(pkg: Package, name: string, ns: Namespace): Module =
+proc new_module*(pkg: Package, name: string, ns: Namespace): Module {.gcsafe.} =
   result = Module(
     pkg: pkg,
     name: name,
@@ -913,44 +916,44 @@ proc new_module*(pkg: Package, name: string, ns: Namespace): Module =
   )
   result.ns.module = result
 
-proc new_module*(pkg: Package, ns: Namespace): Module =
+proc new_module*(pkg: Package, ns: Namespace): Module {.gcsafe.} =
   result = new_module(pkg, "<unknown>", ns)
 
 #################### Namespace ###################
 
-proc new_namespace*(): Namespace =
+proc new_namespace*(): Namespace {.gcsafe.} =
   return Namespace(
     name: "<root>",
     members: Table[MapKey, Value](),
   )
 
-proc new_namespace*(parent: Namespace): Namespace =
+proc new_namespace*(parent: Namespace): Namespace {.gcsafe.} =
   return Namespace(
     parent: parent,
     name: "<root>",
     members: Table[MapKey, Value](),
   )
 
-proc new_namespace*(name: string): Namespace =
+proc new_namespace*(name: string): Namespace {.gcsafe.} =
   return Namespace(
     name: name,
     members: Table[MapKey, Value](),
   )
 
-proc new_namespace*(parent: Namespace, name: string): Namespace =
+proc new_namespace*(parent: Namespace, name: string): Namespace {.gcsafe.} =
   return Namespace(
     parent: parent,
     name: name,
     members: Table[MapKey, Value](),
   )
 
-proc root*(self: Namespace): Namespace =
+proc root*(self: Namespace): Namespace {.gcsafe.} =
   if self.name == "<root>":
     return self
   else:
     return self.parent.root
 
-proc get_module*(self: Namespace): Module =
+proc get_module*(self: Namespace): Module {.gcsafe.} =
   if self.module == nil:
     if self.parent != nil:
       return self.parent.get_module()
@@ -959,13 +962,13 @@ proc get_module*(self: Namespace): Module =
   else:
     return self.module
 
-proc package*(self: Namespace): Package =
+proc package*(self: Namespace): Package {.gcsafe.} =
   self.get_module().pkg
 
-proc has_key*(self: Namespace, key: MapKey): bool {.inline.} =
+proc has_key*(self: Namespace, key: MapKey): bool {.gcsafe, inline.} =
   return self.members.has_key(key) or (self.parent != nil and self.parent.has_key(key))
 
-proc `[]`*(self: Namespace, key: MapKey): Value {.inline.} =
+proc `[]`*(self: Namespace, key: MapKey): Value {.gcsafe, inline.} =
   if self.members.has_key(key):
     return self.members[key]
   elif not self.stop_inheritance and self.parent != nil:
@@ -973,7 +976,7 @@ proc `[]`*(self: Namespace, key: MapKey): Value {.inline.} =
   else:
     raise new_exception(NotDefinedException, %key & " is not defined")
 
-proc locate*(self: Namespace, key: MapKey): (Value, Namespace) {.inline.} =
+proc locate*(self: Namespace, key: MapKey): (Value, Namespace) {.gcsafe, inline.} =
   if self.members.has_key(key):
     result = (self.members[key], self)
   elif not self.stop_inheritance and self.parent != nil:
@@ -981,45 +984,45 @@ proc locate*(self: Namespace, key: MapKey): (Value, Namespace) {.inline.} =
   else:
     not_allowed()
 
-proc `[]`*(self: Namespace, key: string): Value {.inline.} =
+proc `[]`*(self: Namespace, key: string): Value {.gcsafe, inline.} =
   result = self[key.to_key]
 
-proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.inline.} =
+proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.gcsafe, inline.} =
   self.members[key] = val
 
-proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.} =
+proc `[]=`*(self: var Namespace, key: string, val: Value) {.gcsafe, inline.} =
   self.members[key.to_key] = val
 
-proc get_members*(self: Namespace): Value =
+proc get_members*(self: Namespace): Value {.gcsafe.} =
   result = new_gene_map()
   for k, v in self.members:
     result.map[k] = v
 
-proc member_names*(self: Namespace): Value =
+proc member_names*(self: Namespace): Value {.gcsafe.} =
   result = new_gene_vec()
   for k, _ in self.members:
     result.vec.add(k.to_s)
 
 #################### Scope #######################
 
-proc new_scope*(): Scope = Scope(
+proc new_scope*(): Scope {.gcsafe.} = Scope(
   members: @[],
   mappings: Table[MapKey, int](),
   mapping_history: @[],
 )
 
-proc max*(self: Scope): NameIndexScope {.inline.} =
+proc max*(self: Scope): NameIndexScope {.gcsafe, inline.} =
   return self.members.len
 
-proc set_parent*(self: var Scope, parent: Scope, max: NameIndexScope) {.inline.} =
+proc set_parent*(self: var Scope, parent: Scope, max: NameIndexScope) {.gcsafe, inline.} =
   self.parent = parent
   self.parent_index_max = max
 
-proc reset*(self: var Scope) {.inline.} =
+proc reset*(self: var Scope) {.gcsafe, inline.} =
   self.parent = nil
   self.members.setLen(0)
 
-proc has_key(self: Scope, key: MapKey, max: int): bool {.inline.} =
+proc has_key(self: Scope, key: MapKey, max: int): bool {.gcsafe, inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found < max:
@@ -1037,13 +1040,13 @@ proc has_key(self: Scope, key: MapKey, max: int): bool {.inline.} =
   if self.parent != nil:
     return self.parent.has_key(key, self.parent_index_max)
 
-proc has_key*(self: Scope, key: MapKey): bool {.inline.} =
+proc has_key*(self: Scope, key: MapKey): bool {.gcsafe, inline.} =
   if self.mappings.has_key(key):
     return true
   elif self.parent != nil:
     return self.parent.has_key(key, self.parent_index_max)
 
-proc def_member*(self: var Scope, key: MapKey, val: Value) {.inline.} =
+proc def_member*(self: var Scope, key: MapKey, val: Value) {.gcsafe, inline.} =
   var index = self.members.len
   self.members.add(val)
   if self.mappings.has_key_or_put(key, index):
@@ -1079,7 +1082,7 @@ proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
   if self.parent != nil:
     return self.parent[key, self.parent_index_max]
 
-proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
+proc `[]`*(self: Scope, key: MapKey): Value {.gcsafe, inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found > 255:
@@ -1088,7 +1091,7 @@ proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
   elif self.parent != nil:
     return self.parent[key, self.parent_index_max]
 
-proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
+proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.gcsafe, inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found > 255:
@@ -1112,7 +1115,7 @@ proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
   else:
     not_allowed()
 
-proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.inline.} =
+proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.gcsafe, inline.} =
   if self.mappings.has_key(key):
     self.members[self.mappings[key].int] = val
   elif self.parent != nil:
@@ -1122,27 +1125,26 @@ proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.inline.} =
 
 #################### Frame #######################
 
-proc new_frame*(): Frame = Frame(
-  self: Nil,
-)
+proc new_frame*(): Frame {.gcsafe.} =
+  Frame()
 
-proc new_frame*(kind: FrameKind): Frame = Frame(
-  self: Nil,
-  kind: kind,
-)
+proc new_frame*(kind: FrameKind): Frame {.gcsafe.} =
+  Frame(
+    kind: kind,
+  )
 
-proc reset*(self: var Frame) {.inline.} =
+proc reset*(self: var Frame) {.gcsafe, inline.} =
   self.self = nil
   self.ns = nil
   self.scope = nil
   self.extra = nil
 
-proc `[]`*(self: Frame, name: MapKey): Value {.inline.} =
+proc `[]`*(self: Frame, name: MapKey): Value {.gcsafe, inline.} =
   result = self.scope[name]
   if result == nil:
     return self.ns[name]
 
-proc `[]`*(self: Frame, name: Value): Value {.inline.} =
+proc `[]`*(self: Frame, name: Value): Value {.gcsafe, inline.} =
   case name.kind:
   of VkSymbol:
     result = self[name.str.to_key]
@@ -1168,7 +1170,7 @@ proc `[]`*(self: Frame, name: Value): Value {.inline.} =
 
 #################### Function ####################
 
-proc new_fn*(name: string, matcher: RootMatcher, body: seq[Value]): Function =
+proc new_fn*(name: string, matcher: RootMatcher, body: seq[Value]): Function {.gcsafe.} =
   return Function(
     name: name,
     matcher: matcher,
@@ -1178,7 +1180,7 @@ proc new_fn*(name: string, matcher: RootMatcher, body: seq[Value]): Function =
 
 #################### Macro #######################
 
-proc new_macro*(name: string, matcher: RootMatcher, body: seq[Value]): Macro =
+proc new_macro*(name: string, matcher: RootMatcher, body: seq[Value]): Macro {.gcsafe.} =
   return Macro(
     name: name,
     matcher: matcher,
@@ -1188,7 +1190,7 @@ proc new_macro*(name: string, matcher: RootMatcher, body: seq[Value]): Macro =
 
 #################### Block #######################
 
-proc new_block*(matcher: RootMatcher,  body: seq[Value]): Block =
+proc new_block*(matcher: RootMatcher,  body: seq[Value]): Block {.gcsafe.} =
   return Block(
     matcher: matcher,
     matching_hint: matcher.hint,
@@ -1197,25 +1199,26 @@ proc new_block*(matcher: RootMatcher,  body: seq[Value]): Block =
 
 #################### Return ######################
 
-proc new_return*(): Return =
+proc new_return*(): Return {.gcsafe.} =
   return Return()
 
 #################### Class #######################
 
-proc new_class*(name: string, parent: Class): Class =
+proc new_class*(name: string, parent: Class): Class {.gcsafe.} =
   return Class(
     name: name,
     ns: new_namespace(nil, name),
     parent: parent,
   )
 
-proc new_class*(name: string): Class =
-  var parent: Class
-  if ObjectClass != nil:
-    parent = ObjectClass.class
-  new_class(name, parent)
+proc new_class*(name: string): Class {.gcsafe.} =
+  {.cast(gcsafe).}:
+    var parent: Class
+    if ObjectClass != nil:
+      parent = ObjectClass.class
+    new_class(name, parent)
 
-proc get_constructor*(self: Class): Value =
+proc get_constructor*(self: Class): Value {.gcsafe.} =
   self.constructor
   # if self.constructor.is_nil:
   #   if not self.parent.is_nil:
@@ -1223,13 +1226,13 @@ proc get_constructor*(self: Class): Value =
   # else:
   #   return self.constructor
 
-proc has_method*(self: Class, name: MapKey): bool =
+proc has_method*(self: Class, name: MapKey): bool {.gcsafe.} =
   if self.methods.has_key(name):
     return true
   elif self.parent != nil:
     return self.parent.has_method(name)
 
-proc get_method*(self: Class, name: MapKey): Method =
+proc get_method*(self: Class, name: MapKey): Method {.gcsafe.} =
   if self.methods.has_key(name):
     return self.methods[name]
   elif self.parent != nil:
@@ -1237,92 +1240,93 @@ proc get_method*(self: Class, name: MapKey): Method =
   # else:
   #   not_allowed("No method available: " & name.to_s)
 
-proc get_super_method*(self: Class, name: MapKey): Method =
+proc get_super_method*(self: Class, name: MapKey): Method {.gcsafe.} =
   if self.parent != nil:
     return self.parent.get_method(name)
   else:
     not_allowed("No super method available: " & name.to_s)
 
-proc get_class*(val: Value): Class =
-  case val.kind:
-  of VkApplication:
-    return ApplicationClass.class
-  of VkPackage:
-    return PackageClass.class
-  of VkInstance:
-    return val.instance_class
-  of VkCast:
-    return val.cast_class
-  of VkClass:
-    return ClassClass.class
-  of VkMixin:
-    return MixinClass.class
-  of VkNamespace:
-    return NamespaceClass.class
-  of VkFuture:
-    return FutureClass.class
-  of VkNativeFile:
-    return FileClass.class
-  of VkException:
-    var ex = val.exception
-    if ex is Exception:
-      var ex = cast[Exception](ex)
-      if ex.instance != nil:
-        return ex.instance.instance_class
+proc get_class*(val: Value): Class {.gcsafe.} =
+  {.cast(gcsafe).}:
+    case val.kind:
+    of VkApplication:
+      return ApplicationClass.class
+    of VkPackage:
+      return PackageClass.class
+    of VkInstance:
+      return val.instance_class
+    of VkCast:
+      return val.cast_class
+    of VkClass:
+      return ClassClass.class
+    of VkMixin:
+      return MixinClass.class
+    of VkNamespace:
+      return NamespaceClass.class
+    of VkFuture:
+      return FutureClass.class
+    of VkNativeFile:
+      return FileClass.class
+    of VkException:
+      var ex = val.exception
+      if ex is Exception:
+        var ex = cast[Exception](ex)
+        if ex.instance != nil:
+          return ex.instance.instance_class
+        else:
+          return ExceptionClass.class
       else:
         return ExceptionClass.class
+    of VkNil:
+      return NilClass.class
+    of VkBool:
+      return BoolClass.class
+    of VkInt:
+      return IntClass.class
+    of VkChar:
+      return CharClass.class
+    of VkString:
+      return StringClass.class
+    of VkSymbol:
+      return SymbolClass.class
+    of VkComplexSymbol:
+      return ComplexSymbolClass.class
+    of VkVector:
+      return ArrayClass.class
+    of VkMap:
+      return MapClass.class
+    of VkSet:
+      return SetClass.class
+    of VkGene:
+      return GeneClass.class
+    of VkRegex:
+      return RegexClass.class
+    of VkRange:
+      return RangeClass.class
+    of VkDate:
+      return DateClass.class
+    of VkDateTime:
+      return DateTimeClass.class
+    of VkTime:
+      return TimeClass.class
+    of VkFunction:
+      return FunctionClass.class
+    of VkTimezone:
+      return TimezoneClass.class
+    of VkAny:
+      if val.any_class == nil:
+        return ObjectClass.class
+      else:
+        return val.any_class
+    of VkCustom:
+      if val.custom_class == nil:
+        return ObjectClass.class
+      else:
+        return val.custom_class
     else:
-      return ExceptionClass.class
-  of VkNil:
-    return NilClass.class
-  of VkBool:
-    return BoolClass.class
-  of VkInt:
-    return IntClass.class
-  of VkChar:
-    return CharClass.class
-  of VkString:
-    return StringClass.class
-  of VkSymbol:
-    return SymbolClass.class
-  of VkComplexSymbol:
-    return ComplexSymbolClass.class
-  of VkVector:
-    return ArrayClass.class
-  of VkMap:
-    return MapClass.class
-  of VkSet:
-    return SetClass.class
-  of VkGene:
-    return GeneClass.class
-  of VkRegex:
-    return RegexClass.class
-  of VkRange:
-    return RangeClass.class
-  of VkDate:
-    return DateClass.class
-  of VkDateTime:
-    return DateTimeClass.class
-  of VkTime:
-    return TimeClass.class
-  of VkFunction:
-    return FunctionClass.class
-  of VkTimezone:
-    return TimezoneClass.class
-  of VkAny:
-    if val.any_class == nil:
-      return ObjectClass.class
-    else:
-      return val.any_class
-  of VkCustom:
-    if val.custom_class == nil:
-      return ObjectClass.class
-    else:
-      return val.custom_class
-  else:
-    todo("get_class " & $val.kind)
+      todo("get_class " & $val.kind)
 
-proc is_a*(self: Value, class: Class): bool =
+proc is_a*(self: Value, class: Class): bool {.gcsafe.} =
   var my_class = self.get_class
   while true:
     if my_class == class:
@@ -1332,36 +1336,36 @@ proc is_a*(self: Value, class: Class): bool =
     else:
       my_class = my_class.parent
 
-proc def_native_method*(self: Value, name: string, m: NativeMethod) =
+proc def_native_method*(self: Value, name: string, m: NativeMethod) {.gcsafe.} =
   self.class.methods[name.to_key] = Method(
     class: self.class,
     name: name,
     callable: Value(kind: VkNativeMethod, native_method: m),
   )
 
-proc def_native_method*(self: Value, name: string, m: NativeMethod2) =
+proc def_native_method*(self: Value, name: string, m: NativeMethod2) {.gcsafe.} =
   self.class.methods[name.to_key] = Method(
     class: self.class,
     name: name,
     callable: Value(kind: VkNativeMethod2, native_method2: m),
   )
 
-proc def_native_constructor*(self: Value, f: NativeFn) =
+proc def_native_constructor*(self: Value, f: NativeFn) {.gcsafe.} =
   self.class.constructor = Value(kind: VkNativeFn, native_fn: f)
 
-proc def_native_constructor*(self: Value, f: NativeFn2) =
+proc def_native_constructor*(self: Value, f: NativeFn2) {.gcsafe.} =
   self.class.constructor = Value(kind: VkNativeFn2, native_fn2: f)
 
 #################### Method ######################
 
-proc new_method*(class: Class, name: string, fn: Function): Method =
+proc new_method*(class: Class, name: string, fn: Function): Method {.gcsafe.} =
   return Method(
     class: class,
     name: name,
     callable: Value(kind: VkFunction, fn: fn),
   )
 
-proc clone*(self: Method): Method =
+proc clone*(self: Method): Method {.gcsafe.} =
   return Method(
     class: self.class,
     name: self.name,
@@ -1373,14 +1377,14 @@ proc clone*(self: Method): Method =
 proc new_enum*(name: string): Enum =
   return Enum(name: name)
 
-proc `[]`*(self: Enum, name: string): Value =
+proc `[]`*(self: Enum, name: string): Value {.gcsafe.} =
   # return new_gene_internal(self.members[name])
   todo()
 
-proc add_member*(self: var Enum, name: string, value: int) =
+proc add_member*(self: var Enum, name: string, value: int) {.gcsafe.} =
   self.members[name] = EnumMember(parent: self, name: name, value: value)
 
-proc `==`*(this, that: EnumMember): bool =
+proc `==`*(this, that: EnumMember): bool {.gcsafe.} =
   return this.parent == that.parent and this.name == that.name
 
 #################### Date & Time #################
@@ -1409,12 +1413,13 @@ proc new_gene_custom*(c: CustomValue, class: Class): Value =
     custom: c,
   )
 
-proc new_gene_bool*(val: bool): Value {.inline.} =
-  case val
-  of true: return True
-  of false: return False
-  # of true: return Value(kind: VkBool, boolVal: true)
-  # of false: return Value(kind: VkBool, boolVal: false)
+proc new_gene_bool*(val: bool): Value {.gcsafe, inline.} =
+  {.cast(gcsafe).}:
+    case val
+    of true: return True
+    of false: return False
+    # of true: return Value(kind: VkBool, boolVal: true)
+    # of false: return Value(kind: VkBool, boolVal: false)
 
 proc new_gene_bool*(s: string): Value =
   let parsed: bool = parseBool(s)
@@ -1426,12 +1431,13 @@ proc new_gene_int*(): Value =
 proc new_gene_int*(s: string): Value =
   return Value(kind: VkInt, int: parseBiggestInt(s))
 
-proc new_gene_int*(val: BiggestInt): Value {.inline.} =
-  # return Value(kind: VkInt, int: val)
-  if val > 100 or val < -10:
-    return Value(kind: VkInt, int: val)
-  else:
-    return Ints[val + 10]
+proc new_gene_int*(val: BiggestInt): Value {.gcsafe, inline.} =
+  {.cast(gcsafe).}:
+    # return Value(kind: VkInt, int: val)
+    if val > 100 or val < -10:
+      return Value(kind: VkInt, int: val)
+    else:
+      return Ints[val + 10]
 
 proc new_gene_ratio*(num, denom: BiggestInt): Value =
   return Value(kind: VkRatio, ratio_num: num, ratio_denom: denom)
@@ -1451,20 +1457,20 @@ proc new_gene_char*(c: Rune): Value =
 proc new_gene_string*(s: string): Value {.gcsafe.} =
   return Value(kind: VkString, str: s)
 
-proc new_gene_string_move*(s: string): Value =
+proc new_gene_string_move*(s: string): Value {.gcsafe.} =
   result = Value(kind: VkString)
   shallowCopy(result.str, s)
 
-proc new_gene_symbol*(name: string): Value =
+proc new_gene_symbol*(name: string): Value {.gcsafe.} =
   return Value(kind: VkSymbol, str: name)
 
-proc new_gene_complex_symbol*(strs: seq[string]): Value =
+proc new_gene_complex_symbol*(strs: seq[string]): Value {.gcsafe.} =
   Value(
     kind: VkComplexSymbol,
     csymbol: strs,
   )
 
-proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
+proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value {.gcsafe.} =
   var s = ""
   for flag in flags:
     case flag:
@@ -1482,7 +1488,7 @@ proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
     regex_flags: flags,
   )
 
-proc new_gene_regex*(regex: string): Value =
+proc new_gene_regex*(regex: string): Value {.gcsafe.} =
   return Value(
     kind: VkRegex,
     regex: re(regex),
@@ -1556,7 +1562,6 @@ proc new_gene_set*(items: varargs[Value]): Value =
 proc new_gene_gene*(): Value =
   return Value(
     kind: VkGene,
-    gene_type: Nil,
   )
 
 proc new_gene_gene*(`type`: Value, children: varargs[Value]): Value =
@@ -1682,7 +1687,7 @@ proc is_truthy*(self: Value): bool =
 #   else:
 #     return false
 
-proc merge*(self: var Value, value: Value) =
+proc merge*(self: var Value, value: Value) {.gcsafe.} =
   case self.kind:
   of VkGene:
     case value.kind:
@@ -1853,100 +1858,102 @@ proc `$`*(self: Class): string =
   else:
     result = "(class $# < $#)" % [self.name, self.parent.name]
 
-proc `$`*(node: Value): string =
-  if node.is_nil:
-    return "nil"
-  case node.kind
-  of VkNil:
-    result = "nil"
-  of VkBool:
-    result = $(node.bool)
-  of VkInt:
-    result = $(node.int)
-  of VkFloat:
-    result = $(node.float)
-  of VkString:
-    result = "\"" & node.str.replace("\"", "\\\"") & "\""
-  of VkSymbol:
-    result = node.str
-  of VkComplexSymbol:
-    result = node.csymbol.join("/")
-  of VkRegex:
-    result = "#/" & node.regex_pattern & "/"
-  of VkDate:
-    result = node.date.format("yyyy-MM-dd")
-  of VkDateTime:
-    result = node.date.format("yyyy-MM-dd'T'HH:mm:sszzz")
-  of VkTime:
-    result = &"{node.time.hour:02}:{node.time.minute:02}:{node.time.second:02}"
-  of VkVector:
-    result = "["
-    result &= node.vec.join(" ")
-    result &= "]"
-  of VkMap:
-    result = "{"
-    var is_first = true
-    for k, v in node.map:
-      if is_first:
-        is_first = false
-      else:
+proc `$`*(node: Value): string {.gcsafe.} =
+  {.cast(gcsafe).}:
+    if node.is_nil:
+      return "nil"
+    case node.kind
+    of VkNil:
+      result = "nil"
+    of VkBool:
+      result = $(node.bool)
+    of VkInt:
+      result = $(node.int)
+    of VkFloat:
+      result = $(node.float)
+    of VkString:
+      result = "\"" & node.str.replace("\"", "\\\"") & "\""
+    of VkSymbol:
+      result = node.str
+    of VkComplexSymbol:
+      result = node.csymbol.join("/")
+    of VkRegex:
+      result = "#/" & node.regex_pattern & "/"
+    of VkDate:
+      result = node.date.format("yyyy-MM-dd")
+    of VkDateTime:
+      result = node.date.format("yyyy-MM-dd'T'HH:mm:sszzz")
+    of VkTime:
+      result = &"{node.time.hour:02}:{node.time.minute:02}:{node.time.second:02}"
+    of VkVector:
+      result = "["
+      result &= node.vec.join(" ")
+      result &= "]"
+    of VkMap:
+      result = "{"
+      var is_first = true
+      for k, v in node.map:
+        if is_first:
+          is_first = false
+        else:
+          result &= " "
+        result &= "^"
+        result &= k.to_s
         result &= " "
-      result &= "^"
-      result &= k.to_s
-      result &= " "
-      result &= $v
-    result &= "}"
-  of VkGene:
-    result = "(" & $node.gene_type
-    if node.gene_props.len > 0:
-      for k, v in node.gene_props:
-        result &= " ^" & k.to_s & " " & $v
-    if node.gene_children.len > 0:
-      result &= " " & node.gene_children.join(" ")
-    result &= ")"
-  of VkFunction:
-    result = "(fn $#)" % [node.fn.name]
-  of VkMacro:
-    result = "(macro $#)" % [node.macro.name]
-  of VkNamespace:
-    result = "(ns $#)" % [node.ns.name]
-  of VkClass:
-    result = $node.class
-  of VkInstance:
-    result = "($# " % [$node.instance_class]
-    var is_first = true
-    for k, v in node.instance_props:
-      if is_first:
-        is_first = false
-      else:
+        result &= $v
+      result &= "}"
+    of VkGene:
+      result = "(" & $node.gene_type
+      if node.gene_props.len > 0:
+        for k, v in node.gene_props:
+          result &= " ^" & k.to_s & " " & $v
+      if node.gene_children.len > 0:
+        result &= " " & node.gene_children.join(" ")
+      result &= ")"
+    of VkFunction:
+      result = "(fn $#)" % [node.fn.name]
+    of VkMacro:
+      result = "(macro $#)" % [node.macro.name]
+    of VkNamespace:
+      result = "(ns $#)" % [node.ns.name]
+    of VkClass:
+      result = $node.class
+    of VkInstance:
+      result = "($# " % [$node.instance_class]
+      var is_first = true
+      for k, v in node.instance_props:
+        if is_first:
+          is_first = false
+        else:
+          result &= " "
+        result &= "^"
+        result &= k.to_s
         result &= " "
-      result &= "^"
-      result &= k.to_s
-      result &= " "
-      result &= $v
-    result &= ")"
-  of VkQuote:
-    result = ":" & $node.quote
-  of VkUnquote:
-    result = "%" & $node.unquote
-  else:
-    result = $node.kind
+        result &= $v
+      result &= ")"
+    of VkQuote:
+      result = ":" & $node.quote
+    of VkUnquote:
+      result = "%" & $node.unquote
+    else:
+      result = $node.kind
 
-proc `[]`*(self: Table[MapKey, Value], key: string): Value =
+proc `[]`*(self: Table[MapKey, Value], key: string): Value {.gcsafe.} =
   self[key.to_key]
 
-proc `[]=`*(self: var Table[MapKey, Value], key: string, value: Value) =
+proc `[]=`*(self: var Table[MapKey, Value], key: string, value: Value) {.gcsafe.} =
   self[key.to_key] = value
 
-proc wrap_with_try*(body: seq[Value]): seq[Value] =
-  var found_catch_or_finally = false
-  for item in body:
-    if item == Catch or item == Finally:
-      found_catch_or_finally = true
-  if found_catch_or_finally:
-    return @[new_gene_gene(Try, body)]
-  else:
-    return body
+proc wrap_with_try*(body: seq[Value]): seq[Value] {.gcsafe.} =
+  {.cast(gcsafe).}:
+    var found_catch_or_finally = false
+    for item in body:
+      if item == Catch or item == Finally:
+        found_catch_or_finally = true
+    if found_catch_or_finally:
+      return @[new_gene_gene(Try, body)]
+    else:
+      return body
 
 #################### Document ####################
 
@@ -2024,9 +2031,9 @@ proc gene_to_selector_item*(v: Value): SelectorItem =
     todo($v.kind)
 
 # Definition
-proc is_singular*(self: Selector): bool
+proc is_singular*(self: Selector): bool {.gcsafe.}
 
-proc is_singular*(self: SelectorItem): bool =
+proc is_singular*(self: SelectorItem): bool {.gcsafe.} =
   case self.kind:
   of SiDefault:
     if self.matchers.len > 1:
@@ -2043,7 +2050,7 @@ proc is_singular*(self: SelectorItem): bool =
   of SiSelector:
     result = self.selector.is_singular()
 
-proc is_singular*(self: Selector): bool =
+proc is_singular*(self: Selector): bool {.gcsafe.} =
   result = self.children.len == 1 and self.children[0].is_singular()
 
 proc is_last*(self: SelectorItem): bool =
@@ -2099,9 +2106,10 @@ proc prop_splat*(self: seq[Matcher]): MapKey =
 ##################################################
 
 template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  expr.evaluator(self, frame, nil, expr)
+  {.cast(gcsafe).}:
+    expr.evaluator(self, frame, nil, expr)
 
-proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.} =
   try:
     result = self.eval(frame, expr)
   except system.Exception as e:
@@ -2112,7 +2120,7 @@ proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     )
 
 proc eval_wrap*(e: Evaluator): Evaluator =
-  return proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  return proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
     result = e(self, frame, target, expr)
     if result != nil and result.kind == VkException:
       raise result.exception
@@ -2120,13 +2128,13 @@ proc eval_wrap*(e: Evaluator): Evaluator =
 # proc(){.nimcall.} can not access local variables
 # Workaround: create a new type like RemoteFn that does not use nimcall
 proc fn_wrap*(f: NativeFn): NativeFn2 =
-  return proc(args: Value): Value =
+  return proc(args: Value): Value {.gcsafe.} =
     result = f(args)
     if result != nil and result.kind == VkException:
       raise result.exception
 
 proc method_wrap*(m: NativeMethod): NativeMethod2 =
-  return proc(self, args: Value): Value =
+  return proc(self, args: Value): Value {.gcsafe.} =
     result = m(self, args)
     if result != nil and result.kind == VkException:
       raise result.exception

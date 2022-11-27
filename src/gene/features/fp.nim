@@ -30,7 +30,7 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
 proc fn_arg_translator*(value: Value): Expr =
   return translate_arguments(value, function_invoker)
 
-proc eval_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   result = Value(
     kind: VkFunction,
     fn: cast[ExFn](expr).data,
@@ -90,15 +90,15 @@ proc translate_fnx(value: Value): Expr =
     data: fn,
   )
 
-proc eval_return(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_return(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExReturn](expr)
   var r = Return(
     frame: frame,
   )
   if expr.data != nil:
     r.val = self.eval(frame, expr.data)
-  else:
-    r.val = Nil
+  # else:
+  #   r.val = Nil
   raise r
 
 proc translate_return(value: Value): Expr =
@@ -124,7 +124,7 @@ proc bound_function_invoker*(self: VirtualMachine, frame: Frame, target: Value, 
 proc bound_fn_arg_translator*(value: Value): Expr =
   return translate_arguments(value, bound_function_invoker)
 
-proc eval_bind(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_bind(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExBind](expr)
   var target = self.eval(frame, expr.target)
   var self = self.eval(frame, expr.self)

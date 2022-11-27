@@ -188,7 +188,7 @@ proc resolve_module*(self: VirtualMachine, frame: Frame, pkg: Package, s: string
         return path
     not_allowed("resolve_module failed: " & s)
 
-proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExImport](expr)
   var ns: Namespace
   var `from` = expr.from

@@ -125,9 +125,9 @@ var handlers: Table[string, Handler]
 
 proc keys*(self: ParseOptions): HashSet[string]
 proc `[]`*(self: ParseOptions, name: string): Value
-proc unit_keys*(self: ParseOptions): HashSet[string]
-proc `unit`*(self: ParseOptions, name: string): Value
-proc read*(self: var Parser): Value
+proc unit_keys*(self: ParseOptions): HashSet[string] {.gcsafe.}
+proc `unit`*(self: ParseOptions, name: string): Value {.gcsafe.}
+proc read*(self: var Parser): Value {.gcsafe.}
 proc skip_comment(self: var Parser)
 proc skip_block_comment(self: var Parser)
 
@@ -137,17 +137,19 @@ converter to_int(c: char): int = result = ord(c)
 
 #################### ParseOptions ################
 
-proc default_options*(): ParseOptions =
+proc default_options*(): ParseOptions {.gcsafe.} =
   result = ParseOptions()
-  for k, v in DEFAULT_UNITS:
-    result.units[k] = v
+  {.cast(gcsafe).}:
+    for k, v in DEFAULT_UNITS:
+      result.units[k] = v
 
-proc new_options*(prototype: ParseOptions): ParseOptions =
+proc new_options*(prototype: ParseOptions): ParseOptions {.gcsafe.} =
   result = ParseOptions()
-  for k in prototype.keys().items:
-    result.data[k] = prototype[k]
-  for k in prototype.unit_keys.items:
-    result.units[k] = prototype.unit(k)
+  {.cast(gcsafe).}:
+    for k in prototype.keys().items:
+      result.data[k] = prototype[k]
+    for k in prototype.unit_keys.items:
+      result.units[k] = prototype.unit(k)
 
 proc extend*(self: ParseOptions): ParseOptions =
   ParseOptions(
@@ -174,30 +176,31 @@ proc `[]`*(self: ParseOptions, name: string): Value =
 proc `[]=`*(self: ParseOptions, name: string, value: Value) =
   self.data[name] = value
 
-proc unit_keys*(self: ParseOptions): HashSet[string] =
+proc unit_keys*(self: ParseOptions): HashSet[string] {.gcsafe.} =
   result = init_hash_set[string]()
   for k in self.units.keys:
     result.incl(k)
   for k in self.parent.unit_keys():
     result.incl(k)
 
-proc `unit`*(self: ParseOptions, name: string): Value =
-  if self.units.has_key(name):
-    return self.units[name]
-  elif not self.parent.is_nil:
-    return self.parent.unit(name)
-  else:
-    return nil
+proc `unit`*(self: ParseOptions, name: string): Value {.gcsafe.} =
+  {.cast(gcsafe).}:
+    if self.units.has_key(name):
+      return self.units[name]
+    elif not self.parent.is_nil:
+      return self.parent.unit(name)
+    else:
+      return nil
 
 #################### Parser ######################
 
-proc new_parser*(options: ParseOptions): Parser =
+proc new_parser*(options: ParseOptions): Parser {.gcsafe.} =
   return Parser(
     document: Document(),
     options: new_options(options),
   )
 
-proc new_parser*(): Parser =
+proc new_parser*(): Parser {.gcsafe.} =
   return Parser(
     document: Document(),
     options: default_options(),
@@ -206,10 +209,11 @@ proc new_parser*(): Parser =
 proc non_constituent(c: char): bool =
   result = non_constituents.contains(c)
 
-proc is_macro(c: char): bool =
-  result = c.to_int < macros.len and macros[c] != nil
+proc is_macro(c: char): bool {.gcsafe.} =
+  {.cast(gcsafe).}:
+    result = c.to_int < macros.len and macros[c] != nil
 
-proc is_terminating_macro(c: char): bool =
+proc is_terminating_macro(c: char): bool {.gcsafe.} =
   result = c != '#' and c != '\'' and is_macro(c)
 
 proc get_macro(ch: char): MacroReader =
@@ -392,7 +396,7 @@ proc skip_comment(self: var Parser) =
       inc(pos)
   self.bufpos = pos
 
-proc read_token(self: var Parser, lead_constituent: bool, chars_allowed: openarray[char]): string =
+proc read_token(self: var Parser, lead_constituent: bool, chars_allowed: openarray[char]): string {.gcsafe.} =
   var pos = self.bufpos
   var ch = self.buf[pos]
   if lead_constituent and non_constituent(ch):
@@ -569,7 +573,7 @@ proc to_keys(self: string): seq[string] =
 
   result.add(key)
 
-proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
+proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] {.gcsafe.} =
   var ch: char
   var key: string
   var state = PropState.PropKey
@@ -595,11 +599,13 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
         if self.buf[self.bufPos] == '^':
           self.bufPos.inc()
           key = self.read_token(false)
-          result[key.to_key] = True
+          {.cast(gcsafe).}:
+            result[key.to_key] = True
         elif self.buf[self.bufPos] == '!':
           self.bufPos.inc()
           key = self.read_token(false)
-          result[key.to_key] = Nil
+          {.cast(gcsafe).}:
+            result[key.to_key] = Nil
         else:
           key = self.read_token(false)
           if key.contains('^'):
@@ -1203,40 +1209,41 @@ proc read_number(self: var Parser): Value =
   else:
     raise new_exception(ParseError, "Error reading a number (?): " & self.str)
 
-proc read*(self: var Parser): Value =
-  set_len(self.str, 0)
-  self.skip_ws()
-  let ch = self.buf[self.bufpos]
-  var token: string
-  case ch
-  of EndOfFile:
-    let position = (self.line_number, self.get_col_number(self.bufpos))
-    raise new_exception(ParseEofError, "EOF while reading " & $position)
-  of '0'..'9':
-    return read_number(self)
-  elif is_macro(ch):
-    let m = macros[ch] # save line:col metadata here?
-    inc(self.bufpos)
-    result = m(self)
-    if result == Ignore:
-      result = self.read()
-    return result
-  elif ch in ['+', '-']:
-    if isDigit(self.buf[self.bufpos + 1]):
-      return self.read_number()
-    else:
-      token = self.read_token(false)
-      result = interpret_token(token)
+proc read*(self: var Parser): Value {.gcsafe.} =
+  {.cast(gcsafe).}:
+    set_len(self.str, 0)
+    self.skip_ws()
+    let ch = self.buf[self.bufpos]
+    var token: string
+    case ch
+    of EndOfFile:
+      let position = (self.line_number, self.get_col_number(self.bufpos))
+      raise new_exception(ParseEofError, "EOF while reading " & $position)
+    of '0'..'9':
+      return read_number(self)
+    elif is_macro(ch):
+      let m = macros[ch] # save line:col metadata here?
+      inc(self.bufpos)
+      result = m(self)
       if result == Ignore:
         result = self.read()
       return result
+    elif ch in ['+', '-']:
+      if isDigit(self.buf[self.bufpos + 1]):
+        return self.read_number()
+      else:
+        token = self.read_token(false)
+        result = interpret_token(token)
+        if result == Ignore:
+          result = self.read()
+        return result
 
-  token = self.read_token(true)
-  result = interpret_token(token)
-  if result == Ignore:
-    result = self.read()
+    token = self.read_token(true)
+    result = interpret_token(token)
+    if result == Ignore:
+      result = self.read()
 
-proc read_document_properties(self: var Parser) =
+proc read_document_properties(self: var Parser) {.gcsafe.} =
   if self.document_props_done:
     return
   else:
@@ -1257,7 +1264,7 @@ proc read*(self: var Parser, buffer: string): Value =
   defer: self.close()
   result = self.read()
 
-proc read_all*(self: var Parser, buffer: string): seq[Value] =
+proc read_all*(self: var Parser, buffer: string): seq[Value] {.gcsafe.} =
   var s = new_string_stream(buffer)
   self.open(s, "<input>")
   defer: self.close()
@@ -1284,7 +1291,7 @@ proc read_stream*(self: var Parser, buffer: string, stream_handler: StreamHandle
     except ParseEofError:
       break
 
-proc read_document*(self: var Parser, buffer: string): Document =
+proc read_document*(self: var Parser, buffer: string): Document {.gcsafe.} =
   try:
     self.document.children = self.read_all(buffer)
   except ParseEofError:

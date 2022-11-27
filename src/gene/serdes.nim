@@ -10,9 +10,9 @@ type
     references*: Table[string, Value]
     data*: Value
 
-proc serialize*(self: Serialization, value: Value): Value
-proc to_path*(self: Value): string
-proc to_path*(self: Class): string
+proc serialize*(self: Serialization, value: Value): Value {.gcsafe.}
+proc to_path*(self: Value): string {.gcsafe.}
+proc to_path*(self: Class): string {.gcsafe.}
 
 proc new_ref(path: string): Value =
   new_gene_gene(new_gene_complex_symbol(@["gene", "ref"]), new_gene_string(path))
@@ -25,13 +25,13 @@ proc new_ref(path: string): Value =
 #
 # These can be controlled by options passed in.
 
-proc serialize*(value: Value): Serialization =
+proc serialize*(value: Value): Serialization {.gcsafe.} =
   result = Serialization(
     references: Table[string, Value](),
   )
   result.data = result.serialize(value)
 
-proc serialize*(self: Serialization, value: Value): Value =
+proc serialize*(self: Serialization, value: Value): Value {.gcsafe.} =
   case value.kind:
   of VkInt, VkString:
     return value
@@ -89,9 +89,9 @@ proc to_s*(self: Serialization): string =
 
 #################### Deserialization #############
 
-proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value
+proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value {.gcsafe.}
 
-proc deref*(self: Serialization, vm: VirtualMachine, s: string): Value =
+proc deref*(self: Serialization, vm: VirtualMachine, s: string): Value {.gcsafe.} =
   var parts = s.split(":")
   var module_name = parts[0]
   var ns_path = parts[1].split("/")
@@ -109,13 +109,13 @@ proc deref*(self: Serialization, vm: VirtualMachine, s: string): Value =
       else:
         not_allowed("deref " & s & " " & $result.kind)
 
-proc deserialize*(vm: VirtualMachine, s: string): Value =
+proc deserialize*(vm: VirtualMachine, s: string): Value {.gcsafe.} =
   var ser = Serialization(
     references: Table[string, Value](),
   )
   ser.deserialize(vm, read(s))
 
-proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value =
+proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value {.gcsafe.} =
   case value.kind:
   of VkGene:
     case value.gene_type.kind:
@@ -147,7 +147,7 @@ type
   ExDeser* = ref object of Expr
     value*: Expr
 
-proc eval_ser(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_ser(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExSer](expr)
   return serialize(self.eval(frame, expr.value)).to_s
 
@@ -157,7 +157,7 @@ proc translate_ser(value: Value): Expr =
     value: translate(value.gene_children[0]),
   )
 
-proc eval_deser(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_deser(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExDeser](expr)
   return self.deserialize(self.eval(frame, expr.value).str)
 
