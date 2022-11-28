@@ -706,7 +706,6 @@ var Ints: array[111, Value]
 for i in 0..110:
   Ints[i] = Value(kind: VkInt, int: i - 10)
 
-var VM*: VirtualMachine   # The current virtual machine
 var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
 
 var GLOBAL_NS*     : Value
@@ -858,11 +857,20 @@ converter gene_to_ns*(v: Value): Namespace {.gcsafe.} = todo()
 
 #################### VM ##########################
 
+proc new_vm*(): VirtualMachine {.gcsafe.} =
+  var a = alloc_shared(sizeof(VirtualMachineData)) # Create virtual machine on the heap
+  return cast[VirtualMachine](a)
+
 proc new_vm*(app: Application): VirtualMachine {.gcsafe.} =
-  var vm = VirtualMachineData(
-    app: app,
-  )
-  return vm.addr
+  # var vm = VirtualMachineData(
+  #   app: app,
+  # )
+  # return vm.addr
+  var a = alloc_shared(sizeof(VirtualMachineData)) # Create virtual machine on the heap
+  result = cast[VirtualMachine](a)
+  result.app = app
+
+var VM*: VirtualMachine = new_vm() # The current virtual machine
 
 #################### Application #################
 
@@ -1126,12 +1134,17 @@ proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.gcsafe, inline.} =
 #################### Frame #######################
 
 proc new_frame*(): Frame {.gcsafe.} =
-  Frame()
+  {.cast(gcsafe).}:
+    Frame(
+      self: Nil,
+    )
 
 proc new_frame*(kind: FrameKind): Frame {.gcsafe.} =
-  Frame(
-    kind: kind,
-  )
+  {.cast(gcsafe).}:
+    Frame(
+      kind: kind,
+      self: Nil,
+    )
 
 proc reset*(self: var Frame) {.gcsafe, inline.} =
   self.self = nil
@@ -1560,9 +1573,11 @@ proc new_gene_set*(items: varargs[Value]): Value =
     result.set.incl(item)
 
 proc new_gene_gene*(): Value =
-  return Value(
-    kind: VkGene,
-  )
+  {.cast(gcsafe).}:
+    return Value(
+      kind: VkGene,
+      gene_type: Nil,
+    )
 
 proc new_gene_gene*(`type`: Value, children: varargs[Value]): Value =
   return Value(

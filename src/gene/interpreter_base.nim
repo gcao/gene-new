@@ -58,7 +58,8 @@ proc get_member*(self: Value, name: MapKey): Value {.gcsafe.} =
     if self.map.has_key(name):
       return self.map[name]
     else:
-      return
+      {.cast(gcsafe).}:
+        return Nil
   of VkEnum:
     return new_gene_enum_member(self.enum.members[name.to_s])
   of VkInstance:
@@ -70,7 +71,8 @@ proc get_member*(self: Value, name: MapKey): Value {.gcsafe.} =
     elif self.instance_props.has_key(name):
       return self.instance_props[name]
     else:
-      return
+      {.cast(gcsafe).}:
+        return Nil
   of VkArchiveFile:
     return self.arc_file_members[name.to_s]
   of VkDirectory:
@@ -108,14 +110,16 @@ proc get_child*(self: Value, index: int): Value {.gcsafe.} =
     if index < self.vec.len:
       return self.vec[index]
     else:
-      return
+      {.cast(gcsafe).}:
+        return Nil
   of VkGene:
     if index < 0:
       index += self.gene_children.len
     if index < self.gene_children.len:
       return self.gene_children[index]
     else:
-      return
+      {.cast(gcsafe).}:
+        return Nil
   else:
     var class = self.get_class()
     if class.has_method(GET_CHILD_KEY):
@@ -846,17 +850,17 @@ proc translate_wrap*(translate: Translator): Translator {.gcsafe.} =
 #################### VM ##########################
 
 proc init_app_and_vm*() {.gcsafe.} =
-  var app = new_app()
-  app.cmd = "TODO" # combine get_app_filename() and command_line_params()
-  VM = new_vm(app)
+  VM.app = new_app()
+  VM.app.cmd = "TODO" # combine get_app_filename() and command_line_params()
 
   let gene_home = get_env("GENE_HOME", parent_dir(get_app_dir()))
   let gene_pkg = new_package(gene_home)
   gene_pkg.reset_load_paths()
-  VM.runtime = Runtime(
-    name: "default",
-    pkg: gene_pkg,
-  )
+  # Below code fails for some reason
+  # VM.runtime = Runtime(
+  #   name: "default",
+  #   pkg: gene_pkg,
+  # )
 
   VM.init_package(get_current_dir())
 

@@ -62,7 +62,8 @@ proc search_first(self: SelectorMatcher, target: Value): Value {.gcsafe.} =
       else:
         raise NoResult.new
     of VkInstance:
-      return target.instance_props.get_or_default(self.name, nil)
+      {.cast(gcsafe).}:
+        return target.instance_props.get_or_default(self.name, Nil)
     of VkNamespace:
       return target.ns[self.name]
     of VkClass:
@@ -224,14 +225,16 @@ proc search*(self: Selector, target: Value): Value {.gcsafe.} =
         # TODO: invoke callbacks
       else:
         # raise new_exception(SelectorNoResult, "No result is found for the selector.")
-        result = nil
+        {.cast(gcsafe).}:
+          result = Nil
     else:
       var r = SelectorResult(mode: SrAll)
       self.search(target, r)
       result = new_gene_vec(r.all)
       # TODO: invoke callbacks
   except NoResult:
-    result = nil
+    {.cast(gcsafe).}:
+      result = Nil
 
 proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExSelectorInvoker](expr)

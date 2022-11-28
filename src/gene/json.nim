@@ -31,7 +31,8 @@ proc `%`*(self: Value): JsonNode =
 converter json_to_gene*(node: JsonNode): Value {.gcsafe.} =
   case node.kind:
   of JNull:
-    return nil
+    {.cast(gcsafe).}:
+      return Nil
   of JBool:
     return node.bval
   of JInt:

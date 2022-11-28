@@ -299,7 +299,8 @@ proc init*() =
       var f = sleep_async(args.gene_children[0].int)
       var future = new_future[Value]()
       f.add_callback proc() {.gcsafe.} =
-        future.complete(nil)
+        {.cast(gcsafe).}:
+          future.complete(Nil)
       result = new_gene_future(future)
     GENE_NS.ns["base64"] = new_gene_native_fn proc(args: Value): Value =
       encode(args.gene_children[0].str)

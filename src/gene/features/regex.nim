@@ -27,13 +27,16 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     var i = 0
     for item in m.captures.to_seq:
       var name = "$~" & $i
-      var value: Value = nil
+      var value: Value
+      {.cast(gcsafe).}:
+        value = Nil
       if item.is_some():
         value = item.get()
       frame.scope.def_member(name.to_key, value)
       i += 1
   else:
-    return
+    {.cast(gcsafe).}:
+      return Nil
 
 proc eval_not_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExMatch](expr)

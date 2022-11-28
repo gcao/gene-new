@@ -147,7 +147,8 @@ proc eval_object(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 
   var init = class.get_method(INIT_KEY)
   if init != nil:
-    discard self.invoke(frame, result, INIT_KEY, nil)
+    {.cast(gcsafe).}:
+      discard self.invoke(frame, result, INIT_KEY, Nil)
 
 proc translate_object(value: Value): Expr =
   var e = ExObject(
