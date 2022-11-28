@@ -288,6 +288,55 @@ test_interpreter """
 """, 3
 
 test_interpreter """
+  (fn f _ 1)
+  (class A
+    (method test _
+      (f)
+    )
+  )
+  ((new A) .test)
+""", 1
+
+test_interpreter """
+  (fn f _ 1)
+  (class A
+    (fn g _
+      (f)
+    )
+    (method test _
+      (g)
+    )
+  )
+  ((new A) .test)
+""", 1
+
+test_interpreter """
+  (fn f _ 1)
+  (class A
+    (var /x
+      (f)
+    )
+    (method test _
+      x
+    )
+  )
+  ((new A) .test)
+""", 1
+
+# test_interpreter """
+#   (fn f _ 1)
+#   (class A
+#     (var /x
+#       (/f) # A's parent namespace should be the module namespace!
+#     )
+#     (method test _
+#       x
+#     )
+#   )
+#   ((new A) .test)
+# """, 1
+
+test_interpreter """
   (class A
     (method test []
       "A.test"
