@@ -856,11 +856,10 @@ proc init_app_and_vm*() {.gcsafe.} =
   let gene_home = get_env("GENE_HOME", parent_dir(get_app_dir()))
   let gene_pkg = new_package(gene_home)
   gene_pkg.reset_load_paths()
-  # Below code fails for some reason
-  # VM.runtime = Runtime(
-  #   name: "default",
-  #   pkg: gene_pkg,
-  # )
+  VM.runtime = Runtime(
+    name: "default",
+    pkg: gene_pkg,
+  )
 
   VM.init_package(get_current_dir())
 

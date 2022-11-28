@@ -858,7 +858,7 @@ converter gene_to_ns*(v: Value): Namespace {.gcsafe.} = todo()
 #################### VM ##########################
 
 proc new_vm*(): VirtualMachine {.gcsafe.} =
-  var a = alloc_shared(sizeof(VirtualMachineData)) # Create virtual machine on the heap
+  var a = alloc_shared0(sizeof(VirtualMachineData)) # Create virtual machine on the heap
   return cast[VirtualMachine](a)
 
 proc new_vm*(app: Application): VirtualMachine {.gcsafe.} =
