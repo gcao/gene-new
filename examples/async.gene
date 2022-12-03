@@ -9,21 +9,31 @@
   ))
   future
 )
-(await (f "first"))
-(f "second")
-(println 0)
-(gene/sleep 1000)
-(println 1)
-(gene/sleep 1000)
-(println 2)
-(gene/sleep 1000)
-(println 3)
 
-#< Output should look like below, because futures are not checked after every expression.
+(await (f "first"))
+
+(f "second")
+
+(println 0)
+(noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
+(gene/sleep 1000)
+
+(println 1)
+(noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
+(gene/sleep 1000)
+
+(println 2)
+(noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
+(gene/sleep 1000)
+
+(println 3)
+(noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
+
+#< Output should look like below (futures are checked at least once every 10 evaluations)
 first
 0
 1
 2
-3
 second
+3
 #>#
