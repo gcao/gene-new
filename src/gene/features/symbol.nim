@@ -82,9 +82,9 @@ proc translate*(name: string): Expr {.inline.} =
   of "", "self":
     result = SELF_EXPR
   of "global":
-    result = new_ex_literal(GLOBAL_NS)
+    result = new_ex_literal(VM.global_ns)
   of "_":
-    result = new_ex_literal(Placeholder)
+    result = new_ex_literal(Value(kind: VkPlaceholder))
   of "$app":
     result = new_ex_literal(Value(kind: VkApplication, app: VM.app))
   of "$ns":

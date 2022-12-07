@@ -77,7 +77,7 @@ proc translate_case(node: Value): Expr =
   proc handler(input: Value) =
     case state:
     of CsInput:
-      if input == When:
+      if input.is_symbol("when"):
         state = CsWhen
       else:
         not_allowed()
@@ -88,10 +88,10 @@ proc translate_case(node: Value): Expr =
     of CsWhenLogic:
       if input == nil:
         update_mapping(cond, logic)
-      elif input == When:
+      elif input.is_symbol("when"):
         state = CsWhen
         update_mapping(cond, logic)
-      elif input == Else:
+      elif input.is_symbol("then"):
         state = CsElse
         update_mapping(cond, logic)
         logic = @[]

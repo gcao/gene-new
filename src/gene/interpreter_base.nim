@@ -35,7 +35,7 @@ proc to_s*(self: Value): string =
       return self.str
     of VkInstance:
       var m = self.instance_class.get_method(TO_S_KEY)
-      if m.class != ObjectClass.class:
+      if m.class != VM.object_class.class:
         var frame = new_frame()
         var args = new_gene_gene()
         return VM.invoke(frame, self, TO_S_KEY, args).str
@@ -57,7 +57,7 @@ proc get_member*(self: Value, name: MapKey): Value =
     if self.map.has_key(name):
       return self.map[name]
     else:
-      return Nil
+      return Value(kind: VkNil)
   of VkEnum:
     return new_gene_enum_member(self.enum.members[name.to_s])
   of VkInstance:
@@ -69,7 +69,7 @@ proc get_member*(self: Value, name: MapKey): Value =
     elif self.instance_props.has_key(name):
       return self.instance_props[name]
     else:
-      return Nil
+      return Value(kind: VkNil)
   of VkArchiveFile:
     return self.arc_file_members[name.to_s]
   of VkDirectory:
@@ -107,14 +107,14 @@ proc get_child*(self: Value, index: int): Value =
     if index < self.vec.len:
       return self.vec[index]
     else:
-      return Nil
+      return Value(kind: VkNil)
   of VkGene:
     if index < 0:
       index += self.gene_children.len
     if index < self.gene_children.len:
       return self.gene_children[index]
     else:
-      return Nil
+      return Value(kind: VkNil)
   else:
     var class = self.get_class()
     if class.has_method(GET_CHILD_KEY):
@@ -294,7 +294,7 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
         self.parse(m.children, item)
       else:
         self.parse(group, item)
-        if i < v.vec.len and v.vec[i] == Equals:
+        if i < v.vec.len and v.vec[i].is_symbol("="):
           i += 1
           var last_matcher = group[^1]
           var value = v.vec[i]
@@ -854,18 +854,18 @@ proc init_app_and_vm*() =
 
   VM.init_package(get_current_dir())
 
-  GLOBAL_NS = Value(kind: VkNamespace, ns: VM.app.ns)
-  GLOBAL_NS.ns[STDIN_KEY]  = stdin
-  GLOBAL_NS.ns[STDOUT_KEY] = stdout
-  GLOBAL_NS.ns[STDERR_KEY] = stderr
+  VM.global_ns = Value(kind: VkNamespace, ns: VM.app.ns)
+  VM.global_ns.ns[STDIN_KEY]  = stdin
+  VM.global_ns.ns[STDOUT_KEY] = stdout
+  VM.global_ns.ns[STDERR_KEY] = stderr
 
-  GENE_NS = Value(kind: VkNamespace, ns: new_namespace("gene"))
-  GENE_NATIVE_NS = Value(kind: VkNamespace, ns: new_namespace("native"))
-  GENE_NS.ns[GENE_NATIVE_NS.ns.name] = GENE_NATIVE_NS
-  GLOBAL_NS.ns[GENE_NS.ns.name] = GENE_NS
+  VM.gene_ns = Value(kind: VkNamespace, ns: new_namespace("gene"))
+  VM.gene_native_ns = Value(kind: VkNamespace, ns: new_namespace("native"))
+  VM.gene_ns.ns["native"] = VM.gene_native_ns
+  VM.global_ns.ns["gene"] = VM.gene_ns
 
-  GENEX_NS = Value(kind: VkNamespace, ns: new_namespace("genex"))
-  GLOBAL_NS.ns[GENEX_NS.ns.name] = GENEX_NS
+  VM.genex_ns = Value(kind: VkNamespace, ns: new_namespace("genex"))
+  VM.global_ns.ns["genex"] = VM.genex_ns
 
   for callback in VmCreatedCallbacks:
     callback(VM)

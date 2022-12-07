@@ -16,7 +16,7 @@ proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   if e.container == nil:
     result = self.eval(frame, e.value)
     if result == nil:
-      result = Nil
+      result = Value(kind: VkNil)
     frame.scope.def_member(e.name, result)
   else:
     var container = self.eval(frame, e.container)
@@ -33,7 +33,7 @@ proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 
     result = self.eval(frame, e.value)
     if result == nil:
-      result = Nil
+      result = Value(kind: VkNil)
     ns[e.name] = result
 
 proc translate_var(value: Value): Expr =
@@ -42,7 +42,7 @@ proc translate_var(value: Value): Expr =
   if value.gene_children.len > 1:
     v = translate(value.gene_children[1])
   else:
-    v = new_ex_literal(Nil)
+    v = new_ex_literal(Value(kind: VkNil))
   case name.kind:
   of VkSymbol:
     result = ExVar(

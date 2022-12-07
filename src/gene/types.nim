@@ -305,6 +305,46 @@ type
     modules*: Table[MapKey, Namespace]
     repl_on_error*: bool
 
+    global_ns*     : Value
+    gene_ns*       : Value
+    gene_native_ns*: Value
+    genex_ns*      : Value
+
+    object_class*   : Value
+    nil_class*      : Value
+    bool_class*     : Value
+    int_class*      : Value
+    float_class*    : Value
+    char_class*     : Value
+    string_class*   : Value
+    symbol_class*   : Value
+    complex_symbol_class*: Value
+    array_class*    : Value
+    map_class*      : Value
+    set_class*      : Value
+    gene_class*     : Value
+    stream_class*   : Value
+    document_class* : Value
+    regex_class*    : Value
+    range_class*    : Value
+    date_class*     : Value
+    datetime_class* : Value
+    time_class*     : Value
+    timezone_class* : Value
+    selector_class* : Value
+    exception_class*: Value
+    class_class*    : Value
+    mixin_class*    : Value
+    application_class*: Value
+    package_class*  : Value
+    module_class*   : Value
+    namespace_class*: Value
+    function_class* : Value
+    macro_class*    : Value
+    block_class*    : Value
+    future_class*   : Value
+    file_class*     : Value
+
   # VirtualMachine depends on a Runtime
   Runtime* = ref object
     name*: string     # default/...
@@ -677,75 +717,8 @@ type
     of SrAll:
       all*: seq[Value]
 
-let
-  Void*  = Value(kind: VkVoid)
-  Nil*   = Value(kind: VkNil)
-  True*  = Value(kind: VkBool, bool: true)
-  False* = Value(kind: VkBool, bool: false)
-  Placeholder* = Value(kind: VkPlaceholder)
-
-  Quote*     = Value(kind: VkSymbol, str: "quote")
-  Unquote*   = Value(kind: VkSymbol, str: "unquote")
-  If*        = Value(kind: VkSymbol, str: "if")
-  Then*      = Value(kind: VkSymbol, str: "then")
-  Elif*      = Value(kind: VkSymbol, str: "elif")
-  Else*      = Value(kind: VkSymbol, str: "else")
-  Case*      = Value(kind: VkSymbol, str: "case")
-  When*      = Value(kind: VkSymbol, str: "when")
-  Not*       = Value(kind: VkSymbol, str: "not")
-  Try*       = Value(kind: VkSymbol, str: "try")
-  Catch*     = Value(kind: VkSymbol, str: "catch")
-  Finally*   = Value(kind: VkSymbol, str: "finally")
-  Call*      = Value(kind: VkSymbol, str: "call")
-  Do*        = Value(kind: VkSymbol, str: "do")
-  Equals*    = Value(kind: VkSymbol, str: "=")
-
-var Ints: array[111, Value]
-for i in 0..110:
-  Ints[i] = Value(kind: VkInt, int: i - 10)
-
 var VM*: VirtualMachine   # The current virtual machine
-var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
-
-var GLOBAL_NS*     : Value
-var GENE_NS*       : Value
-var GENE_NATIVE_NS*: Value
-var GENEX_NS*      : Value
-
-var ObjectClass*   : Value
-var NilClass*      : Value
-var BoolClass*     : Value
-var IntClass*      : Value
-var FloatClass*    : Value
-var CharClass*     : Value
-var StringClass*   : Value
-var SymbolClass*   : Value
-var ComplexSymbolClass* : Value
-var ArrayClass*    : Value
-var MapClass*      : Value
-var SetClass*      : Value
-var GeneClass*     : Value
-var StreamClass*   : Value
-var DocumentClass* : Value
-var RegexClass*    : Value
-var RangeClass*    : Value
-var DateClass*     : Value
-var DatetimeClass* : Value
-var TimeClass*     : Value
-var TimezoneClass* : Value
-var SelectorClass* : Value
-var ExceptionClass*: Value
-var ClassClass*    : Value
-var MixinClass*    : Value
-var ApplicationClass* : Value
-var PackageClass*  : Value
-var ModuleClass*   : Value
-var NamespaceClass*: Value
-var FunctionClass* : Value
-var MacroClass*    : Value
-var BlockClass*    : Value
-var FutureClass*   : Value
-var FileClass*     : Value
+var VmCreatedCallbacks*: seq[proc(self: var VirtualMachine)] = @[]
 
 #################### Definitions #################
 
@@ -796,6 +769,12 @@ macro name*(name: static string, f: untyped): untyped =
     block:
       `result`
       `id`
+
+proc is_nil*(v: Value): bool =
+  v == nil or v.kind == VkNil
+
+proc is_symbol*(v: Value, s: string): bool =
+  v.kind == VkSymbol and v.str == s
 
 #################### Converters ##################
 
@@ -1123,11 +1102,11 @@ proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.inline.} =
 #################### Frame #######################
 
 proc new_frame*(): Frame = Frame(
-  self: Nil,
+  self: Value(kind: VkNil),
 )
 
 proc new_frame*(kind: FrameKind): Frame = Frame(
-  self: Nil,
+  self: Value(kind: VkNil),
   kind: kind,
 )
 
@@ -1211,8 +1190,8 @@ proc new_class*(name: string, parent: Class): Class =
 
 proc new_class*(name: string): Class =
   var parent: Class
-  if ObjectClass != nil:
-    parent = ObjectClass.class
+  if VM.object_class != nil:
+    parent = VM.object_class.class
   new_class(name, parent)
 
 proc get_constructor*(self: Class): Value =
@@ -1246,23 +1225,23 @@ proc get_super_method*(self: Class, name: MapKey): Method =
 proc get_class*(val: Value): Class =
   case val.kind:
   of VkApplication:
-    return ApplicationClass.class
+    return VM.application_class.class
   of VkPackage:
-    return PackageClass.class
+    return VM.package_class.class
   of VkInstance:
     return val.instance_class
   of VkCast:
     return val.cast_class
   of VkClass:
-    return ClassClass.class
+    return VM.class_class.class
   of VkMixin:
-    return MixinClass.class
+    return VM.mixin_class.class
   of VkNamespace:
-    return NamespaceClass.class
+    return VM.namespace_class.class
   of VkFuture:
-    return FutureClass.class
+    return VM.future_class.class
   of VkNativeFile:
-    return FileClass.class
+    return VM.file_class.class
   of VkException:
     var ex = val.exception
     if ex is Exception:
@@ -1270,53 +1249,53 @@ proc get_class*(val: Value): Class =
       if ex.instance != nil:
         return ex.instance.instance_class
       else:
-        return ExceptionClass.class
+        return VM.exception_class.class
     else:
-      return ExceptionClass.class
+      return VM.exception_class.class
   of VkNil:
-    return NilClass.class
+    return VM.nil_class.class
   of VkBool:
-    return BoolClass.class
+    return VM.bool_class.class
   of VkInt:
-    return IntClass.class
+    return VM.int_class.class
   of VkChar:
-    return CharClass.class
+    return VM.char_class.class
   of VkString:
-    return StringClass.class
+    return VM.string_class.class
   of VkSymbol:
-    return SymbolClass.class
+    return VM.symbol_class.class
   of VkComplexSymbol:
-    return ComplexSymbolClass.class
+    return VM.complex_symbol_class.class
   of VkVector:
-    return ArrayClass.class
+    return VM.array_class.class
   of VkMap:
-    return MapClass.class
+    return VM.map_class.class
   of VkSet:
-    return SetClass.class
+    return VM.set_class.class
   of VkGene:
-    return GeneClass.class
+    return VM.gene_class.class
   of VkRegex:
-    return RegexClass.class
+    return VM.regex_class.class
   of VkRange:
-    return RangeClass.class
+    return VM.range_class.class
   of VkDate:
-    return DateClass.class
+    return VM.date_class.class
   of VkDateTime:
-    return DateTimeClass.class
+    return VM.datetime_class.class
   of VkTime:
-    return TimeClass.class
+    return VM.time_class.class
   of VkFunction:
-    return FunctionClass.class
+    return VM.function_class.class
   of VkTimezone:
-    return TimezoneClass.class
+    return VM.timezone_class.class
   of VkAny:
     if val.any_class == nil:
-      return ObjectClass.class
+      return VM.object_class.class
     else:
       return val.any_class
   of VkCustom:
     if val.custom_class == nil:
-      return ObjectClass.class
+      return VM.object_class.class
     else:
       return val.custom_class
   else:
@@ -1410,11 +1389,10 @@ proc new_gene_custom*(c: CustomValue, class: Class): Value =
   )
 
 proc new_gene_bool*(val: bool): Value {.inline.} =
-  case val
-  of true: return True
-  of false: return False
-  # of true: return Value(kind: VkBool, boolVal: true)
-  # of false: return Value(kind: VkBool, boolVal: false)
+  Value(kind: VkBool, bool: val)
+  # case val
+  # of true: return True
+  # of false: return False
 
 proc new_gene_bool*(s: string): Value =
   let parsed: bool = parseBool(s)
@@ -1427,11 +1405,7 @@ proc new_gene_int*(s: string): Value =
   return Value(kind: VkInt, int: parseBiggestInt(s))
 
 proc new_gene_int*(val: BiggestInt): Value {.inline.} =
-  # return Value(kind: VkInt, int: val)
-  if val > 100 or val < -10:
-    return Value(kind: VkInt, int: val)
-  else:
-    return Ints[val + 10]
+  return Value(kind: VkInt, int: val)
 
 proc new_gene_ratio*(num, denom: BiggestInt): Value =
   return Value(kind: VkRatio, ratio_num: num, ratio_denom: denom)
@@ -1556,7 +1530,7 @@ proc new_gene_set*(items: varargs[Value]): Value =
 proc new_gene_gene*(): Value =
   return Value(
     kind: VkGene,
-    gene_type: Nil,
+    gene_type: Value(kind: VkNil),
   )
 
 proc new_gene_gene*(`type`: Value, children: varargs[Value]): Value =
@@ -1662,7 +1636,7 @@ proc is_truthy*(self: Value): bool =
   case self.kind:
   of VkBool:
     return self.bool
-  of VkNil:
+  of VkNil, VkVoid:
     return false
   else:
     return true
@@ -1848,7 +1822,7 @@ proc is_literal*(self: Value): bool =
     return false
 
 proc `$`*(self: Class): string =
-  if self.parent.is_nil or self.parent == ObjectClass.class:
+  if self.parent.is_nil or self.parent == VM.object_class.class:
     result = "(class $#)" % [self.name]
   else:
     result = "(class $# < $#)" % [self.name, self.parent.name]
@@ -1941,10 +1915,10 @@ proc `[]=`*(self: var Table[MapKey, Value], key: string, value: Value) =
 proc wrap_with_try*(body: seq[Value]): seq[Value] =
   var found_catch_or_finally = false
   for item in body:
-    if item == Catch or item == Finally:
+    if item.kind == VkSymbol and item.str in ["catch", "finally"]:
       found_catch_or_finally = true
   if found_catch_or_finally:
-    return @[new_gene_gene(Try, body)]
+    return @[new_gene_gene(new_gene_symbol("try"), body)]
   else:
     return body
 

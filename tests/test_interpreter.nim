@@ -32,11 +32,11 @@ import ./helpers
 # ==, !=, > >= < <=
 # ->, =>
 
-test_interpreter "nil", Nil
+test_interpreter "nil", Value(kind: VkNil)
 test_interpreter "1", 1
 test_interpreter "true", true
 test_interpreter "false", false
-test_interpreter "_", Placeholder
+test_interpreter "_", Value(kind: VkPlaceholder)
 test_interpreter "\"string\"", "string"
 test_interpreter ":a", new_gene_symbol("a")
 
@@ -167,7 +167,7 @@ test_interpreter """
 test_interpreter """
   (var a (if false 1))
   a
-""", Nil
+""", Value(kind: VkNil)
 
 test_interpreter """
   (var a 1)
@@ -288,7 +288,7 @@ test_interpreter """
   i
 """, 3
 
-test_interpreter "self", Nil
+test_interpreter "self", Value(kind: VkNil)
 
 # # test_interpreter """
 # #   (call_native "str_size" "test")

@@ -511,7 +511,7 @@ proc match_symbol(s: string): Value =
 proc interpret_token(token: string): Value =
   case token
   of "nil":
-    return Nil
+    return Value(kind: VkNil)
   of "true":
     return new_gene_bool(token)
   of "false":
@@ -595,11 +595,11 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
         if self.buf[self.bufPos] == '^':
           self.bufPos.inc()
           key = self.read_token(false)
-          result[key.to_key] = True
+          result[key.to_key] = new_gene_bool(true)
         elif self.buf[self.bufPos] == '!':
           self.bufPos.inc()
           key = self.read_token(false)
-          result[key.to_key] = Nil
+          result[key.to_key] = Value(kind: VkNil)
         else:
           key = self.read_token(false)
           if key.contains('^'):

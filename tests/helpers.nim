@@ -18,8 +18,8 @@ proc test2(self: Value, args: Value): Value =
 
 proc init_all*() =
   init_app_and_vm()
-  GENE_NATIVE_NS.ns["test"] = new_gene_native_method(test)
-  GENE_NATIVE_NS.ns["test2"] = new_gene_native_method(test2)
+  VM.gene_native_ns.ns["test"] = new_gene_native_method(test)
+  VM.gene_native_ns.ns["test2"] = new_gene_native_method(test2)
 
 # This is added to make it easier to write tests
 converter str_to_key*(s: string): MapKey {.inline.} =

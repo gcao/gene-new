@@ -21,7 +21,7 @@ proc translate_enum(value: Value): Expr =
   while i < value.gene_children.len:
     var name = value.gene_children[i].str
     i += 1
-    if i < value.gene_children.len and value.gene_children[i] == Equals:
+    if i < value.gene_children.len and value.gene_children[i].is_symbol("="):
       i += 1
       v = value.gene_children[i].int
       i += 1

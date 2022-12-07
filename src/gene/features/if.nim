@@ -33,7 +33,7 @@ proc normalize_if(self: Value) =
   if self.gene_props.has_key(COND_KEY):
     return
   var `type` = self.gene_type
-  if `type` == If:
+  if `type`.is_symbol("if"):
     # Store if/elif/else block
     var logic: seq[Value]
     var elifs: seq[Value]
@@ -44,28 +44,28 @@ proc normalize_if(self: Value) =
       of IsIf:
         if input == nil:
           not_allowed()
-        elif input == Not:
+        elif input.is_symbol("not"):
           state = IsIfNot
         else:
           self.gene_props[COND_KEY] = input
           state = IsIfCond
       of IsIfNot:
-        self.gene_props[COND_KEY] = new_gene_gene(Not, input)
+        self.gene_props[COND_KEY] = new_gene_gene(new_gene_symbol("not"), input)
         state = IsIfCond
       of IsIfCond:
         state = IsIfLogic
         logic = @[]
         if input == nil:
           not_allowed()
-        elif input != Then:
+        elif not input.is_symbol("then"):
           logic.add(input)
       of IsIfLogic:
         if input == nil:
           self.gene_props[THEN_KEY] = new_gene_stream(logic)
-        elif input == Elif:
+        elif input.is_symbol("elif"):
           self.gene_props[THEN_KEY] = new_gene_stream(logic)
           state = IsElif
-        elif input == Else:
+        elif input.is_symbol("else"):
           self.gene_props[THEN_KEY] = new_gene_stream(logic)
           state = IsElse
           logic = @[]
@@ -74,30 +74,30 @@ proc normalize_if(self: Value) =
       of IsElif:
         if input == nil:
           not_allowed()
-        elif input == Not:
+        elif input.is_symbol("elif"):
           state = IsElifNot
         else:
           elifs.add(input)
           state = IsElifCond
       of IsElifNot:
-        elifs.add(new_gene_gene(Not, input))
+        elifs.add(new_gene_gene(new_gene_symbol("not"), input))
         state = IsElifCond
       of IsElifCond:
         state = IsElifLogic
         logic = @[]
         if input == nil:
           not_allowed()
-        elif input != Then:
+        elif not input.is_symbol("then"):
           logic.add(input)
       of IsElifLogic:
         if input == nil:
           elifs.add(new_gene_stream(logic))
           self.gene_props[ELIF_KEY] = elifs
-        elif input == Elif:
+        elif input.is_symbol("elif"):
           elifs.add(new_gene_stream(logic))
           self.gene_props[ELIF_KEY] = elifs
           state = IsElif
-        elif input == Else:
+        elif input.is_symbol("else"):
           elifs.add(new_gene_stream(logic))
           self.gene_props[ELIF_KEY] = elifs
           state = IsElse

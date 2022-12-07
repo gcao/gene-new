@@ -10,7 +10,7 @@ proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var s = self.eval(frame, cast[ExParse](expr).data).str
   var vals = read_all(s)
   if vals.len == 0:
-    result = Nil
+    result = Value(kind: VkNil)
   elif vals.len == 1:
     result = vals[0]
   else:
@@ -24,5 +24,5 @@ proc translate_parse(value: Value): Expr =
   result = r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GLOBAL_NS.ns["$parse"] = new_gene_processor(translate_parse)
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    self.global_ns.ns["$parse"] = new_gene_processor(translate_parse)

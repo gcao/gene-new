@@ -62,5 +62,5 @@ proc init*() =
   GeneTranslators["break"] = translate_break
   GeneTranslators["continue"] = translate_continue
 
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["$once"] = new_gene_processor(translate_once)
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    self.global_ns.ns["$once"] = new_gene_processor(translate_once)

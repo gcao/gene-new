@@ -65,6 +65,6 @@ proc translate_exit(value: Value): Expr =
 proc init*() =
   GeneTranslators["exit"] = translate_exit
 
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GLOBAL_NS.ns["$env"] = new_gene_processor(translate_env)
-    GLOBAL_NS.ns["$set_env"] = new_gene_processor(translate_set_env)
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    self.global_ns.ns["$env"] = new_gene_processor(translate_env)
+    self.global_ns.ns["$set_env"] = new_gene_processor(translate_set_env)

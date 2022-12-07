@@ -62,7 +62,7 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
       else:
         raise NoResult.new
     of VkInstance:
-      return target.instance_props.get_or_default(self.name, Nil)
+      return target.instance_props.get_or_default(self.name, Value(kind: VkNil))
     of VkNamespace:
       return target.ns[self.name]
     of VkClass:
@@ -80,7 +80,7 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
     else:
       todo($target.kind)
   of SmInvoke:
-    var args = new_gene_gene(Nil)
+    var args = new_gene_gene(Value(kind: VkNil))
     return VM.invoke(new_frame(), target, self.invoke_name, args)
   else:
     todo()
@@ -160,7 +160,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
   of SmSelfAndDescendants:
     result.add_self_and_descendants(target)
   of SmCallback:
-    var args = new_gene_gene(Nil)
+    var args = new_gene_gene(Value(kind: VkNil))
     args.gene_children.add(target)
     var v = VM.call(nil, self.callback, args)
     if v.kind == VkGene and v.gene_type.kind == VkSymbol:
@@ -172,7 +172,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
     else:
       result.add(v)
   of SmInvoke:
-    var args = new_gene_gene(Nil)
+    var args = new_gene_gene(Value(kind: VkNil))
     result.add(VM.invoke(new_frame(), target, self.invoke_name, args))
   else:
     todo("search " & $self.kind)
@@ -224,14 +224,14 @@ proc search*(self: Selector, target: Value): Value =
         # TODO: invoke callbacks
       else:
         # raise new_exception(SelectorNoResult, "No result is found for the selector.")
-        result = Nil
+        result = Value(kind: VkNil)
     else:
       var r = SelectorResult(mode: SrAll)
       self.search(target, r)
       result = new_gene_vec(r.all)
       # TODO: invoke callbacks
   except NoResult:
-    result = Nil
+    result = Value(kind: VkNil)
 
 proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExSelectorInvoker](expr)
@@ -459,5 +459,5 @@ proc init*() =
   GeneTranslators["@"] = translate_selector
   GeneTranslators["@*"] = translate_selector
   GeneTranslators["@."] = translate_selector
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
     self.app.ns["$set"] = new_gene_processor(translate_set)

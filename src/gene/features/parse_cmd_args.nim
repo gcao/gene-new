@@ -270,6 +270,6 @@ proc translate_parse(value: Value): Expr =
   return r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GLOBAL_NS.ns["$parse_cmd_args"] = new_gene_processor(translate_parse)
-    GENE_NS.ns["$parse_cmd_args"] = GLOBAL_NS.ns["$parse_cmd_args"]
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    self.global_ns.ns["$parse_cmd_args"] = new_gene_processor(translate_parse)
+    self.gene_ns.ns["$parse_cmd_args"] = self.global_ns.ns["$parse_cmd_args"]

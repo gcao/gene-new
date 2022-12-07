@@ -85,7 +85,7 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
         stdout.write_line(result)
         break
       except system.Exception as e:
-        result = Nil
+        result = Value(kind: VkNil)
         input = ""
         var s = e.get_stack_trace()
         s.strip_line_end()
@@ -95,6 +95,6 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
     unset_control_c_hook()
   if return_value:
     if result == nil:
-      result = Nil
+      result = Value(kind: VkNil)
   else:
-    return Nil
+    return Value(kind: VkNil)

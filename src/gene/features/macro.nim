@@ -95,5 +95,5 @@ proc translate_caller_eval(value: Value): Expr =
 
 proc init*() =
   GeneTranslators["macro"] = translate_macro
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["$caller_eval"] = new_gene_processor(translate_caller_eval)
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    self.global_ns.ns["$caller_eval"] = new_gene_processor(translate_caller_eval)

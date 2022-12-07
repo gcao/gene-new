@@ -158,14 +158,14 @@ proc handle_response(self: var Registry, req: Request, res: Response): Value =
     return res.value
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
     RegistryClass = Value(kind: VkClass, class: new_class("Registry"))
     RequestClass  = Value(kind: VkClass, class: new_class("Request"))
     ResponseClass = Value(kind: VkClass, class: new_class("Response"))
     MiddlewareClass = Value(kind: VkClass, class: new_class("Middleware"))
 
-    GENEX_NS.ns["Registry"] = RegistryClass
-    RegistryClass.class.parent = ObjectClass.class
+    self.genex_ns.ns["Registry"] = RegistryClass
+    RegistryClass.class.parent = VM.object_class.class
     RegistryClass.def_native_constructor proc(args: Value): Value {.name:"registry_new".} =
       var name = ""
       if args.gene_children.len > 0:

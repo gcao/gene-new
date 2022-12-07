@@ -1,7 +1,6 @@
 import tables
 
 import ../types
-import ../map_key
 import ../interpreter_base
 
 type
@@ -77,6 +76,6 @@ proc translate_render(value: Value): Expr =
   )
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GLOBAL_NS.ns["$render"] = new_gene_processor(translate_render)
-    GENE_NS.ns["$render"] = GLOBAL_NS.ns["$render"]
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    self.global_ns.ns["$render"] = new_gene_processor(translate_render)
+    self.gene_ns.ns["$render"] = self.global_ns.ns["$render"]

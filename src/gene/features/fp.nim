@@ -98,7 +98,7 @@ proc eval_return(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   if expr.data != nil:
     r.val = self.eval(frame, expr.data)
   else:
-    r.val = Nil
+    r.val = Value(kind: VkNil)
   raise r
 
 proc translate_return(value: Value): Expr =

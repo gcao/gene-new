@@ -31,7 +31,7 @@ proc `%`*(self: Value): JsonNode =
 converter json_to_gene*(node: JsonNode): Value =
   case node.kind:
   of JNull:
-    return Nil
+    return Value(kind: VkNil)
   of JBool:
     return node.bval
   of JInt:

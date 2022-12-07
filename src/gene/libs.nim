@@ -278,32 +278,32 @@ proc add_failure_callback(self: Value, args: Value): Value =
         discard VM.call(frame, args.gene_children[0], callback_args)
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GENE_NS.ns["todo"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_todo".} =
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    self.gene_ns.ns["todo"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_todo".} =
       todo(args.gene_children[0].to_s)
-    GLOBAL_NS.ns["todo"] = GENE_NS.ns["todo"]
-    GENE_NS.ns["not_allowed"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_not_allowed".} =
+    self.global_ns.ns["todo"] = self.gene_ns.ns["todo"]
+    self.gene_ns.ns["not_allowed"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_not_allowed".} =
       not_allowed(args.gene_children[0].to_s)
-    GLOBAL_NS.ns["not_allowed"] = GENE_NS.ns["not_allowed"]
+    self.global_ns.ns["not_allowed"] = self.gene_ns.ns["not_allowed"]
 
 
-    GENE_NS.ns["rand"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_rand".} =
+    self.gene_ns.ns["rand"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_rand".} =
       if args.gene_children.len == 0:
         return new_gene_float(rand(1.0))
       else:
         return rand(args.gene_children[0].int)
 
-    GENE_NS.ns["sleep"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep".} =
+    self.gene_ns.ns["sleep"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep".} =
       sleep(args.gene_children[0].int)
-    GENE_NS.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep_async".} =
+    self.gene_ns.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep_async".} =
       var f = sleep_async(args.gene_children[0].int)
       var future = new_future[Value]()
       f.add_callback proc() {.gcsafe.} =
-        future.complete(Nil)
+        future.complete(Value(kind: VkNil))
       result = new_gene_future(future)
-    GENE_NS.ns["base64"] = new_gene_native_fn proc(args: Value): Value =
+    self.gene_ns.ns["base64"] = new_gene_native_fn proc(args: Value): Value =
       encode(args.gene_children[0].str)
-    GENE_NS.ns["base64_decode"] = new_gene_native_fn proc(args: Value): Value =
+    self.gene_ns.ns["base64_decode"] = new_gene_native_fn proc(args: Value): Value =
       case args.gene_children[0].kind:
       of VkString:
         return decode(args.gene_children[0].str)
@@ -311,125 +311,125 @@ proc init*() =
         return ""
       else:
         todo("base64_decode " & $args.gene_children[0].kind)
-    GENE_NS.ns["run_forever"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_run_forever".} =
+    self.gene_ns.ns["run_forever"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_run_forever".} =
       run_forever()
 
-    ObjectClass = Value(kind: VkClass, class: new_class("Object"))
-    ObjectClass.def_native_method("class", object_class)
-    ObjectClass.def_native_method("is", object_is)
-    ObjectClass.def_native_method("to_s", object_to_s)
-    ObjectClass.def_native_method("to_json", object_to_json)
-    ObjectClass.def_native_method("to_bool", object_to_bool)
-    ObjectClass.def_native_method "call", proc(self: Value, args: Value): Value {.name:"object_call".} =
+    self.object_class = Value(kind: VkClass, class: new_class("Object"))
+    self.object_class.def_native_method("class", object_class)
+    self.object_class.def_native_method("is", object_is)
+    self.object_class.def_native_method("to_s", object_to_s)
+    self.object_class.def_native_method("to_json", object_to_json)
+    self.object_class.def_native_method("to_bool", object_to_bool)
+    self.object_class.def_native_method "call", proc(self: Value, args: Value): Value {.name:"object_call".} =
       todo("Object.call")
-    GENE_NS.ns["Object"] = ObjectClass
-    GLOBAL_NS.ns["Object"] = ObjectClass
+    self.gene_ns.ns["Object"] = self.object_class
+    self.global_ns.ns["Object"] = self.object_class
 
-    ClassClass = Value(kind: VkClass, class: new_class("Class"))
-    ClassClass.class.parent = ObjectClass.class
-    ClassClass.def_native_method "name", proc(self: Value, args: Value): Value =
+    self.class_class = Value(kind: VkClass, class: new_class("Class"))
+    self.class_class.class.parent = self.object_class.class
+    self.class_class.def_native_method "name", proc(self: Value, args: Value): Value =
       self.class.name
-    ClassClass.def_native_method "parent", proc(self: Value, args: Value): Value =
+    self.class_class.def_native_method "parent", proc(self: Value, args: Value): Value =
       Value(kind: VkClass, class: self.class.parent)
-    ClassClass.def_native_method "members", proc(self: Value, args: Value): Value {.name:"class_members".} =
+    self.class_class.def_native_method "members", proc(self: Value, args: Value): Value {.name:"class_members".} =
       self.class.ns.get_members()
-    ClassClass.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"class_member_names".} =
+    self.class_class.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"class_member_names".} =
       self.class.ns.member_names()
-    ClassClass.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"class_has_member".} =
+    self.class_class.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"class_has_member".} =
       self.class.ns.members.has_key(args[0].to_s.to_key)
-    ClassClass.def_native_method "on_member_missing", on_member_missing
-    ClassClass.def_native_method "on_extended", proc(self: Value, args: Value): Value {.name:"class_on_extended" } =
+    self.class_class.def_native_method "on_member_missing", on_member_missing
+    self.class_class.def_native_method "on_extended", proc(self: Value, args: Value): Value {.name:"class_on_extended" } =
       self.class.on_extended = args.gene_children[0]
 
-    GENE_NS.ns["Class"] = ClassClass
-    GLOBAL_NS.ns["Class"] = ClassClass
+    self.gene_ns.ns["Class"] = self.class_class
+    self.global_ns.ns["Class"] = self.class_class
 
-    MixinClass = Value(kind: VkClass, class: new_class("Mixin"))
-    MixinClass.class.parent = ObjectClass.class
-    MixinClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"mixin_name".} =
+    self.mixin_class = Value(kind: VkClass, class: new_class("Mixin"))
+    self.mixin_class.class.parent = self.object_class.class
+    self.mixin_class.def_native_method "name", proc(self: Value, args: Value): Value {.name:"mixin_name".} =
       self.mixin.name
-    MixinClass.def_native_method "members", proc(self: Value, args: Value): Value {.name:"mixin_members".} =
+    self.mixin_class.def_native_method "members", proc(self: Value, args: Value): Value {.name:"mixin_members".} =
       self.mixin.ns.get_members()
-    MixinClass.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"mixin_member_names".} =
+    self.mixin_class.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"mixin_member_names".} =
       self.mixin.ns.member_names()
-    MixinClass.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"mixin_has_member".} =
+    self.mixin_class.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"mixin_has_member".} =
       self.mixin.ns.members.has_key(args[0].to_s.to_key)
-    MixinClass.def_native_method "on_member_missing", on_member_missing
-    MixinClass.def_native_method "on_included", proc(self: Value, args: Value): Value {.name:"mixin_on_extended" } =
+    self.mixin_class.def_native_method "on_member_missing", on_member_missing
+    self.mixin_class.def_native_method "on_included", proc(self: Value, args: Value): Value {.name:"mixin_on_extended" } =
       self.class.on_extended = args.gene_children[0]
-    GENE_NS.ns["Mixin"] = MixinClass
-    GLOBAL_NS.ns["Mixin"] = MixinClass
+    self.gene_ns.ns["Mixin"] = self.mixin_class
+    self.global_ns.ns["Mixin"] = self.mixin_class
 
-    ExceptionClass = Value(kind: VkClass, class: new_class("Exception"))
-    ExceptionClass.class.parent = ObjectClass.class
-    ExceptionClass.def_native_method("message", exception_message)
-    ExceptionClass.def_native_method("stacktrace", exception_stack)
-    ExceptionClass.def_native_method("to_s", exception_to_s)
-    GENE_NS.ns["Exception"] = ExceptionClass
-    GLOBAL_NS.ns["Exception"] = ExceptionClass
+    self.exception_class = Value(kind: VkClass, class: new_class("Exception"))
+    self.exception_class.class.parent = self.object_class.class
+    self.exception_class.def_native_method("message", exception_message)
+    self.exception_class.def_native_method("stacktrace", exception_stack)
+    self.exception_class.def_native_method("to_s", exception_to_s)
+    self.gene_ns.ns["Exception"] = self.exception_class
+    self.global_ns.ns["Exception"] = self.exception_class
 
-    ModuleClass = Value(kind: VkClass, class: new_class("Module"))
-    ModuleClass.class.parent = ObjectClass.class
-    ModuleClass.def_native_method "name", proc(self: Value, args: Value): Value =
+    self.module_class = Value(kind: VkClass, class: new_class("Module"))
+    self.module_class.class.parent = self.object_class.class
+    self.module_class.def_native_method "name", proc(self: Value, args: Value): Value =
       self.module.name
-    ModuleClass.def_native_method "set_name", proc(self: Value, args: Value): Value =
+    self.module_class.def_native_method "set_name", proc(self: Value, args: Value): Value =
       self.module.name = args.gene_children[0].str
 
-    NamespaceClass = Value(kind: VkClass, class: new_class("Namespace"))
-    NamespaceClass.class.parent = ObjectClass.class
-    NamespaceClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =
+    self.namespace_class = Value(kind: VkClass, class: new_class("Namespace"))
+    self.namespace_class.class.parent = self.object_class.class
+    self.namespace_class.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =
       self.ns.name
-    NamespaceClass.def_native_method "members", proc(self: Value, args: Value): Value {.name:"ns_members".} =
+    self.namespace_class.def_native_method "members", proc(self: Value, args: Value): Value {.name:"ns_members".} =
       self.ns.get_members()
-    NamespaceClass.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"ns_member_names".} =
+    self.namespace_class.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"ns_member_names".} =
       self.ns.member_names()
-    NamespaceClass.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"ns_has_member".} =
+    self.namespace_class.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"ns_has_member".} =
       self.ns.members.has_key(args[0].to_s.to_key)
-    NamespaceClass.def_native_method "on_member_missing", on_member_missing
-    GENE_NS.ns["Namespace"] = NamespaceClass
-    GLOBAL_NS.ns["Namespace"] = NamespaceClass
+    self.namespace_class.def_native_method "on_member_missing", on_member_missing
+    self.gene_ns.ns["Namespace"] = self.namespace_class
+    self.global_ns.ns["Namespace"] = self.namespace_class
 
-    BoolClass = Value(kind: VkClass, class: new_class("Bool"))
-    BoolClass.class.parent = ObjectClass.class
-    GENE_NS.ns["Bool"] = BoolClass
-    GLOBAL_NS.ns["Bool"] = BoolClass
+    self.bool_class = Value(kind: VkClass, class: new_class("Bool"))
+    self.bool_class.class.parent = self.object_class.class
+    self.gene_ns.ns["Bool"] = self.bool_class
+    self.global_ns.ns["Bool"] = self.bool_class
 
-    IntClass = Value(kind: VkClass, class: new_class("Int"))
-    IntClass.class.parent = ObjectClass.class
-    GENE_NS.ns["Int"] = IntClass
-    GLOBAL_NS.ns["Int"] = IntClass
+    self.int_class = Value(kind: VkClass, class: new_class("Int"))
+    self.int_class.class.parent = self.object_class.class
+    self.gene_ns.ns["Int"] = self.int_class
+    self.global_ns.ns["Int"] = self.int_class
 
-    NilClass = Value(kind: VkClass, class: new_class("Nil"))
-    NilClass.class.parent = ObjectClass.class
-    GENE_NS.ns["Nil"] = NilClass
-    GLOBAL_NS.ns["Nil"] = NilClass
+    self.nil_class = Value(kind: VkClass, class: new_class("Nil"))
+    self.nil_class.class.parent = self.object_class.class
+    self.gene_ns.ns["Nil"] = self.nil_class
+    self.global_ns.ns["Nil"] = self.nil_class
 
-    FutureClass = Value(kind: VkClass, class: new_class("Future"))
-    FutureClass.class.parent = ObjectClass.class
-    FutureClass.def_native_method("on_success", add_success_callback)
-    FutureClass.def_native_method("on_failure", add_failure_callback)
-    FutureClass.class.parent = ObjectClass.class
-    GENE_NS.ns["Future"] = FutureClass
+    self.future_class = Value(kind: VkClass, class: new_class("Future"))
+    self.future_class.class.parent = self.object_class.class
+    self.future_class.def_native_method("on_success", add_success_callback)
+    self.future_class.def_native_method("on_failure", add_failure_callback)
+    self.future_class.class.parent = self.object_class.class
+    self.gene_ns.ns["Future"] = self.future_class
 
-    StringClass = Value(kind: VkClass, class: new_class("String"))
-    StringClass.class.parent = ObjectClass.class
-    GENE_NS.ns["String"] = StringClass
-    GLOBAL_NS.ns["String"] = StringClass
-    StringClass.def_native_method("size", string_size)
-    StringClass.def_native_method("to_i", string_to_i)
-    StringClass.def_native_method("append", string_append)
-    StringClass.def_native_method("substr", string_substr)
-    StringClass.def_native_method("split", string_split)
-    StringClass.def_native_method("contains", string_contains)
-    StringClass.def_native_method("index", string_index)
-    StringClass.def_native_method("rindex", string_rindex)
-    StringClass.def_native_method("char_at", string_char_at)
-    StringClass.def_native_method("trim", string_trim)
-    StringClass.def_native_method("starts_with", string_starts_with)
-    StringClass.def_native_method("ends_with", string_ends_with)
-    StringClass.def_native_method("to_uppercase", string_to_uppercase)
-    StringClass.def_native_method("to_lowercase", string_to_lowercase)
-    StringClass.def_native_method "replace", proc(self: Value, args: Value): Value {.name:"string_replace".} =
+    self.string_class = Value(kind: VkClass, class: new_class("String"))
+    self.string_class.class.parent = self.object_class.class
+    self.gene_ns.ns["String"] = self.string_class
+    self.global_ns.ns["String"] = self.string_class
+    self.string_class.def_native_method("size", string_size)
+    self.string_class.def_native_method("to_i", string_to_i)
+    self.string_class.def_native_method("append", string_append)
+    self.string_class.def_native_method("substr", string_substr)
+    self.string_class.def_native_method("split", string_split)
+    self.string_class.def_native_method("contains", string_contains)
+    self.string_class.def_native_method("index", string_index)
+    self.string_class.def_native_method("rindex", string_rindex)
+    self.string_class.def_native_method("char_at", string_char_at)
+    self.string_class.def_native_method("trim", string_trim)
+    self.string_class.def_native_method("starts_with", string_starts_with)
+    self.string_class.def_native_method("ends_with", string_ends_with)
+    self.string_class.def_native_method("to_uppercase", string_to_uppercase)
+    self.string_class.def_native_method("to_lowercase", string_to_lowercase)
+    self.string_class.def_native_method "replace", proc(self: Value, args: Value): Value {.name:"string_replace".} =
       var first = args.gene_children[0]
       var second = args.gene_children[1]
       case first.kind:
@@ -440,100 +440,100 @@ proc init*() =
       else:
         todo("string_replace " & $first.kind)
 
-    SymbolClass = Value(kind: VkClass, class: new_class("Symbol"))
-    SymbolClass.class.parent = ObjectClass.class
-    GENE_NS.ns["Symbol"] = SymbolClass
-    GLOBAL_NS.ns["Symbol"] = SymbolClass
+    self.symbol_class = Value(kind: VkClass, class: new_class("Symbol"))
+    self.symbol_class.class.parent = self.object_class.class
+    self.gene_ns.ns["Symbol"] = self.symbol_class
+    self.global_ns.ns["Symbol"] = self.symbol_class
 
-    ComplexSymbolClass = Value(kind: VkClass, class: new_class("ComplexSymbol"))
-    ComplexSymbolClass.class.parent = ObjectClass.class
-    ComplexSymbolClass.def_native_method "parts", proc(self: Value, args: Value): Value {.name:"complex_symbol_parts".} =
+    self.complex_symbol_class = Value(kind: VkClass, class: new_class("ComplexSymbol"))
+    self.complex_symbol_class.class.parent = self.object_class.class
+    self.complex_symbol_class.def_native_method "parts", proc(self: Value, args: Value): Value {.name:"complex_symbol_parts".} =
       result = new_gene_vec()
       for item in self.csymbol:
         result.vec.add(item)
-    GENE_NS.ns["ComplexSymbol"] = ComplexSymbolClass
-    GLOBAL_NS.ns["ComplexSymbol"] = ComplexSymbolClass
+    self.gene_ns.ns["ComplexSymbol"] = self.complex_symbol_class
+    self.global_ns.ns["ComplexSymbol"] = self.complex_symbol_class
 
-    ArrayClass = Value(kind: VkClass, class: new_class("Array"))
-    ArrayClass.class.parent = ObjectClass.class
-    ArrayClass.def_native_method("size", array_size)
-    ArrayClass.def_native_method("add", array_add)
-    ArrayClass.def_native_method("del", array_del)
-    ArrayClass.def_native_method("empty", array_empty)
-    ArrayClass.def_native_method("contains", array_contains)
-    GENE_NS.ns["Array"] = ArrayClass
-    GLOBAL_NS.ns["Array"] = ArrayClass
+    self.array_class = Value(kind: VkClass, class: new_class("Array"))
+    self.array_class.class.parent = self.object_class.class
+    self.array_class.def_native_method("size", array_size)
+    self.array_class.def_native_method("add", array_add)
+    self.array_class.def_native_method("del", array_del)
+    self.array_class.def_native_method("empty", array_empty)
+    self.array_class.def_native_method("contains", array_contains)
+    self.gene_ns.ns["Array"] = self.array_class
+    self.global_ns.ns["Array"] = self.array_class
 
-    MapClass = Value(kind: VkClass, class: new_class("Map"))
-    MapClass.class.parent = ObjectClass.class
-    MapClass.def_native_method("size", map_size)
-    MapClass.def_native_method("keys", map_keys)
-    MapClass.def_native_method("values", map_values)
-    MapClass.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"map_contains".} =
+    self.map_class = Value(kind: VkClass, class: new_class("Map"))
+    self.map_class.class.parent = self.object_class.class
+    self.map_class.def_native_method("size", map_size)
+    self.map_class.def_native_method("keys", map_keys)
+    self.map_class.def_native_method("values", map_values)
+    self.map_class.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"map_contains".} =
       self.map.has_key(args.gene_children[0].str.to_key)
-    GENE_NS.ns["Map"] = MapClass
-    GLOBAL_NS.ns["Map"] = MapClass
+    self.gene_ns.ns["Map"] = self.map_class
+    self.global_ns.ns["Map"] = self.map_class
 
-    GeneClass = Value(kind: VkClass, class: new_class("Gene"))
-    GeneClass.class.parent = ObjectClass.class
-    GeneClass.def_native_method("type", gene_type)
-    GeneClass.def_native_method("props", gene_props)
-    GeneClass.def_native_method("children", gene_children)
-    GeneClass.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"gene_contains".} =
+    self.gene_class = Value(kind: VkClass, class: new_class("Gene"))
+    self.gene_class.class.parent = self.object_class.class
+    self.gene_class.def_native_method("type", gene_type)
+    self.gene_class.def_native_method("props", gene_props)
+    self.gene_class.def_native_method("children", gene_children)
+    self.gene_class.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"gene_contains".} =
       var s = args.gene_children[0].str
       result = self.gene_props.has_key(s.to_key)
-    GENE_NS.ns["Gene"] = GeneClass
-    GLOBAL_NS.ns["Gene"] = GeneClass
+    self.gene_ns.ns["Gene"] = self.gene_class
+    self.global_ns.ns["Gene"] = self.gene_class
 
-    FunctionClass = Value(kind: VkClass, class: new_class("Function"))
-    FunctionClass.class.parent = ObjectClass.class
-    FunctionClass.def_native_method "call", proc(self: Value, args: Value): Value {.name:"function_call".} =
+    self.function_class = Value(kind: VkClass, class: new_class("Function"))
+    self.function_class.class.parent = self.object_class.class
+    self.function_class.def_native_method "call", proc(self: Value, args: Value): Value {.name:"function_call".} =
       VM.call(new_frame(), self, args)
 
-    FileClass = Value(kind: VkClass, class: new_class("File"))
-    FileClass.class.parent = ObjectClass.class
-    FileClass.class.ns["read"] = Value(kind: VkNativeFn, native_fn: file_read)
-    FileClass.class.ns["read_async"] = Value(kind: VkNativeFn, native_fn: file_read_async)
-    FileClass.class.ns["write"] = Value(kind: VkNativeFn, native_fn: file_write)
-    FileClass.def_native_method("read", file_read)
-    GENE_NS.ns["File"] = FileClass
+    self.file_class = Value(kind: VkClass, class: new_class("File"))
+    self.file_class.class.parent = self.object_class.class
+    self.file_class.class.ns["read"] = Value(kind: VkNativeFn, native_fn: file_read)
+    self.file_class.class.ns["read_async"] = Value(kind: VkNativeFn, native_fn: file_read_async)
+    self.file_class.class.ns["write"] = Value(kind: VkNativeFn, native_fn: file_write)
+    self.file_class.def_native_method("read", file_read)
+    self.gene_ns.ns["File"] = self.file_class
 
     var os_ns = new_namespace("os")
     os_ns["exec"] = Value(kind: VkNativeFn, native_fn: os_exec)
-    GENE_NS.ns["os"] = Value(kind: VkNamespace, ns: os_ns)
+    self.gene_ns.ns["os"] = Value(kind: VkNamespace, ns: os_ns)
 
     var json_ns = new_namespace("json")
     json_ns["parse"] = Value(kind: VkNativeFn, native_fn: json_parse)
-    GENE_NS.ns["json"] = Value(kind: VkNamespace, ns: json_ns)
+    self.gene_ns.ns["json"] = Value(kind: VkNamespace, ns: json_ns)
 
     var csv_ns = new_namespace("csv")
     csv_ns["parse"] = Value(kind: VkNativeFn, native_fn: csv_parse)
-    GENE_NS.ns["csv"] = Value(kind: VkNamespace, ns: csv_ns)
+    self.gene_ns.ns["csv"] = Value(kind: VkNamespace, ns: csv_ns)
 
-    DateClass = Value(kind: VkClass, class: new_class("Date"))
-    DateClass.class.parent = ObjectClass.class
-    DateClass.def_native_method("year", date_year)
+    self.date_class = Value(kind: VkClass, class: new_class("Date"))
+    self.date_class.class.parent = self.object_class.class
+    self.date_class.def_native_method("year", date_year)
 
-    DateTimeClass = Value(kind: VkClass, class: new_class("DateTime"))
-    DateTimeClass.class.parent = DateClass.class
-    DateTimeClass.def_native_method("elapsed", time_elapsed)
+    self.datetime_class = Value(kind: VkClass, class: new_class("DateTime"))
+    self.datetime_class.class.parent = self.date_class.class
+    self.datetime_class.def_native_method("elapsed", time_elapsed)
 
-    TimeClass = Value(kind: VkClass, class: new_class("Time"))
-    TimeClass.class.parent = ObjectClass.class
-    TimeClass.def_native_method("hour", time_hour)
+    self.time_class = Value(kind: VkClass, class: new_class("Time"))
+    self.time_class.class.parent = self.object_class.class
+    self.time_class.def_native_method("hour", time_hour)
 
-    SelectorClass = Value(kind: VkClass, class: new_class("Selector"))
-    SelectorClass.class.parent = ObjectClass.class
-    # SelectorClass.ns["descendants"] = ...
+    self.selector_class = Value(kind: VkClass, class: new_class("Selector"))
+    self.selector_class.class.parent = self.object_class.class
+    # self.selector_class.ns["descendants"] = ...
 
-    PackageClass = Value(kind: VkClass, class: new_class("Package"))
-    PackageClass.class.parent = ObjectClass.class
-    PackageClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"package_name".} =
+    self.package_class = Value(kind: VkClass, class: new_class("Package"))
+    self.package_class.class.parent = self.object_class.class
+    self.package_class.def_native_method "name", proc(self: Value, args: Value): Value {.name:"package_name".} =
       self.pkg.name
-    GENE_NS.ns["Package"] = PackageClass
+    self.gene_ns.ns["Package"] = self.package_class
 
-    GENE_NS.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
-    GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
+    self.gene_ns.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
+    self.gene_ns.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
 
     discard self.eval(self.runtime.pkg, """
     ($with gene/String

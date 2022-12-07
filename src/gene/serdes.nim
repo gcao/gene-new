@@ -168,8 +168,8 @@ proc translate_deser(value: Value): Expr =
   )
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
     var serdes = new_namespace("serdes")
     serdes["serialize"] = new_gene_processor(translate_ser)
     serdes["deserialize"] = new_gene_processor(translate_deser)
-    GENE_NS.ns["serdes"] = Value(kind: VkNamespace, ns: serdes)
+    self.gene_ns.ns["serdes"] = Value(kind: VkNamespace, ns: serdes)

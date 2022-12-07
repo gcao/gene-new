@@ -63,27 +63,27 @@ proc translate_try(value: Value): Expr =
   for item in value.gene_children:
     case state:
     of TryBody:
-      if item == CATCH:
+      if item.is_symbol("catch"):
         state = TryCatch
-      elif item == FINALLY:
+      elif item.is_symbol("finally"):
         state = TryFinally
       else:
         body.add(item)
     of TryCatch:
-      if item == CATCH:
+      if item.is_symbol("catch"):
         not_allowed()
-      elif item == FINALLY:
+      elif item.is_symbol("finally"):
         not_allowed()
       else:
         state = TryCatchBody
         catch_exception = item
     of TryCatchBody:
-      if item == CATCH:
+      if item.is_symbol("catch"):
         state = TryCatch
         r.catches.add((translate(catch_exception), translate(catch_body)))
         catch_exception = nil
         catch_body = @[]
-      elif item == FINALLY:
+      elif item.is_symbol("finally"):
         state = TryFinally
       else:
         catch_body.add(item)
@@ -112,11 +112,11 @@ proc eval_throw(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     elif class.kind == VkException:
       raise class.exception
     elif class.kind == VkString:
-      raise new_gene_exception(class.str, Value(kind: VkInstance, instance_class: ExceptionClass.class))
+      raise new_gene_exception(class.str, Value(kind: VkInstance, instance_class: VM.exception_class.class))
     else:
       todo()
   else:
-    raise new_gene_exception(Value(kind: VkInstance, instance_class: ExceptionClass.class))
+    raise new_gene_exception(Value(kind: VkInstance, instance_class: VM.exception_class.class))
 
 proc translate_throw(value: Value): Expr =
   var r = ExThrow(

@@ -29,7 +29,7 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     scope.set_parent(old_scope, old_scope.max)
     frame.scope = scope
 
-    scope.def_member(expr.name.to_key, Nil)
+    scope.def_member(expr.name.to_key, Value(kind: VkNil))
     var loop_output = new_gene_vec(@[])
     scope.def_member(LOOP_OUTPUT_KEY, loop_output)
     var data = self.eval(frame, expr.data)
@@ -69,8 +69,8 @@ proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
     scope.set_parent(old_scope, old_scope.max)
     frame.scope = scope
 
-    scope.def_member(expr.key_name.to_key, Nil)
-    scope.def_member(expr.val_name.to_key, Nil)
+    scope.def_member(expr.key_name.to_key, Value(kind: VkNil))
+    scope.def_member(expr.val_name.to_key, Value(kind: VkNil))
     scope.def_member(LOOP_OUTPUT_KEY, @[])
     var data = self.eval(frame, expr.data)
     case data.kind:
@@ -121,6 +121,6 @@ proc translate_emit(value: Value): Expr =
 
 proc init*() =
   GeneTranslators["for"] = translate_for
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GLOBAL_NS.ns["$emit"] = new_gene_processor(translate_emit)
-    GENE_NS.ns["$emit"] = GLOBAL_NS.ns["$emit"]
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    self.global_ns.ns["$emit"] = new_gene_processor(translate_emit)
+    self.gene_ns.ns["$emit"] = self.global_ns.ns["$emit"]

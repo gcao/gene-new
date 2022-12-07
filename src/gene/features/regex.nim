@@ -27,13 +27,13 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     var i = 0
     for item in m.captures.to_seq:
       var name = "$~" & $i
-      var value = Nil
+      var value = Value(kind: VkNil)
       if item.is_some():
         value = item.get()
       frame.scope.def_member(name.to_key, value)
       i += 1
   else:
-    return Nil
+    return Value(kind: VkNil)
 
 proc eval_not_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)

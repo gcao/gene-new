@@ -23,5 +23,5 @@ proc translate_include(value: Value): Expr =
   )
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["$include"] = new_gene_processor(translate_include)
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    self.global_ns.ns["$include"] = new_gene_processor(translate_include)

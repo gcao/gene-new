@@ -70,7 +70,7 @@ proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var class = new_class(e.name)
   result = Value(kind: VkClass, class: class)
   if e.parent == nil:
-    class.parent = ObjectClass.class
+    class.parent = VM.object_class.class
   else:
     var parent = self.eval(frame, e.parent)
     class.parent = parent.class
@@ -119,7 +119,7 @@ proc eval_object(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   var class_val = Value(kind: VkClass, class: class)
   result = new_gene_instance(class, Table[MapKey, Value]())
   if e.parent == nil:
-    class.parent = ObjectClass.class
+    class.parent = VM.object_class.class
   else:
     var parent = self.eval(frame, e.parent)
     class.parent = parent.class
@@ -144,7 +144,7 @@ proc eval_object(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 
   var init = class.get_method(INIT_KEY)
   if init != nil:
-    discard self.invoke(frame, result, INIT_KEY, Nil)
+    discard self.invoke(frame, result, INIT_KEY, Value(kind: VkNil))
 
 proc translate_object(value: Value): Expr =
   var e = ExObject(
@@ -161,7 +161,7 @@ proc translate_object(value: Value): Expr =
     todo()
 
   var body_start = 1
-  if value.gene_children.len >= 3 and value.gene_children[1] == LESS_THAN:
+  if value.gene_children.len >= 3 and value.gene_children[1].is_symbol("<="):
     body_start = 3
     e.parent = translate(value.gene_children[2])
   e.body = translate(value.gene_children[body_start..^1])
@@ -350,7 +350,7 @@ proc eval_method_eq*(self: VirtualMachine, frame: Frame, target: Value, expr: va
   )
 
 proc translate_method(value: Value): Expr =
-  if value.gene_children.len >= 3 and value.gene_children[1] == Equals:
+  if value.gene_children.len >= 3 and value.gene_children[1].is_symbol("="):
     return ExMethodEq(
       evaluator: eval_method_eq,
       name: value.gene_children[0].str,
