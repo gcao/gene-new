@@ -36,7 +36,7 @@ import ./helpers
 # Parsing from a stream (like a log file that is being written to continually, or an incoming socket)
 # Parsing can be interrupted in these cases - what is the best way to stop?
 
-test_parser "nil", Nil
+test_parser "nil", Value(kind: VkNil)
 test_parser "true", true
 test_parser "false", false
 
@@ -116,10 +116,10 @@ test_parser "{}", Table[string, Value]()
 test_parser "{^a 1}", {"a": new_gene_int(1)}.toTable
 
 test_parser "{^a^b 1}", {"a": new_gene_map({"b": new_gene_int(1)}.toTable)}.toTable
-test_parser "{^a^^b}", {"a": new_gene_map({"b": True}.toTable)}.toTable
-test_parser "{^a^!b}", {"a": new_gene_map({"b": False}.toTable)}.toTable
+test_parser "{^a^^b}", {"a": new_gene_map({"b": new_gene_bool(true)}.toTable)}.toTable
+test_parser "{^a^!b}", {"a": new_gene_map({"b": new_gene_bool(false)}.toTable)}.toTable
 test_parser "{^a^b 1 ^a^c 2}", {"a": new_gene_map({"b": new_gene_int(1), "c": new_gene_int(2)}.toTable)}.toTable
-test_parser "{^a^^b ^a^c 2}", {"a": new_gene_map({"b": True, "c": new_gene_int(2)}.toTable)}.toTable
+test_parser "{^a^^b ^a^c 2}", {"a": new_gene_map({"b": new_gene_bool(true), "c": new_gene_int(2)}.toTable)}.toTable
 # test_parser "{^a^b 1 ^a {^c 2}}", {"a": new_gene_map({"b": new_gene_int(1), "c": new_gene_int(2)}.toTable)}.toTable
 test_parser_error "{^a^b 1 ^a 2}"
 test_parser_error "{^a^b 1 ^a {^c 2}}"
@@ -127,7 +127,7 @@ test_parser_error "{^a^b 1 ^a {^c 2}}"
 test_parser "(_ ^a^b 1)", proc(r: Value) =
   assert r.gene_props["a"].map["b"] == 1
 test_parser "(_ ^a^^b 1)", proc(r: Value) =
-  assert r.gene_props["a"].map["b"] == True
+  assert r.gene_props["a"].map["b"] == new_gene_bool(true)
   assert r.gene_children[0] == 1
 
 test_parser "[]", new_gene_vec()
@@ -159,6 +159,10 @@ test_parser "(1 2 3)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_children == @[2, 3]
 
+test_parser "(nil 2 3)", proc(r: Value) =
+  check r.gene_type.kind == VkNil
+  check r.gene_children == @[2, 3]
+
 test_parser """
   (_ 1 "test")
 """, proc(r: Value) =
@@ -177,17 +181,17 @@ test_parser "(1 2 ^a 3 4)", proc(r: Value) =
 
 test_parser "(1 ^^a 2 3)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_props == {"a": True}.toTable
+  check r.gene_props == {"a": new_gene_bool(true)}.toTable
   check r.gene_children == @[2, 3]
 
 test_parser "(1 ^!a 2 3)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_props == {"a": Nil}.toTable()
+  check r.gene_props == {"a": Value(kind: VkNil)}.toTable()
   check r.gene_children == @[2, 3]
 
 test_parser "{^^x ^!y ^^z}", proc(r: Value) =
   check r.kind == VkMap
-  check r.map == {"x": True, "y": Nil, "z": True}.toTable
+  check r.map == {"x": new_gene_bool(true), "y": Value(kind: VkNil), "z": new_gene_bool(true)}.toTable
 
 test_parser ":foo", proc(r: Value) =
   check r.kind == VkQuote

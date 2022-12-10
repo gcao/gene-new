@@ -74,7 +74,7 @@ proc normalize_if(self: Value) =
       of IsElif:
         if input == nil:
           not_allowed()
-        elif input.is_symbol("elif"):
+        elif input.is_symbol("not"):
           state = IsElifNot
         else:
           elifs.add(input)

@@ -770,9 +770,6 @@ macro name*(name: static string, f: untyped): untyped =
       `result`
       `id`
 
-proc is_nil*(v: Value): bool =
-  v == nil or v.kind == VkNil
-
 proc is_symbol*(v: Value, s: string): bool =
   v.kind == VkSymbol and v.str == s
 

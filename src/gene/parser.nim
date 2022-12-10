@@ -522,7 +522,6 @@ proc interpret_token(token: string): Value =
 proc read_gene_type(self: var Parser): Value =
   var delimiter = ')'
   # the bufpos should be already be past the opening paren etc.
-  var count = 0
   while true:
     self.skip_ws()
     var pos = self.bufpos
@@ -532,7 +531,7 @@ proc read_gene_type(self: var Parser): Value =
       raise new_exception(ParseError, format(msg, delimiter, self.filename, self.line_number))
 
     if ch == delimiter:
-      # Do not increase position because we need to read other components in 
+      # Do not increase position because we need to read other components in
       # inc(pos)
       # p.bufpos = pos
       break
@@ -542,14 +541,13 @@ proc read_gene_type(self: var Parser): Value =
       inc(pos)
       self.bufpos = pos
       result = m(self)
-      if result != nil:
-        inc(count)
-        break
+      # if result != nil:
+      #   break
     else:
       result = self.read()
-      if result != nil:
-        inc(count)
-        break
+      # if result != nil:
+      #   break
+    break
 
 proc to_keys(self: string): seq[string] =
   # let parts = self.split("^")

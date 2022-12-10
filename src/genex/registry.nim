@@ -165,7 +165,7 @@ proc init*() =
     MiddlewareClass = Value(kind: VkClass, class: new_class("Middleware"))
 
     self.genex_ns.ns["Registry"] = RegistryClass
-    RegistryClass.class.parent = VM.object_class.class
+    RegistryClass.class.parent = self.object_class.class
     RegistryClass.def_native_constructor proc(args: Value): Value {.name:"registry_new".} =
       var name = ""
       if args.gene_children.len > 0:

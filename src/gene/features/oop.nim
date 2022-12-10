@@ -161,7 +161,7 @@ proc translate_object(value: Value): Expr =
     todo()
 
   var body_start = 1
-  if value.gene_children.len >= 3 and value.gene_children[1].is_symbol("<="):
+  if value.gene_children.len >= 3 and value.gene_children[1].is_symbol("<"):
     body_start = 3
     e.parent = translate(value.gene_children[2])
   e.body = translate(value.gene_children[body_start..^1])
