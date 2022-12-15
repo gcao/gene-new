@@ -91,7 +91,7 @@ proc translate_case(node: Value): Expr =
       elif input.is_symbol("when"):
         state = CsWhen
         update_mapping(cond, logic)
-      elif input.is_symbol("then"):
+      elif input.is_symbol("else"):
         state = CsElse
         update_mapping(cond, logic)
         logic = @[]

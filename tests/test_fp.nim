@@ -161,7 +161,7 @@ test_interpreter """
     2
   )
   (f)
-""", Nil
+""", Value(kind: VkNil)
 
 test_interpreter """
   (fn fib n

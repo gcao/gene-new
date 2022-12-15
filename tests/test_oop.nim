@@ -101,7 +101,7 @@ test_interpreter """
 test_interpreter """
   (class A)
 """, proc(r: Value) =
-  check r.class.parent == ObjectClass.class
+  check r.class.parent == VM.object_class.class
 
 test_interpreter """
   (class A)

@@ -88,7 +88,7 @@ test_interpreter """
   (var x (_ 1))
   (match [a b = nil] x)
   b
-""", Nil
+""", Value(kind: VkNil)
 
 test_interpreter """
   (match

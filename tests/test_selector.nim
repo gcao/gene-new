@@ -92,11 +92,11 @@ test_interpreter """
 
 test_interpreter """
   ({} ./ "a")
-""", Nil
+""", Value(kind: VkNil)
 
 test_interpreter """
   ({} ./ "a" 1)
-""", Nil
+""", Value(kind: VkNil)
 
 test_interpreter """
   ({^a "A"} ./a)
