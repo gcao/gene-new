@@ -152,7 +152,6 @@ type
     of VkEnum:
       `enum`*: Enum
     of VkEnumMember:
-      `enum_parent`*: Enum
       `enum_member`*: EnumMember
     of VkStream:
       stream*: seq[Value]
@@ -527,7 +526,7 @@ type
     members*: Table[string, EnumMember]
 
   EnumMember* = ref object
-    parent*: Enum
+    # parent*: Enum
     name*: string
     value*: int
 
@@ -1354,10 +1353,14 @@ proc `[]`*(self: Enum, name: string): Value =
   todo()
 
 proc add_member*(self: var Enum, name: string, value: int) =
-  self.members[name] = EnumMember(parent: self, name: name, value: value)
+  self.members[name] = EnumMember(
+    # parent: self,
+    name: name,
+    value: value
+  )
 
-proc `==`*(this, that: EnumMember): bool =
-  return this.parent == that.parent and this.name == that.name
+# proc `==`*(this, that: EnumMember): bool =
+#   return this.parent == that.parent and this.name == that.name
 
 #################### Date & Time #################
 
