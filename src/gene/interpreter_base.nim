@@ -840,9 +840,11 @@ proc translate_wrap*(translate: Translator): Translator =
 #################### VM ##########################
 
 proc init_app_and_vm*() =
-  var app = new_app()
-  app.cmd = "TODO" # combine get_app_filename() and command_line_params()
-  VM = new_vm(app)
+  # if not VM.is_nil:
+  #   `=destroy`(VM)
+  VM = new_vm()
+  VM.app = new_app()
+  VM.app.cmd = "TODO" # combine get_app_filename() and command_line_params()
 
   let gene_home = get_env("GENE_HOME", parent_dir(get_app_dir()))
   let gene_pkg = new_package(gene_home)

@@ -831,10 +831,8 @@ converter gene_to_ns*(v: Value): Namespace = todo()
 
 #################### VM ##########################
 
-proc new_vm*(app: Application): VirtualMachine =
-  result = VirtualMachine(
-    app: app,
-  )
+proc new_vm*(): VirtualMachine =
+  return VirtualMachine()
 
 #################### Application #################
 
