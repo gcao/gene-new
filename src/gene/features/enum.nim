@@ -16,6 +16,7 @@ proc translate_enum(value: Value): Expr =
     evaluator: eval_enum,
   )
   var e = new_enum(value.gene_children[0].str)
+  r.data = Value(kind: VkEnum, `enum`: e)
   var i = 1
   var v = 0
   while i < value.gene_children.len:
@@ -25,10 +26,9 @@ proc translate_enum(value: Value): Expr =
       i += 1
       v = value.gene_children[i].int
       i += 1
-    e.add_member(name, v)
+    r.data.add_member(name, v)
     v += 1
 
-  r.data = Value(kind: VkEnum, `enum`: e)
   return r
 
 proc init*() =

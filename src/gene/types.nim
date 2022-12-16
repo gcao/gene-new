@@ -526,7 +526,7 @@ type
     members*: Table[string, EnumMember]
 
   EnumMember* = ref object
-    # parent*: Enum
+    parent*: Value
     name*: string
     value*: int
 
@@ -1350,15 +1350,15 @@ proc `[]`*(self: Enum, name: string): Value =
   # return new_gene_internal(self.members[name])
   todo()
 
-proc add_member*(self: var Enum, name: string, value: int) =
-  self.members[name] = EnumMember(
-    # parent: self,
+proc add_member*(self: var Value, name: string, value: int) =
+  self.enum.members[name] = EnumMember(
+    parent: self,
     name: name,
     value: value
   )
 
-# proc `==`*(this, that: EnumMember): bool =
-#   return this.parent == that.parent and this.name == that.name
+proc `==`*(this, that: EnumMember): bool =
+  return this.parent == that.parent and this.name == that.name
 
 #################### Date & Time #################
 
