@@ -36,6 +36,9 @@ proc translate_do(value: Value): Expr =
     r.children.add translate(item)
   result = r
 
+proc translate_noop(value: Value): Expr =
+  new_ex_literal(Value(kind: VkNil))
+
 proc eval_void(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   for item in cast[ExGroup](expr).children.mitems:
     discard self.eval(frame, item)
@@ -168,6 +171,7 @@ proc translate_tap(value: Value): Expr =
 
 proc init*() =
   GeneTranslators["do"] = translate_do
+  GeneTranslators["noop"] = translate_noop
   GeneTranslators["void"] = translate_void
   GeneTranslators["..."] = translate_explode
   GeneTranslators["$"] = translate_string
