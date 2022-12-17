@@ -164,7 +164,8 @@ proc translate_bool(value: Value): Expr =
   )
 
 proc init*() =
-  GeneTranslators["if"] = translate_if
-  GeneTranslators["not"] = translate_not
-  GeneTranslators["!"] = translate_not
-  GeneTranslators["!!"] = translate_bool
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["if"] = translate_if
+    VM.gene_translators["not"] = translate_not
+    VM.gene_translators["!"] = translate_not
+    VM.gene_translators["!!"] = translate_bool

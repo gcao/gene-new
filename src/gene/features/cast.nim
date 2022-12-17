@@ -24,4 +24,5 @@ proc translate_cast(value: Value): Expr =
   )
 
 proc init*() =
-  GeneTranslators["cast"] = translate_cast
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["cast"] = translate_cast

@@ -455,8 +455,9 @@ proc translate_invoke_selector4*(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["@"] = translate_selector
-  GeneTranslators["@*"] = translate_selector
-  GeneTranslators["@."] = translate_selector
   VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["@"] = translate_selector
+    VM.gene_translators["@*"] = translate_selector
+    VM.gene_translators["@."] = translate_selector
+
     self.app.ns["$set"] = new_gene_processor(translate_set)

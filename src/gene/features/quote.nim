@@ -17,4 +17,5 @@ proc translate_quote(value: Value): Expr =
   )
 
 proc init*() =
-  Translators[VkQuote] = translate_quote
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.translators[VkQuote] = translate_quote

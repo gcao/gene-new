@@ -61,4 +61,5 @@ proc translate_block(value: Value): Expr =
   )
 
 proc init*() =
-  GeneTranslators["->"] = translate_block
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["->"] = translate_block

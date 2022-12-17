@@ -1,4 +1,3 @@
-import tables
 import asyncdispatch
 
 import gene/types except eval, eval_catch, eval_wrap, translate_catch, translate_wrap, fn_wrap, method_catch, method_wrap
@@ -11,8 +10,6 @@ import gene/extension/base
 
 proc set_globals*(
   g_disp          : PDispatcher,
-  translators     : TableRef[ValueKind, Translator],
-  gene_translators: TableRef[string, Translator],
   vm              : VirtualMachine,
   ecatch          : EvalCatch,
   ewrap           : EvalWrap,
@@ -24,8 +21,6 @@ proc set_globals*(
   mwrap           : NativeMethodWrap,
 ) {.dynlib exportc.} =
   set_global_dispatcher(g_disp)
-  Translators     = translators
-  GeneTranslators = gene_translators
   VM              = vm
   eval_catch      = ecatch
   eval_wrap       = ewrap

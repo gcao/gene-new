@@ -242,8 +242,9 @@ proc translate_import*(value: Value): Expr =
   return e
 
 proc init*() =
-  GeneTranslators["import"] = translate_import
-  # $break_from_module is for early exit from a module
-  # GeneTranslators["$break_from_module"] = translate_break_from_module
-  # Q: Should we have generic support for early exit from module, class body etc?
-  # A: probably not
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["import"] = translate_import
+    # $break_from_module is for early exit from a module
+    # VM.gene_translators["$break_from_module"] = translate_break_from_module
+    # Q: Should we have generic support for early exit from module, class body etc?
+    # A: probably not

@@ -44,4 +44,5 @@ proc translate_match(value: Value): Expr =
   )
 
 proc init*() =
-  GeneTranslators["match"] = translate_match
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["match"] = translate_match

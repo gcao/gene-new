@@ -60,4 +60,5 @@ proc translate_var(value: Value): Expr =
     todo($name.kind)
 
 proc init*() =
-  GeneTranslators["var"] = translate_var
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["var"] = translate_var

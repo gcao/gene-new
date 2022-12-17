@@ -56,4 +56,5 @@ proc translate_dep(value: Value): Expr =
   return e
 
 proc init*() =
-  GeneTranslators["$dep"] = translate_dep
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["$dep"] = translate_dep

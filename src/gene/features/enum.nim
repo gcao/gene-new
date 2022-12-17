@@ -32,4 +32,5 @@ proc translate_enum(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["enum"] = translate_enum
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["enum"] = translate_enum

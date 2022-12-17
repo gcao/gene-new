@@ -258,21 +258,22 @@ proc translate_logic*(children: seq[Value]): Expr =
     not_allowed("translate_logic " & $children)
 
 proc init*() =
-  GeneTranslators["+"  ] = translate_arithmetic
-  GeneTranslators["-"  ] = translate_arithmetic
-  GeneTranslators["*"  ] = translate_arithmetic
-  GeneTranslators["/"  ] = translate_arithmetic
-  GeneTranslators["**" ] = translate_arithmetic # power
-  GeneTranslators[">>" ] = translate_arithmetic # shift right
-  GeneTranslators["<<" ] = translate_arithmetic # shift left
-  GeneTranslators["&"  ] = translate_arithmetic  # bit-and
-  GeneTranslators["|"  ] = translate_arithmetic  # bit-or
-  GeneTranslators["==" ] = translate_arithmetic
-  GeneTranslators["!=" ] = translate_arithmetic
-  GeneTranslators["<"  ] = translate_arithmetic
-  GeneTranslators["<=" ] = translate_arithmetic
-  GeneTranslators[">"  ] = translate_arithmetic
-  GeneTranslators[">=" ] = translate_arithmetic
-  GeneTranslators["&&" ] = translate_arithmetic
-  GeneTranslators["||" ] = translate_arithmetic
-  GeneTranslators["||*"] = translate_arithmetic  # xor
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["+"  ] = translate_arithmetic
+    VM.gene_translators["-"  ] = translate_arithmetic
+    VM.gene_translators["*"  ] = translate_arithmetic
+    VM.gene_translators["/"  ] = translate_arithmetic
+    VM.gene_translators["**" ] = translate_arithmetic # power
+    VM.gene_translators[">>" ] = translate_arithmetic # shift right
+    VM.gene_translators["<<" ] = translate_arithmetic # shift left
+    VM.gene_translators["&"  ] = translate_arithmetic  # bit-and
+    VM.gene_translators["|"  ] = translate_arithmetic  # bit-or
+    VM.gene_translators["==" ] = translate_arithmetic
+    VM.gene_translators["!=" ] = translate_arithmetic
+    VM.gene_translators["<"  ] = translate_arithmetic
+    VM.gene_translators["<=" ] = translate_arithmetic
+    VM.gene_translators[">"  ] = translate_arithmetic
+    VM.gene_translators[">=" ] = translate_arithmetic
+    VM.gene_translators["&&" ] = translate_arithmetic
+    VM.gene_translators["||" ] = translate_arithmetic
+    VM.gene_translators["||*"] = translate_arithmetic  # xor

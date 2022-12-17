@@ -170,27 +170,27 @@ proc translate_tap(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["do"] = translate_do
-  GeneTranslators["noop"] = translate_noop
-  GeneTranslators["void"] = translate_void
-  GeneTranslators["..."] = translate_explode
-  GeneTranslators["$"] = translate_string
-  GeneTranslators["$with"] = translate_with
-  # In IDE, a breakpoint should be set in eval_debug and when running in debug
-  # mode, execution should pause and allow the developer to debug the application
-  # from there.
-  GeneTranslators["$debug"] = translate_debug
-
-  # Code that'll be run if current module is the main module
-  # Run like "if isMainModule:" in Python
-  # It can appear on top level or inside functions etc.
-  # Example:
-  #   ($if_main
-  #     ...
-  #   )
-  GeneTranslators["$if_main"] = translate_if_main
-  GeneTranslators["$tap"] = translate_tap
-
   VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["do"] = translate_do
+    VM.gene_translators["noop"] = translate_noop
+    VM.gene_translators["void"] = translate_void
+    VM.gene_translators["..."] = translate_explode
+    VM.gene_translators["$"] = translate_string
+    VM.gene_translators["$with"] = translate_with
+    # In IDE, a breakpoint should be set in eval_debug and when running in debug
+    # mode, execution should pause and allow the developer to debug the application
+    # from there.
+    VM.gene_translators["$debug"] = translate_debug
+
+    # Code that'll be run if current module is the main module
+    # Run like "if isMainModule:" in Python
+    # It can appear on top level or inside functions etc.
+    # Example:
+    #   ($if_main
+    #     ...
+    #   )
+    VM.gene_translators["$if_main"] = translate_if_main
+    VM.gene_translators["$tap"] = translate_tap
+
     self.global_ns.ns["assert"] = new_gene_processor("assert", translate_assert)
     self.gene_ns.ns["assert"] = self.global_ns.ns["assert"]

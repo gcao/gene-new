@@ -17,8 +17,6 @@ type
 
   SetGlobals = proc(
     g_disp          : PDispatcher,
-    translators     : TableRef[ValueKind, Translator],
-    gene_translators: TableRef[string, Translator],
     vm              : VirtualMachine,
     eval_catch      : EvalCatch,
     eval_wrap       : EvalWrap,
@@ -61,8 +59,6 @@ proc load_dynlib*(pkg: Package, path: string): Module =
 proc call_set_globals(p: pointer) =
   cast[SetGlobals](p)(
     get_global_dispatcher(),
-    Translators,
-    GeneTranslators,
     VM,
     eval_catch,
     eval_wrap,

@@ -32,4 +32,5 @@ proc translate_while(value: Value): Expr =
   result = r
 
 proc init*() =
-  GeneTranslators["while"] = translate_while
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["while"] = translate_while

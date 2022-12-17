@@ -177,7 +177,7 @@ proc translate_gene(value: Value): Expr =
 
   case value.gene_type.kind:
   of VkSymbol:
-    var translator = GeneTranslators.get_or_default(value.gene_type.str, default_translator)
+    var translator = VM.gene_translators.get_or_default(value.gene_type.str, default_translator)
     return translator(value)
   of VkString:
     return translate_string(value)
@@ -192,4 +192,5 @@ proc translate_gene(value: Value): Expr =
     return default_translator(value)
 
 proc init*() =
-  Translators[VkGene] = translate_gene
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.translators[VkGene] = translate_gene

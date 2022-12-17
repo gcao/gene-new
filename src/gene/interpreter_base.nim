@@ -780,9 +780,6 @@ CONTINUE_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value
 
 #################### Translator ##################
 
-var Translators*     = new_table[ValueKind, Translator]()
-var GeneTranslators* = new_table[string, Translator]()
-
 proc default_translator(value: Value): Expr =
   case value.kind:
   of VkNil, VkBool, VkInt, VkFloat, VkRegex, VkTime:
@@ -795,7 +792,7 @@ proc default_translator(value: Value): Expr =
     todo($value)
 
 proc translate*(value: Value): Expr =
-  var translator = Translators.get_or_default(value.kind, default_translator)
+  var translator = VM.translators.get_or_default(value.kind, default_translator)
   translator(value)
 
 proc translate*(stmts: seq[Value]): Expr =

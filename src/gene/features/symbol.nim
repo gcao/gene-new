@@ -189,5 +189,6 @@ proc translate_definition*(name: Value, value: Expr): Expr =
     todo("translate_definition " & $name)
 
 proc init*() =
-  Translators[VkSymbol] = translate_symbol
-  Translators[VkComplexSymbol] = translate_complex_symbol
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.translators[VkSymbol] = translate_symbol
+    VM.translators[VkComplexSymbol] = translate_complex_symbol

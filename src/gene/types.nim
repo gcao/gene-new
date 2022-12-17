@@ -302,6 +302,9 @@ type
     modules*: Table[string, Namespace]
     repl_on_error*: bool
 
+    translators*: Table[ValueKind, Translator]
+    gene_translators*: Table[string, Translator]
+
     global_ns*     : Value
     gene_ns*       : Value
     gene_native_ns*: Value

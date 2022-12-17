@@ -24,4 +24,5 @@ proc translate_range(value: Value): Expr =
   new_ex_range(translate(value.gene_children[0]), translate(value.gene_children[1]))
 
 proc init*() =
-  GeneTranslators["range"] = translate_range
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["range"] = translate_range

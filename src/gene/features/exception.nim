@@ -129,5 +129,6 @@ proc translate_throw(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["try"] = translate_try
-  GeneTranslators["throw"] = translate_throw
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["try"] = translate_try
+    VM.gene_translators["throw"] = translate_throw

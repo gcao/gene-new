@@ -143,8 +143,9 @@ proc translate_bind(value: Value): Expr =
   return expr
 
 proc init*() =
-  GeneTranslators["fn"] = translate_fn
-  GeneTranslators["fnx"] = translate_fnx
-  GeneTranslators["fnxx"] = translate_fnx
-  GeneTranslators["return"] = translate_return
-  GeneTranslators["$bind"] = translate_bind
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["fn"] = translate_fn
+    VM.gene_translators["fnx"] = translate_fnx
+    VM.gene_translators["fnxx"] = translate_fnx
+    VM.gene_translators["return"] = translate_return
+    VM.gene_translators["$bind"] = translate_bind

@@ -51,4 +51,5 @@ proc translate_repeat(value: Value): Expr =
   result = r
 
 proc init*() =
-  GeneTranslators["repeat"] = translate_repeat
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["repeat"] = translate_repeat

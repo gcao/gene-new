@@ -61,6 +61,7 @@ proc translate_await(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["async"] = translate_async
-  GeneTranslators["await"] = translate_await
-  GeneTranslators["$await_all"] = translate_await
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["async"] = translate_async
+    VM.gene_translators["await"] = translate_await
+    VM.gene_translators["$await_all"] = translate_await

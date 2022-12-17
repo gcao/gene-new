@@ -27,4 +27,5 @@ proc translate_array(value: Value): Expr =
     cast[ExArray](result).children.add(translate(v))
 
 proc init*() =
-  Translators[VkVector] = translate_array
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.translators[VkVector] = translate_array

@@ -20,4 +20,5 @@ proc translate_map(value: Value): Expr =
     cast[ExMap](result).data[k] = translate(v)
 
 proc init*() =
-  Translators[VkMap] = translate_map
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.translators[VkMap] = translate_map

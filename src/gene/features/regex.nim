@@ -77,7 +77,8 @@ proc translate_regex*(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["$regex"] = translate_regex
-  # Handled in src/gene/features/gene.nim
-  # GeneTranslators["=~"] = translate_match
-  # GeneTranslators["!~"] = translate_match
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["$regex"] = translate_regex
+    # Handled in src/gene/features/gene.nim
+    # VM.gene_translators["=~"] = translate_match
+    # VM.gene_translators["!~"] = translate_match

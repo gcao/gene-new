@@ -111,4 +111,5 @@ proc translate_case(node: Value): Expr =
   result = expr
 
 proc init*() =
-  GeneTranslators["case"] = translate_case
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["case"] = translate_case

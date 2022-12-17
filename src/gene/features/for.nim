@@ -119,7 +119,8 @@ proc translate_emit(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["for"] = translate_for
   VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["for"] = translate_for
+
     self.global_ns.ns["$emit"] = new_gene_processor(translate_emit)
     self.gene_ns.ns["$emit"] = self.global_ns.ns["$emit"]

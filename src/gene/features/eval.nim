@@ -22,4 +22,5 @@ proc translate_eval(value: Value): Expr =
   return e
 
 proc init*() =
-  GeneTranslators["eval"] = translate_eval
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["eval"] = translate_eval

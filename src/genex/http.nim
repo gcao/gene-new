@@ -1,4 +1,4 @@
-import strutils
+import strutils, tables
 import asynchttpserver as stdhttp, asyncdispatch
 import httpclient, uri
 

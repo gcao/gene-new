@@ -92,12 +92,13 @@ proc translate_op_eq(value: Value): Expr =
     not_allowed("translate_op_eq " & $value)
 
 proc init*() =
-  GeneTranslators["="] = translate_assignment
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["="] = translate_assignment
 
-  GeneTranslators["+="] = translate_op_eq
-  GeneTranslators["-="] = translate_op_eq
-  GeneTranslators["*="] = translate_op_eq
-  GeneTranslators["/="] = translate_op_eq
-  GeneTranslators["**="] = translate_op_eq
-  GeneTranslators["&&="] = translate_op_eq
-  GeneTranslators["||="] = translate_op_eq
+    VM.gene_translators["+="] = translate_op_eq
+    VM.gene_translators["-="] = translate_op_eq
+    VM.gene_translators["*="] = translate_op_eq
+    VM.gene_translators["/="] = translate_op_eq
+    VM.gene_translators["**="] = translate_op_eq
+    VM.gene_translators["&&="] = translate_op_eq
+    VM.gene_translators["||="] = translate_op_eq

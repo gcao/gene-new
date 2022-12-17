@@ -45,4 +45,5 @@ proc translate_ns(value: Value): Expr =
   result = e
 
 proc init*() =
-  GeneTranslators["ns"] = translate_ns
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    VM.gene_translators["ns"] = translate_ns
