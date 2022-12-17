@@ -355,7 +355,7 @@ proc new_ex_invoke_selector*(value: Value): Expr =
   e.args = args
   return e
 
-proc translate_selector(value: Value): Expr =
+proc translate_selector(value: Value): Expr {.gcsafe.} =
   if value.gene_type.str == "@.":
     return new_ex_invoke_selector(value)
   else:
@@ -371,7 +371,7 @@ proc handle_item*(item: string): Expr =
     result = translate(item)
 
 # @a/1
-proc translate_csymbol_selector*(csymbol: seq[string]): Expr =
+proc translate_csymbol_selector*(csymbol: seq[string]): Expr {.gcsafe.} =
   var r = ExSelector2(
     evaluator: eval_selector2,
   )
@@ -391,7 +391,7 @@ proc eval_selector_invoker2*(self: VirtualMachine, frame: Frame, target: Value, 
   selector.selector.search(value)
 
 # (x ./ a b)
-proc translate_invoke_selector*(value: Value): Expr =
+proc translate_invoke_selector*(value: Value): Expr {.gcsafe.} =
   var r = ExSelectorInvoker2(
     evaluator: eval_selector_invoker2,
     target: translate(value.gene_type),
@@ -406,7 +406,7 @@ proc translate_invoke_selector*(value: Value): Expr =
 
 # (x ./a)
 # (x ./a/0)
-proc translate_invoke_selector2*(value: Value): Expr =
+proc translate_invoke_selector2*(value: Value): Expr {.gcsafe.} =
   var r = ExSelectorInvoker2(
     evaluator: eval_selector_invoker2,
     target: translate(value.gene_type),
@@ -424,7 +424,7 @@ proc translate_invoke_selector2*(value: Value): Expr =
   return r
 
 # (./ a b)
-proc translate_invoke_selector3*(value: Value): Expr =
+proc translate_invoke_selector3*(value: Value): Expr {.gcsafe.} =
   var r = ExSelectorInvoker2(
     evaluator: eval_selector_invoker2,
   )
@@ -438,7 +438,7 @@ proc translate_invoke_selector3*(value: Value): Expr =
 
 # (./a)
 # (./a/0)
-proc translate_invoke_selector4*(value: Value): Expr =
+proc translate_invoke_selector4*(value: Value): Expr {.gcsafe.} =
   var r = ExSelectorInvoker2(
     evaluator: eval_selector_invoker2,
   )

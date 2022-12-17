@@ -14,8 +14,8 @@ proc new_package*(dir: string): Package
 proc init_package*(self: VirtualMachine, dir: string)
 proc parse_deps(deps: seq[Value]): Table[string, Dependency]
 proc get_member*(self: Value, name: string): Value
-proc translate*(value: Value): Expr
-proc translate*(stmts: seq[Value]): Expr
+proc translate*(value: Value): Expr {.gcsafe.}
+proc translate*(stmts: seq[Value]): Expr {.gcsafe.}
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value
@@ -596,7 +596,7 @@ proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var E
 
   self.invoke(frame, instance, expr.meth, expr.args)
 
-proc translate_invoke*(value: Value): Expr =
+proc translate_invoke*(value: Value): Expr {.gcsafe.} =
   var r = ExInvoke(
     evaluator: eval_invoke,
   )
@@ -751,7 +751,7 @@ proc eval_set*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   else:
     todo($selector.kind)
 
-proc translate_set*(value: Value): Expr =
+proc translate_set*(value: Value): Expr {.gcsafe.} =
   var e = ExSet(
     evaluator: eval_set,
   )
@@ -780,7 +780,7 @@ CONTINUE_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value
 
 #################### Translator ##################
 
-proc default_translator(value: Value): Expr =
+proc default_translator(value: Value): Expr {.gcsafe.} =
   case value.kind:
   of VkNil, VkBool, VkInt, VkFloat, VkRegex, VkTime:
     return new_ex_literal(value)
@@ -791,11 +791,11 @@ proc default_translator(value: Value): Expr =
   else:
     todo($value)
 
-proc translate*(value: Value): Expr =
+proc translate*(value: Value): Expr {.gcsafe.} =
   var translator = VM.translators.get_or_default(value.kind, default_translator)
   translator(value)
 
-proc translate*(stmts: seq[Value]): Expr =
+proc translate*(stmts: seq[Value]): Expr {.gcsafe.} =
   case stmts.len:
   of 0:
     result = new_ex_literal(nil)
@@ -806,7 +806,7 @@ proc translate*(stmts: seq[Value]): Expr =
     for stmt in stmts:
       cast[ExGroup](result).children.add(translate(stmt))
 
-proc translate_arguments*(value: Value): Expr =
+proc translate_arguments*(value: Value): Expr {.gcsafe.} =
   var r = new_ex_arg()
   for k, v in value.gene_props:
     r.props[k] = translate(v)
@@ -815,11 +815,11 @@ proc translate_arguments*(value: Value): Expr =
   r.check_explode()
   result = r
 
-proc translate_arguments*(value: Value, eval: Evaluator): Expr =
+proc translate_arguments*(value: Value, eval: Evaluator): Expr {.gcsafe.} =
   result = translate_arguments(value)
   result.evaluator = eval
 
-proc translate_catch*(value: Value): Expr =
+proc translate_catch*(value: Value): Expr {.gcsafe.} =
   try:
     result = translate(value)
   except system.Exception as e:

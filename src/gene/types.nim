@@ -271,13 +271,13 @@ type
   # index of a name in a scope
   NameIndexScope* = distinct int
 
-  Translator* = proc(value: Value): Expr
+  Translator* = proc(value: Value): Expr {.gcsafe.}
   Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
 
   EvalCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
   EvalWrap* = proc(eval: Evaluator): Evaluator
 
-  TranslateCatch* = proc(value: Value): Expr
+  TranslateCatch* = proc(value: Value): Expr {.gcsafe.}
   TranslateWrap* = proc(translate: Translator): Translator
 
   NativeFn* = proc(args: Value): Value {.nimcall.}
@@ -722,8 +722,8 @@ var VmCreatedCallbacks*: seq[proc(self: var VirtualMachine)] = @[]
 
 #################### Definitions #################
 
-proc new_gene_bool*(val: bool): Value {.inline.}
-proc new_gene_int*(val: BiggestInt): Value {.inline.}
+proc new_gene_bool*(val: bool): Value
+proc new_gene_int*(val: BiggestInt): Value
 proc new_gene_float*(val: float): Value
 proc new_gene_char*(c: char): Value
 proc new_gene_char*(c: Rune): Value
@@ -1366,7 +1366,7 @@ proc new_gene_custom*(c: CustomValue, class: Class): Value =
     custom: c,
   )
 
-proc new_gene_bool*(val: bool): Value {.inline.} =
+proc new_gene_bool*(val: bool): Value =
   Value(kind: VkBool, bool: val)
   # case val
   # of true: return True
@@ -1382,7 +1382,7 @@ proc new_gene_int*(): Value =
 proc new_gene_int*(s: string): Value =
   return Value(kind: VkInt, int: parseBiggestInt(s))
 
-proc new_gene_int*(val: BiggestInt): Value {.inline.} =
+proc new_gene_int*(val: BiggestInt): Value =
   return Value(kind: VkInt, int: val)
 
 proc new_gene_ratio*(num, denom: BiggestInt): Value =

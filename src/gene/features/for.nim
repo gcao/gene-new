@@ -88,7 +88,7 @@ proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   finally:
     frame.scope = old_scope
 
-proc translate_for(value: Value): Expr =
+proc translate_for(value: Value): Expr {.gcsafe.} =
   if value.gene_children[0].kind == VkVector:
     return ExFor2(
       evaluator: eval_for2,
@@ -110,7 +110,7 @@ proc eval_emit(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   for item in cast[ExEmit](expr).data.mitems:
     loop_output.vec.add(self.eval(frame, item))
 
-proc translate_emit(value: Value): Expr =
+proc translate_emit(value: Value): Expr {.gcsafe.} =
   var r = ExEmit(
     evaluator: eval_emit,
   )

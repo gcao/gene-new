@@ -16,7 +16,7 @@ proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   else:
     result = new_gene_stream(vals)
 
-proc translate_parse(value: Value): Expr =
+proc translate_parse(value: Value): Expr {.gcsafe.} =
   var r = ExParse(
     evaluator: eval_parse,
     data: translate(value.gene_children[0])

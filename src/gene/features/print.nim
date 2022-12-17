@@ -14,7 +14,7 @@ proc eval_print(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   if expr.new_line:
     echo ""
 
-proc translate_print(value: Value): Expr =
+proc translate_print(value: Value): Expr {.gcsafe.} =
   var r = ExPrint(
     evaluator: eval_print,
     new_line: value.gene_type.str == "println",

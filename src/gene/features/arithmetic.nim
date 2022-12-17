@@ -128,7 +128,7 @@ proc new_ex_bin*(op: BinOp): ExBinOp =
       op: op,
     )
 
-proc translate_op*(op: string, op1, op2: Expr): Expr =
+proc translate_op*(op: string, op1, op2: Expr): Expr {.gcsafe.} =
   case op:
   of "+":
     result = new_ex_bin(BinAdd)
@@ -160,7 +160,7 @@ proc translate_op*(op: string, op1, op2: Expr): Expr =
   cast[ExBinOp](result).op1 = op1
   cast[ExBinOp](result).op2 = op2
 
-proc translate_arithmetic*(value: Value): Expr =
+proc translate_arithmetic*(value: Value): Expr {.gcsafe.} =
   case value.gene_type.str:
   of "+":
     result = new_ex_bin(BinAdd)
@@ -190,7 +190,7 @@ proc translate_arithmetic*(value: Value): Expr =
   cast[ExBinOp](result).op1 = translate(value.gene_children[0])
   cast[ExBinOp](result).op2 = translate(value.gene_children[1])
 
-proc translate_arithmetic*(children: seq[Value]): Expr =
+proc translate_arithmetic*(children: seq[Value]): Expr {.gcsafe.} =
   if children.len == 1:
     return translate(children[0])
   elif children.len == 3:
@@ -219,7 +219,7 @@ proc eval_and(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
       return false
   return true
 
-proc translate_comparisons*(children: seq[Value]): Expr =
+proc translate_comparisons*(children: seq[Value]): Expr {.gcsafe.} =
   if children.len == 1:
     return translate(children[0])
   elif children.len == 3:
@@ -234,7 +234,7 @@ proc translate_comparisons*(children: seq[Value]): Expr =
   else:
     not_allowed("translate_comparisons " & $children)
 
-proc translate_logic*(children: seq[Value]): Expr =
+proc translate_logic*(children: seq[Value]): Expr {.gcsafe.} =
   if children.len == 1:
     return translate(children[0])
   elif children.len == 3:

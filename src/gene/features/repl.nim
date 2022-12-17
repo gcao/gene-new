@@ -8,7 +8,7 @@ type
 proc eval_repl(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   self.repl(frame, eval, true)
 
-proc translate_repl(value: Value): Expr =
+proc translate_repl(value: Value): Expr {.gcsafe.} =
   ExRepl(
     evaluator: eval_repl,
   )

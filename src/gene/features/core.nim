@@ -28,7 +28,7 @@ type
     as_name*: string
     body*: Expr
 
-proc translate_do(value: Value): Expr =
+proc translate_do(value: Value): Expr {.gcsafe.} =
   var r = ExGroup(
     evaluator: eval_group,
   )
@@ -36,14 +36,14 @@ proc translate_do(value: Value): Expr =
     r.children.add translate(item)
   result = r
 
-proc translate_noop(value: Value): Expr =
+proc translate_noop(value: Value): Expr {.gcsafe.} =
   new_ex_literal(Value(kind: VkNil))
 
 proc eval_void(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   for item in cast[ExGroup](expr).children.mitems:
     discard self.eval(frame, item)
 
-proc translate_void(value: Value): Expr =
+proc translate_void(value: Value): Expr {.gcsafe.} =
   var r = ExGroup(
     evaluator: eval_void,
   )
@@ -51,7 +51,7 @@ proc translate_void(value: Value): Expr =
     r.children.add translate(item)
   result = r
 
-proc translate_explode(value: Value): Expr =
+proc translate_explode(value: Value): Expr {.gcsafe.} =
   var r = new_ex_explode()
   r.data = translate(value.gene_children[0])
   result = r
@@ -64,7 +64,7 @@ proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     s &= self.eval(frame, item).to_s
   return s
 
-proc translate_string*(value: Value): Expr =
+proc translate_string*(value: Value): Expr {.gcsafe.} =
   var e = ExStrings(
     evaluator: eval_string,
   )
@@ -85,7 +85,7 @@ proc eval_with(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   finally:
     frame.self = old_self
 
-proc translate_with(value: Value): Expr =
+proc translate_with(value: Value): Expr {.gcsafe.} =
   ExWith(
     evaluator: eval_with,
     self: translate(value.gene_children[0]),
@@ -101,7 +101,7 @@ proc eval_assert(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
       message = self.eval(frame, expr.message).str
     echo message
 
-proc translate_assert(value: Value): Expr =
+proc translate_assert(value: Value): Expr {.gcsafe.} =
   var r = ExAssert(
     evaluator: eval_assert,
     data: translate(value.gene_children[0]),
@@ -117,7 +117,7 @@ proc eval_debug(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   result = self.eval(frame, e)
   echo "$debug: " & $expr.data & " => " & $result
 
-proc translate_debug(value: Value): Expr =
+proc translate_debug(value: Value): Expr {.gcsafe.} =
   var r = ExDebug(
     evaluator: eval_debug,
   )
@@ -128,7 +128,7 @@ proc eval_if_main(self: VirtualMachine, frame: Frame, target: Value, expr: var E
   if VM.app.main_module == frame.ns.get_module():
     result = self.eval(frame, cast[ExIfMain](expr).body)
 
-proc translate_if_main(value: Value): Expr =
+proc translate_if_main(value: Value): Expr {.gcsafe.} =
   return ExIfMain(
     evaluator: eval_if_main,
     body: translate(value.gene_children)
@@ -151,7 +151,7 @@ proc eval_tap(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     frame.self = old_self
     frame.scope = old_scope
 
-proc translate_tap(value: Value): Expr =
+proc translate_tap(value: Value): Expr {.gcsafe.} =
   var r = ExTap(
     evaluator: eval_tap,
     value: translate(value.gene_children[0]),

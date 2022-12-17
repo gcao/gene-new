@@ -15,7 +15,7 @@ proc eval_cast(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   var class = self.eval(frame, expr.class)
   Value(kind: VkCast, cast_class: class.class, cast_value: v)
 
-proc translate_cast(value: Value): Expr =
+proc translate_cast(value: Value): Expr {.gcsafe.} =
   ExCast(
     evaluator: eval_cast,
     value: translate(value.gene_children[0]),

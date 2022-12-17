@@ -91,7 +91,7 @@ proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   new_frame.self = result
   discard self.eval(new_frame, e.body)
 
-proc translate_class(value: Value): Expr =
+proc translate_class(value: Value): Expr {.gcsafe.} =
   var e = ExClass(
     evaluator: eval_class,
   )
@@ -145,7 +145,7 @@ proc eval_object(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   if init != nil:
     discard self.invoke(frame, result, INIT_KEY, Value(kind: VkNil))
 
-proc translate_object(value: Value): Expr =
+proc translate_object(value: Value): Expr {.gcsafe.} =
   var e = ExObject(
     evaluator: eval_object,
   )
@@ -182,7 +182,7 @@ proc eval_mixin(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   new_frame.self = result
   discard self.eval(new_frame, e.body)
 
-proc translate_mixin(value: Value): Expr =
+proc translate_mixin(value: Value): Expr {.gcsafe.} =
   var e = ExMixin(
     evaluator: eval_mixin,
   )
@@ -215,7 +215,7 @@ proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var E
       else:
         not_allowed()
 
-proc translate_include(value: Value): Expr =
+proc translate_include(value: Value): Expr {.gcsafe.} =
   var e = ExInclude(
     evaluator: eval_include,
   )
@@ -272,7 +272,7 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     else:
       todo("eval_new " & $ctor.kind)
 
-proc translate_new(value: Value): Expr =
+proc translate_new(value: Value): Expr {.gcsafe.} =
   var r = ExNew(
     evaluator: eval_new,
     class: translate(value.gene_children[0]),
@@ -348,7 +348,7 @@ proc eval_method_eq*(self: VirtualMachine, frame: Frame, target: Value, expr: va
     `method`: m,
   )
 
-proc translate_method(value: Value): Expr =
+proc translate_method(value: Value): Expr {.gcsafe.} =
   if value.gene_children.len >= 3 and value.gene_children[1].is_symbol("="):
     return ExMethodEq(
       evaluator: eval_method_eq,
@@ -371,7 +371,7 @@ proc eval_constructor*(self: VirtualMachine, frame: Frame, target: Value, expr: 
   else:
     class.constructor = self.eval(frame, expr.value)
 
-proc translate_constructor(value: Value): Expr =
+proc translate_constructor(value: Value): Expr {.gcsafe.} =
   var r = ExConstructor(
     evaluator: eval_constructor,
   )
@@ -424,7 +424,7 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr
   else:
     todo("eval_invoke_dynamic " & $target.kind)
 
-proc translate_invoke_dynamic(value: Value): Expr =
+proc translate_invoke_dynamic(value: Value): Expr {.gcsafe.} =
   var r = ExInvokeDynamic(
     evaluator: eval_invoke_dynamic,
   )
@@ -471,7 +471,7 @@ proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     else:
       raise
 
-proc translate_super(value: Value): Expr =
+proc translate_super(value: Value): Expr {.gcsafe.} =
   return ExSuper(
     evaluator: eval_super,
     args: new_ex_arg(value),
@@ -491,7 +491,7 @@ proc translate_super(value: Value): Expr =
 #   else:
 #     todo("eval_get_prop " & $obj & " " & name.to_s)
 
-# proc translate_get_prop(value: Value): Expr =
+# proc translate_get_prop(value: Value): Expr {.gcsafe.} =
 #   if value.gene_children.len == 1:
 #     return ExGetProp(
 #       evaluator: eval_get_prop,
@@ -519,7 +519,7 @@ proc translate_super(value: Value): Expr =
 #   else:
 #     todo("eval_set_prop " & $obj & " " & name.to_s)
 
-# proc translate_set_prop(value: Value): Expr =
+# proc translate_set_prop(value: Value): Expr {.gcsafe.} =
 #   if value.gene_children.len == 2:
 #     return ExSetProp(
 #       evaluator: eval_set_prop,
@@ -544,7 +544,7 @@ proc translate_super(value: Value): Expr =
 #   result.fn.parent_scope_max = frame.scope.max
 #   frame.self.class.method_missing = result
 
-# proc translate_method_missing(value: Value): Expr =
+# proc translate_method_missing(value: Value): Expr {.gcsafe.} =
 #   var name = "method_missing"
 #   var matcher = new_arg_matcher()
 #   matcher.parse(value.gene_children[0])

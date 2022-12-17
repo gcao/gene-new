@@ -100,7 +100,7 @@ proc translate*(name: string): Expr {.inline.} =
       name: name,
     )
 
-proc translate*(names: seq[string]): Expr =
+proc translate*(names: seq[string]): Expr {.gcsafe.} =
   if names.len == 1:
     return translate(names[0])
   else:
@@ -127,10 +127,10 @@ proc translate*(names: seq[string]): Expr =
           name: name,
         )
 
-proc translate_symbol(value: Value): Expr =
+proc translate_symbol(value: Value): Expr {.gcsafe.} =
   translate(value.str)
 
-proc translate_complex_symbol(value: Value): Expr =
+proc translate_complex_symbol(value: Value): Expr {.gcsafe.} =
   if value.csymbol[0].starts_with("@"):
     translate_csymbol_selector(value.csymbol)
   else:
@@ -169,7 +169,7 @@ proc eval_define_ns_or_scope(self: VirtualMachine, frame: Frame, target: Value, 
 # Else they are defined on the current scope
 #
 # (fn n/m/f ...) will add f to n/m no matter what n/m is
-proc translate_definition*(name: Value, value: Expr): Expr =
+proc translate_definition*(name: Value, value: Expr): Expr {.gcsafe.} =
   case name.kind:
   of VkSymbol, VkString:
     return ExDefineNsOrScope(

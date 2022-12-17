@@ -26,7 +26,7 @@ proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
 
   self.call_fn_skip_args(new_frame, target)
 
-proc fn_arg_translator*(value: Value): Expr =
+proc fn_arg_translator*(value: Value): Expr {.gcsafe.} =
   return translate_arguments(value, function_invoker)
 
 proc eval_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -38,7 +38,7 @@ proc eval_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr):
   result.fn.parent_scope = frame.scope
   result.fn.parent_scope_max = frame.scope.max
 
-proc to_function(node: Value): Function =
+proc to_function(node: Value): Function {.gcsafe.} =
   var name: string
   var matcher = new_arg_matcher()
   var body_start: int
@@ -74,7 +74,7 @@ proc to_function(node: Value): Function =
     result.ret = translate(node.gene_props["return"])
   result.async = node.gene_props.get_or_default("async", false)
 
-proc translate_fn(value: Value): Expr =
+proc translate_fn(value: Value): Expr {.gcsafe.} =
   var fn = to_function(value)
   var fn_expr = ExFn(
     evaluator: eval_fn,
@@ -82,7 +82,7 @@ proc translate_fn(value: Value): Expr =
   )
   return translate_definition(value.gene_children[0], fn_expr)
 
-proc translate_fnx(value: Value): Expr =
+proc translate_fnx(value: Value): Expr {.gcsafe.} =
   var fn = to_function(value)
   ExFn(
     evaluator: eval_fn,
@@ -100,7 +100,7 @@ proc eval_return(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     r.val = Value(kind: VkNil)
   raise r
 
-proc translate_return(value: Value): Expr =
+proc translate_return(value: Value): Expr {.gcsafe.} =
   var expr = ExReturn()
   expr.evaluator = eval_return
   if value.gene_children.len > 0:
@@ -120,7 +120,7 @@ proc bound_function_invoker*(self: VirtualMachine, frame: Frame, target: Value, 
 
   self.call_fn_skip_args(new_frame, bound_fn.target)
 
-proc bound_fn_arg_translator*(value: Value): Expr =
+proc bound_fn_arg_translator*(value: Value): Expr {.gcsafe.} =
   return translate_arguments(value, bound_function_invoker)
 
 proc eval_bind(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -135,7 +135,7 @@ proc eval_bind(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   )
   Value(kind: VkBoundFunction, bound_fn: bound_fn)
 
-proc translate_bind(value: Value): Expr =
+proc translate_bind(value: Value): Expr {.gcsafe.} =
   var expr = ExBind()
   expr.evaluator = eval_bind
   expr.target = translate(value.gene_children[0])

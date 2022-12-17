@@ -1,4 +1,4 @@
-import dynlib, tables
+import dynlib
 import asyncdispatch
 
 import ./types

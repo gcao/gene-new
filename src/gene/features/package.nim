@@ -44,7 +44,7 @@ proc eval_dep(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 
   # Do the same for nested dependencies
 
-proc translate_dep(value: Value): Expr =
+proc translate_dep(value: Value): Expr {.gcsafe.} =
   var e = ExDependency(
     evaluator: eval_dep,
     name: translate(value.gene_children[0]),

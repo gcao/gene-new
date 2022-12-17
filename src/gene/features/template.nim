@@ -69,7 +69,7 @@ proc eval_render(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   finally:
     frame.scope = old_scope
 
-proc translate_render(value: Value): Expr =
+proc translate_render(value: Value): Expr {.gcsafe.} =
   ExRender(
     evaluator: eval_render,
     data: translate(value.gene_children[0]),

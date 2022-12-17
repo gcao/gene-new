@@ -25,7 +25,7 @@ proc eval_env(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   else:
     result = nil
 
-proc translate_env(value: Value): Expr =
+proc translate_env(value: Value): Expr {.gcsafe.} =
   var r = ExEnv(
     evaluator: eval_env,
     name: translate(value.gene_children[0]),
@@ -40,7 +40,7 @@ proc eval_set_env(self: VirtualMachine, frame: Frame, target: Value, expr: var E
   var val = self.eval(frame, expr.value).to_s
   put_env(env, val)
 
-proc translate_set_env(value: Value): Expr =
+proc translate_set_env(value: Value): Expr {.gcsafe.} =
   ExSetEnv(
     evaluator: eval_set_env,
     name: translate(value.gene_children[0]),
@@ -54,7 +54,7 @@ proc eval_exit(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
     code = self.eval(frame, expr.code).int
   quit(code)
 
-proc translate_exit(value: Value): Expr =
+proc translate_exit(value: Value): Expr {.gcsafe.} =
   var r = ExExit(
     evaluator: eval_exit,
   )

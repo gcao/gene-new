@@ -19,7 +19,7 @@ proc eval_array(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     else:
       result.vec.add(v)
 
-proc translate_array(value: Value): Expr =
+proc translate_array(value: Value): Expr {.gcsafe.} =
   result = ExArray(
     evaluator: eval_array,
   )

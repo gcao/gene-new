@@ -26,7 +26,7 @@ proc eval_async(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     future.fail(e)
     result = new_gene_future(future)
 
-proc translate_async(value: Value): Expr =
+proc translate_async(value: Value): Expr {.gcsafe.} =
   ExAsync(
     evaluator: eval_async,
     data: translate(value.gene_children),
@@ -51,7 +51,7 @@ proc eval_await(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
       else:
         todo()
 
-proc translate_await(value: Value): Expr =
+proc translate_await(value: Value): Expr {.gcsafe.} =
   var r = ExAwait(
     evaluator: eval_await,
     wait_all: value.gene_type.str == "$await_all",

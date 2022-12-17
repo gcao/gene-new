@@ -41,7 +41,7 @@ proc eval_not_match(self: VirtualMachine, frame: Frame, target: Value, expr: var
   var m = input.str.match(pattern.regex)
   return m.is_none()
 
-proc translate_match*(value: Value): Expr =
+proc translate_match*(value: Value): Expr {.gcsafe.} =
   var evaluator: Evaluator
   case value.gene_children[0].str:
   of "=~":
@@ -64,7 +64,7 @@ proc eval_regex(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     s &= self.eval(frame, e).to_s
   result = new_gene_regex(s, expr.flags)
 
-proc translate_regex*(value: Value): Expr =
+proc translate_regex*(value: Value): Expr {.gcsafe.} =
   var r = ExRegex(
     evaluator: eval_regex,
   )

@@ -12,7 +12,7 @@ proc eval_map(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   for k, v in cast[ExMap](expr).data.mpairs:
     result.map[k] = self.eval(frame, v)
 
-proc translate_map(value: Value): Expr =
+proc translate_map(value: Value): Expr {.gcsafe.} =
   result = ExMap(
     evaluator: eval_map,
   )

@@ -15,7 +15,7 @@ proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   if result != nil and result.kind == VkException:
     raise result.exception
 
-proc translate*(value: Value): Expr =
+proc translate*(value: Value): Expr {.gcsafe.} =
   result = translate_catch(value)
   if result != nil and result of ExException:
     raise cast[ExException](result).ex

@@ -14,7 +14,7 @@ proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   var expr = cast[ExTest](expr)
   self.eval(frame, expr.data)
 
-proc translate_test(value: Value): Expr {.wrap_exception.} =
+proc translate_test(value: Value): Expr {.gcsafe, wrap_exception.} =
   return ExTest(
     evaluator: eval_wrap(eval_test),
     data: translate(value.gene_children[0]),

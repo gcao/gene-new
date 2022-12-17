@@ -127,7 +127,7 @@ proc eval_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr):
   if expr.`else` != nil:
     return self.eval(frame, expr.`else`)
 
-proc translate_if(value: Value): Expr =
+proc translate_if(value: Value): Expr {.gcsafe.} =
   normalize_if(value)
   var r = ExIf(
     evaluator: eval_if,
@@ -148,7 +148,7 @@ proc translate_if(value: Value): Expr =
 proc eval_not(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   not self.eval(frame, cast[ExNot](expr).cond).to_bool
 
-proc translate_not(value: Value): Expr =
+proc translate_not(value: Value): Expr {.gcsafe.} =
   ExNot(
     evaluator: eval_not,
     cond: translate(value.gene_children[0]),
@@ -157,7 +157,7 @@ proc translate_not(value: Value): Expr =
 proc eval_bool(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   self.eval(frame, cast[ExBool](expr).data).to_bool
 
-proc translate_bool(value: Value): Expr =
+proc translate_bool(value: Value): Expr {.gcsafe.} =
   ExBool(
     evaluator: eval_bool,
     data: translate(value.gene_children[0]),

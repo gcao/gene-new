@@ -91,7 +91,7 @@ proc handle_assignment_shortcuts(self: seq[Value]): Value =
   else:
     raise new_gene_exception("Invalid right value for assignment " & $self)
 
-proc translate_gene(value: Value): Expr =
+proc translate_gene(value: Value): Expr {.gcsafe.} =
   var `type` = value.gene_type
   case `type`.kind:
   of VkSymbol:

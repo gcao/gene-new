@@ -50,7 +50,7 @@ proc eval_try(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     if not handled:
       raise
 
-proc translate_try(value: Value): Expr =
+proc translate_try(value: Value): Expr {.gcsafe.} =
   var r = ExTry(
     evaluator: eval_try,
   )
@@ -117,7 +117,7 @@ proc eval_throw(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   else:
     raise new_gene_exception(Value(kind: VkInstance, instance_class: VM.exception_class.class))
 
-proc translate_throw(value: Value): Expr =
+proc translate_throw(value: Value): Expr {.gcsafe.} =
   var r = ExThrow(
     evaluator: eval_throw,
   )

@@ -49,7 +49,7 @@ proc eval_macro(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   )
   result.macro.ns = frame.ns
 
-proc arg_translator(value: Value): Expr =
+proc arg_translator(value: Value): Expr {.gcsafe.} =
   var expr = new_ex_literal(value)
   expr.evaluator = macro_invoker
   result = expr
@@ -73,7 +73,7 @@ proc to_macro(node: Value): Macro =
   result = new_macro(name, matcher, body)
   result.translator = arg_translator
 
-proc translate_macro(value: Value): Expr =
+proc translate_macro(value: Value): Expr {.gcsafe.} =
   var mac = to_macro(value)
   var mac_expr = ExMacro(
     evaluator: eval_macro,
@@ -86,7 +86,7 @@ proc eval_caller_eval(self: VirtualMachine, frame: Frame, target: Value, expr: v
   var e = translate(v)
   self.eval(frame.parent, e)
 
-proc translate_caller_eval(value: Value): Expr =
+proc translate_caller_eval(value: Value): Expr {.gcsafe.} =
   ExCallerEval(
     evaluator: eval_caller_eval,
     data: translate(value.gene_children[0]),

@@ -22,7 +22,7 @@ proc eval_loop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
       result = b.val
       break
 
-proc translate_loop(value: Value): Expr =
+proc translate_loop(value: Value): Expr {.gcsafe.} =
   var r = ExLoop(
     evaluator: eval_loop,
   )
@@ -30,10 +30,10 @@ proc translate_loop(value: Value): Expr =
     r.data.add translate(item)
   result = r
 
-proc translate_break(value: Value): Expr =
+proc translate_break(value: Value): Expr {.gcsafe.} =
   BREAK_EXPR
 
-proc translate_continue(value: Value): Expr =
+proc translate_continue(value: Value): Expr {.gcsafe.} =
   CONTINUE_EXPR
 
 proc eval_once(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -45,7 +45,7 @@ proc eval_once(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
       result = self.eval(frame, item)
     expr.input.gene_props["return"] = result
 
-proc translate_once(value: Value): Expr =
+proc translate_once(value: Value): Expr {.gcsafe.} =
   var r = ExOnce(
     evaluator: eval_once,
     input: value,

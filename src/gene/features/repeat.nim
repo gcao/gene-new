@@ -39,7 +39,7 @@ proc eval_repeat(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   finally:
     frame.scope = old_scope
 
-proc translate_repeat(value: Value): Expr =
+proc translate_repeat(value: Value): Expr {.gcsafe.} =
   var r = ExRepeat(
     evaluator: eval_repeat,
     times: translate(value.gene_children[0]),

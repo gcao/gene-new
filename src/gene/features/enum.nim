@@ -11,7 +11,7 @@ proc eval_enum(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   result = cast[ExEnum](expr).data
   frame.ns[result.enum.name] = result
 
-proc translate_enum(value: Value): Expr =
+proc translate_enum(value: Value): Expr {.gcsafe.} =
   var r = ExEnum(
     evaluator: eval_enum,
   )

@@ -35,7 +35,7 @@ proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
       result = Value(kind: VkNil)
     ns[e.name] = result
 
-proc translate_var(value: Value): Expr =
+proc translate_var(value: Value): Expr {.gcsafe.} =
   var name = value.gene_children[0]
   var v: Expr
   if value.gene_children.len > 1:

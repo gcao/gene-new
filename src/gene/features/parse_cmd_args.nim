@@ -162,7 +162,7 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
     else:
       not_allowed()
 
-proc translate(self: ArgMatcher, value: string): Value =
+proc translate(self: ArgMatcher, value: string): Value {.gcsafe.} =
   if self.data_type == ArgInt:
     return value.parse_int
   elif self.data_type == ArgBool:
@@ -258,7 +258,7 @@ proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   else:
     todo()
 
-proc translate_parse(value: Value): Expr =
+proc translate_parse(value: Value): Expr {.gcsafe.} =
   var r = ExParseCmdArgs(
     evaluator: eval_parse,
     cmd_args: translate(value.gene_children[1]),

@@ -10,7 +10,7 @@ type
 proc eval_quote(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   cast[ExQuote](expr).data
 
-proc translate_quote(value: Value): Expr =
+proc translate_quote(value: Value): Expr {.gcsafe.} =
   ExQuote(
     evaluator: eval_quote,
     data: value.quote,

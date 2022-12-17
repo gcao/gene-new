@@ -36,7 +36,7 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   else:
     self.process_args(frame, matcher, value)
 
-proc translate_match(value: Value): Expr =
+proc translate_match(value: Value): Expr {.gcsafe.} =
   return ExMatch(
     evaluator: eval_match,
     matcher: new_arg_matcher(value.gene_children[0]),

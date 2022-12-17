@@ -11,14 +11,14 @@ proc eval_native_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var
   else:
     todo("eval_native_fn " & $target.kind)
 
-proc native_fn_arg_translator*(value: Value): Expr =
+proc native_fn_arg_translator*(value: Value): Expr {.gcsafe.} =
   return translate_arguments(value, eval_native_fn)
 
 proc eval_native_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var args = self.eval_args(frame, target, expr)
   target.native_method(frame.self, args)
 
-proc native_method_arg_translator*(value: Value): Expr =
+proc native_method_arg_translator*(value: Value): Expr {.gcsafe.} =
   return translate_arguments(value, eval_native_method)
 
 proc init*() =

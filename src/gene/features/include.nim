@@ -16,7 +16,7 @@ proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var E
   var e = translate(parsed)
   self.eval(frame, e)
 
-proc translate_include(value: Value): Expr =
+proc translate_include(value: Value): Expr {.gcsafe.} =
   result = ExInclude(
     evaluator: eval_include,
     path: translate(value.gene_children[0]),

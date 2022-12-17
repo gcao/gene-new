@@ -29,7 +29,7 @@ proc eval_assignment(self: VirtualMachine, frame: Frame, target: Value, expr: va
   else:
     frame.ns[name] = result
 
-proc translate_assignment(value: Value): Expr =
+proc translate_assignment(value: Value): Expr {.gcsafe.} =
   var first = value.gene_children[0]
   case first.kind:
   of VkSymbol:
@@ -49,7 +49,7 @@ proc translate_assignment(value: Value): Expr =
   else:
     not_allowed("translate_assignment " & $first.kind)
 
-proc translate_op_eq(value: Value): Expr =
+proc translate_op_eq(value: Value): Expr {.gcsafe.} =
   var first = value.gene_children[0]
   var second = value.gene_children[1]
   var value_expr: ExBinOp

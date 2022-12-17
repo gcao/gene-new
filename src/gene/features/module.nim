@@ -225,7 +225,7 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
         self.modules[path] = ns
   self.import_from_ns(frame, ns, expr.matcher.children)
 
-proc translate_import*(value: Value): Expr =
+proc translate_import*(value: Value): Expr {.gcsafe.} =
   var matcher = new_import_matcher(value)
   var e = ExImport(
     evaluator: eval_import,

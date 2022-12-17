@@ -28,7 +28,7 @@ proc eval_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr):
   new_frame.self = result
   discard self.eval(new_frame, e.body)
 
-proc translate_ns(value: Value): Expr =
+proc translate_ns(value: Value): Expr {.gcsafe.} =
   var e = ExNamespace(
     evaluator: eval_ns,
     body: translate(value.gene_children[1..^1]),

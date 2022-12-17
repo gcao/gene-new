@@ -22,7 +22,7 @@ proc eval_while(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
       result = b.val
       break
 
-proc translate_while(value: Value): Expr =
+proc translate_while(value: Value): Expr {.gcsafe.} =
   var r = ExWhile(
     evaluator: eval_while,
   )

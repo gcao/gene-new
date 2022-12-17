@@ -13,7 +13,7 @@ proc eval_eval(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
     var e2 = translate(v)
     result = self.eval(frame, e2)
 
-proc translate_eval(value: Value): Expr =
+proc translate_eval(value: Value): Expr {.gcsafe.} =
   var e = ExEval(
     evaluator: eval_eval,
   )

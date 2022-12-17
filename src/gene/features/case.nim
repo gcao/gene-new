@@ -53,7 +53,7 @@ proc eval_case(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
       return self.eval(frame, expr.case_blks[pair[1]])
   result = self.eval(frame, expr.case_else)
 
-proc translate_case(node: Value): Expr =
+proc translate_case(node: Value): Expr {.gcsafe.} =
   # Create a variable because result can not be accessed from closure.
   var expr = ExCase(
     evaluator: eval_case,

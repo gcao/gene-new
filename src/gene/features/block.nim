@@ -38,7 +38,7 @@ proc eval_block(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   result.block.parent_scope = frame.scope
   result.block.parent_scope_max = frame.scope.max
 
-proc arg_translator(value: Value): Expr =
+proc arg_translator(value: Value): Expr {.gcsafe.} =
   return translate_arguments(value, block_invoker)
 
 proc to_block(node: Value): Block =
@@ -53,7 +53,7 @@ proc to_block(node: Value): Block =
   result.body_compiled = translate(body)
   result.translator = arg_translator
 
-proc translate_block(value: Value): Expr =
+proc translate_block(value: Value): Expr {.gcsafe.} =
   var blk = to_block(value)
   result = ExBlock(
     evaluator: eval_block,

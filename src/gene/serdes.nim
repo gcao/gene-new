@@ -150,7 +150,7 @@ proc eval_ser(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   var expr = cast[ExSer](expr)
   return serialize(self.eval(frame, expr.value)).to_s
 
-proc translate_ser(value: Value): Expr =
+proc translate_ser(value: Value): Expr {.gcsafe.} =
   return ExSer(
     evaluator: eval_ser,
     value: translate(value.gene_children[0]),
@@ -160,7 +160,7 @@ proc eval_deser(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var expr = cast[ExDeser](expr)
   return self.deserialize(self.eval(frame, expr.value).str)
 
-proc translate_deser(value: Value): Expr =
+proc translate_deser(value: Value): Expr {.gcsafe.} =
   return ExDeser(
     evaluator: eval_deser,
     value: translate(value.gene_children[0]),
