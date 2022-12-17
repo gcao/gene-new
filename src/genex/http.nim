@@ -270,7 +270,7 @@ proc req_headers*(self: Value, args: Value): Value {.wrap_exception.} =
   result = new_gene_map()
   var req = cast[Request](self.custom).req
   for key, val in req.headers.pairs:
-    result.map[key.to_key] = val
+    result.map[key] = val
 
 proc resp_status*(self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Response](self.custom).status
@@ -361,7 +361,7 @@ proc http_get_async(args: Value): Value {.wrap_exception.} =
 proc init*(module: Module): Value {.wrap_exception.} =
   result = new_namespace("http")
   result.ns.module = module
-  GENEX_NS.ns["http"] = result
+  VM.genex_ns.ns["http"] = result
 
   result.ns["respond"] = new_gene_processor(translate_wrap(translate_respond))
   result.ns["redirect"] = new_gene_processor(translate_wrap(translate_respond))

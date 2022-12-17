@@ -130,7 +130,7 @@ proc handle*(cmd: string, args: seq[string]): string =
     var value_name = options.value_name
     var index = 0
     frame.scope.def_member(index_name, index)
-    frame.scope.def_member(value_name, Nil)
+    frame.scope.def_member(value_name, Value(kind: VkNil))
     if options.input_mode == ImCsv:
       var parser: CsvParser
       parser.open(new_file_stream(stdin), "<STDIN>")

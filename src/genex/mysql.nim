@@ -54,7 +54,7 @@ proc close*(self: Value, args: Value): Value {.wrap_exception.} =
 proc init*(module: Module): Value {.wrap_exception.} =
   result = new_namespace("mysql")
   result.ns.module = module
-  GENEX_NS.ns["mysql"] = result
+  VM.genex_ns.ns["mysql"] = result
 
   # result.ns["select"] = new_gene_processor(translate_select)
   result.ns["open"] = NativeFn(open)

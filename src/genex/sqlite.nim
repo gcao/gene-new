@@ -37,7 +37,7 @@ proc close*(self: Value, args: Value): Value {.wrap_exception.} =
 proc init*(module: Module): Value {.wrap_exception.} =
   result = new_namespace("sqlite")
   result.ns.module = module
-  GENEX_NS.ns["sqlite"] = result
+  VM.genex_ns.ns["sqlite"] = result
 
   # result.ns["select"] = new_gene_processor(translate_select)
   result.ns["open"] = NativeFn(open)
