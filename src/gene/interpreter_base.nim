@@ -2,7 +2,6 @@ import strutils, tables, os, sets, pathnorm
 import asyncdispatch
 import macros
 
-import ./map_key
 import ./types
 import ./parser
 import ./repl
@@ -14,14 +13,14 @@ type
 proc new_package*(dir: string): Package
 proc init_package*(self: VirtualMachine, dir: string)
 proc parse_deps(deps: seq[Value]): Table[string, Dependency]
-proc get_member*(self: Value, name: MapKey): Value
+proc get_member*(self: Value, name: string): Value
 proc translate*(value: Value): Expr
 proc translate*(stmts: seq[Value]): Expr
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
 proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args: Value): Value
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args: Value): Value
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args_expr: var Expr): Value
 
 #################### Value #######################
 
@@ -34,17 +33,17 @@ proc to_s*(self: Value): string =
     of VkString:
       return self.str
     of VkInstance:
-      var m = self.instance_class.get_method(TO_S_KEY)
+      var m = self.instance_class.get_method("to_s")
       if m.class != VM.object_class.class:
         var frame = new_frame()
         var args = new_gene_gene()
-        return VM.invoke(frame, self, TO_S_KEY, args).str
+        return VM.invoke(frame, self, "to_s", args).str
     else:
       discard
 
   return $self
 
-proc get_member*(self: Value, name: MapKey): Value =
+proc get_member*(self: Value, name: string): Value =
   var ns: Namespace
   case self.kind:
   of VkNamespace:
@@ -62,10 +61,10 @@ proc get_member*(self: Value, name: MapKey): Value =
     return new_gene_enum_member(self.enum.members[name.to_s])
   of VkInstance:
     var class = self.instance_class
-    if class.has_method(GET_KEY):
+    if class.has_method("get"):
       var args = new_gene_gene()
       args.gene_children.add(name.to_s)
-      return VM.invoke(new_frame(), self, GET_KEY, args)
+      return VM.invoke(new_frame(), self, "get", args)
     elif self.instance_props.has_key(name):
       return self.instance_props[name]
     else:
@@ -80,10 +79,10 @@ proc get_member*(self: Value, name: MapKey): Value =
     return new_gene_symbol(self.str & "/" & name.to_s)
   else:
     var class = self.get_class()
-    if class.has_method(GET_KEY):
+    if class.has_method("get"):
       var args = new_gene_gene()
       args.gene_children.add(name.to_s)
-      return VM.invoke(new_frame(), self, GET_KEY, args)
+      return VM.invoke(new_frame(), self, "get", args)
     else:
       todo("get_member " & $self.kind & " " & name.to_s)
 
@@ -117,10 +116,10 @@ proc get_child*(self: Value, index: int): Value =
       return Value(kind: VkNil)
   else:
     var class = self.get_class()
-    if class.has_method(GET_CHILD_KEY):
+    if class.has_method("get_child"):
       var args = new_gene_gene()
       args.gene_children.add(index)
-      return VM.invoke(new_frame(), self, GET_CHILD_KEY, args)
+      return VM.invoke(new_frame(), self, "get_child", args)
     else:
       not_allowed("get_child " & $self & " " & $index)
 
@@ -134,12 +133,12 @@ proc new_package*(dir: string): Package =
     var package_file = d & "/package.gene"
     if file_exists(package_file):
       var doc = read_document(read_file(package_file))
-      result.name = doc.props[NAME_KEY].str
-      result.version = doc.props[VERSION_KEY]
+      result.name = doc.props["name"].str
+      result.version = doc.props["version"]
       result.ns = new_namespace(VM.app.ns, "package:" & result.name)
       result.dir = d
-      if doc.props.has_key(DEPENDENCIES_KEY):
-        result.dependencies = parse_deps(doc.props[DEPENDENCIES_KEY].vec)
+      if doc.props.has_key("dependencies"):
+        result.dependencies = parse_deps(doc.props["dependencies"].vec)
       return result
     else:
       d = parent_dir(d)
@@ -178,7 +177,7 @@ proc parse_deps(deps: seq[Value]): Table[string, Dependency] =
   for dep in deps:
     var name = dep.gene_children[0].str
     var version = dep.gene_children[1].str
-    var path = dep.gene_props["path".to_key].str
+    var path = dep.gene_props["path"].str
 
     var dep = Dependency(
       name: name,
@@ -242,16 +241,16 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
       if v.str.ends_with("..."):
         m.is_splat = true
         if v.str[1] == '^':
-          m.name = v.str[2..^4].to_key
+          m.name = v.str[2..^4]
           m.is_prop = true
         else:
-          m.name = v.str[1..^4].to_key
+          m.name = v.str[1..^4]
       else:
         if v.str[1] == '^':
-          m.name = v.str[2..^1].to_key
+          m.name = v.str[2..^1]
           m.is_prop = true
         else:
-          m.name = v.str[1..^1].to_key
+          m.name = v.str[1..^1]
       group.add(m)
     else:
       var m = new_matcher(self, MatchData)
@@ -260,16 +259,16 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
         if v.str.endsWith("..."):
           m.is_splat = true
           if v.str[0] == '^':
-            m.name = v.str[1..^4].to_key
+            m.name = v.str[1..^4]
             m.is_prop = true
           else:
-            m.name = v.str[0..^4].to_key
+            m.name = v.str[0..^4]
         else:
           if v.str[0] == '^':
-            m.name = v.str[1..^1].to_key
+            m.name = v.str[1..^1]
             m.is_prop = true
           else:
-            m.name = v.str.to_key
+            m.name = v.str
   of VkComplexSymbol:
     if v.csymbol[0] == '^':
       todo("parse " & $v)
@@ -280,9 +279,9 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
       var name = v.csymbol[1]
       if name.ends_with("..."):
         m.is_splat = true
-        m.name = name[0..^4].to_key
+        m.name = name[0..^4]
       else:
-        m.name = name.to_key
+        m.name = name
   of VkVector:
     var i = 0
     while i < v.vec.len:
@@ -303,7 +302,7 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
   of VkQuote:
     var m = new_matcher(self, MatchLiteral)
     m.literal = v.quote
-    m.name = "<literal>".to_key
+    m.name = "<literal>"
     group.add(m)
   else:
     todo("parse " & $v.kind)
@@ -342,10 +341,10 @@ proc `len`(self: Value): int =
     not_allowed()
 
 proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], input: Value, r: MatchResult) =
-  if input == nil or self.prop_splat == EMPTY_STRING_KEY:
+  if input == nil or self.prop_splat == "":
     return
 
-  var map: Table[MapKey, Value]
+  var map: Table[string, Value]
   case input.kind:
   of VkMap:
     map = input.map
@@ -354,7 +353,7 @@ proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], inp
   else:
     return
 
-  var splat = Table[MapKey, Value]()
+  var splat = Table[string, Value]()
   for k, v in map:
     if k notin self.props:
       splat[k] = v
@@ -384,7 +383,7 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         r.kind = MatchMissingFields
         r.missing.add(self.name)
         return
-    if self.name != EMPTY_STRING_KEY:
+    if self.name != "":
       frame.scope.def_member(self.name, value)
       if self.is_prop:
         frame.self.instance_props[self.name] = value
@@ -537,7 +536,7 @@ proc new_ex_explode*(): ExExplode =
 type
   ExArguments* = ref object of Expr
     has_explode*: bool
-    props*: Table[MapKey, Expr]
+    props*: Table[string, Expr]
     children*: seq[Expr]
 
 proc check_explode*(self: var ExArguments) =
@@ -581,7 +580,7 @@ proc new_ex_arg*(value: Value): ExArguments =
 type
   ExInvoke* = ref object of Expr
     self*: Expr
-    meth*: MapKey
+    meth*: string
     args*: Expr
 
 proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -601,8 +600,8 @@ proc translate_invoke*(value: Value): Expr =
   var r = ExInvoke(
     evaluator: eval_invoke,
   )
-  r.self = translate(value.gene_props.get_or_default(SELF_KEY, nil))
-  r.meth = value.gene_props[METHOD_KEY].str.to_key
+  r.self = translate(value.gene_props.get_or_default("self", nil))
+  r.meth = value.gene_props["method"].str
 
   var args = new_ex_arg()
   for k, v in value.gene_props:
@@ -647,11 +646,11 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
             result = result or child.update(target.gene_children[m.index], value)
       else:
         var class = target.get_class()
-        if class.has_method(SET_CHILD_KEY):
+        if class.has_method("set_child"):
           var args = new_gene_gene()
           args.gene_children.add(m.index)
           args.gene_children.add(value)
-          return VM.invoke(new_frame(), target, SET_CHILD_KEY, args)
+          return VM.invoke(new_frame(), target, "set_child", args)
         else:
           not_allowed("set_child " & $target & " " & $m.index & " " & $value)
     of SmByName:
@@ -688,11 +687,11 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
         if self.is_last:
           result = true
           var class = target.instance_class
-          if class.has_method(SET_KEY):
+          if class.has_method("set"):
             var args = new_gene_gene()
             args.gene_children.add(m.name.to_s)
             args.gene_children.add(value)
-            return VM.invoke(new_frame(), target, SET_KEY, args)
+            return VM.invoke(new_frame(), target, "set", args)
           else:
             target.instance_props[m.name] = value
         else:
@@ -702,11 +701,11 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
         if self.is_last:
           result = true
           var class = target.get_class()
-          if class.has_method(SET_KEY):
+          if class.has_method("set"):
             var args: Expr = new_ex_arg()
             cast[ExArguments](args).children.add(new_ex_literal(m.name.to_s))
             cast[ExArguments](args).children.add(new_ex_literal(value))
-            return VM.invoke(new_frame(), target, SET_KEY, args)
+            return VM.invoke(new_frame(), target, "set", args)
           else:
             not_allowed("update " & $target & " " & m.name.to_s & " " & $value)
         else:
@@ -857,9 +856,9 @@ proc init_app_and_vm*() =
   VM.init_package(get_current_dir())
 
   VM.global_ns = Value(kind: VkNamespace, ns: VM.app.ns)
-  VM.global_ns.ns[STDIN_KEY]  = stdin
-  VM.global_ns.ns[STDOUT_KEY] = stdout
-  VM.global_ns.ns[STDERR_KEY] = stderr
+  VM.global_ns.ns["stdin"]  = stdin
+  VM.global_ns.ns["stdout"] = stdout
+  VM.global_ns.ns["stderr"] = stderr
 
   VM.gene_ns = Value(kind: VkNamespace, ns: new_namespace("gene"))
   VM.gene_native_ns = Value(kind: VkNamespace, ns: new_namespace("native"))
@@ -909,7 +908,7 @@ proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
 proc eval*(self: VirtualMachine, pkg: Package, code: string, module_name: string): Value =
   var module = new_module(pkg, module_name)
   if module.name.len > 0:
-    self.modules[module.name.to_key] = module.ns
+    self.modules[module.name] = module.ns
   var frame = new_frame(FrModule)
   frame.ns = module.ns
   frame.scope = new_scope()
@@ -995,7 +994,7 @@ proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref system.Exception)
   echo "Opening debug console..."
   echo "Note: the exception can be accessed as $ex"
   var ex = exception_to_value(e)
-  frame.scope.def_member(CUR_EXCEPTION_KEY, ex)
+  frame.scope.def_member("$ex", ex)
   result = repl(self, frame, eval, true)
 
 proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
@@ -1055,7 +1054,7 @@ proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args:
         raise
   of VkInstance:
     var class = target.instance_class
-    var meth = class.get_method(CALL_KEY)
+    var meth = class.get_method("call")
     var fn = meth.callable.fn
     var fn_scope = new_scope()
     fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
@@ -1141,7 +1140,7 @@ proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Valu
     future.complete(result)
     result = new_gene_future(future)
 
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args: Value): Value =
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args: Value): Value =
   var class = instance.get_class
   var meth = class.get_method(method_name)
   # var is_method_missing = false
@@ -1166,7 +1165,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: M
   of VkFunction:
     var fn_scope = new_scope()
     # if is_method_missing:
-    #   fn_scope.def_member("$method_name".to_key, expr.meth.to_s)
+    #   fn_scope.def_member("$method_name", expr.meth.to_s)
     var new_frame = Frame(ns: callable.fn.ns, scope: fn_scope)
     new_frame.parent = frame
     new_frame.self = instance
@@ -1193,7 +1192,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: M
   else:
     todo()
 
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: MapKey, args_expr: var Expr): Value =
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args_expr: var Expr): Value =
   var class = instance.get_class
   var meth = class.get_method(method_name)
   # var is_method_missing = false
@@ -1219,7 +1218,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: M
   of VkFunction:
     var fn_scope = new_scope()
     # if is_method_missing:
-    #   fn_scope.def_member("$method_name".to_key, expr.meth.to_s)
+    #   fn_scope.def_member("$method_name", expr.meth.to_s)
     var new_frame = Frame(ns: callable.fn.ns, scope: fn_scope)
     new_frame.parent = frame
     new_frame.self = instance

@@ -1,3 +1,5 @@
+import unittest
+
 import gene/types
 
 import ./helpers
@@ -32,10 +34,16 @@ test_interpreter """
   ({^a 1 ^b 2} .map
     ([k v] -> k)
   )
-""", @["a", "b"]
+""", proc(r: Value) =
+  check r.vec.len == 2
+  check r.vec.contains("a")
+  check r.vec.contains("b")
 
 test_interpreter """
   ({^a 1 ^b 2} .map
     ([_ v] -> v)
   )
-""", @[1, 2]
+""", proc(r: Value) =
+  check r.vec.len == 2
+  check r.vec.contains(1)
+  check r.vec.contains(2)

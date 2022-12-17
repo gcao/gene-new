@@ -1,10 +1,9 @@
 import tables
 
 import ../types
-import ../map_key
 import ../interpreter_base
 
-let LOOP_OUTPUT_KEY = add_key("z_loop_output")
+const LOOP_OUTPUT_KEY = "z_loop_output"
 
 type
   ExFor* = ref object of Expr
@@ -29,7 +28,7 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     scope.set_parent(old_scope, old_scope.max)
     frame.scope = scope
 
-    scope.def_member(expr.name.to_key, Value(kind: VkNil))
+    scope.def_member(expr.name, Value(kind: VkNil))
     var loop_output = new_gene_vec(@[])
     scope.def_member(LOOP_OUTPUT_KEY, loop_output)
     var data = self.eval(frame, expr.data)
@@ -37,7 +36,7 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     of VkVector:
       for item in data.vec:
         try:
-          scope[expr.name.to_key] = item
+          scope[expr.name] = item
           discard self.eval(frame, expr.body)
         except Continue:
           continue
@@ -46,7 +45,7 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     of VkMap:
       for _, v in data.map:
         try:
-          scope[expr.name.to_key] = v
+          scope[expr.name] = v
           discard self.eval(frame, expr.body)
         except Continue:
           continue
@@ -69,20 +68,20 @@ proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
     scope.set_parent(old_scope, old_scope.max)
     frame.scope = scope
 
-    scope.def_member(expr.key_name.to_key, Value(kind: VkNil))
-    scope.def_member(expr.val_name.to_key, Value(kind: VkNil))
+    scope.def_member(expr.key_name, Value(kind: VkNil))
+    scope.def_member(expr.val_name, Value(kind: VkNil))
     scope.def_member(LOOP_OUTPUT_KEY, @[])
     var data = self.eval(frame, expr.data)
     case data.kind:
     of VkVector:
       for k, v in data.vec:
-        scope[expr.key_name.to_key] = k
-        scope[expr.val_name.to_key] = v
+        scope[expr.key_name] = k
+        scope[expr.val_name] = v
         discard self.eval(frame, expr.body)
     of VkMap:
       for k, v in data.map:
-        scope[expr.key_name.to_key] = k.to_s
-        scope[expr.val_name.to_key] = v
+        scope[expr.key_name] = k.to_s
+        scope[expr.val_name] = v
         discard self.eval(frame, expr.body)
     else:
       todo()

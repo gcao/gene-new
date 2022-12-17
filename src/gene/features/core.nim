@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -143,7 +142,7 @@ proc eval_tap(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     if expr.as_self:
       frame.self = result
     else:
-      frame.scope.def_member(expr.as_name.to_key, result)
+      frame.scope.def_member(expr.as_name, result)
     discard self.eval(frame, expr.body)
   finally:
     frame.self = old_self

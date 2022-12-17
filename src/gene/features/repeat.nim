@@ -1,11 +1,7 @@
 import tables
 
 import ../types
-import ../map_key
 import ../interpreter_base
-
-let INDEX_KEY* = add_key("index")
-let TOTAL_KEY* = add_key("total")
 
 type
   ExRepeat* = ref object of Expr
@@ -25,13 +21,13 @@ proc eval_repeat(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     var times = (int)self.eval(frame, expr.times).int
     var i = 0
     if expr.total != nil:
-      scope.def_member(expr.total.str.to_key, new_gene_int(times))
+      scope.def_member(expr.total.str, new_gene_int(times))
     if expr.index != nil:
-      scope.def_member(expr.index.str.to_key, new_gene_int(i))
+      scope.def_member(expr.index.str, new_gene_int(i))
 
     while i < times:
       if expr.index != nil:
-        scope[expr.index.str.to_key] = new_gene_int(i)
+        scope[expr.index.str] = new_gene_int(i)
       i += 1
       try:
         for item in expr.code.mitems:
@@ -47,8 +43,8 @@ proc translate_repeat(value: Value): Expr =
   var r = ExRepeat(
     evaluator: eval_repeat,
     times: translate(value.gene_children[0]),
-    index: value.gene_props.get_or_default(INDEX_KEY, nil),
-    total: value.gene_props.get_or_default(TOTAL_KEY, nil),
+    index: value.gene_props.get_or_default("index", nil),
+    total: value.gene_props.get_or_default("total", nil),
   )
   for item in value.gene_children[1..^1]:
     r.code.add translate(item)

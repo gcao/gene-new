@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 import ./symbol
@@ -71,9 +70,9 @@ proc to_function(node: Value): Function =
   body = wrap_with_try(body)
   result = new_fn(name, matcher, body)
   result.translator = fn_arg_translator
-  if node.gene_props.has_key(RETURN_KEY):
-    result.ret = translate(node.gene_props[RETURN_KEY])
-  result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
+  if node.gene_props.has_key("return"):
+    result.ret = translate(node.gene_props["return"])
+  result.async = node.gene_props.get_or_default("async", false)
 
 proc translate_fn(value: Value): Expr =
   var fn = to_function(value)

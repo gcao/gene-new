@@ -1,6 +1,5 @@
 import tables, strutils
 
-import ./map_key
 import ./types
 import ./parser
 import ./interpreter_base
@@ -95,10 +94,10 @@ proc deref*(self: Serialization, vm: VirtualMachine, s: string): Value =
   var parts = s.split(":")
   var module_name = parts[0]
   var ns_path = parts[1].split("/")
-  var ns = vm.modules[module_name.to_key]
+  var ns = vm.modules[module_name]
   while ns_path.len > 1:
     ns_path.delete(0)
-    var key = ns_path[0].to_key
+    var key = ns_path[0]
     result = ns[key]
     if ns_path.len > 1:
       case result.kind:
@@ -127,7 +126,7 @@ proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value 
         return self.deref(vm, value.gene_children[0].str)
       of "gene/instance":
         var class = self.deserialize(vm, value.gene_children[0]).class
-        var props = Table[MapKey, Value]()
+        var props = Table[string, Value]()
         for k, v in value.gene_children[1].map:
           props[k] = self.deserialize(vm, v)
         return new_gene_instance(class, props)

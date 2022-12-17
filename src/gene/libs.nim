@@ -3,7 +3,6 @@ import asyncdispatch, asyncfile
 
 import ./types
 import ./json
-import ./map_key
 import ./interpreter_base
 
 proc object_class(self: Value, args: Value): Value =
@@ -217,7 +216,7 @@ proc csv_parse(args: Value): Value =
   if args.gene_children[0].str.contains('\t'):
     sep = '\t'
   parser.open(new_string_stream(args.gene_children[0].str), "unknown.csv", sep)
-  if not args.gene_props.get_or_default("skip_headers".to_key, false):
+  if not args.gene_props.get_or_default("skip_headers", false):
     parser.read_header_row()
   result = new_gene_vec()
   while parser.read_row():
@@ -336,7 +335,7 @@ proc init*() =
     self.class_class.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"class_member_names".} =
       self.class.ns.member_names()
     self.class_class.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"class_has_member".} =
-      self.class.ns.members.has_key(args[0].to_s.to_key)
+      self.class.ns.members.has_key(args[0].to_s)
     self.class_class.def_native_method "on_member_missing", on_member_missing
     self.class_class.def_native_method "on_extended", proc(self: Value, args: Value): Value {.name:"class_on_extended" } =
       self.class.on_extended = args.gene_children[0]
@@ -353,7 +352,7 @@ proc init*() =
     self.mixin_class.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"mixin_member_names".} =
       self.mixin.ns.member_names()
     self.mixin_class.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"mixin_has_member".} =
-      self.mixin.ns.members.has_key(args[0].to_s.to_key)
+      self.mixin.ns.members.has_key(args[0].to_s)
     self.mixin_class.def_native_method "on_member_missing", on_member_missing
     self.mixin_class.def_native_method "on_included", proc(self: Value, args: Value): Value {.name:"mixin_on_extended" } =
       self.class.on_extended = args.gene_children[0]
@@ -384,7 +383,7 @@ proc init*() =
     self.namespace_class.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"ns_member_names".} =
       self.ns.member_names()
     self.namespace_class.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"ns_has_member".} =
-      self.ns.members.has_key(args[0].to_s.to_key)
+      self.ns.members.has_key(args[0].to_s)
     self.namespace_class.def_native_method "on_member_missing", on_member_missing
     self.gene_ns.ns["Namespace"] = self.namespace_class
     self.global_ns.ns["Namespace"] = self.namespace_class
@@ -470,7 +469,7 @@ proc init*() =
     self.map_class.def_native_method("keys", map_keys)
     self.map_class.def_native_method("values", map_values)
     self.map_class.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"map_contains".} =
-      self.map.has_key(args.gene_children[0].str.to_key)
+      self.map.has_key(args.gene_children[0].str)
     self.gene_ns.ns["Map"] = self.map_class
     self.global_ns.ns["Map"] = self.map_class
 
@@ -481,7 +480,7 @@ proc init*() =
     self.gene_class.def_native_method("children", gene_children)
     self.gene_class.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"gene_contains".} =
       var s = args.gene_children[0].str
-      result = self.gene_props.has_key(s.to_key)
+      result = self.gene_props.has_key(s)
     self.gene_ns.ns["Gene"] = self.gene_class
     self.global_ns.ns["Gene"] = self.gene_class
 

@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -23,14 +22,9 @@ type
     IsIfNot, IsElifNot,
     IsElse,
 
-let COND_KEY* = add_key("cond")
-let THEN_KEY* = add_key("then")
-let ELIF_KEY* = add_key("elif")
-let ELSE_KEY* = add_key("else")
-
 proc normalize_if(self: Value) =
   # TODO: return a tuple to be used by the translator
-  if self.gene_props.has_key(COND_KEY):
+  if self.gene_props.has_key("cond"):
     return
   var `type` = self.gene_type
   if `type`.is_symbol("if"):
@@ -47,10 +41,10 @@ proc normalize_if(self: Value) =
         elif input.is_symbol("not"):
           state = IsIfNot
         else:
-          self.gene_props[COND_KEY] = input
+          self.gene_props["cond"] = input
           state = IsIfCond
       of IsIfNot:
-        self.gene_props[COND_KEY] = new_gene_gene(new_gene_symbol("not"), input)
+        self.gene_props["cond"] = new_gene_gene(new_gene_symbol("not"), input)
         state = IsIfCond
       of IsIfCond:
         state = IsIfLogic
@@ -61,12 +55,12 @@ proc normalize_if(self: Value) =
           logic.add(input)
       of IsIfLogic:
         if input == nil:
-          self.gene_props[THEN_KEY] = new_gene_stream(logic)
+          self.gene_props["then"] = new_gene_stream(logic)
         elif input.is_symbol("elif"):
-          self.gene_props[THEN_KEY] = new_gene_stream(logic)
+          self.gene_props["then"] = new_gene_stream(logic)
           state = IsElif
         elif input.is_symbol("else"):
-          self.gene_props[THEN_KEY] = new_gene_stream(logic)
+          self.gene_props["then"] = new_gene_stream(logic)
           state = IsElse
           logic = @[]
         else:
@@ -92,21 +86,21 @@ proc normalize_if(self: Value) =
       of IsElifLogic:
         if input == nil:
           elifs.add(new_gene_stream(logic))
-          self.gene_props[ELIF_KEY] = elifs
+          self.gene_props["elif"] = elifs
         elif input.is_symbol("elif"):
           elifs.add(new_gene_stream(logic))
-          self.gene_props[ELIF_KEY] = elifs
+          self.gene_props["elif"] = elifs
           state = IsElif
         elif input.is_symbol("else"):
           elifs.add(new_gene_stream(logic))
-          self.gene_props[ELIF_KEY] = elifs
+          self.gene_props["elif"] = elifs
           state = IsElse
           logic = @[]
         else:
           logic.add(input)
       of IsElse:
         if input == nil:
-          self.gene_props[ELSE_KEY] = new_gene_stream(logic)
+          self.gene_props["else"] = new_gene_stream(logic)
         else:
           logic.add(input)
 
@@ -115,10 +109,10 @@ proc normalize_if(self: Value) =
     handler(nil)
 
     # Add empty blocks when they are missing
-    if not self.gene_props.has_key(THEN_KEY):
-      self.gene_props[THEN_KEY] = new_gene_stream(@[])
-    if not self.gene_props.has_key(ELSE_KEY):
-      self.gene_props[ELSE_KEY] = new_gene_stream(@[])
+    if not self.gene_props.has_key("then"):
+      self.gene_props["then"] = new_gene_stream(@[])
+    if not self.gene_props.has_key("else"):
+      self.gene_props["else"] = new_gene_stream(@[])
 
     self.gene_children.reset  # Clear our gene_children as it's not needed any more
 
@@ -138,17 +132,17 @@ proc translate_if(value: Value): Expr =
   var r = ExIf(
     evaluator: eval_if,
   )
-  r.cond = translate(value.gene_props[COND_KEY])
-  r.then = translate(value.gene_props[THEN_KEY])
-  if value.gene_props.has_key(ELIF_KEY):
-    var elifs = value.gene_props[ELIF_KEY]
+  r.cond = translate(value.gene_props["cond"])
+  r.then = translate(value.gene_props["then"])
+  if value.gene_props.has_key("elif"):
+    var elifs = value.gene_props["elif"]
     var i = 0
     while i < elifs.vec.len:
       var cond = translate(elifs.vec[i])
       var logic = translate(elifs.vec[i + 1])
       r.elifs.add((cond, logic))
       i += 2
-  r.`else` = translate(value.gene_props[ELSE_KEY])
+  r.`else` = translate(value.gene_props["else"])
   result = r
 
 proc eval_not(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =

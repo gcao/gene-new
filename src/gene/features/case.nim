@@ -1,6 +1,5 @@
 import tables, nre
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -12,7 +11,7 @@ type
     case_input*: Expr
     case_blks*: seq[Expr]   # Code blocks
     case_else*: Expr        # Else block
-    case_lite_mapping*: Table[MapKey, int]  # literal -> block index
+    case_lite_mapping*: Table[string, int]  # literal -> block index
     case_more_mapping*: seq[(Expr, int)]    # non-literal -> block index
 
 proc case_equals(input: Value, pattern: Value): bool =

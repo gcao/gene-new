@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 import ./symbol
@@ -8,7 +7,7 @@ import ./symbol
 type
   ExVar* = ref object of Expr
     container*: Expr
-    name*: MapKey
+    name*: string
     value*: Expr
 
 proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -47,14 +46,14 @@ proc translate_var(value: Value): Expr =
   of VkSymbol:
     result = ExVar(
       evaluator: eval_var,
-      name: name.str.to_key,
+      name: name.str,
       value: v,
     )
   of VkComplexSymbol:
     result = ExVar(
       evaluator: eval_var,
       container: translate(name.csymbol[0..^2]),
-      name: name.csymbol[^1].to_key,
+      name: name.csymbol[^1],
       value: v,
     )
   else:

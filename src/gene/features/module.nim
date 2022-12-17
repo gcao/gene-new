@@ -4,10 +4,7 @@ import dynlib
 
 import ../dynlib_mapping
 import ../types
-import ../map_key
 import ../interpreter_base
-
-let INHERIT_KEY*               = add_key("inherit")
 
 type
   ExImport* = ref object of Expr
@@ -22,8 +19,8 @@ type
     `from`*: Value
 
   ImportMatcher* = ref object
-    name*: MapKey
-    `as`*: MapKey
+    name*: string
+    `as`*: string
     children*: seq[ImportMatcher]
     children_only*: bool # true if self should not be imported
 
@@ -31,9 +28,9 @@ proc new_import_matcher(s: string): ImportMatcher =
   var parts = s.split(":")
   case parts.len:
   of 1:
-    return ImportMatcher(name: parts[0].to_key)
+    return ImportMatcher(name: parts[0])
   of 2:
-    return ImportMatcher(name: parts[0].to_key, `as`: parts[1].to_key)
+    return ImportMatcher(name: parts[0], `as`: parts[1])
   else:
     todo("new_import_matcher " & s)
 
@@ -85,7 +82,7 @@ proc new_import_matcher*(v: Value): ImportMatcherRoot =
   result = ImportMatcherRoot()
   result.parse(v, result.children.addr)
 
-proc import_module*(self: VirtualMachine, pkg: Package, name: MapKey, code: string): Namespace =
+proc import_module*(self: VirtualMachine, pkg: Package, name: string, code: string): Namespace =
   if self.modules.has_key(name):
     return self.modules[name]
 
@@ -97,7 +94,7 @@ proc import_module*(self: VirtualMachine, pkg: Package, name: MapKey, code: stri
   result = module.ns
   self.modules[name] = result
 
-proc import_module*(self: VirtualMachine, pkg: Package, name: MapKey, code: string, inherit: Namespace): Namespace =
+proc import_module*(self: VirtualMachine, pkg: Package, name: string, code: string, inherit: Namespace): Namespace =
   var module = new_module(pkg, name.to_s, inherit)
   var frame = new_frame(FrModule)
   frame.ns = module.ns
@@ -107,7 +104,7 @@ proc import_module*(self: VirtualMachine, pkg: Package, name: MapKey, code: stri
 
 proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, group: seq[ImportMatcher]) =
   for m in group:
-    if m.name == MUL_KEY:
+    if m.name == "*":
       for k, v in source.members:
         frame.ns.members[k] = v
     else:
@@ -131,13 +128,13 @@ proc import_from_ns*(self: VirtualMachine, frame: Frame, source: Namespace, grou
         self.import_from_ns(frame, value.ns, m.children)
       else:
         var name = m.name
-        if m.as != 0:
+        if m.as != "":
           name = m.as
         frame.ns.members[name] = value
 
 proc prefetch_from_dynlib(self: Module, names: seq[string]) =
   for name in names:
-    if not self.ns.has_key(name.to_key):
+    if not self.ns.has_key(name):
       var v = self.handle.sym_addr(name)
       if v == nil:
         not_allowed("prefetch_from_dynlib: " & name & " is not found in " & self.name)
@@ -204,13 +201,13 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     var path = self.resolve_module(frame, pkg, `from`, expr.native)
     if expr.native:
       var module: Module
-      if self.modules.has_key(path.to_key):
-        ns = self.modules[path.to_key]
+      if self.modules.has_key(path):
+        ns = self.modules[path]
         module = ns.module
       else:
         module = load_dynlib(pkg, path)
         ns = module.ns
-        self.modules[path.to_key] = ns
+        self.modules[path] = ns
       var names: seq[string] = @[]
       for m in expr.matcher.children:
         names.add(m.name.to_s)
@@ -219,13 +216,13 @@ proc eval_import(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
       if expr.inherit != nil:
         var inherit = self.eval(frame, expr.inherit).ns
         var code = read_file(path)
-        ns = self.import_module(pkg, path.to_key, code, inherit)
-      elif self.modules.has_key(path.to_key):
-        ns = self.modules[path.to_key]
+        ns = self.import_module(pkg, path, code, inherit)
+      elif self.modules.has_key(path):
+        ns = self.modules[path]
       else:
         var code = read_file(path)
-        ns = self.import_module(pkg, path.to_key, code)
-        self.modules[path.to_key] = ns
+        ns = self.import_module(pkg, path, code)
+        self.modules[path] = ns
   self.import_from_ns(frame, ns, expr.matcher.children)
 
 proc translate_import*(value: Value): Expr =
@@ -236,12 +233,12 @@ proc translate_import*(value: Value): Expr =
   )
   if matcher.from != nil:
     e.from = translate(matcher.from)
-  if value.gene_props.has_key(PKG_KEY):
-    e.pkg = translate(value.gene_props[PKG_KEY])
-  if value.gene_props.has_key(NATIVE_KEY):
-    e.native = value.gene_props[NATIVE_KEY].bool
-  if value.gene_props.has_key(INHERIT_KEY):
-    e.inherit = translate(value.gene_props[INHERIT_KEY])
+  if value.gene_props.has_key("pkg"):
+    e.pkg = translate(value.gene_props["pkg"])
+  if value.gene_props.has_key("native"):
+    e.native = value.gene_props["native"].bool
+  if value.gene_props.has_key("inherit"):
+    e.inherit = translate(value.gene_props["inherit"])
   return e
 
 proc init*() =

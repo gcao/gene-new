@@ -1,6 +1,5 @@
 import parseopt, sequtils, parsecsv, streams, re
 
-import ../map_key
 import ../types
 import ../parser
 import ../interpreter
@@ -130,8 +129,8 @@ proc handle*(cmd: string, args: seq[string]): string =
     var index_name = options.index_name
     var value_name = options.value_name
     var index = 0
-    frame.scope.def_member(index_name.to_key, index)
-    frame.scope.def_member(value_name.to_key, Nil)
+    frame.scope.def_member(index_name, index)
+    frame.scope.def_member(value_name, Nil)
     if options.input_mode == ImCsv:
       var parser: CsvParser
       parser.open(new_file_stream(stdin), "<STDIN>")
@@ -141,8 +140,8 @@ proc handle*(cmd: string, args: seq[string]): string =
         var val = new_gene_vec()
         for item in parser.row:
           val.vec.add(item)
-        frame.scope[index_name.to_key] = index
-        frame.scope[value_name.to_key] = val
+        frame.scope[index_name] = index
+        frame.scope[value_name] = val
         var res = VM.eval(frame, options.code)
         if options.print_result:
           if not options.filter_result or res:
@@ -156,8 +155,8 @@ proc handle*(cmd: string, args: seq[string]): string =
         var val = parser.read()
         if val == nil:
           break
-        frame.scope[index_name.to_key] = index
-        frame.scope[value_name.to_key] = val
+        frame.scope[index_name] = index
+        frame.scope[value_name] = val
         var res = VM.eval(frame, options.code)
         if options.print_result:
           if not options.filter_result or res:
@@ -173,8 +172,8 @@ proc handle*(cmd: string, args: seq[string]): string =
           continue
         elif options.skip_empty and val.match(re"^\s*$"):
           continue
-        frame.scope[index_name.to_key] = index
-        frame.scope[value_name.to_key] = val
+        frame.scope[index_name] = index
+        frame.scope[value_name] = val
         var res = VM.eval(frame, options.code)
         if options.print_result:
           if not options.filter_result or res:

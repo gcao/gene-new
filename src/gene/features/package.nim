@@ -1,7 +1,6 @@
 import tables
 
 import ../types
-import ../map_key
 import ../interpreter_base
 
 type
@@ -52,7 +51,7 @@ proc translate_dep(value: Value): Expr =
   )
   if value.gene_children.len > 1:
     e.version = translate(value.gene_children[1])
-  if value.gene_props.has_key("path".to_key):
+  if value.gene_props.has_key("path"):
     e.path = translate(value.gene_props["path"])
   return e
 

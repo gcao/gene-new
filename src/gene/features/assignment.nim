@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 import ./arithmetic
@@ -18,7 +17,7 @@ import ./symbol
 
 type
   ExAssignment* = ref object of Expr
-    name*: MapKey
+    name*: string
     value*: Expr
 
 proc eval_assignment(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -36,7 +35,7 @@ proc translate_assignment(value: Value): Expr =
   of VkSymbol:
     result = ExAssignment(
       evaluator: eval_assignment,
-      name: first.str.to_key,
+      name: first.str,
       value: translate(value.gene_children[1]),
     )
   of VkComplexSymbol:
@@ -76,7 +75,7 @@ proc translate_op_eq(value: Value): Expr =
     value_expr.op2 = translate(second)
     return ExAssignment(
       evaluator: eval_assignment,
-      name: first.str.to_key,
+      name: first.str,
       value: value_expr,
     )
   of VkComplexSymbol:

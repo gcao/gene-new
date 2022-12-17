@@ -1,7 +1,6 @@
 import strutils
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 import ./core
@@ -62,7 +61,7 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     expr.args_expr = ExInvoke(
       evaluator: eval_invoke,
       self: expr.`type`,
-      meth: CALL_KEY,
+      meth: "call",
       args: new_ex_arg(expr.args),
     )
     return self.eval_invoke(frame, `type`, expr.args_expr)
@@ -98,8 +97,8 @@ proc translate_gene(value: Value): Expr =
   of VkSymbol:
     case `type`.str:
     of ".":
-      value.gene_props[SELF_KEY] = new_gene_symbol("self")
-      value.gene_props[METHOD_KEY] = value.gene_children[0]
+      value.gene_props["self"] = new_gene_symbol("self")
+      value.gene_props["method"] = value.gene_children[0]
       value.gene_children.delete 0
       value.gene_type = new_gene_symbol("$invoke_dynamic")
     of "...":
@@ -108,8 +107,8 @@ proc translate_gene(value: Value): Expr =
       return translate_import(value)
     else:
       if `type`.str.starts_with("."): # (.method x y z)
-        value.gene_props[SELF_KEY] = new_gene_symbol("self")
-        value.gene_props[METHOD_KEY] = new_gene_string_move(`type`.str.substr(1))
+        value.gene_props["self"] = new_gene_symbol("self")
+        value.gene_props["method"] = new_gene_string_move(`type`.str.substr(1))
         value.gene_type = new_gene_symbol("$invoke_method")
   of VkComplexSymbol:
     if `type`.csymbol[0] == ".":
@@ -126,9 +125,9 @@ proc translate_gene(value: Value): Expr =
     of VkSymbol:
       case first.str:
       of ".": # (x . method ...) or (x . function ...)
-        value.gene_props[SELF_KEY] = value.gene_type
+        value.gene_props["self"] = value.gene_type
         value.gene_children.delete 0
-        value.gene_props[METHOD_KEY] = value.gene_children[0]
+        value.gene_props["method"] = value.gene_children[0]
         value.gene_children.delete 0
         value.gene_type = new_gene_symbol("$invoke_dynamic")
       of "==", "!=", "<", "<=", ">", ">=":
@@ -158,13 +157,13 @@ proc translate_gene(value: Value): Expr =
         value.gene_children.insert value.gene_type, 0
         value.gene_type = first
       of "->":
-        value.gene_props[ARGS_KEY] = value.gene_type
+        value.gene_props["args"] = value.gene_type
         value.gene_type = value.gene_children[0]
         value.gene_children.delete 0
       else:
         if first.str.startsWith("."):
-          value.gene_props[SELF_KEY] = `type`
-          value.gene_props[METHOD_KEY] = new_gene_string_move(first.str.substr(1))
+          value.gene_props["self"] = `type`
+          value.gene_props["method"] = new_gene_string_move(first.str.substr(1))
           value.gene_children.delete 0
           value.gene_type = new_gene_symbol("$invoke_method")
     of VkComplexSymbol:

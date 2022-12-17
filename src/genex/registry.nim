@@ -2,7 +2,6 @@ import tables, nre
 import asyncdispatch
 
 import ../gene/types
-import ../gene/map_key
 import ../gene/interpreter_base
 
 type
@@ -44,7 +43,7 @@ type
     `type`*: RequestType
     async*: bool
     path*: Value
-    params*: Table[MapKey, Value]
+    params*: Table[string, Value]
     args*: seq[Value]
 
   ResponseType* = enum

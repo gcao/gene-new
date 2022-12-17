@@ -1,6 +1,5 @@
 import unittest, strutils, tables, osproc
 
-import gene/map_key
 import gene/types
 import gene/parser
 import gene/interpreter
@@ -14,19 +13,12 @@ proc test(self: Value, args: Value): Value =
   1
 
 proc test2(self: Value, args: Value): Value =
-  self.instance_props["a".to_key].int + args.gene_children[0].int + args.gene_children[1].int
+  self.instance_props["a"].int + args.gene_children[0].int + args.gene_children[1].int
 
 proc init_all*() =
   init_app_and_vm()
   VM.gene_native_ns.ns["test"] = new_gene_native_method(test)
   VM.gene_native_ns.ns["test2"] = new_gene_native_method(test2)
-
-# This is added to make it easier to write tests
-converter str_to_key*(s: string): MapKey {.inline.} =
-  s.to_key
-
-converter key_to_s*(self: MapKey): string {.inline.} =
-  self.to_s
 
 converter seq_to_gene*(self: seq[int]): Value =
   result = new_gene_vec()
@@ -52,7 +44,8 @@ proc test_parser*(code: string, result: Value) =
 proc test_parser*(code: string, callback: proc(result: Value)) =
   var code = cleanup(code)
   test "Parser / read: " & code:
-    callback read(code)
+    var parser = new_parser()
+    callback parser.read(code)
 
 proc test_parse_archive*(code: string, callback: proc(result: Value)) =
   var code = cleanup(code)
@@ -180,6 +173,26 @@ proc test_jsgen*(code: string, result: Value) =
     #   echo "===================="
     var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)
     check output == result
+
+proc test_jsgen*(code: string, callback: proc(result: Value)) =
+  var code = cleanup(code)
+  test "JS generation: " & code:
+    init_all()
+    var generated = VM.eval(code, "test_code").to_s
+    # if exists_env("SHOW_JS"):
+    #   echo "--------------------"
+    #   echo generated
+    #   echo()
+    var file = "/tmp/test.js"
+    write_file(file, generated)
+    # if exists_env("UGLIFY_JS"):
+    #   echo "--------------------"
+    #   var ret = exec_cmd(get_env("UGLIFY_JS") & " -b width=120 " & file)
+    #   if ret != 0:
+    #     discard exec_cmd("cat " & file)
+    #   echo "===================="
+    var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)
+    callback(output)
 
 proc test_serdes*(code: string, result: Value) =
   var code = cleanup(code)

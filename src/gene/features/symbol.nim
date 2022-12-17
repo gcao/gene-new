@@ -1,21 +1,20 @@
 import strutils, sequtils, tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 import ./selector
 
 type
   ExSymbol* = ref object of Expr
-    name*: MapKey
+    name*: string
 
   ExDefineNsOrScope* = ref object of Expr
-    name*: MapKey
+    name*: string
     value*: Expr
 
   ExMember* = ref object of Expr
     container*: Expr
-    name*: MapKey
+    name*: string
 
   ExChild* = ref object of Expr
     container*: Expr
@@ -23,7 +22,7 @@ type
 
   # member of self
   ExMyMember* = ref object of Expr
-    name*: MapKey
+    name*: string
 
   ExPackage* = ref object of Expr
 
@@ -98,7 +97,7 @@ proc translate*(name: string): Expr {.inline.} =
   else:
     result = ExMyMember(
       evaluator: eval_my_member,
-      name: name.to_key,
+      name: name,
     )
 
 proc translate*(names: seq[string]): Expr =
@@ -110,7 +109,7 @@ proc translate*(names: seq[string]): Expr =
       return ExInvoke(
         evaluator: eval_invoke,
         self: translate(names[0..^2]),
-        meth: name[1..^1].to_key,
+        meth: name[1..^1],
         args: new_ex_arg(),
       )
     else:
@@ -125,7 +124,7 @@ proc translate*(names: seq[string]): Expr =
         return ExMember(
           evaluator: eval_member,
           container: translate(names[0..^2]),
-          name: name.to_key,
+          name: name,
         )
 
 proc translate_symbol(value: Value): Expr =
@@ -175,7 +174,7 @@ proc translate_definition*(name: Value, value: Expr): Expr =
   of VkSymbol, VkString:
     return ExDefineNsOrScope(
       evaluator: eval_define_ns_or_scope,
-      name: name.str.to_key,
+      name: name.str,
       value: value,
     )
   of VkComplexSymbol:

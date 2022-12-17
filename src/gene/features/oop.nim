@@ -1,11 +1,10 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 import ./symbol
 
-let LESS_THAN = new_gene_symbol("<")
+const INIT_KEY = "init"
 
 type
   ExClass* = ref object of Expr
@@ -107,7 +106,7 @@ proc translate_class(value: Value): Expr =
     todo()
 
   var body_start = 1
-  if value.gene_children.len >= 3 and value.gene_children[1] == LESS_THAN:
+  if value.gene_children.len >= 3 and value.gene_children[1].is_symbol("<"):
     body_start = 3
     e.parent = translate(value.gene_children[2])
   e.body = translate(value.gene_children[body_start..^1])
@@ -117,7 +116,7 @@ proc eval_object(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
   var e = cast[ExObject](expr)
   var class = new_class(e.name)
   var class_val = Value(kind: VkClass, class: class)
-  result = new_gene_instance(class, Table[MapKey, Value]())
+  result = new_gene_instance(class, Table[string, Value]())
   if e.parent == nil:
     class.parent = VM.object_class.class
   else:
@@ -210,9 +209,9 @@ proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var E
       case x.kind:
       of VkClass:
         new_method.class = x.class
-        x.class.methods[new_method.name.to_key] = new_method
+        x.class.methods[new_method.name] = new_method
       of VkMixin:
-        x.mixin.methods[new_method.name.to_key] = new_method
+        x.mixin.methods[new_method.name] = new_method
       else:
         not_allowed()
 
@@ -299,7 +298,7 @@ proc to_function(node: Value): Function =
 
   body = wrap_with_try(body)
   result = new_fn(name, matcher, body)
-  result.async = node.gene_props.get_or_default(ASYNC_KEY, false)
+  result.async = node.gene_props.get_or_default("async", false)
 
 proc to_constructor(node: Value): Function =
   var name = "new"
@@ -318,9 +317,9 @@ proc assign_method(frame: Frame, m: Method) =
   case frame.self.kind:
   of VkClass:
     m.class = frame.self.class
-    frame.self.class.methods[m.name.to_key] = m
+    frame.self.class.methods[m.name] = m
   of VkMixin:
-    frame.self.mixin.methods[m.name.to_key] = m
+    frame.self.mixin.methods[m.name] = m
   else:
     not_allowed()
 
@@ -393,9 +392,9 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr
   var target = self.eval(frame, expr.target)
   case target.kind:
   of VkString:
-    return self.invoke(frame, instance, target.str.to_key, expr.args)
+    return self.invoke(frame, instance, target.str, expr.args)
   of VkSymbol:
-    return self.invoke(frame, instance, target.str.to_key, expr.args)
+    return self.invoke(frame, instance, target.str, expr.args)
   of VkFunction:
     var fn = target.fn
     var fn_scope = new_scope()
@@ -429,8 +428,8 @@ proc translate_invoke_dynamic(value: Value): Expr =
   var r = ExInvokeDynamic(
     evaluator: eval_invoke_dynamic,
   )
-  r.self = translate(value.gene_props.get_or_default(SELF_KEY, nil))
-  r.target = translate(value.gene_props[METHOD_KEY])
+  r.self = translate(value.gene_props.get_or_default("self", nil))
+  r.target = translate(value.gene_props["method"])
 
   var args = new_ex_arg()
   for k, v in value.gene_props:
@@ -445,7 +444,7 @@ proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var expr = cast[ExSuper](expr)
   var instance = frame.self
   var m = frame.extra.method
-  var meth = m.class.get_super_method(m.name.to_key)
+  var meth = m.class.get_super_method(m.name)
 
   var fn_scope = new_scope()
   var new_frame = Frame(ns: meth.callable.fn.ns, scope: fn_scope)
@@ -488,7 +487,7 @@ proc translate_super(value: Value): Expr =
 #       self.eval(frame, expr.self)
 #   case obj.kind:
 #   of VkInstance:
-#     return obj.instance_props[name.str.to_key]
+#     return obj.instance_props[name.str]
 #   else:
 #     todo("eval_get_prop " & $obj & " " & name.to_s)
 
@@ -516,7 +515,7 @@ proc translate_super(value: Value): Expr =
 #       self.eval(frame, expr.self)
 #   case obj.kind:
 #   of VkInstance:
-#     obj.instance_props[name.str.to_key] = result
+#     obj.instance_props[name.str] = result
 #   else:
 #     todo("eval_set_prop " & $obj & " " & name.to_s)
 

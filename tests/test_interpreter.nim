@@ -338,7 +338,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native function (test)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: Table[MapKey, Value], children: seq[Value]): Value =
+#   VM.app.ns["test"] = proc(props: Table[string, Value], children: seq[Value]): Value =
 #     1
 #   var code = cleanup """
 #     (test)
@@ -347,7 +347,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native function (test 1 2)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: Table[MapKey, Value], children: seq[Value]): Value =
+#   VM.app.ns["test"] = proc(props: Table[string, Value], children: seq[Value]): Value =
 #     children[0].int + children[1].int
 #   var code = cleanup """
 #     (test 1 2)

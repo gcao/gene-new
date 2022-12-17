@@ -1,6 +1,5 @@
 import strutils, tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -247,7 +246,7 @@ proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: 
     todo()
     # var default_expr: Expr
     # for e in expr.gene_props:
-    #   if e.map_key == DEFAULT_KEY:
+    #   if e == "default":
     #     default_expr = e.map_val
     #     break
     # if default_expr != nil:
@@ -326,7 +325,7 @@ proc eval_invoke_selector(self: VirtualMachine, frame: Frame, target: Value, exp
   var selector = new_selector()
   selector.translator = selector_arg_translator
   var item = SelectorItem()
-  var name = self.eval(frame, expr.name).str.to_key
+  var name = self.eval(frame, expr.name).str
   item.matchers.add(SelectorMatcher(kind: SmInvoke, invoke_name: name))
   selector.children.add(item);
   new_gene_selector(selector)

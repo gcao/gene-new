@@ -1,6 +1,5 @@
 import nre, tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -23,14 +22,14 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   if r.is_some():
     var m = r.get()
     result = Value(kind: VkRegexMatch, regex_match: m)
-    frame.scope.def_member("$~".to_key, result)
+    frame.scope.def_member("$~", result)
     var i = 0
     for item in m.captures.to_seq:
       var name = "$~" & $i
       var value = Value(kind: VkNil)
       if item.is_some():
         value = item.get()
-      frame.scope.def_member(name.to_key, value)
+      frame.scope.def_member(name, value)
       i += 1
   else:
     return Value(kind: VkNil)
@@ -69,9 +68,9 @@ proc translate_regex*(value: Value): Expr =
   var r = ExRegex(
     evaluator: eval_regex,
   )
-  if value.gene_props.has_key("i".to_key):
+  if value.gene_props.has_key("i"):
     r.flags.incl(RfIgnoreCase)
-  if value.gene_props.has_key("m".to_key):
+  if value.gene_props.has_key("m"):
     r.flags.incl(RfMultiLine)
   for item in value.gene_children:
     r.data.add(translate(item))

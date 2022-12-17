@@ -1,7 +1,6 @@
 import strutils, sequtils, tables
 
 import ../types
-import ../map_key
 import ../interpreter_base
 
 type
@@ -122,14 +121,14 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
     of "option":
       var option = ArgMatcher(kind: ArgOption)
       option.parse_data_type(item)
-      option.toggle = item.gene_props.get_or_default(TOGGLE_KEY, false)
+      option.toggle = item.gene_props.get_or_default("toggle", false)
       if option.toggle:
         option.data_type = ArgBool
       else:
-        option.multiple = item.gene_props.get_or_default(MULTIPLE_KEY, false)
-        option.required = item.gene_props.get_or_default(REQUIRED_KEY, false)
-      if item.gene_props.has_key(DEFAULT_KEY):
-        option.default = item.gene_props[DEFAULT_KEY]
+        option.multiple = item.gene_props.get_or_default("multiple", false)
+        option.required = item.gene_props.get_or_default("required", false)
+      if item.gene_props.has_key("default"):
+        option.default = item.gene_props["default"]
         option.required = false
       for item in item.gene_children:
         if item.str[0] == '-':
@@ -148,14 +147,14 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
     of "argument":
       var arg = ArgMatcher(kind: ArgPositional)
       arg.arg_name = item.gene_children[0].str
-      if item.gene_props.has_key(DEFAULT_KEY):
-        arg.default = item.gene_props[DEFAULT_KEY]
+      if item.gene_props.has_key("default"):
+        arg.default = item.gene_props["default"]
         arg.required = false
       arg.parse_data_type(item)
       var is_last = i == schema.vec.len - 1
       if is_last:
-        arg.multiple = item.gene_props.get_or_default(MULTIPLE_KEY, false)
-        arg.required = item.gene_props.get_or_default(REQUIRED_KEY, false)
+        arg.multiple = item.gene_props.get_or_default("multiple", false)
+        arg.required = item.gene_props.get_or_default("required", false)
       else:
         arg.required = true
       self.args.add(arg)
@@ -255,7 +254,7 @@ proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
         name = k[2..^1]
       elif k.starts_with("-"):
         name = k[1..^1]
-      frame.scope.def_member(name.to_key, v)
+      frame.scope.def_member(name, v)
   else:
     todo()
 

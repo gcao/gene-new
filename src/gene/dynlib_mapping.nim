@@ -1,7 +1,6 @@
 import dynlib, tables
 import asyncdispatch
 
-import ./map_key
 import ./types
 import ./interpreter_base
 
@@ -18,7 +17,6 @@ type
 
   SetGlobals = proc(
     g_disp          : PDispatcher,
-    mapping         : Mapping,
     translators     : TableRef[ValueKind, Translator],
     gene_translators: TableRef[string, Translator],
     vm              : VirtualMachine,
@@ -63,7 +61,6 @@ proc load_dynlib*(pkg: Package, path: string): Module =
 proc call_set_globals(p: pointer) =
   cast[SetGlobals](p)(
     get_global_dispatcher(),
-    mapping,
     Translators,
     GeneTranslators,
     VM,

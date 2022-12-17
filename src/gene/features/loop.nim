@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -11,8 +10,6 @@ type
   ExOnce* = ref object of Expr
     input*: Value
     code*: seq[Expr]
-
-let LOOP_KEY* = add_key("loop")
 
 proc eval_loop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   while true:
@@ -41,12 +38,12 @@ proc translate_continue(value: Value): Expr =
 
 proc eval_once(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExOnce](expr)
-  if expr.input.gene_props.has_key(RETURN_KEY):
-    result = expr.input.gene_props[RETURN_KEY]
+  if expr.input.gene_props.has_key("return"):
+    result = expr.input.gene_props["return"]
   else:
     for item in expr.code.mitems:
       result = self.eval(frame, item)
-    expr.input.gene_props[RETURN_KEY] = result
+    expr.input.gene_props["return"] = result
 
 proc translate_once(value: Value): Expr =
   var r = ExOnce(

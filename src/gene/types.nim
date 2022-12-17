@@ -4,8 +4,6 @@ import asyncdispatch
 import dynlib
 import macros
 
-import ./map_key
-
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
 
 type
@@ -140,14 +138,14 @@ type
     of VkTimezone:
       timezone*: Timezone
     of VkMap:
-      map*: Table[MapKey, Value]
+      map*: Table[string, Value]
     of VkVector:
       vec*: seq[Value]
     of VkSet:
       set*: HashSet[Value]
     of VkGene:
       gene_type*: Value
-      gene_props*: Table[MapKey, Value]
+      gene_props*: Table[string, Value]
       gene_children*: seq[Value]
     of VkEnum:
       `enum`*: Enum
@@ -159,7 +157,7 @@ type
       stream_ended*: bool
     of VkDocument:
       document_type*: Value
-      document_props*: Table[MapKey, Value]
+      document_props*: Table[string, Value]
       document_children*: seq[Value]
     of VkFile:
       file_parent*: Value
@@ -225,7 +223,7 @@ type
       native_method2*: NativeMethod2
     of VkInstance:
       instance_class*: Class
-      instance_props*: Table[MapKey, Value]
+      instance_props*: Table[string, Value]
     of VkExpr:
       expr*: Expr
     of VkFuture:
@@ -241,7 +239,7 @@ type
 
   Document* = ref object
     `type`: Value
-    props*: Table[MapKey, Value]
+    props*: Table[string, Value]
     children*: seq[Value]
 
   # applicable to numbers, characters
@@ -301,7 +299,7 @@ type
   VirtualMachine* = ref object
     app*: Application
     runtime*: Runtime
-    modules*: Table[MapKey, Namespace]
+    modules*: Table[string, Namespace]
     repl_on_error*: bool
 
     global_ns*     : Value
@@ -462,21 +460,21 @@ type
     parent*: Namespace
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
-    members*: Table[MapKey, Value]
+    members*: Table[string, Value]
     on_member_missing*: seq[Value]
 
   Class* = ref object
     parent*: Class
     name*: string
     constructor*: Value
-    methods*: Table[MapKey, Method]
+    methods*: Table[string, Method]
     on_extended*: Value
     # method_missing*: Value
     ns*: Namespace # Class can act like a namespace
 
   Mixin* = ref object
     name*: string
-    methods*: Table[MapKey, Method]
+    methods*: Table[string, Method]
     on_included*: Value
     ns*: Namespace # Mixin can act like a namespace
 
@@ -553,7 +551,7 @@ type
     else:
       discard
     args*: Value # This is only available in some frames (e.g. function/macro/block)
-    props*: Table[MapKey, Value]
+    props*: Table[string, Value]
 
   Frame* = ref object
     parent*: Frame
@@ -570,7 +568,7 @@ type
     # Value of mappings is composed of two bytes:
     #   first is the optional index in self.mapping_history + 1
     #   second is the index in self.members
-    mappings*: Table[MapKey, int]
+    mappings*: Table[string, int]
     mapping_history*: seq[seq[NameIndexScope]]
 
   Break* = ref object of CatchableError
@@ -611,7 +609,7 @@ type
     root*: RootMatcher
     kind*: MatcherKind
     next*: Matcher  # if kind is MatchData and is_splat is true, we may need to check next matcher
-    name*: MapKey
+    name*: string
     is_prop*: bool
     literal*: Value # if kind is MatchLiteral, this is required
     # match_name*: bool # Match symbol to name - useful for (myif true then ... else ...)
@@ -638,7 +636,7 @@ type
     # fields*: seq[MatchedField]
     # assign_only*: bool # If true, no new variables will be defined
     # If missing fields
-    missing*: seq[MapKey]
+    missing*: seq[string]
     # If wrong type
     expect_type*: string
     found_type*: string
@@ -646,7 +644,7 @@ type
   # Internal state when applying the matcher to an input
   # Limited to one level
   MatchState* = ref object
-    # prop_processed*: seq[MapKey]
+    # prop_processed*: seq[string]
     data_index*: int
 
   SelectorNoResult* = object of Exception
@@ -694,13 +692,13 @@ type
     of SmByIndexRange:
       range*: Range
     of SmByName:
-      name*: MapKey
+      name*: string
     of SmByType:
       by_type*: Value
     of SmCallback:
       callback*: Value
     of SmInvoke:
-      invoke_name*: MapKey
+      invoke_name*: string
       invoke_args*: Value
     else: discard
 
@@ -716,7 +714,7 @@ type
     of SrAll:
       all*: seq[Value]
 
-var VM*: VirtualMachine   # The current virtual machine
+var VM* {.threadvar.}: VirtualMachine  # The current virtual machine
 var VmCreatedCallbacks*: seq[proc(self: var VirtualMachine)] = @[]
 
 #################### Definitions #################
@@ -731,11 +729,10 @@ proc new_gene_string_move*(s: string): Value
 proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
 proc new_gene_vec*(items: varargs[Value]): Value
 proc new_gene_map*(): Value
-proc new_gene_map*(map: Table[MapKey, Value]): Value
+proc new_gene_map*(map: Table[string, Value]): Value
 proc new_namespace*(): Namespace
 proc new_namespace*(name: string): Namespace
 proc new_namespace*(parent: Namespace): Namespace
-proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.inline.}
 proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.}
 proc new_class*(name: string): Class
 proc new_class*(name: string, parent: Class): Class
@@ -781,7 +778,7 @@ converter to_gene*(v: float): Value                    = new_gene_float(v)
 converter to_gene*(v: string): Value                   = new_gene_string(v)
 converter to_gene*(v: char): Value                     = new_gene_char(v)
 converter to_gene*(v: Rune): Value                     = new_gene_char(v)
-converter to_gene*(v: Table[MapKey, Value]): Value = new_gene_map(v)
+converter to_gene*(v: Table[string, Value]): Value = new_gene_map(v)
 
 # Below converter causes problem with the hash function
 # converter to_gene*(v: seq[Value]): Value           = new_gene_vec(v)
@@ -808,20 +805,6 @@ converter file_to_gene*(file: File): Value =
   Value(
     kind: VkNativeFile,
     native_file: file,
-  )
-
-converter to_map*(self: Table[string, Value]): Table[MapKey, Value] {.inline.} =
-  for k, v in self:
-    result[k.to_key] = v
-
-converter to_string_map*(self: Table[MapKey, Value]): Table[string, Value] {.inline.} =
-  for k, v in self:
-    result[k.to_s] = v
-
-converter to_gene*(v: Table[string, Value]): Value =
-  return Value(
-    kind: VkMap,
-    map: v,
   )
 
 converter int_to_scope_index*(v: int): NameIndexScope = cast[NameIndexScope](v)
@@ -894,27 +877,27 @@ proc new_module*(pkg: Package, ns: Namespace): Module =
 proc new_namespace*(): Namespace =
   return Namespace(
     name: "<root>",
-    members: Table[MapKey, Value](),
+    members: Table[string, Value](),
   )
 
 proc new_namespace*(parent: Namespace): Namespace =
   return Namespace(
     parent: parent,
     name: "<root>",
-    members: Table[MapKey, Value](),
+    members: Table[string, Value](),
   )
 
 proc new_namespace*(name: string): Namespace =
   return Namespace(
     name: name,
-    members: Table[MapKey, Value](),
+    members: Table[string, Value](),
   )
 
 proc new_namespace*(parent: Namespace, name: string): Namespace =
   return Namespace(
     parent: parent,
     name: name,
-    members: Table[MapKey, Value](),
+    members: Table[string, Value](),
   )
 
 proc root*(self: Namespace): Namespace =
@@ -935,18 +918,18 @@ proc get_module*(self: Namespace): Module =
 proc package*(self: Namespace): Package =
   self.get_module().pkg
 
-proc has_key*(self: Namespace, key: MapKey): bool {.inline.} =
+proc has_key*(self: Namespace, key: string): bool {.inline.} =
   return self.members.has_key(key) or (self.parent != nil and self.parent.has_key(key))
 
-proc `[]`*(self: Namespace, key: MapKey): Value {.inline.} =
+proc `[]`*(self: Namespace, key: string): Value {.inline.} =
   if self.members.has_key(key):
     return self.members[key]
   elif not self.stop_inheritance and self.parent != nil:
     return self.parent[key]
   else:
-    raise new_exception(NotDefinedException, %key & " is not defined")
+    raise new_exception(NotDefinedException, key & " is not defined")
 
-proc locate*(self: Namespace, key: MapKey): (Value, Namespace) {.inline.} =
+proc locate*(self: Namespace, key: string): (Value, Namespace) {.inline.} =
   if self.members.has_key(key):
     result = (self.members[key], self)
   elif not self.stop_inheritance and self.parent != nil:
@@ -954,14 +937,8 @@ proc locate*(self: Namespace, key: MapKey): (Value, Namespace) {.inline.} =
   else:
     not_allowed()
 
-proc `[]`*(self: Namespace, key: string): Value {.inline.} =
-  result = self[key.to_key]
-
-proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.inline.} =
-  self.members[key] = val
-
 proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.} =
-  self.members[key.to_key] = val
+  self.members[key] = val
 
 proc get_members*(self: Namespace): Value =
   result = new_gene_map()
@@ -971,13 +948,13 @@ proc get_members*(self: Namespace): Value =
 proc member_names*(self: Namespace): Value =
   result = new_gene_vec()
   for k, _ in self.members:
-    result.vec.add(k.to_s)
+    result.vec.add(k)
 
 #################### Scope #######################
 
 proc new_scope*(): Scope = Scope(
   members: @[],
-  mappings: Table[MapKey, int](),
+  mappings: Table[string, int](),
   mapping_history: @[],
 )
 
@@ -992,7 +969,7 @@ proc reset*(self: var Scope) {.inline.} =
   self.parent = nil
   self.members.setLen(0)
 
-proc has_key(self: Scope, key: MapKey, max: int): bool {.inline.} =
+proc has_key(self: Scope, key: string, max: int): bool {.inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found < max:
@@ -1010,13 +987,13 @@ proc has_key(self: Scope, key: MapKey, max: int): bool {.inline.} =
   if self.parent != nil:
     return self.parent.has_key(key, self.parent_index_max)
 
-proc has_key*(self: Scope, key: MapKey): bool {.inline.} =
+proc has_key*(self: Scope, key: string): bool {.inline.} =
   if self.mappings.has_key(key):
     return true
   elif self.parent != nil:
     return self.parent.has_key(key, self.parent_index_max)
 
-proc def_member*(self: var Scope, key: MapKey, val: Value) {.inline.} =
+proc def_member*(self: var Scope, key: string, val: Value) {.inline.} =
   var index = self.members.len
   self.members.add(val)
   if self.mappings.has_key_or_put(key, index):
@@ -1030,7 +1007,7 @@ proc def_member*(self: var Scope, key: MapKey, val: Value) {.inline.} =
       self.mapping_history.add(@[NameIndexScope(cur)])
       self.mappings[key] = (history_index + 1).shl(8) + index
 
-proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
+proc `[]`(self: Scope, key: string, max: int): Value {.inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found > 255:
@@ -1052,7 +1029,7 @@ proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
   if self.parent != nil:
     return self.parent[key, self.parent_index_max]
 
-proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
+proc `[]`*(self: Scope, key: string): Value {.inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found > 255:
@@ -1061,7 +1038,7 @@ proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
   elif self.parent != nil:
     return self.parent[key, self.parent_index_max]
 
-proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
+proc `[]=`(self: var Scope, key: string, val: Value, max: int) {.inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found > 255:
@@ -1085,7 +1062,7 @@ proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
   else:
     not_allowed()
 
-proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.inline.} =
+proc `[]=`*(self: var Scope, key: string, val: Value) {.inline.} =
   if self.mappings.has_key(key):
     self.members[self.mappings[key].int] = val
   elif self.parent != nil:
@@ -1110,7 +1087,7 @@ proc reset*(self: var Frame) {.inline.} =
   self.scope = nil
   self.extra = nil
 
-proc `[]`*(self: Frame, name: MapKey): Value {.inline.} =
+proc `[]`*(self: Frame, name: string): Value {.inline.} =
   result = self.scope[name]
   if result == nil:
     return self.ns[name]
@@ -1118,7 +1095,7 @@ proc `[]`*(self: Frame, name: MapKey): Value {.inline.} =
 proc `[]`*(self: Frame, name: Value): Value {.inline.} =
   case name.kind:
   of VkSymbol:
-    result = self[name.str.to_key]
+    result = self[name.str]
   # of VkComplexSymbol:
   #   var csymbol = name.csymbol
   #   if csymbol[0] == "global":
@@ -1132,7 +1109,7 @@ proc `[]`*(self: Frame, name: Value): Value {.inline.} =
   #     # result = self.ns
   #     todo()
   #   else:
-  #     result = self[csymbol[0].to_key]
+  #     result = self[csymbol[0]]
   #   for csymbol in csymbol[1..^1]:
   #     # result = result.get_member(csymbol)
   #     todo()
@@ -1196,13 +1173,13 @@ proc get_constructor*(self: Class): Value =
   # else:
   #   return self.constructor
 
-proc has_method*(self: Class, name: MapKey): bool =
+proc has_method*(self: Class, name: string): bool =
   if self.methods.has_key(name):
     return true
   elif self.parent != nil:
     return self.parent.has_method(name)
 
-proc get_method*(self: Class, name: MapKey): Method =
+proc get_method*(self: Class, name: string): Method =
   if self.methods.has_key(name):
     return self.methods[name]
   elif self.parent != nil:
@@ -1210,11 +1187,11 @@ proc get_method*(self: Class, name: MapKey): Method =
   # else:
   #   not_allowed("No method available: " & name.to_s)
 
-proc get_super_method*(self: Class, name: MapKey): Method =
+proc get_super_method*(self: Class, name: string): Method =
   if self.parent != nil:
     return self.parent.get_method(name)
   else:
-    not_allowed("No super method available: " & name.to_s)
+    not_allowed("No super method available: " & name)
 
 proc get_class*(val: Value): Class =
   case val.kind:
@@ -1306,14 +1283,14 @@ proc is_a*(self: Value, class: Class): bool =
       my_class = my_class.parent
 
 proc def_native_method*(self: Value, name: string, m: NativeMethod) =
-  self.class.methods[name.to_key] = Method(
+  self.class.methods[name] = Method(
     class: self.class,
     name: name,
     callable: Value(kind: VkNativeMethod, native_method: m),
   )
 
 proc def_native_method*(self: Value, name: string, m: NativeMethod2) =
-  self.class.methods[name.to_key] = Method(
+  self.class.methods[name] = Method(
     class: self.class,
     name: name,
     callable: Value(kind: VkNativeMethod2, native_method2: m),
@@ -1508,10 +1485,10 @@ proc new_gene_stream*(items: seq[Value]): Value =
 proc new_gene_map*(): Value =
   return Value(
     kind: VkMap,
-    map: Table[MapKey, Value](),
+    map: Table[string, Value](),
   )
 
-proc new_gene_map*(map: Table[MapKey, Value]): Value =
+proc new_gene_map*(map: Table[string, Value]): Value =
   return Value(
     kind: VkMap,
     map: map,
@@ -1538,7 +1515,7 @@ proc new_gene_gene*(`type`: Value, children: varargs[Value]): Value =
     gene_children: @children,
   )
 
-proc new_gene_gene*(`type`: Value, props: Table[MapKey, Value], children: varargs[Value]): Value =
+proc new_gene_gene*(`type`: Value, props: Table[string, Value], children: varargs[Value]): Value =
   return Value(
     kind: VkGene,
     gene_type: `type`,
@@ -1617,7 +1594,7 @@ proc new_gene_class*(name: string): Value =
     class: new_class(name),
   )
 
-proc new_gene_instance*(class: Class, props: Table[MapKey, Value]): Value =
+proc new_gene_instance*(class: Class, props: Table[string, Value]): Value =
   return Value(
     kind: VkInstance,
     instance_class: class,
@@ -1864,7 +1841,7 @@ proc `$`*(node: Value): string =
       else:
         result &= " "
       result &= "^"
-      result &= k.to_s
+      result &= k
       result &= " "
       result &= $v
     result &= "}"
@@ -1872,7 +1849,7 @@ proc `$`*(node: Value): string =
     result = "(" & $node.gene_type
     if node.gene_props.len > 0:
       for k, v in node.gene_props:
-        result &= " ^" & k.to_s & " " & $v
+        result &= " ^" & k & " " & $v
     if node.gene_children.len > 0:
       result &= " " & node.gene_children.join(" ")
     result &= ")"
@@ -1893,7 +1870,7 @@ proc `$`*(node: Value): string =
       else:
         result &= " "
       result &= "^"
-      result &= k.to_s
+      result &= k
       result &= " "
       result &= $v
     result &= ")"
@@ -1903,12 +1880,6 @@ proc `$`*(node: Value): string =
     result = "%" & $node.unquote
   else:
     result = $node.kind
-
-proc `[]`*(self: Table[MapKey, Value], key: string): Value =
-  self[key.to_key]
-
-proc `[]=`*(self: var Table[MapKey, Value], key: string, value: Value) =
-  self[key.to_key] = value
 
 proc wrap_with_try*(body: seq[Value]): seq[Value] =
   var found_catch_or_finally = false
@@ -1970,7 +1941,7 @@ proc gene_to_selector_item*(v: Value): SelectorItem =
     result.matchers.add(SelectorMatcher(kind: SmByIndex, index: v.int))
   of VkString:
     result = SelectorItem()
-    result.matchers.add(SelectorMatcher(kind: SmByName, name: v.str.to_key))
+    result.matchers.add(SelectorMatcher(kind: SmByName, name: v.str))
   of VkSymbol:
     result = SelectorItem()
     result.matchers.add(SelectorMatcher(kind: SmByType, by_type: v))
@@ -1984,7 +1955,7 @@ proc gene_to_selector_item*(v: Value): SelectorItem =
       of VkInt:
         result.matchers.add(SelectorMatcher(kind: SmByIndex, index: item.int))
       of VkString:
-        result.matchers.add(SelectorMatcher(kind: SmByName, name: item.str.to_key))
+        result.matchers.add(SelectorMatcher(kind: SmByName, name: item.str))
       of VkSymbol:
         result.matchers.add(SelectorMatcher(kind: SmByType, by_type: item))
       else:
@@ -2052,18 +2023,18 @@ proc hint*(self: RootMatcher): MatchingHint {.inline.} =
         result.mode = MhDefault
         return
 
-# proc new_matched_field*(name: MapKey, value: Value): MatchedField =
+# proc new_matched_field*(name: string, value: Value): MatchedField =
 #   result = MatchedField(
 #     name: name,
 #     value: value,
 #   )
 
-proc props*(self: seq[Matcher]): HashSet[MapKey] =
+proc props*(self: seq[Matcher]): HashSet[string] =
   for m in self:
     if m.kind == MatchProp and not m.is_splat:
       result.incl(m.name)
 
-proc prop_splat*(self: seq[Matcher]): MapKey =
+proc prop_splat*(self: seq[Matcher]): string =
   for m in self:
     if m.kind == MatchProp and m.is_splat:
       return m.name

@@ -5,7 +5,6 @@
 
 import lexbase, streams, strutils, unicode, tables, sets, times, nre, base64, os
 
-import ./map_key
 import ./types
 
 let DEBUG = new_gene_symbol("debug")
@@ -51,7 +50,7 @@ type
     document*: Document
     token_kind*: TokenKind
     error*: ParseErrorKind
-    # stored_references*: Table[MapKey, Value]
+    # stored_references*: Table[string, Value]
     document_props_done*: bool  # flag to tell whether we have read document properties
 
   TokenKind* = enum
@@ -76,9 +75,9 @@ type
 
   ParseScope* = ref object
     parent*: ParseScope
-    mappings*: Table[MapKey, Value]
+    mappings*: Table[string, Value]
 
-  ParseFunction* = proc(self: var Parser, scope: ParseScope, props: Table[MapKey, Value], children: seq[Value]): Value
+  ParseFunction* = proc(self: var Parser, scope: ParseScope, props: Table[string, Value], children: seq[Value]): Value
 
   ParseHandlerType* = enum
     PhDefault
@@ -108,7 +107,7 @@ type
 
   DelimitedListResult = object
     list: seq[Value]
-    map: Table[MapKey, Value]
+    map: Table[string, Value]
 
   Handler = proc(self: var Parser, input: Value): Value
 
@@ -567,12 +566,12 @@ proc to_keys(self: string): seq[string] =
 
   result.add(key)
 
-proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
+proc read_map(self: var Parser, mode: MapKind): Table[string, Value] =
   var ch: char
   var key: string
   var state = PropState.PropKey
 
-  result = init_table[MapKey, Value]()
+  result = init_table[string, Value]()
   var map = result.addr
 
   while true:
@@ -593,18 +592,18 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
         if self.buf[self.bufPos] == '^':
           self.bufPos.inc()
           key = self.read_token(false)
-          result[key.to_key] = new_gene_bool(true)
+          result[key] = new_gene_bool(true)
         elif self.buf[self.bufPos] == '!':
           self.bufPos.inc()
           key = self.read_token(false)
-          result[key.to_key] = Value(kind: VkNil)
+          result[key] = Value(kind: VkNil)
         else:
           key = self.read_token(false)
           if key.contains('^'):
             let parts = key.to_keys()
             map = result.addr
             for part in parts[0..^2]:
-              if map[].has_key(part.to_key):
+              if map[].has_key(part):
                 map = map[][part].map.addr
               else:
                 var new_map = new_gene_map()
@@ -643,15 +642,15 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
       state = PropState.PropKey
 
       var value = self.read()
-      if map[].has_key(key.to_key):
+      if map[].has_key(key):
         raise new_exception(ParseError, "Bad input at " & $self.bufpos & " (conflict with property shortcut found earlier.)")
         # if value.kind == VkMap:
         #   for k, v in value.map:
-        #     map[][key.to_key].map[k] = v
+        #     map[][key].map[k] = v
         # else:
         #   raise new_exception(ParseError, "Bad input: mixing map with non-map")
       else:
-        map[][key.to_key] = value
+        map[][key] = value
 
       map = result.addr
 

@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -46,8 +45,8 @@ proc to_block(node: Value): Block =
   var matcher = new_arg_matcher()
   var body: seq[Value] = node.gene_children
 
-  if node.gene_props.has_key(ARGS_KEY):
-    matcher.parse(node.gene_props[ARGS_KEY])
+  if node.gene_props.has_key("args"):
+    matcher.parse(node.gene_props["args"])
 
   # body = wrap_with_try(body)
   result = new_block(matcher, body)

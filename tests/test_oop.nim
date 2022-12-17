@@ -451,7 +451,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native method":
 #   init_all()
-#   VM.app.ns["test_fn"] = proc(self: Value, props: Table[MapKey, Value], children: seq[Value]): Value =
+#   VM.app.ns["test_fn"] = proc(self: Value, props: Table[string, Value], children: seq[Value]): Value =
 #     children[0].int + children[1].int
 #   var code = cleanup """
 #     (class A

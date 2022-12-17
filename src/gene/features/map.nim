@@ -1,12 +1,11 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
 type
   ExMap* = ref object of Expr
-    data*: Table[MapKey, Expr]
+    data*: Table[string, Expr]
 
 proc eval_map(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   result = new_gene_map()
