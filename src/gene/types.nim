@@ -723,7 +723,7 @@ var VmCreatedCallbacks*: seq[proc(self: var VirtualMachine)] = @[]
 #################### Definitions #################
 
 proc new_gene_bool*(val: bool): Value
-proc new_gene_int*(val: BiggestInt): Value
+proc new_gene_int*(val: BiggestInt): Value {.gcsafe.}
 proc new_gene_float*(val: float): Value
 proc new_gene_char*(c: char): Value
 proc new_gene_char*(c: Rune): Value
@@ -1382,7 +1382,7 @@ proc new_gene_int*(): Value =
 proc new_gene_int*(s: string): Value =
   return Value(kind: VkInt, int: parseBiggestInt(s))
 
-proc new_gene_int*(val: BiggestInt): Value =
+proc new_gene_int*(val: BiggestInt): Value {.gcsafe.} =
   return Value(kind: VkInt, int: val)
 
 proc new_gene_ratio*(num, denom: BiggestInt): Value =
@@ -2045,7 +2045,8 @@ proc prop_splat*(self: seq[Matcher]): string =
 ##################################################
 
 template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  expr.evaluator(self, frame, nil, expr)
+  {.cast(gcsafe).}:
+    expr.evaluator(self, frame, nil, expr)
 
 proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   try:

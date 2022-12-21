@@ -66,7 +66,7 @@ proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var i = cast[ExChild](expr).index
   return v.get_child(i)
 
-proc translate*(name: string): Expr {.inline.} =
+proc translate*(name: string): Expr {.gcsafe, inline.} =
   if name.starts_with("@"):
     if name[1] == '.':
       return new_ex_invoke_selector(name[2..^1])
