@@ -111,6 +111,7 @@ var handlers {.threadvar.}: Table[string, Handler]
 
 #################### Interfaces ##################
 
+proc init*() {.gcsafe.}
 proc keys*(self: ParseOptions): HashSet[string]
 proc `[]`*(self: ParseOptions, name: string): Value
 proc unit_keys*(self: ParseOptions): HashSet[string]
@@ -180,12 +181,18 @@ proc `unit`*(self: ParseOptions, name: string): Value =
 #################### Parser ######################
 
 proc new_parser*(options: ParseOptions): Parser =
+  if not INITIALIZED:
+    init()
+
   return Parser(
     document: Document(),
     options: new_options(options),
   )
 
 proc new_parser*(): Parser =
+  if not INITIALIZED:
+    init()
+
   return Parser(
     document: Document(),
     options: default_options(),
@@ -941,8 +948,6 @@ proc init*() =
   init_macro_array()
   init_dispatch_macro_array()
   init_handlers()
-
-init() # Get parser ready for the main thread
 
 proc open*(self: var Parser, input: Stream, filename: string) =
   lexbase.open(self, input)

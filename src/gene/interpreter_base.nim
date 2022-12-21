@@ -870,6 +870,38 @@ proc init_app_and_vm*() =
   for callback in VmCreatedCallbacks:
     callback(VM)
 
+proc init_app_and_vm_for_thread*() {.gcsafe.} =
+  VM = new_vm()
+  VM.app = new_app()
+  VM.app.cmd = "TODO" # combine get_app_filename() and command_line_params()
+
+  let gene_home = get_env("GENE_HOME", parent_dir(get_app_dir()))
+  let gene_pkg = new_package(gene_home)
+  gene_pkg.reset_load_paths()
+  VM.runtime = Runtime(
+    name: "default",
+    pkg: gene_pkg,
+  )
+
+  VM.init_package(get_current_dir())
+
+  VM.global_ns = Value(kind: VkNamespace, ns: VM.app.ns)
+  VM.global_ns.ns["stdin"]  = stdin
+  VM.global_ns.ns["stdout"] = stdout
+  VM.global_ns.ns["stderr"] = stderr
+
+  VM.gene_ns = Value(kind: VkNamespace, ns: new_namespace("gene"))
+  VM.gene_native_ns = Value(kind: VkNamespace, ns: new_namespace("native"))
+  VM.gene_ns.ns["native"] = VM.gene_native_ns
+  VM.global_ns.ns["gene"] = VM.gene_ns
+
+  VM.genex_ns = Value(kind: VkNamespace, ns: new_namespace("genex"))
+  VM.global_ns.ns["genex"] = VM.genex_ns
+
+  var callbacks = cast[ptr seq[VmCallback]](VmCreatedCallbacksAddr)
+  for callback in callbacks[]:
+    callback(VM)
+
 proc wait_for_futures*(self: VirtualMachine) =
   try:
     run_forever()

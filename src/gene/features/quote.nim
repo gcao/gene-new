@@ -1,7 +1,6 @@
 import tables
 
 import ../types
-import ../interpreter_base
 
 type
   ExQuote* = ref object of Expr

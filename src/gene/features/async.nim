@@ -1,5 +1,6 @@
 import tables
 import asyncdispatch
+import threadpool
 
 import ../types
 import ../interpreter_base
@@ -38,8 +39,11 @@ proc eval_await(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     self.wait_for_futures()
   elif expr.data.len == 1:
     var r = self.eval(frame, expr.data[0])
-    if r.kind == VkFuture:
+    case r.kind:
+    of VkFuture:
       result = wait_for(r.future)
+    of VkThreadResult:
+      result = ^r.thread_result
     else:
       todo()
   else:

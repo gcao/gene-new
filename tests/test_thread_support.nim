@@ -30,7 +30,7 @@ test_interpreter """
   # The result can be ignored or used.
   (await
     (spawn_return
-      (sleep 500)
+      (gene/sleep 500)
       (1 + 2)
     )
   )
@@ -39,11 +39,11 @@ test_interpreter """
 test_interpreter """
   (await
     (spawn_return
-      (sleep 100)
+      (gene/sleep 100)
       (var x
         (await
           (spawn_return
-            (sleep 200)
+            (gene/sleep 200)
             2
           )
         )
@@ -53,50 +53,50 @@ test_interpreter """
   )
 """, 3
 
-test_interpreter """
-  # spawn:
-  # Spawn a thread
-  # Run the code in the thread
-  # Return the thread
-  # The result of thread execution can be ignored or accessed using (thread .result)
+# test_interpreter """
+#   # spawn:
+#   # Spawn a thread
+#   # Run the code in the thread
+#   # Return the thread
+#   # The result of thread execution can be ignored or accessed using (thread .result)
 
-  # All threads can send or receive messages
-  # The messages are deeply copied on the receiver end.
+#   # All threads can send or receive messages
+#   # The messages are deeply copied on the receiver end.
 
-  (var thread
-    (spawn
-      (var done)
-      (var result)
-      ($thread .on_message
-        (msg ->
-          (done = true)
-          (result = msg)
-        )
-      )
-      (while (not done)
-        # Add 10 noops to make sure futures are checked in every iteration
-        (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
-        (sleep 200)
-      )
-      result
-    )
-  )
-  (thread .send 1)
-  (await (thread .result))
-""", 1
+#   (var thread
+#     (spawn
+#       (var done)
+#       (var result)
+#       ($thread .on_message
+#         (msg ->
+#           (done = true)
+#           (result = msg)
+#         )
+#       )
+#       (while (not done)
+#         # Add 10 noops to make sure futures are checked in every iteration
+#         (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
+#         (gene/sleep 200)
+#       )
+#       result
+#     )
+#   )
+#   (thread .send 1)
+#   (await (thread .result))
+# """, 1
 
-test_interpreter """
-  (spawn
-    (sleep 200)
-    (var thread (gene/thread/main))
-    (thread .send 1)
-  )
+# test_interpreter """
+#   (spawn
+#     (gene/sleep 200)
+#     (var thread (gene/thread/main))
+#     (thread .send 1)
+#   )
 
-  (var result)
-  # $thread - the current thread which is the main thread here.
-  ($thread .on_message
-    (msg -> (result = msg))
-  )
-  ($wait_for_threads) # Wait for running threads to finish
-  result
-""", 1
+#   (var result)
+#   # $thread - the current thread which is the main thread here.
+#   ($thread .on_message
+#     (msg -> (result = msg))
+#   )
+#   ($wait_for_threads) # Wait for running threads to finish
+#   result
+# """, 1

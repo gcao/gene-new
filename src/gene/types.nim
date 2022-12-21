@@ -1,6 +1,7 @@
 import os, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm
 import nre
 import asyncdispatch
+import threadpool
 import dynlib
 import macros
 
@@ -85,6 +86,7 @@ type
     VkExpr
     VkExplode
     VkFuture
+    VkThreadResult
     VkNativeFile
 
   Value* {.acyclic.} = ref object
@@ -230,6 +232,8 @@ type
       future*: Future[Value]
       ft_success_callbacks*: seq[Value]
       ft_failure_callbacks*: seq[Value]
+    of VkThreadResult:
+      thread_result*: FlowVar[Value]
     of VkNativeFile:
       native_file*: File
     else:
@@ -343,6 +347,7 @@ type
     macro_class*    : Value
     block_class*    : Value
     future_class*   : Value
+    thread_result_class*: Value
     file_class*     : Value
 
   # VirtualMachine depends on a Runtime
@@ -717,8 +722,11 @@ type
     of SrAll:
       all*: seq[Value]
 
+  VmCallback* = proc(self: var VirtualMachine) {.gcsafe.}
+
 var VM* {.threadvar.}: VirtualMachine  # The current virtual machine
-var VmCreatedCallbacks*: seq[proc(self: var VirtualMachine)] = @[]
+var VmCreatedCallbacks*: seq[VmCallback] = @[]
+var VmCreatedCallbacksAddr* = VmCreatedCallbacks.addr
 
 #################### Definitions #################
 
@@ -1214,6 +1222,8 @@ proc get_class*(val: Value): Class =
     return VM.namespace_class.class
   of VkFuture:
     return VM.future_class.class
+  of VkThreadResult:
+    return VM.thread_result_class.class
   of VkNativeFile:
     return VM.file_class.class
   of VkException:
