@@ -272,20 +272,20 @@ type
   NameIndexScope* = distinct int
 
   Translator* = proc(value: Value): Expr {.gcsafe.}
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
+  Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.}
 
-  EvalCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
-  EvalWrap* = proc(eval: Evaluator): Evaluator
+  EvalCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.}
+  EvalWrap* = proc(eval: Evaluator): Evaluator {.gcsafe.}
 
   TranslateCatch* = proc(value: Value): Expr {.gcsafe.}
-  TranslateWrap* = proc(translate: Translator): Translator
+  TranslateWrap* = proc(translate: Translator): Translator {.gcsafe.}
 
-  NativeFn* = proc(args: Value): Value {.nimcall.}
-  NativeFn2* = proc(args: Value): Value
-  NativeFnWrap* = proc(f: NativeFn): NativeFn2
-  NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
-  NativeMethod2* = proc(self: Value, args: Value): Value
-  NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2
+  NativeFn* = proc(args: Value): Value {.gcsafe, nimcall.}
+  NativeFn2* = proc(args: Value): Value {.gcsafe.}
+  NativeFnWrap* = proc(f: NativeFn): NativeFn2 {.gcsafe.}
+  NativeMethod* = proc(self: Value, args: Value): Value {.gcsafe, nimcall.}
+  NativeMethod2* = proc(self: Value, args: Value): Value {.gcsafe.}
+  NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2 {.gcsafe.}
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
   # To distinguish NativeMacro and NativeMethod, we just create Value with different kind
@@ -722,26 +722,26 @@ var VmCreatedCallbacks*: seq[proc(self: var VirtualMachine)] = @[]
 
 #################### Definitions #################
 
-proc new_gene_bool*(val: bool): Value
+proc new_gene_bool*(val: bool): Value {.gcsafe.}
 proc new_gene_int*(val: BiggestInt): Value {.gcsafe.}
-proc new_gene_float*(val: float): Value
-proc new_gene_char*(c: char): Value
-proc new_gene_char*(c: Rune): Value
+proc new_gene_float*(val: float): Value {.gcsafe.}
+proc new_gene_char*(c: char): Value {.gcsafe.}
+proc new_gene_char*(c: Rune): Value {.gcsafe.}
 proc new_gene_string*(s: string): Value {.gcsafe.}
-proc new_gene_string_move*(s: string): Value
+proc new_gene_string_move*(s: string): Value {.gcsafe.}
 proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
-proc new_gene_vec*(items: varargs[Value]): Value
-proc new_gene_map*(): Value
-proc new_gene_map*(map: Table[string, Value]): Value
-proc new_namespace*(): Namespace
-proc new_namespace*(name: string): Namespace
-proc new_namespace*(parent: Namespace): Namespace
+proc new_gene_vec*(items: varargs[Value]): Value {.gcsafe.}
+proc new_gene_map*(): Value {.gcsafe.}
+proc new_gene_map*(map: Table[string, Value]): Value {.gcsafe.}
+proc new_namespace*(): Namespace {.gcsafe.}
+proc new_namespace*(name: string): Namespace {.gcsafe.}
+proc new_namespace*(parent: Namespace): Namespace {.gcsafe.}
 proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.}
-proc new_class*(name: string): Class
-proc new_class*(name: string, parent: Class): Class
-proc new_match_matcher*(): RootMatcher
-proc new_arg_matcher*(): RootMatcher
-proc hint*(self: RootMatcher): MatchingHint {.inline.}
+proc new_class*(name: string): Class {.gcsafe.}
+proc new_class*(name: string, parent: Class): Class {.gcsafe.}
+proc new_match_matcher*(): RootMatcher {.gcsafe.}
+proc new_arg_matcher*(): RootMatcher {.gcsafe.}
+proc hint*(self: RootMatcher): MatchingHint {.gcsafe.}
 
 ##################################################
 
@@ -774,14 +774,14 @@ proc is_symbol*(v: Value, s: string): bool =
 
 #################### Converters ##################
 
-converter to_gene*(v: int): Value                      = new_gene_int(v)
-converter to_gene*(v: int64): Value                    = new_gene_int(v)
-converter to_gene*(v: bool): Value                     = new_gene_bool(v)
-converter to_gene*(v: float): Value                    = new_gene_float(v)
-converter to_gene*(v: string): Value                   = new_gene_string(v)
-converter to_gene*(v: char): Value                     = new_gene_char(v)
-converter to_gene*(v: Rune): Value                     = new_gene_char(v)
-converter to_gene*(v: Table[string, Value]): Value = new_gene_map(v)
+converter to_gene*(v: int): Value                     {.gcsafe.} = new_gene_int(v)
+converter to_gene*(v: int64): Value                   {.gcsafe.} = new_gene_int(v)
+converter to_gene*(v: bool): Value                    {.gcsafe.} = new_gene_bool(v)
+converter to_gene*(v: float): Value                   {.gcsafe.} = new_gene_float(v)
+converter to_gene*(v: string): Value                  {.gcsafe.} = new_gene_string(v)
+converter to_gene*(v: char): Value                    {.gcsafe.} = new_gene_char(v)
+converter to_gene*(v: Rune): Value                    {.gcsafe.} = new_gene_char(v)
+converter to_gene*(v: Table[string, Value]): Value    {.gcsafe.} = new_gene_map(v)
 
 # Below converter causes problem with the hash function
 # converter to_gene*(v: seq[Value]): Value           = new_gene_vec(v)
@@ -1970,7 +1970,7 @@ proc gene_to_selector_item*(v: Value): SelectorItem =
     todo($v.kind)
 
 # Definition
-proc is_singular*(self: Selector): bool
+proc is_singular*(self: Selector): bool {.gcsafe.}
 
 proc is_singular*(self: SelectorItem): bool =
   case self.kind:
@@ -2016,7 +2016,7 @@ proc new_matcher*(root: RootMatcher, kind: MatcherKind): Matcher =
 proc required*(self: Matcher): bool =
   return self.default_value_expr == nil and not self.is_splat
 
-proc hint*(self: RootMatcher): MatchingHint {.inline.} =
+proc hint*(self: RootMatcher): MatchingHint =
   if self.children.len == 0:
     result.mode = MhNone
   else:
@@ -2045,8 +2045,7 @@ proc prop_splat*(self: seq[Matcher]): string =
 ##################################################
 
 template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  {.cast(gcsafe).}:
-    expr.evaluator(self, frame, nil, expr)
+  expr.evaluator(self, frame, nil, expr)
 
 proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   try:
@@ -2067,7 +2066,7 @@ proc eval_wrap*(e: Evaluator): Evaluator =
 # proc(){.nimcall.} can not access local variables
 # Workaround: create a new type like RemoteFn that does not use nimcall
 proc fn_wrap*(f: NativeFn): NativeFn2 =
-  return proc(args: Value): Value =
+  return proc(args: Value): Value {.gcsafe.} =
     result = f(args)
     if result != nil and result.kind == VkException:
       raise result.exception

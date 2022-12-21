@@ -1,14 +1,14 @@
 import gene/types
 import gene/interpreter_base except call
 
-var eval_catch*: EvalCatch
-var eval_wrap*: EvalWrap
-var translate_catch*: TranslateCatch
-var translate_wrap*: TranslateWrap
-var invoke_catch*: Invoke
-var invoke_wrap*: InvokeWrap
-var fn_wrap*: NativeFnWrap
-var method_wrap*: NativeMethodWrap
+var eval_catch*       {.threadvar.}: EvalCatch
+var eval_wrap*        {.threadvar.}: EvalWrap
+var translate_catch*  {.threadvar.}: TranslateCatch
+var translate_wrap*   {.threadvar.}: TranslateWrap
+var invoke_catch*     {.threadvar.}: Invoke
+var invoke_wrap*      {.threadvar.}: InvokeWrap
+var fn_wrap*          {.threadvar.}: NativeFnWrap
+var method_wrap*      {.threadvar.}: NativeMethodWrap
 
 proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   result = self.eval_catch(frame, expr)

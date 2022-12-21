@@ -7,20 +7,20 @@ import ./parser
 import ./repl
 
 type
-  Invoke* = proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
+  Invoke* = proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.}
   InvokeWrap* = proc(invoke: Invoke): Invoke
 
-proc new_package*(dir: string): Package
-proc init_package*(self: VirtualMachine, dir: string)
-proc parse_deps(deps: seq[Value]): Table[string, Dependency]
-proc get_member*(self: Value, name: string): Value
+proc new_package*(dir: string): Package {.gcsafe.}
+proc init_package*(self: VirtualMachine, dir: string) {.gcsafe.}
+proc parse_deps(deps: seq[Value]): Table[string, Dependency] {.gcsafe.}
+proc get_member*(self: Value, name: string): Value {.gcsafe.}
 proc translate*(value: Value): Expr {.gcsafe.}
 proc translate*(stmts: seq[Value]): Expr {.gcsafe.}
-proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value
-proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value
-proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args: Value): Value
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args_expr: var Expr): Value
+proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.}
+proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value {.gcsafe.}
+proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value {.gcsafe.}
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args: Value): Value {.gcsafe.}
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args_expr: var Expr): Value {.gcsafe.}
 
 #################### Value #######################
 
@@ -583,7 +583,7 @@ type
     meth*: string
     args*: Expr
 
-proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExInvoke](expr)
   var instance: Value
   var e = cast[ExInvoke](expr).self
@@ -766,14 +766,16 @@ proc translate_set*(value: Value): Expr {.gcsafe.} =
 
 #################### Simple Exprs ################
 
-let BREAK_EXPR* = Expr()
-BREAK_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+var BREAK_EXPR* {.threadvar.}: Expr
+
+proc eval_break(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e: Break
   e.new
   raise e
 
-let CONTINUE_EXPR* = Expr()
-CONTINUE_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+var CONTINUE_EXPR* {.threadvar.}: Expr
+
+proc eval_continue(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e: Continue
   e.new
   raise e
@@ -888,7 +890,7 @@ proc eval_prepare*(self: VirtualMachine, pkg: Package): Frame =
   result.ns = module.ns
   result.scope = new_scope()
 
-proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
+proc eval*(self: VirtualMachine, frame: Frame, code: string): Value {.gcsafe.} =
   var parser = new_parser()
   parser.open(code)
   while true:
@@ -902,7 +904,7 @@ proc eval*(self: VirtualMachine, frame: Frame, code: string): Value =
       parser.close()
       break
 
-proc eval*(self: VirtualMachine, pkg: Package, code: string, module_name: string): Value =
+proc eval*(self: VirtualMachine, pkg: Package, code: string, module_name: string): Value {.gcsafe.} =
   var module = new_module(pkg, module_name)
   if module.name.len > 0:
     self.modules[module.name] = module.ns
@@ -1009,7 +1011,7 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
   else:
     todo()
 
-proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value =
+proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value {.gcsafe.} =
   case target.kind:
   of VkFunction:
     var fn_scope = new_scope()
@@ -1106,10 +1108,10 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
     var args = self.eval_args(frame, nil, expr)
     self.process_args(new_frame, matcher, args)
 
-proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
+proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
   self.call(frame, nil, target, args)
 
-proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value =
+proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value {.gcsafe.} =
   if target.fn.body_compiled == nil:
     target.fn.body_compiled = translate(target.fn.body)
 
@@ -1189,7 +1191,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
   else:
     todo()
 
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args_expr: var Expr): Value =
+proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args_expr: var Expr): Value {.gcsafe.} =
   var class = instance.get_class
   var meth = class.get_method(method_name)
   # var is_method_missing = false
@@ -1242,7 +1244,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
   else:
     todo()
 
-proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
+proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
   try:
     result = self.call(frame, target, args)
   except system.Exception as e:
@@ -1252,7 +1254,12 @@ proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value)
     )
 
 proc call_wrap*(invoke: Invoke): Invoke =
-  return proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
+  return proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
     result = self.invoke(frame, target, args)
     if result != nil and result.kind == VkException:
       raise result.exception
+
+proc init*() =
+  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    BREAK_EXPR = Expr(evaluator: eval_break)
+    CONTINUE_EXPR = Expr(evaluator: eval_continue)

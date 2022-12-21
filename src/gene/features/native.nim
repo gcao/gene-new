@@ -1,7 +1,7 @@
 import ../types
 import ../interpreter_base
 
-proc eval_native_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_native_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var args = self.eval_args(frame, target, expr)
   case target.kind:
   of VkNativeFn:

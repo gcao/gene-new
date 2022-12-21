@@ -1,4 +1,4 @@
-import ./interpreter_base
+import ./interpreter_base; interpreter_base.init()
 export interpreter_base
 
 import "./features/core" as core_feature; core_feature.init()

@@ -75,10 +75,10 @@ type
     path*: Value
     callback*: Value
 
-var RegistryClass*   : Value
-var RequestClass*    : Value
-var ResponseClass*   : Value
-var MiddlewareClass* : Value
+var RegistryClass*   {.threadvar.}: Value
+var RequestClass*    {.threadvar.}: Value
+var ResponseClass*   {.threadvar.}: Value
+var MiddlewareClass* {.threadvar.}: Value
 
 proc to_response(self: Value): Response =
   if self.is_nil:
@@ -165,7 +165,7 @@ proc init*() =
 
     self.genex_ns.ns["Registry"] = RegistryClass
     RegistryClass.class.parent = self.object_class.class
-    RegistryClass.def_native_constructor proc(args: Value): Value {.name:"registry_new".} =
+    RegistryClass.def_native_constructor proc(args: Value): Value {.gcsafe, name:"registry_new".} =
       var name = ""
       if args.gene_children.len > 0:
         name = args.gene_children[0].to_s
@@ -196,7 +196,7 @@ proc init*() =
       )
       ((Registry)self.custom).resources_map[name] = resource
 
-    RegistryClass.def_native_method "request", proc(self: Value, args: Value): Value {.name:"registry_request".} =
+    RegistryClass.def_native_method "request", proc(self: Value, args: Value): Value {.gcsafe, name:"registry_request".} =
       var path = args.gene_children[0].str
       var req = Request(
         `type`: RqDefault,
@@ -290,7 +290,7 @@ proc init*() =
       var req = (Request)self.custom
       raise new_exception(ResourceNotFoundError, $req.path)
 
-    MiddlewareClass.def_native_method "call_next", proc(self: Value, args: Value): Value {.name:"middleware_handle".} =
+    MiddlewareClass.def_native_method "call_next", proc(self: Value, args: Value): Value {.gcsafe, name:"middleware_handle".} =
       var middleware = (Middleware)self.custom
       var registry = new_gene_custom(middleware.registry, RegistryClass.class)
       var req = args.gene_children[0]

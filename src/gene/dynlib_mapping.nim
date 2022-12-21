@@ -13,7 +13,7 @@ import ./interpreter_base
 # https://gradha.github.io/articles/2015/01/writing-c-libraries-with-nim.html
 
 type
-  Init = proc(module: Module): Value {.nimcall.}
+  Init = proc(module: Module): Value {.gcsafe, nimcall.}
 
   SetGlobals = proc(
     g_disp          : PDispatcher,
@@ -28,7 +28,7 @@ type
     method_wrap     : NativeMethodWrap,
   ) {.nimcall.}
 
-proc call_set_globals(p: pointer)
+proc call_set_globals(p: pointer) {.gcsafe.}
 
 # TODO: unload dynamic libraries before reloading
 
@@ -57,15 +57,16 @@ proc load_dynlib*(pkg: Package, path: string): Module =
     todo("load_dynlib " & $init_result.kind)
 
 proc call_set_globals(p: pointer) =
-  cast[SetGlobals](p)(
-    get_global_dispatcher(),
-    VM,
-    eval_catch,
-    eval_wrap,
-    translate_catch,
-    translate_wrap,
-    call_catch,
-    call_wrap,
-    fn_wrap,
-    method_wrap,
-  )
+  {.cast(gcsafe).}:
+    cast[SetGlobals](p)(
+      get_global_dispatcher(),
+      VM,
+      eval_catch,
+      eval_wrap,
+      translate_catch,
+      translate_wrap,
+      call_catch,
+      call_wrap,
+      fn_wrap,
+      method_wrap,
+    )

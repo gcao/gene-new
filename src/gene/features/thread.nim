@@ -1,3 +1,5 @@
+import threadpool
+
 import ../types
 import ../interpreter_base
 
@@ -6,12 +8,16 @@ type
     return_value*: bool
     body*: seq[Expr]
 
-proc eval_spawn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc thread_handler() =
   todo()
+
+proc eval_spawn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  spawn thread_handler()
 
 proc translate_spawn(value: Value): Expr {.gcsafe.} =
   var r = Exspawn(
     evaluator: eval_spawn,
+    return_value: value.gene_type.is_symbol("spawn_return"),
   )
   for item in value.gene_children:
     r.body.add translate(item)

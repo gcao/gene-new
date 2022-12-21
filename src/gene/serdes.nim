@@ -9,9 +9,9 @@ type
     references*: Table[string, Value]
     data*: Value
 
-proc serialize*(self: Serialization, value: Value): Value
-proc to_path*(self: Value): string
-proc to_path*(self: Class): string
+proc serialize*(self: Serialization, value: Value): Value {.gcsafe.}
+proc to_path*(self: Value): string {.gcsafe.}
+proc to_path*(self: Class): string {.gcsafe.}
 
 proc new_ref(path: string): Value =
   new_gene_gene(new_gene_complex_symbol(@["gene", "ref"]), new_gene_string(path))
@@ -88,7 +88,7 @@ proc to_s*(self: Serialization): string =
 
 #################### Deserialization #############
 
-proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value
+proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value {.gcsafe.}
 
 proc deref*(self: Serialization, vm: VirtualMachine, s: string): Value =
   var parts = s.split(":")

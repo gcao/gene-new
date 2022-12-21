@@ -8,7 +8,7 @@ type
   ExTest = ref object of Expr
     data: Expr
 
-var ExtensionClass: Value
+var ExtensionClass {.threadvar.}: Value
 
 proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExTest](expr)

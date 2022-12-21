@@ -24,7 +24,7 @@ type
     selector*: Expr
     target*: Expr
 
-proc search*(self: Selector, target: Value, r: SelectorResult)
+proc search*(self: Selector, target: Value, r: SelectorResult) {.gcsafe.}
 
 proc search_first(self: SelectorMatcher, target: Value): Value =
   case self.kind:
@@ -232,7 +232,7 @@ proc search*(self: Selector, target: Value): Value =
   except NoResult:
     result = Value(kind: VkNil)
 
-proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExSelectorInvoker](expr)
   var selector = target.selector
   var v: Value

@@ -26,20 +26,24 @@ type
 
   ExPackage* = ref object of Expr
 
-let SELF_EXPR = Expr()
-SELF_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+var SELF_EXPR {.threadvar.}: Expr
+
+proc eval_self(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   frame.self
 
-let NS_EXPR = Expr()
-NS_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+var NS_EXPR {.threadvar.}: Expr
+
+proc eval_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   Value(kind: VkNamespace, ns: frame.ns)
 
-let PKG_EXPR = Expr()
-PKG_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+var PKG_EXPR {.threadvar.}: Expr
+
+proc eval_pkg(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   Value(kind: VkPackage, pkg: frame.ns.package)
 
-let MOD_EXPR = Expr()
-MOD_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+var MOD_EXPR {.threadvar.}: Expr
+
+proc eval_mod(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   Value(kind: VkModule, module: frame.ns.module)
 
 proc eval_symbol_scope(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
@@ -190,5 +194,10 @@ proc translate_definition*(name: Value, value: Expr): Expr {.gcsafe.} =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    SELF_EXPR = Expr(evaluator: eval_self)
+    NS_EXPR = Expr(evaluator: eval_ns)
+    PKG_EXPR = Expr(evaluator: eval_pkg)
+    MOD_EXPR = Expr(evaluator: eval_mod)
+
     VM.translators[VkSymbol] = translate_symbol
     VM.translators[VkComplexSymbol] = translate_complex_symbol
