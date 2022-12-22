@@ -6,8 +6,8 @@ type
   CustomConnection = ref object of CustomValue
     conn: DbConn
 
-var ConnectionClass: Value
-var StatementClass: Value
+var ConnectionClass {.threadvar.}: Value
+var StatementClass {.threadvar.}: Value
 
 proc open*(args: Value): Value {.wrap_exception.} =
   var host = args.gene_children[0].str

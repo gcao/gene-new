@@ -102,8 +102,8 @@ type
     headers: Table[string, Value]
     props: Table[string, Value]
 
-var RequestClass: Value
-var ResponseClass: Value
+var RequestClass {.threadvar.}: Value
+var ResponseClass {.threadvar.}: Value
 
 proc new_response*(args: Value): Value {.wrap_exception.} =
   var resp = Response()

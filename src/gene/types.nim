@@ -5,6 +5,7 @@ import threadpool
 import dynlib
 import macros
 
+const ASYNC_WAIT_LIMIT = 10
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
 
 type
@@ -305,6 +306,7 @@ type
     app*: Application
     runtime*: Runtime
     modules*: Table[string, Namespace]
+    async_wait*: uint
     repl_on_error*: bool
 
     translators*: Table[ValueKind, Translator]
@@ -827,7 +829,9 @@ converter gene_to_ns*(v: Value): Namespace = todo()
 #################### VM ##########################
 
 proc new_vm*(): VirtualMachine =
-  return VirtualMachine()
+  return VirtualMachine(
+    async_wait: ASYNC_WAIT_LIMIT,
+  )
 
 #################### Application #################
 
@@ -2056,6 +2060,17 @@ proc prop_splat*(self: seq[Matcher]): string =
 ##################################################
 
 template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  if self.async_wait == 0:
+    self.async_wait = ASYNC_WAIT_LIMIT
+    try:
+      poll()
+    except ValueError as e:
+      if e.msg == "No handles or timers registered in dispatcher.":
+        discard
+      else:
+        raise
+  else:
+    self.async_wait -= 1
   expr.evaluator(self, frame, nil, expr)
 
 proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =

@@ -14,10 +14,6 @@
 
 (f "second")
 
-(println 0)
-(noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
-(gene/sleep 1000)
-
 (println 1)
 (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
 (gene/sleep 1000)
@@ -31,7 +27,6 @@
 
 #< Output should look like below (futures are checked at least once every 10 evaluations)
 first
-0
 1
 2
 second
