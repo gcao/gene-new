@@ -309,6 +309,9 @@ type
     async_wait*: uint
     repl_on_error*: bool
 
+    thread_id*: int
+    thread_results*: Table[int, Value]
+
     translators*: Table[ValueKind, Translator]
     gene_translators*: Table[string, Translator]
 
@@ -539,6 +542,12 @@ type
     name*: string
     value*: int
 
+  ThreadMetadata* = object
+    id*: uint
+    parent_id*: uint
+    thread*: Thread[int]
+    channel*: Channel[tuple[name: string, payload: Value]]
+
   Expr* = ref object of RootObj
     evaluator*: Evaluator
 
@@ -728,6 +737,8 @@ type
   VmCallback* = proc(self: var VirtualMachine) {.gcsafe.}
 
 var VM* {.threadvar.}: VirtualMachine  # The current virtual machine
+# TODO: guard access to Threads with lock
+var ThreadData*: array[64, ThreadMetadata]
 var VmCreatedCallbacks*: seq[VmCallback] = @[]
 var VmCreatedCallbacksAddr* = VmCreatedCallbacks.addr
 
