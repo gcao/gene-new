@@ -1,10 +1,18 @@
+import tables
+
 import gene/types
 
 import ./helpers
 
 # Multithread support:
 #   $spawn
+#   $spawn_wait wait for result
 #   $spawn_return
+#     Spawn a thread
+#     Run the code in the thread
+#     Return the result
+#     The result is wrapped in a Future object (similar to how async works here)
+#     The result can be ignored or used.
 #   $thread - the current thread
 #   $wait_for_threads
 #     can take an optional list of threads
@@ -22,15 +30,9 @@ import ./helpers
 #     its pristine state.
 
 test_interpreter """
-  # spawn_return:
-  # Spawn a thread
-  # Run the code in the thread
-  # Return the result
-  # The result is wrapped in a Future object (similar to how async works here)
-  # The result can be ignored or used.
   (await
     (spawn_return
-      (gene/sleep 500)
+      (gene/sleep 100)
       (1 + 2)
     )
   )
@@ -43,7 +45,7 @@ test_interpreter """
       (var x
         (await
           (spawn_return
-            (gene/sleep 200)
+            (gene/sleep 100)
             2
           )
         )
@@ -52,6 +54,36 @@ test_interpreter """
     )
   )
 """, 3
+
+test_interpreter """
+  (await
+    (spawn_return
+      (gene/sleep 100)
+      "a"
+    )
+  )
+""", "a"
+
+test_interpreter """
+  (await
+    (spawn_return
+      (gene/sleep 100)
+      [1 2]
+    )
+  )
+""", new_gene_vec(1, 2)
+
+test_interpreter """
+  (await
+    (spawn_return
+      (gene/sleep 100)
+      {^a 1 ^b 2}
+    )
+  )
+""", {
+  "a": new_gene_int(1),
+  "b": new_gene_int(2),
+}.toTable
 
 # test_interpreter """
 #   # spawn:
@@ -76,7 +108,7 @@ test_interpreter """
 #       (while (not done)
 #         # Add 10 noops to make sure futures are checked in every iteration
 #         (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
-#         (gene/sleep 200)
+#         (gene/sleep 100)
 #       )
 #       result
 #     )
@@ -87,7 +119,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (spawn
-#     (gene/sleep 200)
+#     (gene/sleep 100)
 #     (var thread (gene/thread/main))
 #     (thread .send 1)
 #   )

@@ -233,6 +233,7 @@ type
       ft_success_callbacks*: seq[Value]
       ft_failure_callbacks*: seq[Value]
     of VkThreadResult:
+      # thread*: ? # The thread itself
       thread_result*: FlowVar[Value]
     of VkNativeFile:
       native_file*: File
