@@ -57,7 +57,10 @@ proc handle*(cmd: string, args: seq[string]): string =
   var options = parse_options(args)
   setup_logger(options.debugging)
 
+  let thread_id = get_free_thread()
+  init_thread(thread_id)
   init_app_and_vm()
+  VM.thread_id = thread_id
   VM.repl_on_error = options.repl_on_error
   VM.app.args = options.args
 

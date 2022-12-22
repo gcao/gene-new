@@ -16,7 +16,13 @@ proc test2(self: Value, args: Value): Value =
   self.instance_props["a"].int + args.gene_children[0].int + args.gene_children[1].int
 
 proc init_all*() =
+  if not VM.is_nil() and VM.thread_id > 0:
+    cleanup_thread(VM.thread_id)
+
+  let thread_id = get_free_thread()
+  init_thread(thread_id)
   init_app_and_vm()
+  VM.thread_id = thread_id
   VM.gene_native_ns.ns["test"] = new_gene_native_method(test)
   VM.gene_native_ns.ns["test2"] = new_gene_native_method(test2)
 

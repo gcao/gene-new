@@ -309,6 +309,9 @@ type
     async_wait*: uint
     repl_on_error*: bool
 
+    thread_id*: int
+    thread_results*: Table[int, Value]
+
     translators*: Table[ValueKind, Translator]
     gene_translators*: Table[string, Translator]
 
@@ -539,6 +542,13 @@ type
     name*: string
     value*: int
 
+  ThreadMetadata* = object
+    id*: int
+    in_use*: bool
+    parent_id*: int
+    thread*: Thread[int]
+    channel*: Channel[tuple[name: string, payload: Value]]
+
   Expr* = ref object of RootObj
     evaluator*: Evaluator
 
@@ -728,6 +738,8 @@ type
   VmCallback* = proc(self: var VirtualMachine) {.gcsafe.}
 
 var VM* {.threadvar.}: VirtualMachine  # The current virtual machine
+# TODO: guard access to Threads with lock
+var Threads*: array[1..64, ThreadMetadata]
 var VmCreatedCallbacks*: seq[VmCallback] = @[]
 var VmCreatedCallbacksAddr* = VmCreatedCallbacks.addr
 
@@ -1850,6 +1862,10 @@ proc `$`*(node: Value): string =
     result = "["
     result &= node.vec.join(" ")
     result &= "]"
+  of VkStream:
+    result = "(#Stream "
+    result &= node.stream.join(" ")
+    result &= ")"
   of VkMap:
     result = "{"
     var is_first = true
@@ -1908,6 +1924,27 @@ proc wrap_with_try*(body: seq[Value]): seq[Value] =
     return @[new_gene_gene(new_gene_symbol("try"), body)]
   else:
     return body
+
+#################### Thread ######################
+
+proc get_free_thread*(): int =
+  # TODO: handle the case when all threads are in use
+  for i in 1..Threads.high:
+    if not Threads[i].in_use:
+      return i
+
+proc init_thread*(id: int) =
+  Threads[id].in_use = true
+  Threads[id].channel.open()
+
+proc init_thread*(id, parent_id: int) =
+  Threads[id].parent_id = parent_id
+  Threads[id].in_use = true
+  Threads[id].channel.open()
+
+proc cleanup_thread*(id: int) =
+  Threads[id].in_use = false
+  Threads[id].channel.close()
 
 #################### Document ####################
 
