@@ -35,8 +35,6 @@ proc thread_handler(thread_id: int) =
   VM.thread_id = thread_id
   # Receive code from my channel
   var (name, payload) = Threads[thread_id].channel.recv()
-  echo $name
-  echo $payload
   if name != "code":
     todo("Expecting code but received " & name)
 
@@ -45,7 +43,6 @@ proc thread_handler(thread_id: int) =
   var r = VM.eval(frame, expr)
 
   # Send result to caller thread thru channel
-  # var parent_id = Threads[i].parent_id
   var parent_id = Threads[thread_id].parent_id
   Threads[parent_id].channel.send(("return", r))
 
@@ -59,27 +56,27 @@ proc eval_spawn(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
 
   # 1. Obtain a free thread.
   #    If there is no thread available, wait for one to be available or throw an error ?!
-  var thread_id = get_free_thread()
-  init_thread(thread_id, VM.thread_id)
+  var child_thread_id = get_free_thread()
+  init_thread(child_thread_id, self.thread_id)
 
   # 2. Create thread
-  create_thread(Threads[thread_id].thread, thread_handler, thread_id)
+  create_thread(Threads[child_thread_id].thread, thread_handler, child_thread_id)
 
   # 3. Send code to run
-  var channel = Threads[thread_id].channel.addr
-  channel[].send((name: "code", payload: new_gene_stream(e.body)))
+  var child_channel = Threads[child_thread_id].channel.addr
+  child_channel[].send((name: "code", payload: new_gene_stream(e.body)))
 
   # 4. Handle result (by creating an asynchronous Future object)
   var r = new_gene_future(new_future[Value]())
   result = r
+  var channel = Threads[VM.thread_id].channel.addr
   add_timer 1000, false, proc(fd: AsyncFD): bool =
     let tried = channel[].try_recv()
     if tried.data_available:
-      echo $tried.msg
       r.future.complete(tried.msg.payload)
       return true
 
-  self.thread_results[thread_id] = result
+  # self.thread_results[child_thread_id] = result
 
 proc translate_spawn(value: Value): Expr {.gcsafe.} =
   var r = ExSpawn(
