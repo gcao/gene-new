@@ -409,9 +409,9 @@ proc init*() =
     self.future_class.def_native_method("on_failure", add_failure_callback)
     self.gene_ns.ns["Future"] = self.future_class
 
-    self.thread_result_class = Value(kind: VkClass, class: new_class("ThreadResult"))
-    self.thread_result_class.class.parent = self.object_class.class
-    self.gene_ns.ns["ThreadResult"] = self.thread_result_class
+    # self.thread_result_class = Value(kind: VkClass, class: new_class("ThreadResult"))
+    # self.thread_result_class.class.parent = self.object_class.class
+    # self.gene_ns.ns["ThreadResult"] = self.thread_result_class
 
     self.string_class = Value(kind: VkClass, class: new_class("String"))
     self.string_class.class.parent = self.object_class.class

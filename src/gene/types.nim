@@ -233,9 +233,9 @@ type
       future*: Future[Value]
       ft_success_callbacks*: seq[Value]
       ft_failure_callbacks*: seq[Value]
-    of VkThreadResult:
-      # thread*: ? # The thread itself
-      thread_result*: FlowVar[Value]
+    # of VkThreadResult:
+    #   # thread*: ? # The thread itself
+    #   thread_result*: FlowVar[Value]
     of VkNativeFile:
       native_file*: File
     else:
@@ -310,7 +310,7 @@ type
     repl_on_error*: bool
 
     thread_id*: int
-    thread_results*: Table[int, Value]
+    # thread_results*: Table[int, Value]
 
     translators*: Table[ValueKind, Translator]
     gene_translators*: Table[string, Translator]
@@ -353,7 +353,7 @@ type
     macro_class*    : Value
     block_class*    : Value
     future_class*   : Value
-    thread_result_class*: Value
+    # thread_result_class*: Value
     file_class*     : Value
 
   # VirtualMachine depends on a Runtime
@@ -1239,8 +1239,8 @@ proc get_class*(val: Value): Class =
     return VM.namespace_class.class
   of VkFuture:
     return VM.future_class.class
-  of VkThreadResult:
-    return VM.thread_result_class.class
+  # of VkThreadResult:
+  #   return VM.thread_result_class.class
   of VkNativeFile:
     return VM.file_class.class
   of VkException:
@@ -1944,7 +1944,8 @@ proc init_thread*(id, parent_id: int) =
 
 proc cleanup_thread*(id: int) =
   Threads[id].in_use = false
-  Threads[id].channel.close()
+  # TODO: the channel should not be freed as it may be re-used later.
+  # Threads[id].channel.close()
 
 #################### Document ####################
 

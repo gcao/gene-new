@@ -42,8 +42,8 @@ proc eval_await(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     case r.kind:
     of VkFuture:
       result = wait_for(r.future)
-    of VkThreadResult:
-      result = ^r.thread_result
+    # of VkThreadResult:
+    #   result = ^r.thread_result
     else:
       todo()
   else:

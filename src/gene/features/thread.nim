@@ -1,8 +1,9 @@
-import tables
 import asyncdispatch, asyncfutures
 
 import ../types
 import ../interpreter_base
+
+const WAIT_INTERVAL = 5
 
 type
   ExSpawn* = ref object of Expr
@@ -70,7 +71,7 @@ proc eval_spawn(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var r = new_gene_future(new_future[Value]())
   result = r
   var channel = Threads[VM.thread_id].channel.addr
-  add_timer 1000, false, proc(fd: AsyncFD): bool =
+  add_timer WAIT_INTERVAL, false, proc(fd: AsyncFD): bool =
     let tried = channel[].try_recv()
     if tried.data_available:
       r.future.complete(tried.msg.payload)
