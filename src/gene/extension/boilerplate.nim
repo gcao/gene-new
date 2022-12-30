@@ -1,7 +1,7 @@
 import asyncdispatch
 
-import gene/types except eval, eval_catch, eval_wrap, translate_catch, translate_wrap, fn_wrap, method_catch, method_wrap
-import gene/interpreter_base except translate, translate_catch, translate_wrap
+import gene/types except eval_wrap, translate_catch, translate_wrap, fn_wrap, method_catch, method_wrap
+import gene/interpreter_base except eval, eval_catch, translate, translate_catch, translate_wrap
 import gene/extension/base
 
 # All extensions should include this module like below

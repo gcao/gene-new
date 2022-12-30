@@ -4,7 +4,9 @@ import asyncdispatch
 import dynlib
 import macros
 
-const ASYNC_WAIT_LIMIT = 10
+const ASYNC_WAIT_LIMIT*   = 10
+const CHANNEL_WAIT_LIMIT* = 10
+
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
 
 type
@@ -306,9 +308,12 @@ type
     app*: Application
     runtime*: Runtime
     modules*: Table[string, Namespace]
-    async_wait*: uint
     repl_on_error*: bool
 
+    async_wait*: uint
+    channel_wait*: uint
+
+    main_thread*: bool
     thread_id*: int
 
     translators*: Table[ValueKind, Translator]
@@ -843,6 +848,7 @@ converter gene_to_ns*(v: Value): Namespace = todo()
 proc new_vm*(): VirtualMachine =
   return VirtualMachine(
     async_wait: ASYNC_WAIT_LIMIT,
+    channel_wait: CHANNEL_WAIT_LIMIT,
   )
 
 #################### Application #################
@@ -2099,25 +2105,6 @@ proc prop_splat*(self: seq[Matcher]): string =
       return m.name
 
 ##################################################
-
-template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  if self.async_wait == 0:
-    self.async_wait = ASYNC_WAIT_LIMIT
-    if has_pending_operations():
-      poll()
-  else:
-    self.async_wait -= 1
-  expr.evaluator(self, frame, nil, expr)
-
-proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  try:
-    result = self.eval(frame, expr)
-  except system.Exception as e:
-    # echo e.msg & "\n" & e.getStackTrace()
-    result = Value(
-      kind: VkException,
-      exception: e,
-    )
 
 proc eval_wrap*(e: Evaluator): Evaluator =
   return proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =

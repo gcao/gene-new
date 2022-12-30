@@ -24,6 +24,44 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
 
 #################### Value #######################
 
+proc check_channel*(self: VirtualMachine) =
+  if self.global_ns.ns.has_key("$thread"):
+    var thread = self.global_ns.ns["$thread"]
+    if thread.thread_callbacks.len() > 0:
+      var channel = Threads[self.thread_id].channel
+      var tried = channel.try_recv()
+      while tried.data_available:
+        for callback in thread.thread_callbacks:
+          var frame = new_frame()
+          var args = new_gene_gene()
+          discard self.call(frame, thread, callback, args)
+        tried = channel.try_recv()
+
+proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  if self.async_wait == 0:
+    self.async_wait = ASYNC_WAIT_LIMIT
+    if has_pending_operations():
+      poll()
+
+    if self.channel_wait == 0:
+      self.channel_wait = CHANNEL_WAIT_LIMIT
+      self.check_channel()
+    else:
+      self.channel_wait -= 1
+  else:
+    self.async_wait -= 1
+  expr.evaluator(self, frame, nil, expr)
+
+proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  try:
+    result = self.eval(frame, expr)
+  except system.Exception as e:
+    # echo e.msg & "\n" & e.getStackTrace()
+    result = Value(
+      kind: VkException,
+      exception: e,
+    )
+
 proc to_s*(self: Value): string =
   if self.is_nil:
     return ""
@@ -426,6 +464,13 @@ proc match*(vm: VirtualMachine, frame: Frame, self: RootMatcher, input: Value): 
   for child in children:
     vm.match(frame, child, input, state, result)
   vm.match_prop_splat(frame, children, input, result)
+
+#################### ExNoop ######################
+
+var NOOP_EXPR* {.threadvar.}: Expr
+
+proc eval_noop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  discard
 
 #################### ExLiteral ###################
 
@@ -838,12 +883,13 @@ proc translate_wrap*(translate: Translator): Translator =
 #################### VM ##########################
 
 proc init_app_and_vm*() =
-  # if not VM.is_nil:
-  #   `=destroy`(VM)
+  if not VM.is_nil:
+    cleanup_thread(VM.thread_id)
 
   let thread_id = get_free_thread()
   init_thread(thread_id)
   VM = new_vm()
+  VM.main_thread = true
   VM.thread_id = thread_id
   VM.app = new_app()
   VM.app.cmd = "TODO" # combine get_app_filename() and command_line_params()
@@ -1298,5 +1344,6 @@ proc call_wrap*(invoke: Invoke): Invoke =
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+    NOOP_EXPR = Expr(evaluator: eval_noop)
     BREAK_EXPR = Expr(evaluator: eval_break)
     CONTINUE_EXPR = Expr(evaluator: eval_continue)

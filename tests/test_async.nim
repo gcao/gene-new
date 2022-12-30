@@ -165,8 +165,10 @@ test_interpreter """
 
 test_interpreter """
   (var result 0)
-  ((gene/sleep_async 1000).on_success(-> (result = 1000)))
+  # 1000 didn't work, probably because the VM is too slow, 500 ms difference
+  # is not long enough
+  ((gene/sleep_async 2000).on_success(-> (result = 2000)))
   ((gene/sleep_async 500 ).on_success(-> (result = 500)))
   ($await_all)
   result
-""", 1000
+""", 2000

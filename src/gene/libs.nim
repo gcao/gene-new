@@ -294,6 +294,10 @@ proc init*() =
 
     self.gene_ns.ns["sleep"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep".} =
       sleep(args.gene_children[0].int)
+      # sleep will trigger all async
+      for i in 1..ASYNC_WAIT_LIMIT * CHANNEL_WAIT_LIMIT:
+        discard VM.eval(nil, NOOP_EXPR)
+
     self.gene_ns.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep_async".} =
       var f = sleep_async(args.gene_children[0].int)
       var future = new_future[Value]()

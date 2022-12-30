@@ -100,39 +100,37 @@ test_interpreter """
   check r.gene_props["a"] == 2
   check r.gene_children == new_gene_vec(3, 4)
 
-# test_interpreter """
-#   # spawn:
-#   # Spawn a thread
-#   # Run the code in the thread
-#   # Return the thread
-#   # The result of thread execution can be ignored or accessed using (thread .result)
+test_interpreter """
+  # spawn:
+  # Spawn a thread
+  # Run the code in the thread
+  # Return the thread
+  # The result of thread execution can be ignored or accessed using (thread .result)
 
-#   # All threads can send or receive messages
-#   # The messages are deeply copied on the receiver end.
+  # All threads can send or receive messages
+  # The messages are deeply copied on the receiver end.
 
-#   (var thread
-#     (spawn
-#       (var done)
-#       ($thread .on_message
-#         (msg ->
-#           (println msg)
-#           (if (msg == "stop")
-#             (done = true)
-#           )
-#         )
-#       )
-#       (while (not done)
-#         (println "sleep")
-#         # (gene/sleep 100)
-#         (await (gene/sleep_async 100))
-#       )
-#     )
-#   )
-#   (gene/sleep 100)
-#   (thread .send "stop")
-#   (thread .join)
-#   1
-# """, 1
+  (var thread
+    (spawn
+      (var done)
+      ($thread .on_message
+        (msg ->
+          (println msg)
+          (if (msg == "stop")
+            (done = true)
+          )
+        )
+      )
+      (while (not done)
+        (gene/sleep 100)
+      )
+    )
+  )
+  (gene/sleep 100)
+  (thread .send "stop")
+  (thread .join)
+  1
+""", 1
 
 # test_interpreter """
 #   (spawn

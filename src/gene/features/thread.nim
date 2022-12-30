@@ -15,12 +15,6 @@ type
     return_value*: bool
     body*: seq[Value]
 
-# Automatically start a message loop when a callback is registered.
-# When thread finishes execution, the message loop is stopped.
-# The user can create an infinite loop to keep the thread alive forever.
-proc start_message_loop() =
-  discard
-
 proc thread_handler(thread_id: int) =
   init_app_and_vm_for_thread(thread_id)
 
@@ -36,16 +30,9 @@ proc thread_handler(thread_id: int) =
   if name != CODE:
     todo("Expecting code but received " & name)
 
-  # Start message loop
-  var thread_ended = false
-  start_message_loop()
-
   # Run code
   var expr = translate(payload)
   var r = VM.eval(frame, expr)
-
-  # Stop message loop
-  thread_ended = true
 
   # Send result to caller thread thru channel
   var parent_id = Threads[thread_id].parent_id
