@@ -99,8 +99,8 @@ proc thread_join(self: Value, args: Value): Value =
 proc thread_send(self: Value, args: Value): Value =
   if Threads[self.thread_id].secret != self.thread_secret:
     not_allowed("The receiving thread has ended.")
-  var channel = Threads[self.thread_id].channel
-  channel.send((name: MESSAGE, payload: args.gene_children[0]))
+  var channel = Threads[self.thread_id].channel.addr
+  channel[].send((name: MESSAGE, payload: args.gene_children[0]))
 
 proc thread_on_message(self: Value, args: Value): Value =
   self.thread_callbacks.add(args.gene_children[0])

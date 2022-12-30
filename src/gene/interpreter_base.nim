@@ -28,14 +28,14 @@ proc check_channel*(self: VirtualMachine) =
   if self.global_ns.ns.has_key("$thread"):
     var thread = self.global_ns.ns["$thread"]
     if thread.thread_callbacks.len() > 0:
-      var channel = Threads[self.thread_id].channel
-      var tried = channel.try_recv()
+      let channel = Threads[self.thread_id].channel.addr
+      var tried = channel[].try_recv()
       while tried.data_available:
         for callback in thread.thread_callbacks:
           var frame = new_frame()
           var args = new_gene_gene()
           discard self.call(frame, thread, callback, args)
-        tried = channel.try_recv()
+        tried = channel[].try_recv()
 
 proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   if self.async_wait == 0:
