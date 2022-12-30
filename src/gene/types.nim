@@ -237,7 +237,6 @@ type
     of VkThread: # This is actually a reference to a thread stored in the global Threads
       thread_id*: int
       thread_secret*: float
-      thread_callbacks*: seq[Value]
     of VkNativeFile:
       native_file*: File
     else:
@@ -315,6 +314,7 @@ type
 
     main_thread*: bool
     thread_id*: int
+    thread_callbacks*: seq[Value]
 
     translators*: Table[ValueKind, Translator]
     gene_translators*: Table[string, Translator]

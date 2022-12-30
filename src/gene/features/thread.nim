@@ -70,11 +70,11 @@ proc eval_spawn(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
           return true
         of MESSAGE:
           var thread = self.global_ns.ns["$thread"]
-          if thread.thread_callbacks.len > 0:
+          if self.thread_callbacks.len > 0:
             var callback_args = new_gene_gene()
             callback_args.gene_children.add(tried.msg.payload)
             var frame = Frame()
-            for callback in thread.thread_callbacks:
+            for callback in self.thread_callbacks:
               discard self.call(frame, thread, callback, callback_args)
         else:
           not_allowed()
@@ -103,7 +103,7 @@ proc thread_send(self: Value, args: Value): Value =
   channel[].send((name: MESSAGE, payload: args.gene_children[0]))
 
 proc thread_on_message(self: Value, args: Value): Value =
-  self.thread_callbacks.add(args.gene_children[0])
+  VM.thread_callbacks.add(args.gene_children[0])
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: var VirtualMachine) =

@@ -27,11 +27,11 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
 proc check_channel*(self: VirtualMachine) =
   if self.global_ns.ns.has_key("$thread"):
     var thread = self.global_ns.ns["$thread"]
-    if thread.thread_callbacks.len() > 0:
+    if self.thread_callbacks.len() > 0:
       let channel = Threads[self.thread_id].channel.addr
       var tried = channel[].try_recv()
       while tried.data_available:
-        for callback in thread.thread_callbacks:
+        for callback in self.thread_callbacks:
           var frame = new_frame()
           var args = new_gene_gene()
           args.gene_children.add(tried.msg.payload)
