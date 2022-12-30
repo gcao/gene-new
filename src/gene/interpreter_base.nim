@@ -34,6 +34,7 @@ proc check_channel*(self: VirtualMachine) =
         for callback in thread.thread_callbacks:
           var frame = new_frame()
           var args = new_gene_gene()
+          args.gene_children.add(tried.msg.payload)
           discard self.call(frame, thread, callback, args)
         tried = channel[].try_recv()
 

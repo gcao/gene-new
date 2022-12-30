@@ -115,7 +115,6 @@ test_interpreter """
       (var done)
       ($thread .on_message
         (msg ->
-          (println msg)
           (if (msg == "stop")
             (done = true)
           )
