@@ -194,3 +194,5 @@ proc init*() =
 
     self.global_ns.ns["assert"] = new_gene_processor("assert", translate_assert)
     self.gene_ns.ns["assert"] = self.global_ns.ns["assert"]
+
+    self.object_class = Value(kind: VkClass, class: new_class("Object"))

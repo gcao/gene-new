@@ -313,7 +313,6 @@ proc init*() =
     self.gene_ns.ns["run_forever"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_run_forever".} =
       run_forever()
 
-    self.object_class = Value(kind: VkClass, class: new_class("Object"))
     self.object_class.def_native_method("class", object_class)
     self.object_class.def_native_method("is", object_is)
     self.object_class.def_native_method("to_s", object_to_s)
@@ -408,10 +407,6 @@ proc init*() =
     self.future_class.def_native_method("on_success", add_success_callback)
     self.future_class.def_native_method("on_failure", add_failure_callback)
     self.gene_ns.ns["Future"] = self.future_class
-
-    # self.thread_result_class = Value(kind: VkClass, class: new_class("ThreadResult"))
-    # self.thread_result_class.class.parent = self.object_class.class
-    # self.gene_ns.ns["ThreadResult"] = self.thread_result_class
 
     self.string_class = Value(kind: VkClass, class: new_class("String"))
     self.string_class.class.parent = self.object_class.class

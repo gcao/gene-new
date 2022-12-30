@@ -840,7 +840,11 @@ proc translate_wrap*(translate: Translator): Translator =
 proc init_app_and_vm*() =
   # if not VM.is_nil:
   #   `=destroy`(VM)
+
+  let thread_id = get_free_thread()
+  init_thread(thread_id)
   VM = new_vm()
+  VM.thread_id = thread_id
   VM.app = new_app()
   VM.app.cmd = "TODO" # combine get_app_filename() and command_line_params()
 
@@ -870,8 +874,9 @@ proc init_app_and_vm*() =
   for callback in VmCreatedCallbacks:
     callback(VM)
 
-proc init_app_and_vm_for_thread*() {.gcsafe.} =
+proc init_app_and_vm_for_thread*(thread_id: int) {.gcsafe.} =
   VM = new_vm()
+  VM.thread_id = thread_id
   VM.app = new_app()
   VM.app.cmd = "TODO" # combine get_app_filename() and command_line_params()
 

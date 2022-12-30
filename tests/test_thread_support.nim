@@ -29,6 +29,9 @@ import ./helpers
 #     may not be a good idea because it is not easy to reset the associated VM to
 #     its pristine state.
 
+# Give each thread a random id, when a thread object is re-used, the random id should
+# change, so that reference to old thread can be invalidated.
+
 test_interpreter """
   (await
     (spawn_return
@@ -110,23 +113,25 @@ test_interpreter """
 #   (var thread
 #     (spawn
 #       (var done)
-#       (var result)
 #       ($thread .on_message
 #         (msg ->
-#           (done = true)
-#           (result = msg)
+#           (println msg)
+#           (if (msg == "stop")
+#             (done = true)
+#           )
 #         )
 #       )
 #       (while (not done)
-#         # Add 10 noops to make sure futures are checked in every iteration
-#         (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
-#         (gene/sleep 100)
+#         (println "sleep")
+#         # (gene/sleep 100)
+#         (await (gene/sleep_async 100))
 #       )
-#       result
 #     )
 #   )
-#   (thread .send 1)
-#   (await (thread .result))
+#   (gene/sleep 100)
+#   (thread .send "stop")
+#   (thread .join)
+#   1
 # """, 1
 
 # test_interpreter """
