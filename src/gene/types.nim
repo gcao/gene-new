@@ -2103,13 +2103,8 @@ proc prop_splat*(self: seq[Matcher]): string =
 template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   if self.async_wait == 0:
     self.async_wait = ASYNC_WAIT_LIMIT
-    try:
+    if has_pending_operations():
       poll()
-    except ValueError as e:
-      if e.msg == "No handles or timers registered in dispatcher.":
-        discard
-      else:
-        raise
   else:
     self.async_wait -= 1
   expr.evaluator(self, frame, nil, expr)
