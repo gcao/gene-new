@@ -131,18 +131,20 @@ test_interpreter """
   1
 """, 1
 
-# test_interpreter """
-#   (spawn
-#     (gene/sleep 100)
-#     (var thread (gene/thread/main))
-#     (thread .send 1)
-#   )
+test_interpreter """
+  (spawn
+    (gene/sleep 100)
+    (var thread $thread/.parent)
+    (thread .send 1)
+  )
 
-#   (var result)
-#   # $thread - the current thread which is the main thread here.
-#   ($thread .on_message
-#     (msg -> (result = msg))
-#   )
-#   ($wait_for_threads) # Wait for running threads to finish
-#   result
-# """, 1
+  (var result)
+  # $thread - the current thread which is the main thread here.
+  ($thread .on_message
+    (msg ->
+      (result = msg)
+    )
+  )
+  (gene/sleep 200)
+  result
+""", 1

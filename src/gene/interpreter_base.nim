@@ -31,11 +31,12 @@ proc check_channel*(self: VirtualMachine) =
       let channel = Threads[self.thread_id].channel.addr
       var tried = channel[].try_recv()
       while tried.data_available:
-        for callback in self.thread_callbacks:
-          var frame = new_frame()
-          var args = new_gene_gene()
-          args.gene_children.add(tried.msg.payload)
-          discard self.call(frame, thread, callback, args)
+        if tried.msg.name == SEND_MESSAGE:
+          for callback in self.thread_callbacks:
+            var frame = new_frame()
+            var args = new_gene_gene()
+            args.gene_children.add(tried.msg.payload)
+            discard self.call(frame, thread, callback, args)
         tried = channel[].try_recv()
 
 proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =

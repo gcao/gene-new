@@ -9,6 +9,11 @@ const CHANNEL_WAIT_LIMIT* = 10
 
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
 
+# Channel message names
+const SEND_CODE*    = "code"
+const SEND_RETURN*  = "return"
+const SEND_MESSAGE* = "message"
+
 type
   RegexFlag* = enum
     RfIgnoreCase
@@ -551,6 +556,7 @@ type
     secret*: float
     in_use*: bool
     parent_id*: int
+    parent_secret*: float
     thread*: Thread[int]
     channel*: Channel[tuple[name: string, payload: Value]]
 
