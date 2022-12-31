@@ -24,6 +24,13 @@ import ./helpers
 #     Messages are deeply copied on the receiving end
 #     (thread .send x)
 #     (thread .on_message (x -> ...))
+#   In order to improve efficiency, VMs do not check messages by default.
+#     It can be enabled explicitly, or enabled when a message handler is
+#     registered, and can be disabled. It's the developer's responsibility
+#     to make sure no message is sent to a channel if the VM doesn't handle
+#     them.
+#
+#   Message handlers can be categorized as two types: once or multiple times
 
 #   Re-using threads
 #     may not be a good idea because it is not easy to reset the associated VM to

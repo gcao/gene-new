@@ -39,7 +39,7 @@ proc check_channel*(self: VirtualMachine) =
             discard self.call(frame, thread, callback, args)
         tried = channel[].try_recv()
 
-proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   if self.async_wait == 0:
     self.async_wait = ASYNC_WAIT_LIMIT
     if has_pending_operations():

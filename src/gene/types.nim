@@ -14,6 +14,8 @@ const SEND_CODE*    = "code"
 const SEND_RETURN*  = "return"
 const SEND_MESSAGE* = "message"
 
+const CHANNEL_LIMIT* = 256
+
 type
   RegexFlag* = enum
     RfIgnoreCase
@@ -1949,7 +1951,7 @@ proc init_thread*(id: int) =
   Threads[id].in_use = true
   randomize()
   Threads[id].secret = rand(1.0)
-  Threads[id].channel.open()
+  Threads[id].channel.open(CHANNEL_LIMIT)
 
 proc init_thread*(id, parent_id: int) =
   init_thread(id)
