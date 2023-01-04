@@ -5,7 +5,6 @@ import dynlib
 import macros
 
 const ASYNC_WAIT_LIMIT*   = 10
-const CHANNEL_WAIT_LIMIT* = 10
 
 const DEFAULT_ERROR_MESSAGE = "Error occurred."
 
@@ -317,11 +316,9 @@ type
     repl_on_error*: bool
 
     async_wait*: uint
-    channel_wait*: uint
 
     main_thread*: bool
     thread_id*: int
-    thread_callbacks*: seq[Value]
 
     translators*: Table[ValueKind, Translator]
     gene_translators*: Table[string, Translator]
@@ -856,7 +853,6 @@ converter gene_to_ns*(v: Value): Namespace = todo()
 proc new_vm*(): VirtualMachine =
   return VirtualMachine(
     async_wait: ASYNC_WAIT_LIMIT,
-    channel_wait: CHANNEL_WAIT_LIMIT,
   )
 
 #################### Application #################

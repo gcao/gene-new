@@ -23,7 +23,7 @@ import ./helpers
 #   Message passing between threads
 #     Messages are deeply copied on the receiving end
 #     (thread .send x)
-#     (thread .on_message (x -> ...))
+#     (thread .check_message (x -> ...))
 #   In order to improve efficiency, VMs do not check messages by default.
 #     It can be enabled explicitly, or enabled when a message handler is
 #     registered, and can be disabled. It's the developer's responsibility
@@ -119,15 +119,12 @@ test_interpreter """
 
   (var thread
     (spawn
-      (var done)
-      ($thread .on_message
-        (msg ->
+      (loop
+        ($thread .check_message (msg ->
           (if (msg == "stop")
-            (done = true)
+            (break)
           )
-        )
-      )
-      (while (not done)
+        ))
         (gene/sleep 100)
       )
     )
@@ -147,11 +144,35 @@ test_interpreter """
 
   (var result)
   # $thread - the current thread which is the main thread here.
-  ($thread .on_message
-    (msg ->
+  (loop
+    ($thread .check_message (msg ->
       (result = msg)
-    )
+      (break)
+    ))
+    (gene/sleep 200)
   )
-  (gene/sleep 200)
   result
 """, 1
+
+test_interpreter """
+  (spawn
+    (gene/sleep 100)
+    (var thread $thread/.parent)
+    (thread .send 1)
+    (thread .send 2)
+    (thread .send "over")
+  )
+
+  (var result)
+  # $thread - the current thread which is the main thread here.
+  (loop
+    ($thread .check_message (msg ->
+      (if (msg == "over")
+        (break)
+      )
+      (result = msg)
+    ))
+    (gene/sleep 200)
+  )
+  result
+""", 2
