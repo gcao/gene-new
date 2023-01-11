@@ -15,7 +15,7 @@ import ./helpers
 #     figure out the thread & channel to send message to.
 #   Any read/write of the shared thread metadata should be guarded by a lock.
 #   Allow sending more code to a running thread (the receiving thread should
-#     not having ended.)
+#     not have ended.)
 #   Allow arguments to be passed when running code inside a thread (args will be
 #     deeply copied)
 
@@ -44,7 +44,7 @@ import ./helpers
 #     to make sure no message is sent to a channel if the VM doesn't handle
 #     them.
 #
-#   Message handlers can be categorized as two types: once or multiple times
+#   Message handlers can be deregistered when it is not needed any more.
 
 #   Re-using threads
 #     may not be a good idea because it is not easy to reset the associated VM to
@@ -130,99 +130,81 @@ test_interpreter """
   check r.gene_props["a"] == 2
   check r.gene_children == new_gene_vec(3, 4)
 
-test_interpreter """
-  # spawn:
-  # Spawn a thread
-  # Run the code in the thread
-  # Return the thread
-  # The result of thread execution can be ignored or accessed using (thread .result)
-
-  # All threads can send or receive messages
-  # The messages are deeply copied on the receiver end.
-
-  (var thread
-    (spawn
-      (loop
-        ($thread .check_message (msg ->
-          (if (msg == "stop")
-            (break)
-          )
-        ))
-        (gene/sleep 100)
-      )
-    )
-  )
-  (gene/sleep 100)
-  (thread .send "stop")
-  (thread .join)
-  1
-""", 1
-
-test_interpreter """
-  (spawn
-    (gene/sleep 100)
-    (var thread $thread/.parent)
-    (thread .send 1)
-  )
-
-  (var result)
-  # $thread - the current thread which is the main thread here.
-  (loop
-    ($thread .check_message (msg ->
-      (result = msg)
-      (break)
-    ))
-    (gene/sleep 200)
-  )
-  result
-""", 1
-
-test_interpreter """
-  (spawn
-    (gene/sleep 100)
-    (var thread $thread/.parent)
-    (thread .send 1)
-    (thread .send 2)
-    (thread .send "over")
-  )
-
-  (var result)
-  # $thread - the current thread which is the main thread here.
-  (loop
-    ($thread .check_message (msg ->
-      (if (msg == "over")
-        (break)
-      )
-      (result = msg)
-    ))
-    (gene/sleep 200)
-  )
-  result
-""", 2
-
 # test_interpreter """
+#   # spawn:
+#   # Spawn a thread
+#   # Run the code in the thread
+#   # Return the thread
+#   # The result of thread execution can be ignored or accessed using (thread .result)
+
+#   # All threads can send or receive messages
+#   # The messages are deeply copied on the receiver end.
+
 #   (var thread
 #     (spawn
-#       (var global/finished false)
-#       (while (not global/finished)
+#       (var done false)
+#       ($thread .on_message (msg ->
+#         (if (msg == "stop")
+#           (done = true)
+#           true # tell the interpreter that the message is handled, do not pass the message to next callback
+#         )
+#       ))
+#       (while (not done)
 #         (gene/sleep 100)
 #       )
 #     )
 #   )
-#   (gene/sleep 200)
-#   (thread .run
-#     (global/finished = true)
-#   )
+#   (gene/sleep 100)
+#   (thread .send "stop")
 #   (thread .join)
 #   1
 # """, 1
 
 # test_interpreter """
+#   (spawn
+#     (gene/sleep 100)
+#     (var thread $thread/.parent)
+#     (thread .send 1)
+#   )
+
+#   (var result (new gene/Future))
+
+#   # $thread - the current thread which is the main thread here.
+#   ($thread .on_message (msg ->
+#     (result .complete msg)
+#     true
+#   ))
+
+#   (await result)
+# """, 1
+
+# test_interpreter """
+#   (spawn
+#     (gene/sleep 100)
+#     (var thread $thread/.parent)
+#     (thread .send 1)
+#     (thread .send 2)
+#     (thread .send "over")
+#   )
+
+#   (var result (new gene/Future))
+
+#   ($thread .on_message (msg ->
+#     (if (msg == "over")
+#       (break)
+#     )
+#     (result = msg)
+#   ))
+
+#   (await result)
+# """, 2
+
+# test_interpreter """
 #   (var thread
-#     (spawn
+#     (spawn ^args {^x 100}
 #       (var global/finished false)
 #       (while (not global/finished)
-#         (gene/sleep 100)
+#         (gene/sleep x)
 #       )
 #     )
 #   )

@@ -65,6 +65,14 @@ proc eval_spawn(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
         of SEND_RETURN:
           r.future.complete(tried.msg.payload)
           return true
+        of SEND_MESSAGE:
+          var thread = self.global_ns.ns["$thread"]
+          if self.thread_callbacks.len > 0:
+            var callback_args = new_gene_gene()
+            callback_args.gene_children.add(tried.msg.payload)
+            var frame = Frame()
+            for callback in self.thread_callbacks:
+              discard self.call(frame, thread, callback, callback_args)
         else:
           not_allowed()
   else:
@@ -98,17 +106,8 @@ proc thread_send(self: Value, args: Value): Value =
   var channel = Threads[self.thread_id].channel.addr
   channel[].send((name: SEND_MESSAGE, payload: args.gene_children[0]))
 
-proc thread_check_message(self: Value, args: Value): Value =
-  let callback = args.gene_children[0]
-  let channel = Threads[VM.thread_id].channel.addr
-  var tried = channel[].try_recv()
-  while tried.data_available:
-    if tried.msg.name == SEND_MESSAGE:
-      var frame = new_frame()
-      var callback_args = new_gene_gene()
-      callback_args.gene_children.add(tried.msg.payload)
-      discard VM.call(frame, self, callback, callback_args)
-    tried = channel[].try_recv()
+proc thread_on_message(self: Value, args: Value): Value =
+  VM.thread_callbacks.add(args.gene_children[0])
 
 proc init*() =
   VmCreatedCallbacks.add proc(self: var VirtualMachine) =
@@ -117,7 +116,7 @@ proc init*() =
     self.thread_class.def_native_method("parent", thread_parent)
     self.thread_class.def_native_method("join", thread_join)
     self.thread_class.def_native_method("send", thread_send)
-    self.thread_class.def_native_method("check_message", thread_check_message)
+    self.thread_class.def_native_method("on_message", thread_on_message)
     self.gene_ns.ns["Thread"] = self.thread_class
 
     let spawn = new_gene_processor(translate_spawn)

@@ -319,6 +319,7 @@ type
 
     main_thread*: bool
     thread_id*: int
+    thread_callbacks*: seq[Value]
 
     translators*: Table[ValueKind, Translator]
     gene_translators*: Table[string, Translator]

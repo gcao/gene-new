@@ -24,11 +24,24 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
 
 #################### Value #######################
 
+proc check_channel*(self: VirtualMachine) =
+  let channel = Threads[self.thread_id].channel.addr
+  var tried = channel[].try_recv()
+  while tried.data_available:
+    if tried.msg.name == SEND_MESSAGE:
+      for callback in self.thread_callbacks:
+        var frame = new_frame()
+        var args = new_gene_gene()
+        args.gene_children.add(tried.msg.payload)
+        discard self.call(frame, nil, callback, args)
+    tried = channel[].try_recv()
+
 template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   if self.async_wait == 0:
     self.async_wait = ASYNC_WAIT_LIMIT
     if has_pending_operations():
       poll()
+    # self.check_channel()
   else:
     self.async_wait -= 1
   expr.evaluator(self, frame, nil, expr)

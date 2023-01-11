@@ -52,6 +52,40 @@ proc eval_await(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
       else:
         todo()
 
+proc add_success_callback(self: Value, args: Value): Value =
+  # Register callback to future
+  if self.future.finished:
+    if not self.future.failed:
+      var callback_args = new_gene_gene()
+      callback_args.gene_children.add(self.future.read())
+      var frame = Frame()
+      discard VM.call(frame, args.gene_children[0], callback_args)
+  else:
+    self.future.add_callback proc() {.gcsafe.} =
+      if not self.future.failed:
+        var callback_args = new_gene_gene()
+        callback_args.gene_children.add(self.future.read())
+        var frame = Frame()
+        discard VM.call(frame, args.gene_children[0], callback_args)
+
+proc add_failure_callback(self: Value, args: Value): Value =
+  # Register callback to future
+  if self.future.finished:
+    if self.future.failed:
+      var callback_args = new_gene_gene()
+      var ex = exception_to_value(cast[ref system.Exception](self.future.read_error()))
+      callback_args.gene_children.add(ex)
+      var frame = Frame()
+      discard VM.call(frame, args.gene_children[0], callback_args)
+  else:
+    self.future.add_callback proc() {.gcsafe.} =
+      if self.future.failed:
+        var callback_args = new_gene_gene()
+        var ex = exception_to_value(cast[ref system.Exception](self.future.read_error()))
+        callback_args.gene_children.add(ex)
+        var frame = Frame()
+        discard VM.call(frame, args.gene_children[0], callback_args)
+
 proc translate_await(value: Value): Expr {.gcsafe.} =
   var r = ExAwait(
     evaluator: eval_await,
@@ -66,3 +100,9 @@ proc init*() =
     VM.gene_translators["async"] = translate_async
     VM.gene_translators["await"] = translate_await
     VM.gene_translators["$await_all"] = translate_await
+
+    self.future_class = Value(kind: VkClass, class: new_class("Future"))
+    self.future_class.class.parent = self.object_class.class
+    self.future_class.def_native_method("on_success", add_success_callback)
+    self.future_class.def_native_method("on_failure", add_failure_callback)
+    self.gene_ns.ns["Future"] = self.future_class
