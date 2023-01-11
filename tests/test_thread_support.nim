@@ -5,6 +5,20 @@ import gene/types
 import ./helpers
 
 # Multithread support:
+#   A VM should know whether there is any child thread spawned from itself
+#   A VM should wait for all child threads automatically. A custom method
+#     should be implemented instead of using the standard joinThread method
+#     because it'll block the current thread.
+#   If a VM has child threads, it should check for messages every X evaluations
+#     (allow this to be disabled)
+#   Child threads can talk to each other. It's the developer's responsibility to
+#     figure out the thread & channel to send message to.
+#   Any read/write of the shared thread metadata should be guarded by a lock.
+#   Allow sending more code to a running thread (the receiving thread should
+#     not having ended.)
+#   Allow arguments to be passed when running code inside a thread (args will be
+#     deeply copied)
+
 #   $spawn
 #   $spawn_wait wait for result
 #   $spawn_return
@@ -47,6 +61,15 @@ test_interpreter """
     )
   )
 """, 3
+
+# test_interpreter """
+#   (await
+#     (spawn_return ^args {^first 1 ^second 2}
+#       (gene/sleep 100)
+#       (first + second)
+#     )
+#   )
+# """, 3
 
 test_interpreter """
   (await
@@ -176,3 +199,37 @@ test_interpreter """
   )
   result
 """, 2
+
+# test_interpreter """
+#   (var thread
+#     (spawn
+#       (var global/finished false)
+#       (while (not global/finished)
+#         (gene/sleep 100)
+#       )
+#     )
+#   )
+#   (gene/sleep 200)
+#   (thread .run
+#     (global/finished = true)
+#   )
+#   (thread .join)
+#   1
+# """, 1
+
+# test_interpreter """
+#   (var thread
+#     (spawn
+#       (var global/finished false)
+#       (while (not global/finished)
+#         (gene/sleep 100)
+#       )
+#     )
+#   )
+#   (gene/sleep 200)
+#   (thread .run ^args {^x true}
+#     (global/finished = x)
+#   )
+#   (thread .join)
+#   1
+# """, 1
