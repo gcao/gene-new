@@ -6,7 +6,7 @@ import macros
 
 const ASYNC_WAIT_LIMIT*   = 10
 
-const DEFAULT_ERROR_MESSAGE = "Error occurred."
+const DEFAULT_ERROR_MESSAGE* = "Error occurred."
 
 # Channel message names
 const SEND_CODE*    = "code"

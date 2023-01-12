@@ -40,7 +40,10 @@ proc eval_await(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     var r = self.eval(frame, expr.data[0])
     case r.kind:
     of VkFuture:
-      result = wait_for(r.future)
+      if r.future.finished:
+        result = r.future.read()
+      else:
+        result = wait_for(r.future)
     else:
       todo()
   else:
@@ -51,6 +54,53 @@ proc eval_await(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
         result.vec.add(wait_for(r.future))
       else:
         todo()
+
+proc translate_await(value: Value): Expr {.gcsafe.} =
+  var r = ExAwait(
+    evaluator: eval_await,
+    wait_all: value.gene_type.str == "$await_all",
+  )
+  for item in value.gene_children:
+    r.data.add(translate(item))
+  return r
+
+proc new_future(args: Value): Value =
+  new_gene_future(new_future[Value]())
+
+proc complete(self: Value, args: Value): Value =
+  var v =
+    if args.gene_children.len > 0:
+      args.gene_children[0]
+    else:
+      Value(kind: VkNil)
+
+  # Force the dispatcher to process the callbacks
+  var future: Future[void]
+  if not has_pending_operations():
+    future = sleep_async(0)
+
+  self.future.complete(v)
+
+  if not future.is_nil:
+    wait_for(future)
+
+proc fail(self: Value, args: Value): Value =
+  var v =
+    if args.gene_children.len > 0:
+      args.gene_children[0].to_s
+    else:
+      DEFAULT_ERROR_MESSAGE
+
+  # Force the dispatcher to process the callbacks
+  var future: Future[void]
+  if not has_pending_operations():
+    future = sleep_async(0)
+
+  var e = new_exception(types.Exception, v)
+  self.future.fail(e)
+
+  if not future.is_nil:
+    wait_for(future)
 
 proc add_success_callback(self: Value, args: Value): Value =
   # Register callback to future
@@ -86,15 +136,6 @@ proc add_failure_callback(self: Value, args: Value): Value =
         var frame = Frame()
         discard VM.call(frame, args.gene_children[0], callback_args)
 
-proc translate_await(value: Value): Expr {.gcsafe.} =
-  var r = ExAwait(
-    evaluator: eval_await,
-    wait_all: value.gene_type.str == "$await_all",
-  )
-  for item in value.gene_children:
-    r.data.add(translate(item))
-  return r
-
 proc init*() =
   VmCreatedCallbacks.add proc(self: var VirtualMachine) =
     VM.gene_translators["async"] = translate_async
@@ -103,6 +144,9 @@ proc init*() =
 
     self.future_class = Value(kind: VkClass, class: new_class("Future"))
     self.future_class.class.parent = self.object_class.class
+    self.future_class.def_native_constructor(new_future)
+    self.future_class.def_native_method("complete", complete)
+    self.future_class.def_native_method("fail", fail)
     self.future_class.def_native_method("on_success", add_success_callback)
     self.future_class.def_native_method("on_failure", add_failure_callback)
     self.gene_ns.ns["Future"] = self.future_class

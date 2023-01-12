@@ -18,29 +18,35 @@ import ./helpers
 # * await: convert to synchronous call
 #
 
-# test_interpreter """
-#   (var future (new gene/Future))
-#   (future .complete 1)
-#   (await future)
-# """, 1
+test_interpreter """
+  (var future (new gene/Future))
+  (future .complete 1)
+  (await future)
+""", 1
 
-# test_interpreter """
-#   (var result)
-#   (var future (new gene/Future))
-#   (future .on_success (-> result = 1))
-#   (future .on_failure (-> result = 2))
-#   (future .complete)
-#   (await future)
-# """, 1
+test_interpreter """
+  (var result)
+  (var future (new gene/Future))
+  (future .on_success (-> (result = 1)))
+  (future .on_failure (-> (result = 2)))
+  (future .complete)
+  (await future)
+  result
+""", 1
 
-# test_interpreter """
-#   (var result)
-#   (var future (new gene/Future))
-#   (future .on_success (-> result = 1))
-#   (future .on_failure (-> result = 2))
-#   (future .abort)
-#   (await future)
-# """, 2
+test_interpreter """
+  (var result)
+  (var future (new gene/Future))
+  (future .on_success (-> (result = 1)))
+  (future .on_failure (-> (result = 2)))
+  (future .fail)
+  (try
+    (await future)
+    (fail "should not arrive here.")
+  catch *
+  )
+  result
+""", 2
 
 test_interpreter """
   (async 1)

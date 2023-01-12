@@ -259,7 +259,10 @@ proc init*() =
         return rand(args.gene_children[0].int)
 
     self.gene_ns.ns["sleep"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep".} =
-      sleep(args.gene_children[0].int)
+      var time = 1
+      if args.gene_children.len >= 1:
+        time = args.gene_children[0].int
+      sleep(time)
       # sleep will trigger async event check
       for i in 1..ASYNC_WAIT_LIMIT:
         discard VM.eval(nil, NOOP_EXPR)
@@ -270,6 +273,7 @@ proc init*() =
       f.add_callback proc() {.gcsafe.} =
         future.complete(Value(kind: VkNil))
       result = new_gene_future(future)
+
     self.gene_ns.ns["base64"] = new_gene_native_fn proc(args: Value): Value =
       encode(args.gene_children[0].str)
     self.gene_ns.ns["base64_decode"] = new_gene_native_fn proc(args: Value): Value =
