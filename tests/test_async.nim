@@ -202,3 +202,16 @@ test_interpreter """
   ($await_all)
   result
 """, 2000
+
+# test_interpreter """
+#   (var result false)
+#   (gene/defer (result = true) 1000)
+#   (gene/wait_until result) # wait, but let async code run in the middle, can take an interval and a timeout value
+#   result
+# """, true
+
+# test_interpreter """
+#   (var result false)
+#   (gene/wait_until ^timeout 2000 result) # wait, but let async code run in the middle, can take an interval and a timeout value
+#   result
+# """, false

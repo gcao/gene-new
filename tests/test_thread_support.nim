@@ -45,6 +45,18 @@ import ./helpers
 #     them.
 #
 #   Message handlers can be deregistered when it is not needed any more.
+#
+#   Message and reply
+#     Can be used to simulate real time communication
+#     Each messaage can be given a unique id
+#     A reply can be sent for any given message (no multi replies are allowed)
+#     Reply will know exactly which channel to use
+#     The sender can select to wait for reply or register a callback for the reply
+#     Replies are not handled by regular message handlers
+#     The order of replies/messages are not guaranteed
+#
+#   Broadcasting
+#     Should limit to my child threads, or subset of my child threads
 
 #   Re-using threads
 #     may not be a good idea because it is not easy to reset the associated VM to
@@ -52,6 +64,22 @@ import ./helpers
 
 # Give each thread a random id, when a thread object is re-used, the random id should
 # change, so that reference to old thread can be invalidated.
+
+# Design of a multithreading HTTP server
+#   The main thread listens on the socket for incoming request
+#   For each incoming request
+#     Parse request
+#     A worker thread is spawned (can be done while the main thread is idling)
+#     Send message to the worker thread to process the request
+#     Wait for reply
+#     Stop the worker thread (can be done while the main thread is idling)
+#     Send reply to the client
+#   Global states and user sessions should be stored in DB
+#
+#   This is not very efficient because the worker threads are not reused and it's
+#     expensive to start/stop a worker thread.
+#   If we reuse worker threads, some requests may change the global environment by
+#     accident. This will cause hard-to-catch bugs.
 
 test_interpreter """
   (await
@@ -187,7 +215,7 @@ test_interpreter """
 #     (thread .send "over")
 #   )
 
-#   (var result (new gene/Future))
+#   (var result)
 
 #   ($thread .on_message (msg ->
 #     (if (msg == "over")
@@ -196,7 +224,7 @@ test_interpreter """
 #     (result = msg)
 #   ))
 
-#   (await result)
+#   result
 # """, 2
 
 # test_interpreter """

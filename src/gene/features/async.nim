@@ -32,28 +32,28 @@ proc translate_async(value: Value): Expr {.gcsafe.} =
     data: translate(value.gene_children),
   )
 
+proc await(self: Value): Value =
+    case self.kind:
+    of VkFuture:
+      if self.future.finished:
+        result = self.future.read()
+      else:
+        result = wait_for(self.future)
+    else:
+      todo()
+
 proc eval_await(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExAwait](expr)
   if expr.wait_all:
     self.wait_for_futures()
   elif expr.data.len == 1:
     var r = self.eval(frame, expr.data[0])
-    case r.kind:
-    of VkFuture:
-      if r.future.finished:
-        result = r.future.read()
-      else:
-        result = wait_for(r.future)
-    else:
-      todo()
+    result = await(r)
   else:
     result = new_gene_vec()
     for item in expr.data.mitems:
       var r = self.eval(frame, item)
-      if r.kind == VkFuture:
-        result.vec.add(wait_for(r.future))
-      else:
-        todo()
+      result.vec.add(await(r))
 
 proc translate_await(value: Value): Expr {.gcsafe.} =
   var r = ExAwait(
