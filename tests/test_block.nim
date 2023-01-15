@@ -104,3 +104,8 @@ test_interpreter """
 #   (g 2)
 # """, proc(r: Value) =
 #   check r.gene_children == @[2]
+
+test_interpreter """
+  (var ^^define_assign a (a == nil))
+  a
+""", true

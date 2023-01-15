@@ -7,16 +7,24 @@ import ./symbol
 type
   ExVar* = ref object of Expr
     container*: Expr
+    define_assign*: bool
     name*: string
     value*: Expr
 
 proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExVar](expr)
   if e.container == nil:
-    result = self.eval(frame, e.value)
-    if result == nil:
-      result = Value(kind: VkNil)
-    frame.scope.def_member(e.name, result)
+    if e.define_assign:
+      frame.scope.def_member(e.name, Value(kind: VkNil))
+      result = self.eval(frame, e.value)
+      if result == nil:
+        result = Value(kind: VkNil)
+      frame.scope[e.name] = result
+    else:
+      result = self.eval(frame, e.value)
+      if result == nil:
+        result = Value(kind: VkNil)
+      frame.scope.def_member(e.name, result)
   else:
     var container = self.eval(frame, e.container)
     var ns: Namespace
@@ -30,10 +38,17 @@ proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     else:
       todo("eval_var " & $container.kind)
 
-    result = self.eval(frame, e.value)
-    if result == nil:
-      result = Value(kind: VkNil)
-    ns[e.name] = result
+    if e.define_assign:
+      ns[e.name] = Value(kind: VkNil)
+      result = self.eval(frame, e.value)
+      if result == nil:
+        result = Value(kind: VkNil)
+      ns[e.name] = result
+    else:
+      result = self.eval(frame, e.value)
+      if result == nil:
+        result = Value(kind: VkNil)
+      ns[e.name] = result
 
 proc translate_var(value: Value): Expr {.gcsafe.} =
   var name = value.gene_children[0]
@@ -42,16 +57,19 @@ proc translate_var(value: Value): Expr {.gcsafe.} =
     v = translate(value.gene_children[1])
   else:
     v = new_ex_literal(Value(kind: VkNil))
+  var define_assign = value.gene_props.has_key("define_assign") and value.gene_props.has_key("define_assign")
   case name.kind:
   of VkSymbol:
     result = ExVar(
       evaluator: eval_var,
+      define_assign: define_assign,
       name: name.str,
       value: v,
     )
   of VkComplexSymbol:
     result = ExVar(
       evaluator: eval_var,
+      define_assign: define_assign,
       container: translate(name.csymbol[0..^2]),
       name: name.csymbol[^1],
       value: v,
