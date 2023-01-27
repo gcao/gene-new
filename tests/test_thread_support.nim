@@ -55,6 +55,12 @@ import ./helpers
 #     Replies are not handled by regular message handlers
 #     The order of replies/messages are not guaranteed
 #
+#     A reply can be sent for another reply (the sender has to add a flag to
+#       signify the receiver that a reply is expected.) - bad idea!
+#
+#     Maybe we can allow multiple unrelated messages to be sent in one shot in
+#       order to improve efficiency?!
+#
 #   Broadcasting
 #     Should limit to my child threads, or subset of my child threads
 
@@ -80,6 +86,7 @@ import ./helpers
 #     expensive to start/stop a worker thread.
 #   If we reuse worker threads, some requests may change the global environment by
 #     accident. This will cause hard-to-catch bugs.
+#   We probably should let the developer decide whether a thread should be reused.
 
 test_interpreter """
   (await

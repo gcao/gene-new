@@ -551,9 +551,30 @@ type
     name*: string
     value*: int
 
+  InterThreadMessageType* = enum
+    MtRun           # Run code and forget
+    MtRunWithReply  # Run code and expect a reply
+    MtSend          # Send and forget
+    MtSendWithReply # Send and expect a reply
+    MtReply         # Reply
+
+  InterThreadMessage* = object
+    id*: int
+    `type`*: InterThreadMessageType
+    payload*: Value
+    from_message_id*: int       # Used by MtReply
+    from_thread_id*: int        # Used by MtReply
+    from_thread_secret*: float  # Used by MtReply
+
+  ThreadState* = enum
+    TsUninitialized
+    TsFree
+    TsBusy
+
   ThreadMetadata* = object
     id*: int
     secret*: float
+    state*: ThreadState
     in_use*: bool
     parent_id*: int
     parent_secret*: float
