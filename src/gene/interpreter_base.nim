@@ -1229,12 +1229,18 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
 
   case callable.kind:
   of VkNativeMethod, VkNativeMethod2:
-    var args_expr: Expr = new_ex_arg(args)
-    var args = self.eval_args(frame, nil, args_expr)
-    if callable.kind == VkNativeMethod:
-      result = meth.callable.native_method(instance, args)
+    if meth.is_macro:
+      if callable.kind == VkNativeMethod:
+        result = meth.callable.native_method(instance, args)
+      else:
+        result = meth.callable.native_method2(instance, args)
     else:
-      result = meth.callable.native_method2(instance, args)
+      var args_expr: Expr = new_ex_arg(args)
+      var args = self.eval_args(frame, nil, args_expr)
+      if callable.kind == VkNativeMethod:
+        result = meth.callable.native_method(instance, args)
+      else:
+        result = meth.callable.native_method2(instance, args)
 
   of VkFunction:
     var fn_scope = new_scope()

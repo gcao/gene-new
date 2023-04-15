@@ -409,7 +409,7 @@ proc init*() =
       self.class.name
     self.class_class.def_native_method "parent", proc(self: Value, args: Value): Value =
       Value(kind: VkClass, class: self.class.parent)
-    self.class_class.def_native_method "fn", class_fn
+    self.class_class.def_native_macro_method "fn", class_fn
     self.class_class.def_native_macro_method "macro", class_macro
     self.class_class.def_native_method "members", proc(self: Value, args: Value): Value {.name:"class_members".} =
       self.class.ns.get_members()
