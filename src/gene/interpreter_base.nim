@@ -20,7 +20,6 @@ proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Valu
 proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value {.gcsafe.}
 proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value {.gcsafe.}
 proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args: Value): Value {.gcsafe.}
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args_expr: var Expr): Value {.gcsafe.}
 
 #################### Value #######################
 
@@ -407,6 +406,8 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         state.data_index += 1
     elif self.min_left < input.len - state.data_index:
       value = input[state.data_index]
+      if value.kind == VkPlaceholder:
+        value = vm.eval(frame, self.default_value_expr)
       state.data_index += 1
     else:
       if self.default_value_expr != nil:
@@ -608,10 +609,11 @@ proc new_ex_arg*(value: Value): ExArguments =
   result = ExArguments(
     evaluator: eval_args,
   )
-  for k, v in value.gene_props:
-    result.props[k] = translate(v)
-  for v in value.gene_children:
-    result.children.add(translate(v))
+  if not value.is_nil and value.kind == VkGene:
+    for k, v in value.gene_props:
+      result.props[k] = translate(v)
+    for v in value.gene_children:
+      result.children.add(translate(v))
   result.check_explode()
 
 #################### OOP #########################
@@ -620,16 +622,16 @@ type
   ExInvoke* = ref object of Expr
     self*: Expr
     meth*: string
-    args*: Expr
+    args*: Value
 
 proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExInvoke](expr)
   var instance: Value
-  var e = cast[ExInvoke](expr).self
-  if e == nil:
+  var self_expr = cast[ExInvoke](expr).self
+  if self_expr == nil:
     instance = frame.self
   else:
-    instance = self.eval(frame, e)
+    instance = self.eval(frame, self_expr)
   if instance == nil:
     raise new_exception(types.Exception, "Invoking " & expr.meth.to_s & " on nil.")
 
@@ -641,13 +643,7 @@ proc translate_invoke*(value: Value): Expr {.gcsafe.} =
   )
   r.self = translate(value.gene_props.get_or_default("self", nil))
   r.meth = value.gene_props["method"].str
-
-  var args = new_ex_arg()
-  for k, v in value.gene_props:
-    args.props[k] = translate(v)
-  for v in value.gene_children:
-    args.children.add(translate(v))
-  r.args = args
+  r.args = value
 
   result = r
 
@@ -741,9 +737,9 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
           result = true
           var class = target.get_class()
           if class.has_method("set"):
-            var args: Expr = new_ex_arg()
-            cast[ExArguments](args).children.add(new_ex_literal(m.name.to_s))
-            cast[ExArguments](args).children.add(new_ex_literal(value))
+            var args = new_gene_gene()
+            args.gene_children.add(m.name.to_s)
+            args.gene_children.add(value)
             return VM.invoke(new_frame(), target, "set", args)
           else:
             not_allowed("update " & $target & " " & m.name.to_s & " " & $value)
@@ -1233,58 +1229,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
 
   case callable.kind:
   of VkNativeMethod, VkNativeMethod2:
-    if callable.kind == VkNativeMethod:
-      result = meth.callable.native_method(instance, args)
-    else:
-      result = meth.callable.native_method2(instance, args)
-
-  of VkFunction:
-    var fn_scope = new_scope()
-    # if is_method_missing:
-    #   fn_scope.def_member("$method_name", expr.meth.to_s)
-    var new_frame = Frame(ns: callable.fn.ns, scope: fn_scope)
-    new_frame.parent = frame
-    new_frame.self = instance
-    new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
-
-    if callable.fn.body_compiled == nil:
-      callable.fn.body_compiled = translate(callable.fn.body)
-
-    try:
-      self.process_args(new_frame, callable.fn.matcher, args)
-      result = self.eval(new_frame, callable.fn.body_compiled)
-    except Return as r:
-      # return's frame is the same as new_frame(current function's frame)
-      if r.frame == new_frame:
-        result = r.val
-      else:
-        raise
-    except system.Exception as e:
-      if self.repl_on_error:
-        result = repl_on_error(self, frame, e)
-        discard
-      else:
-        raise
-  else:
-    todo()
-
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args_expr: var Expr): Value {.gcsafe.} =
-  var class = instance.get_class
-  var meth = class.get_method(method_name)
-  # var is_method_missing = false
-  var callable: Value
-  if meth == nil:
-    not_allowed("No method available: " & class.name & "." & method_name.to_s)
-    # if class.method_missing == nil:
-    #   not_allowed("No method available: " & expr.meth.to_s)
-    # else:
-    #   is_method_missing = true
-    #   callable = class.method_missing
-  else:
-    callable = meth.callable
-
-  case callable.kind:
-  of VkNativeMethod, VkNativeMethod2:
+    var args_expr: Expr = new_ex_arg(args)
     var args = self.eval_args(frame, nil, args_expr)
     if callable.kind == VkNativeMethod:
       result = meth.callable.native_method(instance, args)
@@ -1304,7 +1249,9 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
       callable.fn.body_compiled = translate(callable.fn.body)
 
     try:
-      handle_args(self, frame, new_frame, callable.fn.matcher, cast[ExArguments](args_expr))
+      var args_expr: Expr = new_ex_arg(args)
+      var args = self.eval_args(frame, nil, args_expr)
+      self.process_args(new_frame, callable.fn.matcher, args)
       result = self.eval(new_frame, callable.fn.body_compiled)
     except Return as r:
       # return's frame is the same as new_frame(current function's frame)

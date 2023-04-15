@@ -506,6 +506,7 @@ type
     name*: string
     callable*: Value
     # public*: bool
+    is_macro*: bool
 
   Function* = ref object of GeneProcessor
     async*: bool
@@ -1356,6 +1357,14 @@ proc def_native_method*(self: Value, name: string, m: NativeMethod2) =
     class: self.class,
     name: name,
     callable: Value(kind: VkNativeMethod2, native_method2: m),
+  )
+
+proc def_native_macro_method*(self: Value, name: string, m: NativeMethod) =
+  self.class.methods[name] = Method(
+    class: self.class,
+    name: name,
+    callable: Value(kind: VkNativeMethod, native_method: m),
+    is_macro: true,
   )
 
 proc def_native_constructor*(self: Value, f: NativeFn) =

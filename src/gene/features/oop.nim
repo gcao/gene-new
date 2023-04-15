@@ -29,7 +29,7 @@ type
 
   ExNew* = ref object of Expr
     class*: Expr
-    args*: Expr
+    args*: Value
 
   ExMethod* = ref object of Expr
     name*: string
@@ -47,7 +47,7 @@ type
   ExInvokeDynamic* = ref object of Expr
     self*: Expr
     target*: Expr
-    args*: Expr
+    args*: Value
 
   ExSuper* = ref object of Expr
     args*: Expr
@@ -240,7 +240,8 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   else:
     case ctor.kind:
     of VkNativeFn, VkNativeFn2:
-      var args = self.eval_args(frame, nil, expr.args)
+      var args_expr: Expr = new_ex_arg(expr.args)
+      var args = self.eval_args(frame, nil, args_expr)
       if ctor.kind == VkNativeFn:
         result = ctor.native_fn(args)
       else:
@@ -255,8 +256,8 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
       new_frame.parent = frame
       new_frame.self = result
 
-      var args_expr = cast[ExNew](expr).args
-      handle_args(self, frame, new_frame, ctor.fn.matcher, cast[ExArguments](args_expr))
+      var args = new_ex_arg(expr.args)
+      handle_args(self, frame, new_frame, ctor.fn.matcher, args)
 
       if ctor.fn.body_compiled == nil:
         ctor.fn.body_compiled = translate(ctor.fn.body)
@@ -276,12 +277,12 @@ proc translate_new(value: Value): Expr {.gcsafe.} =
   var r = ExNew(
     evaluator: eval_new,
     class: translate(value.gene_children[0]),
-    args: new_ex_arg(),
+    args: new_gene_gene(),
   )
   for k, v in value.gene_props:
-    cast[ExArguments](r.args).props[k] = translate(v)
+    r.args.gene_props[k] = v
   for v in value.gene_children[1..^1]:
-    cast[ExArguments](r.args).children.add(translate(v))
+    r.args.gene_children.add(v)
   return r
 
 # TODO: this is almost the same as to_function in fp.nim
@@ -406,7 +407,8 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr
       fn.body_compiled = translate(fn.body)
 
     try:
-      handle_args(self, frame, new_frame, fn.matcher, cast[ExArguments](expr.args))
+      var args = new_ex_arg(expr.args)
+      handle_args(self, frame, new_frame, fn.matcher, args)
       result = self.eval(new_frame, fn.body_compiled)
     except Return as r:
       # return's frame is the same as new_frame(current function's frame)
@@ -430,13 +432,7 @@ proc translate_invoke_dynamic(value: Value): Expr {.gcsafe.} =
   )
   r.self = translate(value.gene_props.get_or_default("self", nil))
   r.target = translate(value.gene_props["method"])
-
-  var args = new_ex_arg()
-  for k, v in value.gene_props:
-    args.props[k] = translate(v)
-  for v in value.gene_children:
-    args.children.add(translate(v))
-  r.args = args
+  r.args = value
 
   result = r
 

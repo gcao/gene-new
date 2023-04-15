@@ -530,3 +530,27 @@ test """Parser / read_stream:
 test_parser """
   (#Ignore) 1
 """, 1
+
+# test_parser """
+#   #"#a/b#" # same as ("" a/b)
+# """, "TODO"
+
+# test_parser """
+#   #"#1#" # same as ("" 1)
+# """, "TODO"
+
+# test_parser """
+#   #"#true#" # same as ("" true)
+# """, "TODO"
+
+# test_parser """
+#   #"a#(1 + 2)" # same as ("a" (1 + 2))
+# """, "TODO"
+
+# test_parser """
+#   #"a#[1 2]" # same as ("a" [1 2])
+# """, "TODO"
+
+# test_parser """
+#   #"a#{^a b}" # same as ("a" {^a b})
+# """, "TODO"

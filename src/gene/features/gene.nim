@@ -62,7 +62,7 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
       evaluator: eval_invoke,
       self: expr.`type`,
       meth: "call",
-      args: new_ex_arg(expr.args),
+      args: expr.args,
     )
     return self.eval_invoke(frame, `type`, expr.args_expr)
   else:

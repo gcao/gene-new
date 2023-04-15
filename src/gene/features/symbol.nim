@@ -114,7 +114,6 @@ proc translate*(names: seq[string]): Expr {.gcsafe.} =
         evaluator: eval_invoke,
         self: translate(names[0..^2]),
         meth: name[1..^1],
-        args: new_ex_arg(),
       )
     else:
       try:

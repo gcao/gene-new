@@ -31,6 +31,112 @@ proc on_member_missing(self: Value, args: Value): Value =
   else:
     todo("member_missing " & $self.kind)
 
+proc to_function(node: Value): Function =
+  var first = node.gene_children[0]
+  var name = first.str
+
+  var matcher = new_arg_matcher()
+  matcher.parse(node.gene_children[1])
+
+  var body: seq[Value] = @[]
+  for i in 2..<node.gene_children.len:
+    body.add node.gene_children[i]
+
+  body = wrap_with_try(body)
+  result = new_fn(name, matcher, body)
+  result.async = node.gene_props.get_or_default("async", false)
+
+proc class_fn(self: Value, args: Value): Value =
+  # define a fn like method on a class
+  var fn = to_function(args)
+
+  var m = Method(
+    name: fn.name,
+    callable: Value(kind: VkFunction, fn: fn),
+  )
+  m.callable.fn.ns = self.class.ns
+  case self.kind:
+  of VkClass:
+    m.class = self.class
+    self.class.methods[m.name] = m
+  of VkMixin:
+    self.mixin.methods[m.name] = m
+  else:
+    not_allowed()
+
+proc macro_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+  var scope = new_scope()
+  scope.set_parent(target.macro.parent_scope, target.macro.parent_scope_max)
+  var new_frame = Frame(ns: target.macro.ns, scope: scope)
+  new_frame.parent = frame
+
+  var args = cast[ExLiteral](expr).data
+  var match_result = self.match(new_frame, target.macro.matcher, args)
+  case match_result.kind:
+  of MatchSuccess:
+    discard
+  of MatchMissingFields:
+    for field in match_result.missing:
+      not_allowed("Argument " & field.to_s & " is missing.")
+  else:
+    todo()
+
+  if target.macro.body_compiled == nil:
+    target.macro.body_compiled = translate(target.macro.body)
+
+  try:
+    result = self.eval(new_frame, target.macro.body_compiled)
+  except Return as r:
+    result = r.val
+  except system.Exception as e:
+    if self.repl_on_error:
+      result = repl_on_error(self, frame, e)
+      discard
+    else:
+      raise
+
+proc arg_translator(value: Value): Expr {.gcsafe.} =
+  var expr = new_ex_literal(value)
+  expr.evaluator = macro_invoker
+  result = expr
+
+proc to_macro(node: Value): Macro =
+  var first = node.gene_children[0]
+  var name: string
+  if first.kind == VkSymbol:
+    name = first.str
+  elif first.kind == VkComplexSymbol:
+    name = first.csymbol[^1]
+
+  var matcher = new_arg_matcher()
+  matcher.parse(node.gene_children[1])
+
+  var body: seq[Value] = @[]
+  for i in 2..<node.gene_children.len:
+    body.add node.gene_children[i]
+
+  body = wrap_with_try(body)
+  result = new_macro(name, matcher, body)
+  result.translator = arg_translator
+
+proc class_macro(self: Value, args: Value): Value =
+  # define a macro like method on a class
+  var mac = to_macro(args)
+
+  var m = Method(
+    name: mac.name,
+    callable: Value(kind: VkMacro, `macro`: mac),
+  )
+  m.callable.macro.ns = self.class.ns
+  case self.kind:
+  of VkClass:
+    m.class = self.class
+    self.class.methods[m.name] = m
+  of VkMixin:
+    self.mixin.methods[m.name] = m
+  else:
+    not_allowed()
+
 proc exception_message(self: Value, args: Value): Value =
   self.exception.msg
 
@@ -303,6 +409,8 @@ proc init*() =
       self.class.name
     self.class_class.def_native_method "parent", proc(self: Value, args: Value): Value =
       Value(kind: VkClass, class: self.class.parent)
+    self.class_class.def_native_method "fn", class_fn
+    self.class_class.def_native_macro_method "macro", class_macro
     self.class_class.def_native_method "members", proc(self: Value, args: Value): Value {.name:"class_members".} =
       self.class.ns.get_members()
     self.class_class.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"class_member_names".} =

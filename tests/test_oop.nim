@@ -560,3 +560,33 @@ test_interpreter """
   )
   a/.test
 """, 2
+
+test_interpreter """
+  (class A
+    (.fn test a
+      a
+    )
+  )
+  (var b 1)
+  ((new A) .test b)
+""", 1
+
+# test_interpreter """
+#   (class A
+#     (.macro test a
+#       a
+#     )
+#   )
+#   (var b 1)
+#   ((new A) .test b)
+# """, new_gene_symbol("b")
+
+# test_interpreter """
+#   (class A
+#     (.macro test a
+#       ($caller_eval a)
+#     )
+#   )
+#   (var b 1)
+#   ((new A) .test b)
+# """, 1

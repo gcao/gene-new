@@ -121,6 +121,11 @@ test_interpreter """
 
 test_interpreter """
   (fn f [a = 1] a)
+  (f _)
+""", 1
+
+test_interpreter """
+  (fn f [a = 1] a)
   (f 2)
 """, 2
 
