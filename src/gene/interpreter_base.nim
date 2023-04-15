@@ -1271,6 +1271,38 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
         discard
       else:
         raise
+
+  of VkMacro:
+    var scope = new_scope()
+    var new_frame = Frame(ns: callable.macro.ns, scope: scope)
+    new_frame.parent = frame
+    new_frame.self = instance
+    new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
+
+    var match_result = self.match(new_frame, callable.macro.matcher, args)
+    case match_result.kind:
+    of MatchSuccess:
+      discard
+    of MatchMissingFields:
+      for field in match_result.missing:
+        not_allowed("Argument " & field.to_s & " is missing.")
+    else:
+      todo()
+
+    if callable.macro.body_compiled == nil:
+      callable.macro.body_compiled = translate(callable.macro.body)
+
+    try:
+      result = self.eval(new_frame, callable.macro.body_compiled)
+    except Return as r:
+      result = r.val
+    except system.Exception as e:
+      if self.repl_on_error:
+        result = repl_on_error(self, frame, e)
+        discard
+      else:
+        raise
+
   else:
     todo()
 
