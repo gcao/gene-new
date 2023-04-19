@@ -1249,7 +1249,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
     var new_frame = Frame(ns: callable.fn.ns, scope: fn_scope)
     new_frame.parent = frame
     new_frame.self = instance
-    new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
+    new_frame.callable = Value(kind: VkMethod, `method`: meth)
 
     if callable.fn.body_compiled == nil:
       callable.fn.body_compiled = translate(callable.fn.body)
@@ -1277,7 +1277,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
     var new_frame = Frame(ns: callable.macro.ns, scope: scope)
     new_frame.parent = frame
     new_frame.self = instance
-    new_frame.extra = FrameExtra(kind: FrMethod, `method`: meth)
+    new_frame.callable = Value(kind: VkMethod, `method`: meth)
 
     var match_result = self.match(new_frame, callable.macro.matcher, args)
     case match_result.kind:

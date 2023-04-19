@@ -439,7 +439,7 @@ proc translate_invoke_dynamic(value: Value): Expr {.gcsafe.} =
 proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExSuper](expr)
   var instance = frame.self
-  var m = frame.extra.method
+  var m = frame.callable.method
   var meth = m.class.get_super_method(m.name)
 
   var fn_scope = new_scope()

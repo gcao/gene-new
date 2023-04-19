@@ -586,34 +586,24 @@ type
     evaluator*: Evaluator
 
   FrameKind* = enum
-    FrDefault
+    FrUnknown # used when a frame is returned to the pool
+    FrRoot
     FrModule
     FrFunction
     FrMacro
+    FrBlock
     FrMethod
-
-  FrameExtra* = ref object
-    case kind*: FrameKind
-    of FrModule:
-      `mod`*: Module
-    of FrFunction:
-      fn*: Function
-    of FrMacro:
-      `macro`*: Macro
-    of FrMethod:
-      `method`*: Method
-    else:
-      discard
-    args*: Value # This is only available in some frames (e.g. function/macro/block)
-    props*: Table[string, Value]
+    FrOther
 
   Frame* = ref object
     parent*: Frame
-    kind*: FrameKind  # this is in both Frame and FrameExtra and must be kept in sync.
-    self*: Value
+    kind*: FrameKind
     ns*: Namespace
     scope*: Scope
-    extra*: FrameExtra
+    callable*: Value # the function/macro/method/block/native function/...
+    self*: Value
+    args*: Value # This is only available in some frames (e.g. function/macro/block)
+    props*: Table[string, Value]
 
   Scope* = ref object
     parent*: Scope
@@ -1146,7 +1136,6 @@ proc reset*(self: var Frame) {.inline.} =
   self.self = nil
   self.ns = nil
   self.scope = nil
-  self.extra = nil
 
 proc `[]`*(self: Frame, name: string): Value {.inline.} =
   result = self.scope[name]
