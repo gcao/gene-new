@@ -23,8 +23,8 @@ const ASSIGNMENT_OPS = [
   "&&=", "||=",
 ]
 
-proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  result = new_gene_gene(target)
+proc default_invoker(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  result = new_gene_gene(frame.callable)
   var expr = cast[ExArguments](expr)
   for k, v in expr.props.mpairs:
     result.gene_props[k] = self.eval(frame, v)
@@ -36,19 +36,107 @@ proc default_invoker(self: VirtualMachine, frame: Frame, target: Value, expr: va
     else:
       result.gene_children.add(r)
 
-proc eval_gene*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExGene](expr)
   var `type` = self.eval(frame, expr.`type`)
   var translator: Translator
   case `type`.kind:
   of VkFunction:
-    translator = `type`.fn.translator
+    var fn = `type`.fn
+    var fn_scope = new_scope()
+    fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
+    var new_frame = Frame(ns: fn.ns, scope: fn_scope)
+    new_frame.parent = frame
+
+    var args_expr = new_ex_arg()
+    for k, v in expr.args.gene_props:
+      args_expr.props[k] = translate(v)
+    for v in expr.args.gene_children:
+      args_expr.children.add(translate(v))
+    args_expr.check_explode()
+
+    handle_args(self, frame, new_frame, fn.matcher, args_expr)
+
+    return self.call_fn_skip_args(new_frame, `type`)
+
   of VkBoundFunction:
-    translator = `type`.bound_fn.translator
+    var bound_fn = `type`.bound_fn
+    var fn = bound_fn.target.fn
+    var fn_scope = new_scope()
+    fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
+    var new_frame = Frame(ns: fn.ns, scope: fn_scope)
+    new_frame.parent = frame
+    new_frame.self = bound_fn.self
+
+    var args_expr = new_ex_arg()
+    for k, v in expr.args.gene_props:
+      args_expr.props[k] = translate(v)
+    for v in expr.args.gene_children:
+      args_expr.children.add(translate(v))
+    args_expr.check_explode()
+
+    handle_args(self, frame, new_frame, fn.matcher, args_expr)
+
+    return self.call_fn_skip_args(new_frame, bound_fn.target)
+
   of VkMacro:
-    translator = `type`.macro.translator
+    var `macro` = `type`.macro
+    var scope = new_scope()
+    scope.set_parent(`macro`.parent_scope, `macro`.parent_scope_max)
+    var new_frame = Frame(ns: `macro`.ns, scope: scope)
+    new_frame.parent = frame
+
+    var args = expr.args
+    var match_result = self.match(new_frame, `macro`.matcher, args)
+    case match_result.kind:
+    of MatchSuccess:
+      discard
+    of MatchMissingFields:
+      for field in match_result.missing:
+        not_allowed("Argument " & field.to_s & " is missing.")
+    else:
+      todo()
+
+    if `macro`.body_compiled == nil:
+      `macro`.body_compiled = translate(`macro`.body)
+
+    try:
+      return self.eval(new_frame, `macro`.body_compiled)
+    except Return as r:
+      return r.val
+    except system.Exception as e:
+      if self.repl_on_error:
+        return repl_on_error(self, frame, e)
+      else:
+        raise
+
   of VkBlock:
-    translator = `type`.block.translator
+    var `block` = `type`.block
+    var scope = new_scope()
+    scope.set_parent(`block`.parent_scope, `block`.parent_scope_max)
+    var new_frame = Frame(ns: `block`.ns, scope: scope)
+    new_frame.parent = frame
+    new_frame.self = `block`.frame.self
+
+    var args_expr = new_ex_arg()
+    for k, v in expr.args.gene_props:
+      args_expr.props[k] = translate(v)
+    for v in expr.args.gene_children:
+      args_expr.children.add(translate(v))
+    args_expr.check_explode()
+
+    handle_args(self, frame, new_frame, `block`.matcher, args_expr)
+
+    try:
+      return self.eval(new_frame, `block`.body_compiled)
+    except Return as r:
+      return r.val
+    except system.Exception as e:
+      if self.repl_on_error:
+        return repl_on_error(self, frame, e)
+      else:
+        raise
+
   of VkSelector:
     translator = `type`.selector.translator
   of VkGeneProcessor:
@@ -64,13 +152,13 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
       meth: "call",
       args: expr.args,
     )
-    return self.eval_invoke(frame, `type`, expr.args_expr)
+    return self.eval_invoke(frame, expr.args_expr)
   else:
     expr.args_expr = translate_arguments(expr.args)
-    return default_invoker(self, frame, `type`, expr.args_expr)
+    return default_invoker(self, frame, expr.args_expr)
 
   expr.args_expr = translator(expr.args)
-  return expr.args_expr.evaluator(self, frame, `type`, expr.args_expr)
+  return expr.args_expr.evaluator(self, frame, expr.args_expr)
 
 proc default_translator(value: Value): Expr =
   ExGene(

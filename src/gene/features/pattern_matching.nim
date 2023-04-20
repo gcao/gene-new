@@ -8,7 +8,7 @@ type
     matcher: RootMatcher
     value*: Expr
 
-proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_match(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
   var matcher = expr.matcher
   var value = self.eval(frame, expr.value)

@@ -57,7 +57,7 @@ proc render(self: VirtualMachine, frame: Frame, value: var Value): Value =
 
   value
 
-proc eval_render(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_render(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var old_scope = frame.scope
   try:
     var scope = new_scope()

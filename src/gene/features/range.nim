@@ -8,7 +8,7 @@ type
     start*: Expr
     `end`*: Expr
 
-proc eval_range*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_range*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var start = self.eval(frame, cast[ExRange](expr).start)
   var `end` = self.eval(frame, cast[ExRange](expr).end)
   new_gene_range(start, `end`)

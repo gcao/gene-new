@@ -15,7 +15,7 @@ type
   ExExit = ref object of Expr
     code*: Expr
 
-proc eval_env(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_env(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExEnv](expr)
   var env = self.eval(frame, expr.name).to_s
   if exists_env(env):
@@ -34,7 +34,7 @@ proc translate_env(value: Value): Expr {.gcsafe.} =
     r.default_value = translate(value.gene_children[1])
   return r
 
-proc eval_set_env(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_set_env(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExSetEnv](expr)
   var env = self.eval(frame, expr.name).to_s
   var val = self.eval(frame, expr.value).to_s
@@ -47,7 +47,7 @@ proc translate_set_env(value: Value): Expr {.gcsafe.} =
     value: translate(value.gene_children[1]),
   )
 
-proc eval_exit(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_exit(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExExit](expr)
   var code = 0
   if expr.code != nil:

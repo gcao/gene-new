@@ -116,7 +116,7 @@ proc normalize_if(self: Value) =
 
     self.gene_children.reset  # Clear our gene_children as it's not needed any more
 
-proc eval_if(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_if(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExIf](expr)
   if self.eval(frame, expr.cond):
     return self.eval(frame, expr.`then`)
@@ -145,7 +145,7 @@ proc translate_if(value: Value): Expr {.gcsafe.} =
   r.`else` = translate(value.gene_props["else"])
   result = r
 
-proc eval_not(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_not(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   not self.eval(frame, cast[ExNot](expr).cond).to_bool
 
 proc translate_not(value: Value): Expr {.gcsafe.} =
@@ -154,7 +154,7 @@ proc translate_not(value: Value): Expr {.gcsafe.} =
     cond: translate(value.gene_children[0]),
   )
 
-proc eval_bool(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_bool(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   self.eval(frame, cast[ExBool](expr).data).to_bool
 
 proc translate_bool(value: Value): Expr {.gcsafe.} =

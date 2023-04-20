@@ -12,7 +12,7 @@ type
     wait_all*: bool
     data*: seq[Expr]
 
-proc eval_async(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_async(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExAsync](expr)
   try:
     var val = self.eval(frame, expr.data)
@@ -42,7 +42,7 @@ proc await(self: Value): Value =
     else:
       todo()
 
-proc eval_await(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_await(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExAwait](expr)
   if expr.wait_all:
     self.wait_for_futures()

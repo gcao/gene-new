@@ -20,7 +20,7 @@ type
   ExEmit* = ref object of Expr
     data*: seq[Expr]
 
-proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_for(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExFor](expr)
   var old_scope = frame.scope
   try:
@@ -60,7 +60,7 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   finally:
     frame.scope = old_scope
 
-proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_for2(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExFor2](expr)
   var old_scope = frame.scope
   try:
@@ -105,7 +105,7 @@ proc translate_for(value: Value): Expr {.gcsafe.} =
       body: translate(value.gene_children[3..^1]),
     )
 
-proc eval_emit(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_emit(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var loop_output = frame.scope[LOOP_OUTPUT_KEY]
   for item in cast[ExEmit](expr).data.mitems:
     loop_output.vec.add(self.eval(frame, item))

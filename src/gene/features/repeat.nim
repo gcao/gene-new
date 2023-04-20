@@ -10,7 +10,7 @@ type
     index*: Value
     total*: Value
 
-proc eval_repeat(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_repeat(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExRepeat](expr)
   var old_scope = frame.scope
   try:

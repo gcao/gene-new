@@ -6,7 +6,7 @@ type
   ExQuote* = ref object of Expr
     data*: Value
 
-proc eval_quote(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_quote(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   cast[ExQuote](expr).data
 
 proc translate_quote(value: Value): Expr {.gcsafe.} =

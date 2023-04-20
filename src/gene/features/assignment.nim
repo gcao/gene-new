@@ -20,7 +20,7 @@ type
     name*: string
     value*: Expr
 
-proc eval_assignment(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_assignment(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var name = cast[ExAssignment](expr).name
   var value = cast[ExAssignment](expr).value
   result = self.eval(frame, value)

@@ -13,7 +13,7 @@ type
   ExMemberMissing* = ref object of Expr
     data: Expr
 
-proc eval_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e = cast[ExNamespace](expr)
   var ns = new_namespace(frame.ns, e.name)
   result = Value(kind: VkNamespace, ns: ns)

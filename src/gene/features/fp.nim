@@ -16,20 +16,7 @@ type
     self*: Expr
     # args*: ExArguments
 
-proc function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var fn_scope = new_scope()
-  fn_scope.set_parent(target.fn.parent_scope, target.fn.parent_scope_max)
-  var new_frame = Frame(ns: target.fn.ns, scope: fn_scope)
-  new_frame.parent = frame
-
-  handle_args(self, frame, new_frame, target.fn.matcher, cast[ExArguments](expr))
-
-  self.call_fn_skip_args(new_frame, target)
-
-proc fn_arg_translator*(value: Value): Expr {.gcsafe.} =
-  return translate_arguments(value, function_invoker)
-
-proc eval_fn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_fn(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   result = Value(
     kind: VkFunction,
     fn: cast[ExFn](expr).data,
@@ -69,7 +56,6 @@ proc to_function(node: Value): Function {.gcsafe.} =
 
   body = wrap_with_try(body)
   result = new_fn(name, matcher, body)
-  result.translator = fn_arg_translator
   if node.gene_props.has_key("return"):
     result.ret = translate(node.gene_props["return"])
   result.async = node.gene_props.get_or_default("async", false)
@@ -89,7 +75,7 @@ proc translate_fnx(value: Value): Expr {.gcsafe.} =
     data: fn,
   )
 
-proc eval_return(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_return(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExReturn](expr)
   var r = Return(
     frame: frame,
@@ -107,28 +93,11 @@ proc translate_return(value: Value): Expr {.gcsafe.} =
     expr.data = translate(value.gene_children[0])
   return expr
 
-proc bound_function_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var bound_fn = target.bound_fn
-  var fn = bound_fn.target.fn
-  var fn_scope = new_scope()
-  fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
-  var new_frame = Frame(ns: fn.ns, scope: fn_scope)
-  new_frame.parent = frame
-  new_frame.self = bound_fn.self
-
-  handle_args(self, frame, new_frame, fn.matcher, cast[ExArguments](expr))
-
-  self.call_fn_skip_args(new_frame, bound_fn.target)
-
-proc bound_fn_arg_translator*(value: Value): Expr {.gcsafe.} =
-  return translate_arguments(value, bound_function_invoker)
-
-proc eval_bind(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_bind(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExBind](expr)
   var target = self.eval(frame, expr.target)
   var self = self.eval(frame, expr.self)
   var bound_fn = BoundFunction(
-    translator: bound_fn_arg_translator,
     target: target,
     self: self,
     # args: args,

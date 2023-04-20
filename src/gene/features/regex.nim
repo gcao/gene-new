@@ -14,7 +14,7 @@ type
     flags: set[RegexFlag]
     data*: seq[Expr]
 
-proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_match(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
   var input = self.eval(frame, expr.input)
   var pattern = self.eval(frame, expr.pattern)
@@ -34,7 +34,7 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   else:
     return Value(kind: VkNil)
 
-proc eval_not_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_not_match(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
   var input = self.eval(frame, expr.input)
   var pattern = self.eval(frame, expr.pattern)
@@ -57,7 +57,7 @@ proc translate_match*(value: Value): Expr {.gcsafe.} =
     pattern: translate(value.gene_children[1]),
   )
 
-proc eval_regex(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_regex(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExRegex](expr)
   var s = ""
   for e in expr.data.mitems:

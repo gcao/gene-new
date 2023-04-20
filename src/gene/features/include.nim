@@ -7,7 +7,7 @@ type
     path*: Expr
     # pkg*: Expr
 
-proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_include(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExInclude](expr)
   var dir = "" # TODO: logic similar to module paths
   var path = self.eval(frame, expr.path).str

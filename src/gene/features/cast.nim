@@ -9,7 +9,7 @@ type
     class*: Expr
     body: Expr
 
-proc eval_cast(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_cast(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExCast](expr)
   var v = self.eval(frame, expr.value)
   var class = self.eval(frame, expr.class)

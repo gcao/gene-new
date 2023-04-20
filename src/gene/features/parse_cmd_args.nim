@@ -243,7 +243,7 @@ proc match*(self: var ArgMatcherRoot, input: string): ArgMatchingResult =
     parts = s.split(" ")
   return self.match(parts)
 
-proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_parse(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExParseCmdArgs](expr)
   var cmd_args = self.eval(frame, expr.cmd_args)
   var r = expr.cmd_args_schema.match(cmd_args.vec.map(proc(v: Value): string = v.str))

@@ -7,28 +7,7 @@ type
   ExBlock* = ref object of Expr
     data*: Block
 
-proc block_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var expr = cast[ExArguments](expr)
-  var scope = new_scope()
-  scope.set_parent(target.block.parent_scope, target.block.parent_scope_max)
-  var new_frame = Frame(ns: target.block.ns, scope: scope)
-  new_frame.parent = frame
-  new_frame.self = target.block.frame.self
-
-  handle_args(self, frame, new_frame, target.block.matcher, expr)
-
-  try:
-    result = self.eval(new_frame, target.block.body_compiled)
-  except Return as r:
-    result = r.val
-  except system.Exception as e:
-    if self.repl_on_error:
-      result = repl_on_error(self, frame, e)
-      discard
-    else:
-      raise
-
-proc eval_block(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_block(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   result = Value(
     kind: VkBlock,
     `block`: cast[ExBlock](expr).data,
@@ -37,9 +16,6 @@ proc eval_block(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   result.block.ns = frame.ns
   result.block.parent_scope = frame.scope
   result.block.parent_scope_max = frame.scope.max
-
-proc arg_translator(value: Value): Expr {.gcsafe.} =
-  return translate_arguments(value, block_invoker)
 
 proc to_block(node: Value): Block =
   var matcher = new_arg_matcher()
@@ -51,7 +27,6 @@ proc to_block(node: Value): Block =
   # body = wrap_with_try(body)
   result = new_block(matcher, body)
   result.body_compiled = translate(body)
-  result.translator = arg_translator
 
 proc translate_block(value: Value): Expr {.gcsafe.} =
   var blk = to_block(value)

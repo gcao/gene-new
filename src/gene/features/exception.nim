@@ -20,7 +20,7 @@ type
     first*: Expr
     second*: Expr
 
-proc eval_try(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_try(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExTry](expr)
   try:
     result = self.eval(frame, expr.body)
@@ -99,7 +99,7 @@ proc translate_try(value: Value): Expr {.gcsafe.} =
     r.finally = translate(`finally`)
   return r
 
-proc eval_throw(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_throw(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExThrow](expr)
   if expr.first != nil:
     var class = self.eval(frame, expr.first)

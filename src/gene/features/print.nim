@@ -6,7 +6,7 @@ type
     new_line*: bool
     data*: seq[Expr]
 
-proc eval_print(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_print(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExPrint](expr)
   for e in expr.data.mitems:
     var v = self.eval(frame, e)

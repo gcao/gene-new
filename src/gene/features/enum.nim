@@ -6,7 +6,7 @@ type
   ExEnum* = ref object of Expr
     data*: Value
 
-proc eval_enum(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_enum(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   result = cast[ExEnum](expr).data
   frame.ns[result.enum.name] = result
 

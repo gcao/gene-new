@@ -5,7 +5,7 @@ import ../interpreter_base
 type
   ExRepl* = ref object of Expr
 
-proc eval_repl(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_repl(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   self.repl(frame, eval, true)
 
 proc translate_repl(value: Value): Expr {.gcsafe.} =

@@ -11,7 +11,7 @@ type
     repo*: Expr
     commit*: Expr # applicable if repo is given
 
-proc eval_dep(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_dep(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExDependency](expr)
   var name = self.eval(frame, expr.name).str
   var version = ""

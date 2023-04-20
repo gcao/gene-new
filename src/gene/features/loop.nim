@@ -11,7 +11,7 @@ type
     input*: Value
     code*: seq[Expr]
 
-proc eval_loop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_loop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   while true:
     try:
       for item in cast[ExLoop](expr).data.mitems:
@@ -36,7 +36,7 @@ proc translate_break(value: Value): Expr {.gcsafe.} =
 proc translate_continue(value: Value): Expr {.gcsafe.} =
   CONTINUE_EXPR
 
-proc eval_once(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_once(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExOnce](expr)
   if expr.input.gene_props.has_key("return"):
     result = expr.input.gene_props["return"]

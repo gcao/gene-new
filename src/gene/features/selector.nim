@@ -232,9 +232,9 @@ proc search*(self: Selector, target: Value): Value =
   except NoResult:
     result = Value(kind: VkNil)
 
-proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc selector_invoker*(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExSelectorInvoker](expr)
-  var selector = target.selector
+  var selector = frame.callable.selector
   var v: Value
   if expr.data != nil:
     v = self.eval(frame, expr.data)
@@ -262,7 +262,7 @@ proc selector_arg_translator*(value: Value): Expr =
     r.data = translate(value.gene_children[0])
   return r
 
-proc eval_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_selector(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var selector = new_selector()
   selector.translator = selector_arg_translator
   var v = self.eval(frame, cast[ExSelector](expr).data)
@@ -282,7 +282,7 @@ proc new_ex_selector*(name: string): ExSelector =
       data: new_ex_literal(new_gene_string(name)),
     )
 
-proc eval_selector2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_selector2*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExSelector2](expr)
   var selector = new_selector()
   selector.translator = selector_arg_translator
@@ -320,7 +320,7 @@ proc new_ex_selector*(parallel_mode: bool, data: seq[Value]): Expr =
       r.data.add(translate(item))
     return r
 
-proc eval_invoke_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_invoke_selector(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExInvokeSelector](expr)
   var selector = new_selector()
   selector.translator = selector_arg_translator
@@ -380,7 +380,7 @@ proc translate_csymbol_selector*(csymbol: seq[string]): Expr {.gcsafe.} =
     r.data.add(handle_item(item))
   return r
 
-proc eval_selector_invoker2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_selector_invoker2*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExSelectorInvoker2](expr)
   var value: Value
   if expr.target == nil:

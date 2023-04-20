@@ -11,7 +11,7 @@ type
     name*: string
     value*: Expr
 
-proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_var(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e = cast[ExVar](expr)
   if e.container == nil:
     if e.define_assign:

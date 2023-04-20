@@ -64,7 +64,7 @@ type
   # ExMethodMissing* = ref object of Expr
   #   fn: Function
 
-proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_class(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e = cast[ExClass](expr)
   var class = new_class(e.name)
   result = Value(kind: VkClass, class: class)
@@ -112,7 +112,7 @@ proc translate_class(value: Value): Expr {.gcsafe.} =
   e.body = translate(value.gene_children[body_start..^1])
   return translate_definition(value.gene_children[0], e)
 
-proc eval_object(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_object(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e = cast[ExObject](expr)
   var class = new_class(e.name)
   var class_val = Value(kind: VkClass, class: class)
@@ -166,7 +166,7 @@ proc translate_object(value: Value): Expr {.gcsafe.} =
   e.body = translate(value.gene_children[body_start..^1])
   return translate_definition(value.gene_children[0], e)
 
-proc eval_mixin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_mixin(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e = cast[ExMixin](expr)
   var m = new_mixin(e.name)
   m.ns.parent = frame.ns
@@ -200,7 +200,7 @@ proc translate_mixin(value: Value): Expr {.gcsafe.} =
   e.body = translate(value.gene_children[body_start..^1])
   result = e
 
-proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_include(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var x = frame.self
   for e in cast[ExInclude](expr).data.mitems:
     var m = self.eval(frame, e).mixin
@@ -224,7 +224,7 @@ proc translate_include(value: Value): Expr {.gcsafe.} =
 
   result = e
 
-proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_new(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExNew](expr)
   var class = self.eval(frame, expr.class).class
   var ctor = class.get_constructor()
@@ -241,7 +241,7 @@ proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     case ctor.kind:
     of VkNativeFn, VkNativeFn2:
       var args_expr: Expr = new_ex_arg(expr.args)
-      var args = self.eval_args(frame, nil, args_expr)
+      var args = self.eval_args(frame, args_expr)
       if ctor.kind == VkNativeFn:
         result = ctor.native_fn(args)
       else:
@@ -324,7 +324,7 @@ proc assign_method(frame: Frame, m: Method) =
   else:
     not_allowed()
 
-proc eval_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_method(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var m = Method(
     name: cast[ExMethod](expr).name,
     callable: Value(kind: VkFunction, fn: cast[ExMethod](expr).fn),
@@ -337,7 +337,7 @@ proc eval_method(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
     `method`: m,
   )
 
-proc eval_method_eq*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_method_eq*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var m = Method(
     name: cast[ExMethodEq](expr).name,
     callable: self.eval(frame, cast[ExMethodEq](expr).value),
@@ -364,7 +364,7 @@ proc translate_method(value: Value): Expr {.gcsafe.} =
     fn: fn,
   )
 
-proc eval_constructor*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_constructor*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExConstructor](expr)
   var class = frame.self.class
   if expr.fn != nil:
@@ -382,7 +382,7 @@ proc translate_constructor(value: Value): Expr {.gcsafe.} =
     r.value = translate(value.gene_children[0])
   result = r
 
-proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExInvokeDynamic](expr)
   var instance: Value
   var e = expr.self
@@ -436,7 +436,7 @@ proc translate_invoke_dynamic(value: Value): Expr {.gcsafe.} =
 
   result = r
 
-proc eval_super(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_super(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExSuper](expr)
   var instance = frame.self
   var m = frame.callable.method
@@ -473,7 +473,7 @@ proc translate_super(value: Value): Expr {.gcsafe.} =
     args: new_ex_arg(value),
   )
 
-# proc eval_get_prop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+# proc eval_get_prop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 #   var expr = cast[ExGetProp](expr)
 #   var name = self.eval(frame, expr.name)
 #   var obj =
@@ -500,7 +500,7 @@ proc translate_super(value: Value): Expr {.gcsafe.} =
 #       name: translate(value.gene_children[1]),
 #     )
 
-# proc eval_set_prop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+# proc eval_set_prop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 #   var expr = cast[ExSetProp](expr)
 #   var name = self.eval(frame, expr.name)
 #   result = self.eval(frame, expr.value)
@@ -530,7 +530,7 @@ proc translate_super(value: Value): Expr {.gcsafe.} =
 #       value: translate(value.gene_children[2]),
 #     )
 
-# proc eval_method_missing(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+# proc eval_method_missing(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 #   result = Value(
 #     kind: VkFunction,
 #     fn: cast[ExMethodMissing](expr).fn,

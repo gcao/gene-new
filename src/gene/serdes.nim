@@ -146,7 +146,7 @@ type
   ExDeser* = ref object of Expr
     value*: Expr
 
-proc eval_ser(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_ser(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExSer](expr)
   return serialize(self.eval(frame, expr.value)).to_s
 
@@ -156,7 +156,7 @@ proc translate_ser(value: Value): Expr {.gcsafe.} =
     value: translate(value.gene_children[0]),
   )
 
-proc eval_deser(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_deser(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExDeser](expr)
   return self.deserialize(self.eval(frame, expr.value).str)
 

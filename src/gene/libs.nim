@@ -64,7 +64,8 @@ proc class_fn(self: Value, args: Value): Value =
   else:
     not_allowed()
 
-proc macro_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc macro_invoker*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+  var target = frame.callable
   var scope = new_scope()
   scope.set_parent(target.macro.parent_scope, target.macro.parent_scope_max)
   var new_frame = Frame(ns: target.macro.ns, scope: scope)

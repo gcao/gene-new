@@ -7,7 +7,7 @@ type
   ExMap* = ref object of Expr
     data*: Table[string, Expr]
 
-proc eval_map(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_map(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   result = new_gene_map()
   for k, v in cast[ExMap](expr).data.mpairs:
     result.map[k] = self.eval(frame, v)

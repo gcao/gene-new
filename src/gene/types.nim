@@ -285,7 +285,7 @@ type
   NameIndexScope* = distinct int
 
   Translator* = proc(value: Value): Expr {.gcsafe.}
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.}
+  Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.}
 
   EvalCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.}
   EvalWrap* = proc(eval: Evaluator): Evaluator {.gcsafe.}
@@ -2131,8 +2131,8 @@ proc prop_splat*(self: seq[Matcher]): string =
 ##################################################
 
 proc eval_wrap*(e: Evaluator): Evaluator =
-  return proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-    result = e(self, frame, target, expr)
+  return proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+    result = e(self, frame, expr)
     if result != nil and result.kind == VkException:
       raise result.exception
 

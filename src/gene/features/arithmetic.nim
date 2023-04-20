@@ -63,7 +63,7 @@ type
   ExAnd* = ref object of Expr
     children*: seq[Expr]
 
-proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_bin(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var first = self.eval(frame, cast[ExBinOp](expr).op1)
   var second = self.eval(frame, cast[ExBinOp](expr).op2)
   case cast[ExBinOp](expr).op:
@@ -98,7 +98,7 @@ proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   else:
     todo("eval_bin " & $cast[ExBinOp](expr).op)
 
-proc eval_logical(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_logical(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var op = cast[ExBinOp](expr).op
   var first = self.eval(frame, cast[ExBinOp](expr).op1)
   case op:
@@ -213,7 +213,7 @@ proc translate_arithmetic*(children: seq[Value]): Expr {.gcsafe.} =
   else:
     not_allowed("translate_arithmetic " & $children)
 
-proc eval_and(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_and(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   for e in cast[ExAnd](expr).children.mitems:
     if not self.eval(frame, e):
       return false

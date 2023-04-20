@@ -43,7 +43,7 @@ template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     # self.check_channel()
   else:
     self.async_wait -= 1
-  expr.evaluator(self, frame, nil, expr)
+  expr.evaluator(self, frame, expr)
 
 proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   try:
@@ -464,7 +464,7 @@ proc match*(vm: VirtualMachine, frame: Frame, self: RootMatcher, input: Value): 
 
 var NOOP_EXPR* {.threadvar.}: Expr
 
-proc eval_noop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_noop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   discard
 
 #################### ExLiteral ###################
@@ -473,7 +473,7 @@ type
   ExLiteral* = ref object of Expr
     data*: Value
 
-proc eval_literal(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_literal(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   cast[ExLiteral](expr).data
 
 proc new_ex_literal*(v: Value): ExLiteral =
@@ -488,7 +488,7 @@ type
   ExString* = ref object of Expr
     data*: string
 
-proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_string(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   return "" & cast[ExString](expr).data
 
 proc new_ex_string*(v: Value): ExString =
@@ -503,7 +503,7 @@ type
   ExGroup* = ref object of Expr
     children*: seq[Expr]
 
-proc eval_group*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_group*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   for item in cast[ExGroup](expr).children.mitems:
     result = self.eval(frame, item)
 
@@ -518,7 +518,7 @@ type
   ExException* = ref object of Expr
     ex*: ref system.Exception
 
-proc eval_exception(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_exception(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   # raise cast[ExException](expr).ex
   not_allowed("eval_exception")
 
@@ -559,7 +559,7 @@ type
   ExExplode* = ref object of Expr
     data*: Expr
 
-proc eval_explode*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_explode*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var data = self.eval(frame, cast[ExExplode](expr).data)
   Value(
     kind: VkExplode,
@@ -575,9 +575,11 @@ proc new_ex_explode*(): ExExplode =
 
 type
   ExArguments* = ref object of Expr
-    has_explode*: bool
+    self*: Expr
+    callable*: Expr
     props*: Table[string, Expr]
     children*: seq[Expr]
+    has_explode*: bool
 
 proc check_explode*(self: var ExArguments) =
   for child in self.children:
@@ -585,7 +587,7 @@ proc check_explode*(self: var ExArguments) =
       self.has_explode = true
       return
 
-proc eval_args*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_args*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExArguments](expr)
   result = new_gene_gene()
   for k, v in expr.props.mpairs:
@@ -624,7 +626,7 @@ type
     meth*: string
     args*: Value
 
-proc eval_invoke*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_invoke*(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExInvoke](expr)
   var instance: Value
   var self_expr = cast[ExInvoke](expr).self
@@ -753,7 +755,7 @@ proc update*(self: Selector, target: Value, value: Value): bool =
   for child in self.children:
     result = result or child.update(target, value)
 
-proc eval_set*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_set*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExSet](expr)
   var target =
     if expr.target == nil:
@@ -803,14 +805,14 @@ proc translate_set*(value: Value): Expr {.gcsafe.} =
 
 var BREAK_EXPR* {.threadvar.}: Expr
 
-proc eval_break(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_break(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e: Break
   e.new
   raise e
 
 var CONTINUE_EXPR* {.threadvar.}: Expr
 
-proc eval_continue(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_continue(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var e: Continue
   e.new
   raise e
@@ -1178,7 +1180,7 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
           new_frame.scope.def_member(field.name, value)
   else:
     var expr = cast[Expr](args_expr)
-    var args = self.eval_args(frame, nil, expr)
+    var args = self.eval_args(frame, expr)
     self.process_args(new_frame, matcher, args)
 
 proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
@@ -1236,7 +1238,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
         result = meth.callable.native_method2(instance, args)
     else:
       var args_expr: Expr = new_ex_arg(args)
-      var args = self.eval_args(frame, nil, args_expr)
+      var args = self.eval_args(frame, args_expr)
       if callable.kind == VkNativeMethod:
         result = meth.callable.native_method(instance, args)
       else:
@@ -1249,14 +1251,14 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
     var new_frame = Frame(ns: callable.fn.ns, scope: fn_scope)
     new_frame.parent = frame
     new_frame.self = instance
-    new_frame.callable = Value(kind: VkMethod, `method`: meth)
+    new_frame.callable = callable
 
     if callable.fn.body_compiled == nil:
       callable.fn.body_compiled = translate(callable.fn.body)
 
     try:
       var args_expr: Expr = new_ex_arg(args)
-      var args = self.eval_args(frame, nil, args_expr)
+      var args = self.eval_args(frame, args_expr)
       self.process_args(new_frame, callable.fn.matcher, args)
       result = self.eval(new_frame, callable.fn.body_compiled)
     except Return as r:

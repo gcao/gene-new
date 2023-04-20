@@ -36,7 +36,7 @@ proc thread_handler(thread_id: int) =
   # Free resources
   cleanup_thread(thread_id)
 
-proc eval_spawn(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_spawn(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.} =
   var e = cast[ExSpawn](expr)
 
   # 1. Obtain a free thread.

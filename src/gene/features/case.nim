@@ -44,7 +44,7 @@ proc case_equals(input: Value, pattern: Value): bool =
     else:
       result = input == pattern
 
-proc eval_case(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_case(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExCase](expr)
   var input = self.eval(frame, expr.case_input)
   for pair in expr.case_more_mapping.mitems:

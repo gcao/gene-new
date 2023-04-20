@@ -8,7 +8,7 @@ type
     cond*: Expr
     body: seq[Expr]
 
-proc eval_while(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_while(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   while true:
     var cond = self.eval(frame, cast[ExWhile](expr).cond)
     if not cond.bool:
