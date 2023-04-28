@@ -10,7 +10,7 @@ type
 
 var ExtensionClass {.threadvar.}: Value
 
-proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_test(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExTest](expr)
   self.eval(frame, expr.data)
 

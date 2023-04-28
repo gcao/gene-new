@@ -139,12 +139,55 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 
   of VkSelector:
     translator = `type`.selector.translator
+    # var e = ExSelectorInvoker(
+    #   # evaluator: selector_invoker,
+    # )
+    # if expr.args.gene_children.len > 0:
+    #   e.data = translate(expr.args.gene_children[0])
+
+    # var selector = `type`.selector
+    # var v: Value
+    # if e.data != nil:
+    #   v = self.eval(frame, e.data)
+    # else:
+    #   v = frame.self
+    # try:
+    #   return selector.search(v)
+    # except SelectorNoResult:
+    #   todo()
+    #   # var default_expr: Expr
+    #   # for e in expr.gene_props:
+    #   #   if e == "default":
+    #   #     default_expr = e.map_val
+    #   #     break
+    #   # if default_expr != nil:
+    #   #   result = self.eval(frame, default_expr)
+    #   # else:
+    #   #   raise
+
   of VkGeneProcessor:
     translator = `type`.gene_processor.translator
+
   of VkNativeFn, VkNativeFn2:
-    translator = native_fn_arg_translator
+    var args_expr = new_ex_arg()
+    for k, v in expr.args.gene_props:
+      args_expr.props[k] = translate(v)
+    for v in expr.args.gene_children:
+      args_expr.children.add(translate(v))
+    args_expr.check_explode()
+    var e = cast[Expr](args_expr)
+    var args = self.eval_args(frame, e)
+    case `type`.kind:
+    of VkNativeFn:
+      return `type`.native_fn(args)
+    of VkNativeFn2:
+      return `type`.native_fn2(args)
+    else:
+      todo("eval_native_fn " & $`type`.kind)
+
   of VkNativeMethod, VkNativeMethod2:
     translator = native_method_arg_translator
+
   of VkInstance:
     expr.args_expr = ExInvoke(
       evaluator: eval_invoke,
@@ -153,6 +196,7 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       args: expr.args,
     )
     return self.eval_invoke(frame, expr.args_expr)
+
   else:
     expr.args_expr = translate_arguments(expr.args)
     return default_invoker(self, frame, expr.args_expr)

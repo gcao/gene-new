@@ -1251,7 +1251,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
     var new_frame = Frame(ns: callable.fn.ns, scope: fn_scope)
     new_frame.parent = frame
     new_frame.self = instance
-    new_frame.callable = callable
+    new_frame.callable = Value(kind: VkMethod, `method`: meth)
 
     if callable.fn.body_compiled == nil:
       callable.fn.body_compiled = translate(callable.fn.body)
