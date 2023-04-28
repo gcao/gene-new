@@ -23,19 +23,6 @@ const ASSIGNMENT_OPS = [
   "&&=", "||=",
 ]
 
-proc default_invoker(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  result = new_gene_gene(frame.callable)
-  var expr = cast[ExArguments](expr)
-  for k, v in expr.props.mpairs:
-    result.gene_props[k] = self.eval(frame, v)
-  for v in expr.children.mitems:
-    var r = self.eval(frame, v)
-    if r.kind == VkExplode:
-      for item in r.explode.vec:
-        result.gene_children.add(item)
-    else:
-      result.gene_children.add(r)
-
 proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExGene](expr)
   var `type` = self.eval(frame, expr.`type`)
@@ -138,32 +125,23 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
         raise
 
   of VkSelector:
-    translator = `type`.selector.translator
-    # var e = ExSelectorInvoker(
-    #   # evaluator: selector_invoker,
-    # )
-    # if expr.args.gene_children.len > 0:
-    #   e.data = translate(expr.args.gene_children[0])
-
-    # var selector = `type`.selector
-    # var v: Value
-    # if e.data != nil:
-    #   v = self.eval(frame, e.data)
-    # else:
-    #   v = frame.self
-    # try:
-    #   return selector.search(v)
-    # except SelectorNoResult:
-    #   todo()
-    #   # var default_expr: Expr
-    #   # for e in expr.gene_props:
-    #   #   if e == "default":
-    #   #     default_expr = e.map_val
-    #   #     break
-    #   # if default_expr != nil:
-    #   #   result = self.eval(frame, default_expr)
-    #   # else:
-    #   #   raise
+    # translator = `type`.selector.translator
+    try:
+      var selector = `type`.selector
+      var e = translate(expr.args.gene_children[0])
+      var v = self.eval(frame, e)
+      return selector.search(v)
+    except SelectorNoResult:
+      todo()
+      # var default_expr: Expr
+      # for e in expr.gene_props:
+      #   if e == "default":
+      #     default_expr = e.map_val
+      #     break
+      # if default_expr != nil:
+      #   result = self.eval(frame, default_expr)
+      # else:
+      #   raise
 
   of VkGeneProcessor:
     translator = `type`.gene_processor.translator
@@ -198,8 +176,18 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     return self.eval_invoke(frame, expr.args_expr)
 
   else:
-    expr.args_expr = translate_arguments(expr.args)
-    return default_invoker(self, frame, expr.args_expr)
+    result = new_gene_gene(`type`)
+    var args_expr = cast[ExArguments](translate_arguments(expr.args))
+    for k, v in args_expr.props.mpairs:
+      result.gene_props[k] = self.eval(frame, v)
+    for v in args_expr.children.mitems:
+      var r = self.eval(frame, v)
+      if r.kind == VkExplode:
+        for item in r.explode.vec:
+          result.gene_children.add(item)
+      else:
+        result.gene_children.add(r)
+    return result
 
   expr.args_expr = translator(expr.args)
   return expr.args_expr.evaluator(self, frame, expr.args_expr)
