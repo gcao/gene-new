@@ -16,7 +16,7 @@ type
     self*: Expr
     # args*: ExArguments
 
-proc eval_fn(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_fn(frame: Frame, expr: var Expr): Value =
   result = Value(
     kind: VkFunction,
     fn: cast[ExFn](expr).data,
@@ -75,13 +75,13 @@ proc translate_fnx(value: Value): Expr {.gcsafe.} =
     data: fn,
   )
 
-proc eval_return(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_return(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExReturn](expr)
   var r = Return(
     frame: frame,
   )
   if expr.data != nil:
-    r.val = self.eval(frame, expr.data)
+    r.val = eval(frame, expr.data)
   else:
     r.val = Value(kind: VkNil)
   raise r
@@ -93,10 +93,10 @@ proc translate_return(value: Value): Expr {.gcsafe.} =
     expr.data = translate(value.gene_children[0])
   return expr
 
-proc eval_bind(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_bind(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExBind](expr)
-  var target = self.eval(frame, expr.target)
-  var self = self.eval(frame, expr.self)
+  var target = eval(frame, expr.target)
+  var self = eval(frame, expr.self)
   var bound_fn = BoundFunction(
     target: target,
     self: self,
@@ -112,7 +112,7 @@ proc translate_bind(value: Value): Expr {.gcsafe.} =
   return expr
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["fn"] = translate_fn
     VM.gene_translators["fnx"] = translate_fnx
     VM.gene_translators["fnxx"] = translate_fnx

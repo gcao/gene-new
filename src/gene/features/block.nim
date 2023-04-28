@@ -7,7 +7,7 @@ type
   ExBlock* = ref object of Expr
     data*: Block
 
-proc eval_block(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_block(frame: Frame, expr: var Expr): Value =
   result = Value(
     kind: VkBlock,
     `block`: cast[ExBlock](expr).data,
@@ -36,5 +36,5 @@ proc translate_block(value: Value): Expr {.gcsafe.} =
   )
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["->"] = translate_block

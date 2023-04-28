@@ -50,8 +50,8 @@ import ../gene/interpreter_base
 # log* -> console.log
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
-    discard self.eval(self.runtime.pkg, """
+  VmCreatedCallbacks.add proc() =
+    discard eval(VM.runtime.pkg, """
       (ns genex/js
         (ns ast
           (class Base

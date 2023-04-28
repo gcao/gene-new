@@ -22,9 +22,9 @@ const ASSIGNMENT_OPS = [
   "&&=", "||=",
 ]
 
-proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_gene*(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExGene](expr)
-  var `type` = self.eval(frame, expr.`type`)
+  var `type` = eval(frame, expr.`type`)
   case `type`.kind:
   of VkFunction:
     var fn = `type`.fn
@@ -40,9 +40,9 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       args_expr.children.add(translate(v))
     args_expr.check_explode()
 
-    handle_args(self, frame, new_frame, fn.matcher, args_expr)
+    handle_args(frame, new_frame, fn.matcher, args_expr)
 
-    return self.call_fn_skip_args(new_frame, `type`)
+    return call_fn_skip_args(new_frame, `type`)
 
   of VkBoundFunction:
     var bound_fn = `type`.bound_fn
@@ -60,9 +60,9 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       args_expr.children.add(translate(v))
     args_expr.check_explode()
 
-    handle_args(self, frame, new_frame, fn.matcher, args_expr)
+    handle_args(frame, new_frame, fn.matcher, args_expr)
 
-    return self.call_fn_skip_args(new_frame, bound_fn.target)
+    return call_fn_skip_args(new_frame, bound_fn.target)
 
   of VkMacro:
     var `macro` = `type`.macro
@@ -72,7 +72,7 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     new_frame.parent = frame
 
     var args = expr.args
-    var match_result = self.match(new_frame, `macro`.matcher, args)
+    var match_result = match(new_frame, `macro`.matcher, args)
     case match_result.kind:
     of MatchSuccess:
       discard
@@ -86,12 +86,12 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       `macro`.body_compiled = translate(`macro`.body)
 
     try:
-      return self.eval(new_frame, `macro`.body_compiled)
+      return eval(new_frame, `macro`.body_compiled)
     except Return as r:
       return r.val
     except system.Exception as e:
-      if self.repl_on_error:
-        return repl_on_error(self, frame, e)
+      if VM.repl_on_error:
+        return repl_on_error(frame, e)
       else:
         raise
 
@@ -110,15 +110,15 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       args_expr.children.add(translate(v))
     args_expr.check_explode()
 
-    handle_args(self, frame, new_frame, `block`.matcher, args_expr)
+    handle_args(frame, new_frame, `block`.matcher, args_expr)
 
     try:
-      return self.eval(new_frame, `block`.body_compiled)
+      return eval(new_frame, `block`.body_compiled)
     except Return as r:
       return r.val
     except system.Exception as e:
-      if self.repl_on_error:
-        return repl_on_error(self, frame, e)
+      if VM.repl_on_error:
+        return repl_on_error(frame, e)
       else:
         raise
 
@@ -127,7 +127,7 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     try:
       var selector = `type`.selector
       var e = translate(expr.args.gene_children[0])
-      var v = self.eval(frame, e)
+      var v = eval(frame, e)
       return selector.search(v)
     except SelectorNoResult:
       todo()
@@ -137,14 +137,14 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       #     default_expr = e.map_val
       #     break
       # if default_expr != nil:
-      #   result = self.eval(frame, default_expr)
+      #   result = eval(frame, default_expr)
       # else:
       #   raise
 
   of VkGeneProcessor:
     var translator = `type`.gene_processor.translator
     var args_expr = translator(expr.args)
-    return args_expr.evaluator(self, frame, args_expr)
+    return args_expr.evaluator(frame, args_expr)
 
   of VkNativeFn, VkNativeFn2:
     var args_expr = new_ex_arg()
@@ -154,19 +154,19 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       args_expr.children.add(translate(v))
     args_expr.check_explode()
     var e = cast[Expr](args_expr)
-    var args = self.eval_args(frame, e)
+    var args = eval_args(frame, e)
     case `type`.kind:
     of VkNativeFn:
-      return `type`.native_fn(args)
+      return `type`.native_fn(frame, args)
     of VkNativeFn2:
-      return `type`.native_fn2(args)
+      return `type`.native_fn2(frame, args)
     else:
       todo("eval_native_fn " & $`type`.kind)
 
   of VkNativeMethod, VkNativeMethod2:
     var args_expr = translate_arguments(expr.args)
-    var args = self.eval_args(frame, args_expr)
-    return `type`.native_method(frame.self, args)
+    var args = eval_args(frame, args_expr)
+    return `type`.native_method(frame, frame.self, args)
 
   of VkInstance:
     expr.args_expr = ExInvoke(
@@ -175,15 +175,15 @@ proc eval_gene*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       meth: "call",
       args: expr.args,
     )
-    return self.eval_invoke(frame, expr.args_expr)
+    return eval_invoke(frame, expr.args_expr)
 
   else:
     result = new_gene_gene(`type`)
     var args_expr = cast[ExArguments](translate_arguments(expr.args))
     for k, v in args_expr.props.mpairs:
-      result.gene_props[k] = self.eval(frame, v)
+      result.gene_props[k] = eval(frame, v)
     for v in args_expr.children.mitems:
-      var r = self.eval(frame, v)
+      var r = eval(frame, v)
       if r.kind == VkExplode:
         for item in r.explode.vec:
           result.gene_children.add(item)
@@ -311,5 +311,5 @@ proc translate_gene(value: Value): Expr {.gcsafe.} =
     return default_translator(value)
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.translators[VkGene] = translate_gene

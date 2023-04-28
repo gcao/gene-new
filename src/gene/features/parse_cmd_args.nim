@@ -243,9 +243,9 @@ proc match*(self: var ArgMatcherRoot, input: string): ArgMatchingResult =
     parts = s.split(" ")
   return self.match(parts)
 
-proc eval_parse(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_parse(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExParseCmdArgs](expr)
-  var cmd_args = self.eval(frame, expr.cmd_args)
+  var cmd_args = eval(frame, expr.cmd_args)
   var r = expr.cmd_args_schema.match(cmd_args.vec.map(proc(v: Value): string = v.str))
   if r.kind == AmSuccess:
     for k, v in r.fields:
@@ -269,6 +269,7 @@ proc translate_parse(value: Value): Expr {.gcsafe.} =
   return r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
-    self.global_ns.ns["$parse_cmd_args"] = new_gene_processor(translate_parse)
-    self.gene_ns.ns["$parse_cmd_args"] = self.global_ns.ns["$parse_cmd_args"]
+  VmCreatedCallbacks.add proc() =
+    let parse = new_gene_processor(translate_parse)
+    VM.global_ns.ns["$parse_cmd_args"] = parse
+    VM.gene_ns.ns["$parse_cmd_args"] = parse

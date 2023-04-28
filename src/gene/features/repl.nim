@@ -5,8 +5,8 @@ import ../interpreter_base
 type
   ExRepl* = ref object of Expr
 
-proc eval_repl(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  self.repl(frame, eval, true)
+proc eval_repl(frame: Frame, expr: var Expr): Value =
+  repl(frame, eval, true)
 
 proc translate_repl(value: Value): Expr {.gcsafe.} =
   ExRepl(
@@ -14,6 +14,7 @@ proc translate_repl(value: Value): Expr {.gcsafe.} =
   )
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
-    self.global_ns.ns["repl"] = new_gene_processor(translate_repl)
-    self.gene_ns.ns["repl"] = self.global_ns.ns["repl"]
+  VmCreatedCallbacks.add proc() =
+    let repl = new_gene_processor(translate_repl)
+    VM.global_ns.ns["repl"] = repl
+    VM.gene_ns.ns["repl"] = repl

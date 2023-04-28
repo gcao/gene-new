@@ -11,22 +11,22 @@ type
     name*: string
     value*: Expr
 
-proc eval_var(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_var(frame: Frame, expr: var Expr): Value =
   var e = cast[ExVar](expr)
   if e.container == nil:
     if e.define_assign:
       frame.scope.def_member(e.name, Value(kind: VkNil))
-      result = self.eval(frame, e.value)
+      result = eval(frame, e.value)
       if result == nil:
         result = Value(kind: VkNil)
       frame.scope[e.name] = result
     else:
-      result = self.eval(frame, e.value)
+      result = eval(frame, e.value)
       if result == nil:
         result = Value(kind: VkNil)
       frame.scope.def_member(e.name, result)
   else:
-    var container = self.eval(frame, e.container)
+    var container = eval(frame, e.container)
     var ns: Namespace
     case container.kind:
     of VkNamespace:
@@ -40,12 +40,12 @@ proc eval_var(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
 
     if e.define_assign:
       ns[e.name] = Value(kind: VkNil)
-      result = self.eval(frame, e.value)
+      result = eval(frame, e.value)
       if result == nil:
         result = Value(kind: VkNil)
       ns[e.name] = result
     else:
-      result = self.eval(frame, e.value)
+      result = eval(frame, e.value)
       if result == nil:
         result = Value(kind: VkNil)
       ns[e.name] = result
@@ -78,5 +78,5 @@ proc translate_var(value: Value): Expr {.gcsafe.} =
     todo($name.kind)
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["var"] = translate_var

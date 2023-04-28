@@ -8,9 +8,9 @@ type
     start*: Expr
     `end`*: Expr
 
-proc eval_range*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var start = self.eval(frame, cast[ExRange](expr).start)
-  var `end` = self.eval(frame, cast[ExRange](expr).end)
+proc eval_range*(frame: Frame, expr: var Expr): Value =
+  var start = eval(frame, cast[ExRange](expr).start)
+  var `end` = eval(frame, cast[ExRange](expr).end)
   new_gene_range(start, `end`)
 
 proc new_ex_range*(start, `end`: Expr): Expr =
@@ -24,5 +24,5 @@ proc translate_range(value: Value): Expr {.gcsafe.} =
   new_ex_range(translate(value.gene_children[0]), translate(value.gene_children[1]))
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["range"] = translate_range

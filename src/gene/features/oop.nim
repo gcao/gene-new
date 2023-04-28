@@ -64,32 +64,32 @@ type
   # ExMethodMissing* = ref object of Expr
   #   fn: Function
 
-proc eval_class(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_class(frame: Frame, expr: var Expr): Value =
   var e = cast[ExClass](expr)
   var class = new_class(e.name)
   result = Value(kind: VkClass, class: class)
   if e.parent == nil:
     class.parent = VM.object_class.class
   else:
-    var parent = self.eval(frame, e.parent)
+    var parent = eval(frame, e.parent)
     class.parent = parent.class
     if not parent.class.on_extended.is_nil:
       var f = new_frame()
       f.self = parent
       var args = new_gene_gene()
       args.gene_children.add(result)
-      discard VM.call(f, parent, parent.class.on_extended, args)
+      discard call(f, parent, parent.class.on_extended, args)
   class.ns.parent = frame.ns
   var container = frame.ns
   if e.container != nil:
-    container = self.eval(frame, e.container).ns
+    container = eval(frame, e.container).ns
   container[e.name] = result
 
   var new_frame = new_frame()
   new_frame.ns = class.ns
   new_frame.scope = new_scope()
   new_frame.self = result
-  discard self.eval(new_frame, e.body)
+  discard eval(new_frame, e.body)
 
 proc translate_class(value: Value): Expr {.gcsafe.} =
   var e = ExClass(
@@ -112,7 +112,7 @@ proc translate_class(value: Value): Expr {.gcsafe.} =
   e.body = translate(value.gene_children[body_start..^1])
   return translate_definition(value.gene_children[0], e)
 
-proc eval_object(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_object(frame: Frame, expr: var Expr): Value =
   var e = cast[ExObject](expr)
   var class = new_class(e.name)
   var class_val = Value(kind: VkClass, class: class)
@@ -120,30 +120,30 @@ proc eval_object(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   if e.parent == nil:
     class.parent = VM.object_class.class
   else:
-    var parent = self.eval(frame, e.parent)
+    var parent = eval(frame, e.parent)
     class.parent = parent.class
     if not parent.class.on_extended.is_nil:
       var f = new_frame()
       f.self = parent
       var args = new_gene_gene()
       args.gene_children.add(class_val)
-      discard VM.call(f, parent, parent.class.on_extended, args)
+      discard call(f, parent, parent.class.on_extended, args)
   class.ns.parent = frame.ns
   # TODO
   # var container = frame.ns
   # if e.container != nil:
-  #   container = self.eval(frame, e.container).ns
+  #   container = eval(frame, e.container).ns
   # container[e.name] = result
 
   var new_frame = new_frame()
   new_frame.ns = class.ns
   new_frame.scope = new_scope()
   new_frame.self = class_val
-  discard self.eval(new_frame, e.body)
+  discard eval(new_frame, e.body)
 
   var init = class.get_method(INIT_KEY)
   if init != nil:
-    discard self.invoke(frame, result, INIT_KEY, Value(kind: VkNil))
+    discard invoke(frame, result, INIT_KEY, Value(kind: VkNil))
 
 proc translate_object(value: Value): Expr {.gcsafe.} =
   var e = ExObject(
@@ -166,21 +166,21 @@ proc translate_object(value: Value): Expr {.gcsafe.} =
   e.body = translate(value.gene_children[body_start..^1])
   return translate_definition(value.gene_children[0], e)
 
-proc eval_mixin(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_mixin(frame: Frame, expr: var Expr): Value =
   var e = cast[ExMixin](expr)
   var m = new_mixin(e.name)
   m.ns.parent = frame.ns
   result = Value(kind: VkMixin, `mixin`: m)
   var container = frame.ns
   if e.container != nil:
-    container = self.eval(frame, e.container).ns
+    container = eval(frame, e.container).ns
   container[e.name] = result
 
   var new_frame = new_frame()
   new_frame.ns = m.ns
   new_frame.scope = new_scope()
   new_frame.self = result
-  discard self.eval(new_frame, e.body)
+  discard eval(new_frame, e.body)
 
 proc translate_mixin(value: Value): Expr {.gcsafe.} =
   var e = ExMixin(
@@ -200,10 +200,10 @@ proc translate_mixin(value: Value): Expr {.gcsafe.} =
   e.body = translate(value.gene_children[body_start..^1])
   result = e
 
-proc eval_include(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_include(frame: Frame, expr: var Expr): Value =
   var x = frame.self
   for e in cast[ExInclude](expr).data.mitems:
-    var m = self.eval(frame, e).mixin
+    var m = eval(frame, e).mixin
     for _, meth in m.methods:
       var new_method = meth.clone
       case x.kind:
@@ -224,9 +224,9 @@ proc translate_include(value: Value): Expr {.gcsafe.} =
 
   result = e
 
-proc eval_new(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_new(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExNew](expr)
-  var class = self.eval(frame, expr.class).class
+  var class = eval(frame, expr.class).class
   var ctor = class.get_constructor()
   if ctor == nil:
     result = Value(
@@ -236,16 +236,16 @@ proc eval_new(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     # TODO: should "init" be called for instances created by custom constructors?
     var init = class.get_method(INIT_KEY)
     if init != nil:
-      discard self.invoke(frame, result, INIT_KEY, expr.args)
+      discard invoke(frame, result, INIT_KEY, expr.args)
   else:
     case ctor.kind:
     of VkNativeFn, VkNativeFn2:
       var args_expr: Expr = new_ex_arg(expr.args)
-      var args = self.eval_args(frame, args_expr)
+      var args = eval_args(frame, args_expr)
       if ctor.kind == VkNativeFn:
-        result = ctor.native_fn(args)
+        result = ctor.native_fn(frame, args)
       else:
-        result = ctor.native_fn2(args)
+        result = ctor.native_fn2(frame, args)
     of VkFunction:
       result = Value(
         kind: VkInstance,
@@ -257,13 +257,13 @@ proc eval_new(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       new_frame.self = result
 
       var args = new_ex_arg(expr.args)
-      handle_args(self, frame, new_frame, ctor.fn.matcher, args)
+      handle_args(frame, new_frame, ctor.fn.matcher, args)
 
       if ctor.fn.body_compiled == nil:
         ctor.fn.body_compiled = translate(ctor.fn.body)
 
       try:
-        discard self.eval(new_frame, ctor.fn.body_compiled)
+        discard eval(new_frame, ctor.fn.body_compiled)
       except Return as r:
         # return's frame is the same as new_frame(current function's frame)
         if r.frame == new_frame:
@@ -324,7 +324,7 @@ proc assign_method(frame: Frame, m: Method) =
   else:
     not_allowed()
 
-proc eval_method(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_method(frame: Frame, expr: var Expr): Value =
   var m = Method(
     name: cast[ExMethod](expr).name,
     callable: Value(kind: VkFunction, fn: cast[ExMethod](expr).fn),
@@ -337,10 +337,10 @@ proc eval_method(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     `method`: m,
   )
 
-proc eval_method_eq*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_method_eq*(frame: Frame, expr: var Expr): Value =
   var m = Method(
     name: cast[ExMethodEq](expr).name,
-    callable: self.eval(frame, cast[ExMethodEq](expr).value),
+    callable: eval(frame, cast[ExMethodEq](expr).value),
   )
   assign_method(frame, m)
 
@@ -349,13 +349,13 @@ proc eval_method_eq*(self: VirtualMachine, frame: Frame, expr: var Expr): Value 
     `method`: m,
   )
 
-proc eval_constructor*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_constructor*(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExConstructor](expr)
   var class = frame.self.class
   if expr.fn != nil:
     class.constructor = Value(kind: VkFunction, fn: expr.fn)
   else:
-    class.constructor = self.eval(frame, expr.value)
+    class.constructor = eval(frame, expr.value)
 
 proc translate_constructor(value: Value): Expr {.gcsafe.} =
   var r = ExConstructor(
@@ -367,20 +367,20 @@ proc translate_constructor(value: Value): Expr {.gcsafe.} =
     r.value = translate(value.gene_children[0])
   result = r
 
-proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_invoke_dynamic(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExInvokeDynamic](expr)
   var instance: Value
   var e = expr.self
   if e == nil:
     instance = frame.self
   else:
-    instance = self.eval(frame, e)
-  var target = self.eval(frame, expr.target)
+    instance = eval(frame, e)
+  var target = eval(frame, expr.target)
   case target.kind:
   of VkString:
-    return self.invoke(frame, instance, target.str, expr.args)
+    return invoke(frame, instance, target.str, expr.args)
   of VkSymbol:
-    return self.invoke(frame, instance, target.str, expr.args)
+    return invoke(frame, instance, target.str, expr.args)
   of VkFunction:
     var fn = target.fn
     var fn_scope = new_scope()
@@ -393,8 +393,8 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, expr: var Expr): Va
 
     try:
       var args = new_ex_arg(expr.args)
-      handle_args(self, frame, new_frame, fn.matcher, args)
-      result = self.eval(new_frame, fn.body_compiled)
+      handle_args(frame, new_frame, fn.matcher, args)
+      result = eval(new_frame, fn.body_compiled)
     except Return as r:
       # return's frame is the same as new_frame(current function's frame)
       if r.frame == new_frame:
@@ -402,8 +402,8 @@ proc eval_invoke_dynamic(self: VirtualMachine, frame: Frame, expr: var Expr): Va
       else:
         raise
     except system.Exception as e:
-      if self.repl_on_error:
-        result = repl_on_error(self, frame, e)
+      if VM.repl_on_error:
+        result = repl_on_error(frame, e)
         discard
       else:
         raise
@@ -421,7 +421,7 @@ proc translate_invoke_dynamic(value: Value): Expr {.gcsafe.} =
 
   result = r
 
-proc eval_super(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_super(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExSuper](expr)
   var instance = frame.self
   var m = frame.callable.method
@@ -432,13 +432,13 @@ proc eval_super(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   new_frame.parent = frame
   new_frame.self = instance
 
-  handle_args(self, frame, new_frame, meth.callable.fn.matcher, cast[ExArguments](expr.args))
+  handle_args(frame, new_frame, meth.callable.fn.matcher, cast[ExArguments](expr.args))
 
   if meth.callable.fn.body_compiled == nil:
     meth.callable.fn.body_compiled = translate(meth.callable.fn.body)
 
   try:
-    result = self.eval(new_frame, meth.callable.fn.body_compiled)
+    result = eval(new_frame, meth.callable.fn.body_compiled)
   except Return as r:
     # return's frame is the same as new_frame(current function's frame)
     if r.frame == new_frame:
@@ -446,8 +446,8 @@ proc eval_super(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     else:
       raise
   except system.Exception as e:
-    if self.repl_on_error:
-      result = repl_on_error(self, frame, e)
+    if VM.repl_on_error:
+      result = repl_on_error(frame, e)
       discard
     else:
       raise
@@ -458,14 +458,14 @@ proc translate_super(value: Value): Expr {.gcsafe.} =
     args: new_ex_arg(value),
   )
 
-# proc eval_get_prop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+# proc eval_get_prop(frame: Frame, expr: var Expr): Value =
 #   var expr = cast[ExGetProp](expr)
-#   var name = self.eval(frame, expr.name)
+#   var name = eval(frame, expr.name)
 #   var obj =
 #     if expr.self == nil:
 #       frame.self
 #     else:
-#       self.eval(frame, expr.self)
+#       eval(frame, expr.self)
 #   case obj.kind:
 #   of VkInstance:
 #     return obj.instance_props[name.str]
@@ -485,15 +485,15 @@ proc translate_super(value: Value): Expr {.gcsafe.} =
 #       name: translate(value.gene_children[1]),
 #     )
 
-# proc eval_set_prop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+# proc eval_set_prop(frame: Frame, expr: var Expr): Value =
 #   var expr = cast[ExSetProp](expr)
-#   var name = self.eval(frame, expr.name)
-#   result = self.eval(frame, expr.value)
+#   var name = eval(frame, expr.name)
+#   result = eval(frame, expr.value)
 #   var obj =
 #     if expr.self == nil:
 #       frame.self
 #     else:
-#       self.eval(frame, expr.self)
+#       eval(frame, expr.self)
 #   case obj.kind:
 #   of VkInstance:
 #     obj.instance_props[name.str] = result
@@ -515,7 +515,7 @@ proc translate_super(value: Value): Expr {.gcsafe.} =
 #       value: translate(value.gene_children[2]),
 #     )
 
-# proc eval_method_missing(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+# proc eval_method_missing(frame: Frame, expr: var Expr): Value =
 #   result = Value(
 #     kind: VkFunction,
 #     fn: cast[ExMethodMissing](expr).fn,
@@ -543,7 +543,7 @@ proc translate_super(value: Value): Expr {.gcsafe.} =
 #   )
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["class"] = translate_class
     VM.gene_translators["$def_constructor"] = translate_constructor
     VM.gene_translators["$set_constructor"] = translate_constructor

@@ -20,10 +20,10 @@ type
     name*: string
     value*: Expr
 
-proc eval_assignment(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_assignment(frame: Frame, expr: var Expr): Value =
   var name = cast[ExAssignment](expr).name
   var value = cast[ExAssignment](expr).value
-  result = self.eval(frame, value)
+  result = eval(frame, value)
   if frame.scope.has_key(name):
     frame.scope[name] = result
   else:
@@ -92,7 +92,7 @@ proc translate_op_eq(value: Value): Expr {.gcsafe.} =
     not_allowed("translate_op_eq " & $value)
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["="] = translate_assignment
 
     VM.gene_translators["+="] = translate_op_eq

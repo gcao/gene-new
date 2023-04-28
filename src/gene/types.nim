@@ -285,19 +285,19 @@ type
   NameIndexScope* = distinct int
 
   Translator* = proc(value: Value): Expr {.gcsafe.}
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.}
+  Evaluator* = proc(frame: Frame, expr: var Expr): Value {.gcsafe.}
 
-  EvalCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.}
+  EvalCatch* = proc(frame: Frame, expr: var Expr): Value {.gcsafe.}
   EvalWrap* = proc(eval: Evaluator): Evaluator {.gcsafe.}
 
   TranslateCatch* = proc(value: Value): Expr {.gcsafe.}
   TranslateWrap* = proc(translate: Translator): Translator {.gcsafe.}
 
-  NativeFn* = proc(args: Value): Value {.gcsafe, nimcall.}
-  NativeFn2* = proc(args: Value): Value {.gcsafe.}
+  NativeFn* = proc(frame: Frame, args: Value): Value {.gcsafe, nimcall.}
+  NativeFn2* = proc(frame: Frame, args: Value): Value {.gcsafe.}
   NativeFnWrap* = proc(f: NativeFn): NativeFn2 {.gcsafe.}
-  NativeMethod* = proc(self: Value, args: Value): Value {.gcsafe, nimcall.}
-  NativeMethod2* = proc(self: Value, args: Value): Value {.gcsafe.}
+  NativeMethod* = proc(frame: Frame, self: Value, args: Value): Value {.gcsafe, nimcall.}
+  NativeMethod2* = proc(frame: Frame, self: Value, args: Value): Value {.gcsafe.}
   NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2 {.gcsafe.}
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
@@ -758,7 +758,7 @@ type
     of SrAll:
       all*: seq[Value]
 
-  VmCallback* = proc(self: var VirtualMachine) {.gcsafe.}
+  VmCallback* = proc() {.gcsafe.}
 
 var VM* {.threadvar.}: VirtualMachine  # The current virtual machine
 # TODO: guard access to Threads with lock
@@ -2131,21 +2131,21 @@ proc prop_splat*(self: seq[Matcher]): string =
 ##################################################
 
 proc eval_wrap*(e: Evaluator): Evaluator =
-  return proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-    result = e(self, frame, expr)
+  return proc(frame: Frame, expr: var Expr): Value =
+    result = e(frame, expr)
     if result != nil and result.kind == VkException:
       raise result.exception
 
 # proc(){.nimcall.} can not access local variables
 # Workaround: create a new type like RemoteFn that does not use nimcall
 proc fn_wrap*(f: NativeFn): NativeFn2 =
-  return proc(args: Value): Value {.gcsafe.} =
-    result = f(args)
+  return proc(frame: Frame, args: Value): Value {.gcsafe.} =
+    result = f(frame, args)
     if result != nil and result.kind == VkException:
       raise result.exception
 
 proc method_wrap*(m: NativeMethod): NativeMethod2 =
-  return proc(self, args: Value): Value =
-    result = m(self, args)
+  return proc(frame: Frame, self, args: Value): Value =
+    result = m(frame, self, args)
     if result != nil and result.kind == VkException:
       raise result.exception

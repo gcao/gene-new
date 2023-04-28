@@ -68,9 +68,9 @@ proc handle*(cmd: string, args: seq[string]): string =
   let start = cpu_time()
   var value: Value
   if file.ends_with(".gar"):
-    value = VM.run_archive_file(file)
+    value = run_archive_file(file)
   else:
-    value = VM.run_file(file)
+    value = run_file(file)
   if options.print_result:
     echo value.to_s
   if options.benchmark:

@@ -20,10 +20,10 @@ type
     first*: Expr
     second*: Expr
 
-proc eval_try(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_try(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExTry](expr)
   try:
-    result = self.eval(frame, expr.body)
+    result = eval(frame, expr.body)
   except types.Exception as ex:
     frame.scope.def_member("$ex", exception_to_value(ex))
     var handled = false
@@ -33,18 +33,18 @@ proc eval_try(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
         if catch[0] of ExMyMember and cast[ExMyMember](catch[0]).name.to_s == "*":
           # class = GeneExceptionClass
           handled = true
-          result = self.eval(frame, catch[1])
+          result = eval(frame, catch[1])
           break
-        var class = self.eval(frame, catch[0])
+        var class = eval(frame, catch[0])
         if ex.instance == nil:
           raise
         if ex.instance.is_a(class.class):
           handled = true
-          result = self.eval(frame, catch[1])
+          result = eval(frame, catch[1])
           break
     if expr.finally != nil:
       try:
-        discard self.eval(frame, expr.finally)
+        discard eval(frame, expr.finally)
       except Return, Break:
         todo()
     if not handled:
@@ -99,12 +99,12 @@ proc translate_try(value: Value): Expr {.gcsafe.} =
     r.finally = translate(`finally`)
   return r
 
-proc eval_throw(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_throw(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExThrow](expr)
   if expr.first != nil:
-    var class = self.eval(frame, expr.first)
+    var class = eval(frame, expr.first)
     if expr.second != nil:
-      var message = self.eval(frame, expr.second)
+      var message = eval(frame, expr.second)
       raise new_gene_exception(message.str, Value(kind: VkInstance, instance_class: class.class))
     elif class.kind == VkClass:
       raise new_gene_exception(Value(kind: VkInstance, instance_class: class.class))
@@ -129,6 +129,6 @@ proc translate_throw(value: Value): Expr {.gcsafe.} =
   return r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["try"] = translate_try
     VM.gene_translators["throw"] = translate_throw

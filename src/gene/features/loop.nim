@@ -11,11 +11,11 @@ type
     input*: Value
     code*: seq[Expr]
 
-proc eval_loop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_loop(frame: Frame, expr: var Expr): Value =
   while true:
     try:
       for item in cast[ExLoop](expr).data.mitems:
-        result = self.eval(frame, item)
+        result = eval(frame, item)
     except Continue:
       discard
     except Break as b:
@@ -36,13 +36,13 @@ proc translate_break(value: Value): Expr {.gcsafe.} =
 proc translate_continue(value: Value): Expr {.gcsafe.} =
   CONTINUE_EXPR
 
-proc eval_once(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_once(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExOnce](expr)
   if expr.input.gene_props.has_key("return"):
     result = expr.input.gene_props["return"]
   else:
     for item in expr.code.mitems:
-      result = self.eval(frame, item)
+      result = eval(frame, item)
     expr.input.gene_props["return"] = result
 
 proc translate_once(value: Value): Expr {.gcsafe.} =
@@ -55,9 +55,9 @@ proc translate_once(value: Value): Expr {.gcsafe.} =
   result = r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["loop"] = translate_loop
     VM.gene_translators["break"] = translate_break
     VM.gene_translators["continue"] = translate_continue
 
-    self.global_ns.ns["$once"] = new_gene_processor(translate_once)
+    VM.global_ns.ns["$once"] = new_gene_processor(translate_once)

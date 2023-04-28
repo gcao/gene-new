@@ -15,13 +15,13 @@ type
   ExExit = ref object of Expr
     code*: Expr
 
-proc eval_env(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_env(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExEnv](expr)
-  var env = self.eval(frame, expr.name).to_s
+  var env = eval(frame, expr.name).to_s
   if exists_env(env):
     result = get_env(env)
   elif expr.default_value != nil:
-    result = self.eval(frame, expr.default_value).to_s
+    result = eval(frame, expr.default_value).to_s
   else:
     result = nil
 
@@ -34,10 +34,10 @@ proc translate_env(value: Value): Expr {.gcsafe.} =
     r.default_value = translate(value.gene_children[1])
   return r
 
-proc eval_set_env(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_set_env(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExSetEnv](expr)
-  var env = self.eval(frame, expr.name).to_s
-  var val = self.eval(frame, expr.value).to_s
+  var env = eval(frame, expr.name).to_s
+  var val = eval(frame, expr.value).to_s
   put_env(env, val)
 
 proc translate_set_env(value: Value): Expr {.gcsafe.} =
@@ -47,11 +47,11 @@ proc translate_set_env(value: Value): Expr {.gcsafe.} =
     value: translate(value.gene_children[1]),
   )
 
-proc eval_exit(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_exit(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExExit](expr)
   var code = 0
   if expr.code != nil:
-    code = self.eval(frame, expr.code).int
+    code = eval(frame, expr.code).int
   quit(code)
 
 proc translate_exit(value: Value): Expr {.gcsafe.} =
@@ -63,8 +63,8 @@ proc translate_exit(value: Value): Expr {.gcsafe.} =
   return r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["exit"] = translate_exit
 
-    self.global_ns.ns["$env"] = new_gene_processor(translate_env)
-    self.global_ns.ns["$set_env"] = new_gene_processor(translate_set_env)
+    VM.global_ns.ns["$env"] = new_gene_processor(translate_env)
+    VM.global_ns.ns["$set_env"] = new_gene_processor(translate_set_env)

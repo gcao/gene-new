@@ -8,10 +8,10 @@ type
     matcher: RootMatcher
     value*: Expr
 
-proc eval_match(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_match(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
   var matcher = expr.matcher
-  var value = self.eval(frame, expr.value)
+  var value = eval(frame, expr.value)
   case matcher.hint.mode:
   of MhNone:
     discard
@@ -34,7 +34,7 @@ proc eval_match(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     else:
       todo("eval_match value.kind = " & $value.kind)
   else:
-    self.process_args(frame, matcher, value)
+    process_args(frame, matcher, value)
 
 proc translate_match(value: Value): Expr {.gcsafe.} =
   return ExMatch(
@@ -44,5 +44,5 @@ proc translate_match(value: Value): Expr {.gcsafe.} =
   )
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["match"] = translate_match

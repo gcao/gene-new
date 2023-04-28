@@ -10,8 +10,8 @@ var invoke_wrap*      {.threadvar.}: InvokeWrap
 var fn_wrap*          {.threadvar.}: NativeFnWrap
 var method_wrap*      {.threadvar.}: NativeMethodWrap
 
-proc eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  result = self.eval_catch(frame, expr)
+proc eval*(frame: Frame, expr: var Expr): Value =
+  result = eval_catch(frame, expr)
   if result != nil and result.kind == VkException:
     raise result.exception
 
@@ -20,8 +20,8 @@ proc translate*(value: Value): Expr {.gcsafe.} =
   if result != nil and result of ExException:
     raise cast[ExException](result).ex
 
-proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value =
-  result = self.invoke_catch(frame, target, args)
+proc call*(frame: Frame, target: Value, args: Value): Value =
+  result = invoke_catch(frame, target, args)
   if result != nil and result.kind == VkException:
     raise result.exception
 

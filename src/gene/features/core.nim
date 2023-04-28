@@ -39,9 +39,9 @@ proc translate_do(value: Value): Expr {.gcsafe.} =
 proc translate_noop(value: Value): Expr {.gcsafe.} =
   new_ex_literal(Value(kind: VkNil))
 
-proc eval_void(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_void(frame: Frame, expr: var Expr): Value =
   for item in cast[ExGroup](expr).children.mitems:
-    discard self.eval(frame, item)
+    discard eval(frame, item)
 
 proc translate_void(value: Value): Expr {.gcsafe.} =
   var r = ExGroup(
@@ -56,12 +56,12 @@ proc translate_explode(value: Value): Expr {.gcsafe.} =
   r.data = translate(value.gene_children[0])
   result = r
 
-proc eval_string(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_string(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExStrings](expr)
   var s = ""
   s &= expr.first
   for item in expr.rest.mitems:
-    s &= self.eval(frame, item).to_s
+    s &= eval(frame, item).to_s
   return s
 
 proc translate_string*(value: Value): Expr {.gcsafe.} =
@@ -77,11 +77,11 @@ proc translate_string*(value: Value): Expr {.gcsafe.} =
     e.rest.add(translate(item))
   return e
 
-proc eval_with(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_with(frame: Frame, expr: var Expr): Value =
   var old_self = frame.self
   try:
-    frame.self = self.eval(frame, cast[ExWith](expr).self)
-    return self.eval(frame, cast[ExWith](expr).body)
+    frame.self = eval(frame, cast[ExWith](expr).self)
+    return eval(frame, cast[ExWith](expr).body)
   finally:
     frame.self = old_self
 
@@ -92,13 +92,13 @@ proc translate_with(value: Value): Expr {.gcsafe.} =
     body: translate(value.gene_children[1..^1]),
   )
 
-proc eval_assert(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_assert(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExAssert](expr)
-  var value = self.eval(frame, expr.data)
+  var value = eval(frame, expr.data)
   if not value.to_bool():
     var message = "AssertionFailure: expression returned falsy value."
     if expr.message != nil:
-      message = self.eval(frame, expr.message).str
+      message = eval(frame, expr.message).str
     echo message
 
 proc translate_assert(value: Value): Expr {.gcsafe.} =
@@ -110,11 +110,11 @@ proc translate_assert(value: Value): Expr {.gcsafe.} =
     r.message = translate(value.gene_children[1])
   return r
 
-proc eval_debug(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_debug(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExDebug](expr)
   echo "$debug: " & $expr.data
   var e = translate(expr.data)
-  result = self.eval(frame, e)
+  result = eval(frame, e)
   echo "$debug: " & $expr.data & " => " & $result
 
 proc translate_debug(value: Value): Expr {.gcsafe.} =
@@ -124,9 +124,9 @@ proc translate_debug(value: Value): Expr {.gcsafe.} =
   r.data = value.gene_children[0]
   return r
 
-proc eval_if_main(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_if_main(frame: Frame, expr: var Expr): Value =
   if VM.app.main_module == frame.ns.get_module():
-    result = self.eval(frame, cast[ExIfMain](expr).body)
+    result = eval(frame, cast[ExIfMain](expr).body)
 
 proc translate_if_main(value: Value): Expr {.gcsafe.} =
   return ExIfMain(
@@ -134,9 +134,9 @@ proc translate_if_main(value: Value): Expr {.gcsafe.} =
     body: translate(value.gene_children)
   )
 
-proc eval_tap(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_tap(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExTap](expr)
-  result = self.eval(frame, expr.value)
+  result = eval(frame, expr.value)
   var old_self = frame.self
   var old_scope = frame.scope
   try:
@@ -146,7 +146,7 @@ proc eval_tap(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       frame.self = result
     else:
       frame.scope.def_member(expr.as_name, result)
-    discard self.eval(frame, expr.body)
+    discard eval(frame, expr.body)
   finally:
     frame.self = old_self
     frame.scope = old_scope
@@ -170,7 +170,7 @@ proc translate_tap(value: Value): Expr {.gcsafe.} =
   return r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["do"] = translate_do
     VM.gene_translators["noop"] = translate_noop
     VM.gene_translators["void"] = translate_void
@@ -192,7 +192,8 @@ proc init*() =
     VM.gene_translators["$if_main"] = translate_if_main
     VM.gene_translators["$tap"] = translate_tap
 
-    self.global_ns.ns["assert"] = new_gene_processor("assert", translate_assert)
-    self.gene_ns.ns["assert"] = self.global_ns.ns["assert"]
+    let assert = new_gene_processor("assert", translate_assert)
+    VM.global_ns.ns["assert"] = assert
+    VM.gene_ns.ns["assert"] = assert
 
-    self.object_class = Value(kind: VkClass, class: new_class("Object"))
+    VM.object_class = Value(kind: VkClass, class: new_class("Object"))

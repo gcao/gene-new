@@ -6,8 +6,8 @@ import ../gene/interpreter_base
 # * Translate sass to css
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
-    discard self.eval(self.runtime.pkg, """
+  VmCreatedCallbacks.add proc() =
+    discard eval(VM.runtime.pkg, """
       (ns genex/css
         (fn sass str
           (todo "sass")

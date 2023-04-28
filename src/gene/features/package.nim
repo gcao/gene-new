@@ -11,19 +11,19 @@ type
     repo*: Expr
     commit*: Expr # applicable if repo is given
 
-proc eval_dep(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_dep(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExDependency](expr)
-  var name = self.eval(frame, expr.name).str
+  var name = eval(frame, expr.name).str
   var version = ""
   if expr.version != nil:
-    version = self.eval(frame, expr.version).str
+    version = eval(frame, expr.version).str
   var dep = Dependency(
     name: name,
     version: version,
   )
   if expr.path != nil:
     dep.type = "path"
-    dep.path = self.eval(frame, expr.path).str
+    dep.path = eval(frame, expr.path).str
 
   var pkg = frame.ns.package
   pkg.dependencies[name] = dep
@@ -56,5 +56,5 @@ proc translate_dep(value: Value): Expr {.gcsafe.} =
   return e
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["$dep"] = translate_dep

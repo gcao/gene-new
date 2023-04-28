@@ -6,7 +6,7 @@ type
   ExEnum* = ref object of Expr
     data*: Value
 
-proc eval_enum(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_enum(frame: Frame, expr: var Expr): Value =
   result = cast[ExEnum](expr).data
   frame.ns[result.enum.name] = result
 
@@ -31,5 +31,5 @@ proc translate_enum(value: Value): Expr {.gcsafe.} =
   return r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["enum"] = translate_enum

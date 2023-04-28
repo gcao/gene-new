@@ -9,10 +9,10 @@ type
     class*: Expr
     body: Expr
 
-proc eval_cast(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_cast(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExCast](expr)
-  var v = self.eval(frame, expr.value)
-  var class = self.eval(frame, expr.class)
+  var v = eval(frame, expr.value)
+  var class = eval(frame, expr.class)
   Value(kind: VkCast, cast_class: class.class, cast_value: v)
 
 proc translate_cast(value: Value): Expr {.gcsafe.} =
@@ -24,5 +24,5 @@ proc translate_cast(value: Value): Expr {.gcsafe.} =
   )
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["cast"] = translate_cast

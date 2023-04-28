@@ -7,7 +7,7 @@ import ./parser
 import ./repl
 
 type
-  Invoke* = proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.}
+  Invoke* = proc(frame: Frame, target: Value, args: Value): Value {.gcsafe.}
   InvokeWrap* = proc(invoke: Invoke): Invoke
 
 proc new_package*(dir: string): Package {.gcsafe.}
@@ -16,38 +16,38 @@ proc parse_deps(deps: seq[Value]): Table[string, Dependency] {.gcsafe.}
 proc get_member*(self: Value, name: string): Value {.gcsafe.}
 proc translate*(value: Value): Expr {.gcsafe.}
 proc translate*(stmts: seq[Value]): Expr {.gcsafe.}
-proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.}
-proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value {.gcsafe.}
-proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value {.gcsafe.}
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args: Value): Value {.gcsafe.}
+proc call*(frame: Frame, target: Value, args: Value): Value {.gcsafe.}
+proc call*(frame: Frame, this: Value, target: Value, args: Value): Value {.gcsafe.}
+proc call_fn_skip_args*(frame: Frame, target: Value): Value {.gcsafe.}
+proc invoke*(frame: Frame, instance: Value, method_name: string, args: Value): Value {.gcsafe.}
 
 #################### Value #######################
 
-proc check_channel*(self: VirtualMachine) =
-  let channel = Threads[self.thread_id].channel.addr
+proc check_channel*() =
+  let channel = Threads[VM.thread_id].channel.addr
   var tried = channel[].try_recv()
   while tried.data_available:
     if tried.msg.name == SEND_MESSAGE:
-      for callback in self.thread_callbacks:
+      for callback in VM.thread_callbacks:
         var frame = new_frame()
         var args = new_gene_gene()
         args.gene_children.add(tried.msg.payload)
-        discard self.call(frame, nil, callback, args)
+        discard call(frame, nil, callback, args)
     tried = channel[].try_recv()
 
-template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  if self.async_wait == 0:
-    self.async_wait = ASYNC_WAIT_LIMIT
+template eval*(frame: Frame, expr: var Expr): Value =
+  if VM.async_wait == 0:
+    VM.async_wait = ASYNC_WAIT_LIMIT
     if has_pending_operations():
       poll()
     # self.check_channel()
   else:
-    self.async_wait -= 1
-  expr.evaluator(self, frame, expr)
+    VM.async_wait -= 1
+  expr.evaluator(frame, expr)
 
-proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_catch*(frame: Frame, expr: var Expr): Value =
   try:
-    result = self.eval(frame, expr)
+    result = eval(frame, expr)
   except system.Exception as e:
     # echo e.msg & "\n" & e.getStackTrace()
     result = Value(
@@ -68,7 +68,7 @@ proc to_s*(self: Value): string =
       if m.class != VM.object_class.class:
         var frame = new_frame()
         var args = new_gene_gene()
-        return VM.invoke(frame, self, "to_s", args).str
+        return invoke(frame, self, "to_s", args).str
     else:
       discard
 
@@ -95,7 +95,7 @@ proc get_member*(self: Value, name: string): Value =
     if class.has_method("get"):
       var args = new_gene_gene()
       args.gene_children.add(name.to_s)
-      return VM.invoke(new_frame(), self, "get", args)
+      return invoke(new_frame(), self, "get", args)
     elif self.instance_props.has_key(name):
       return self.instance_props[name]
     else:
@@ -113,7 +113,7 @@ proc get_member*(self: Value, name: string): Value =
     if class.has_method("get"):
       var args = new_gene_gene()
       args.gene_children.add(name.to_s)
-      return VM.invoke(new_frame(), self, "get", args)
+      return invoke(new_frame(), self, "get", args)
     else:
       todo("get_member " & $self.kind & " " & name.to_s)
 
@@ -123,7 +123,7 @@ proc get_member*(self: Value, name: string): Value =
     var args = new_gene_gene()
     args.gene_children.add(name.to_s)
     for v in ns.on_member_missing:
-      var r = VM.call(new_frame(), self, v, args)
+      var r = call(new_frame(), self, v, args)
       if r != nil:
         return r
   raise new_exception(NotDefinedException, name.to_s & " is not defined")
@@ -150,7 +150,7 @@ proc get_child*(self: Value, index: int): Value =
     if class.has_method("get_child"):
       var args = new_gene_gene()
       args.gene_children.add(index)
-      return VM.invoke(new_frame(), self, "get_child", args)
+      return invoke(new_frame(), self, "get_child", args)
     else:
       not_allowed("get_child " & $self & " " & $index)
 
@@ -371,7 +371,7 @@ proc `len`(self: Value): int =
   else:
     not_allowed()
 
-proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], input: Value, r: MatchResult) =
+proc match_prop_splat*(frame: Frame, self: seq[Matcher], input: Value, r: MatchResult) =
   if input == nil or self.prop_splat == "":
     return
 
@@ -392,7 +392,7 @@ proc match_prop_splat*(vm: VirtualMachine, frame: Frame, self: seq[Matcher], inp
   frame.scope.def_member(self.prop_splat, splat_value)
   # TODO: handle @a... or ^@a...
 
-proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state: MatchState, r: MatchResult) =
+proc match(frame: Frame, self: Matcher, input: Value, state: MatchState, r: MatchResult) =
   var value: Value
   case self.kind:
   of MatchData:
@@ -407,11 +407,11 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
     elif self.min_left < input.len - state.data_index:
       value = input[state.data_index]
       if value.kind == VkPlaceholder:
-        value = vm.eval(frame, self.default_value_expr)
+        value = eval(frame, self.default_value_expr)
       state.data_index += 1
     else:
       if self.default_value_expr != nil:
-        value = vm.eval(frame, self.default_value_expr)
+        value = eval(frame, self.default_value_expr)
       else:
         r.kind = MatchMissingFields
         r.missing.add(self.name)
@@ -422,8 +422,8 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
         frame.self.instance_props[self.name] = value
     var child_state = MatchState()
     for child in self.children:
-      vm.match(frame, child, value, child_state, r)
-    vm.match_prop_splat(frame, self.children, value, r)
+      match(frame, child, value, child_state, r)
+    match_prop_splat(frame, self.children, value, r)
 
   of MatchProp:
     if self.is_splat:
@@ -434,7 +434,7 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
       value = input.map[self.name]
     else:
       if self.default_value_expr != nil:
-        value = vm.eval(frame, self.default_value_expr)
+        value = eval(frame, self.default_value_expr)
       else:
         r.kind = MatchMissingFields
         r.missing.add(self.name)
@@ -452,19 +452,19 @@ proc match(vm: VirtualMachine, frame: Frame, self: Matcher, input: Value, state:
   else:
     todo("match " & $self.kind)
 
-proc match*(vm: VirtualMachine, frame: Frame, self: RootMatcher, input: Value): MatchResult =
+proc match*(frame: Frame, self: RootMatcher, input: Value): MatchResult =
   result = MatchResult()
   var children = self.children
   var state = MatchState()
   for child in children:
-    vm.match(frame, child, input, state, result)
-  vm.match_prop_splat(frame, children, input, result)
+    match(frame, child, input, state, result)
+  match_prop_splat(frame, children, input, result)
 
 #################### ExNoop ######################
 
 var NOOP_EXPR* {.threadvar.}: Expr
 
-proc eval_noop(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_noop(frame: Frame, expr: var Expr): Value =
   discard
 
 #################### ExLiteral ###################
@@ -473,7 +473,7 @@ type
   ExLiteral* = ref object of Expr
     data*: Value
 
-proc eval_literal(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_literal(frame: Frame, expr: var Expr): Value =
   cast[ExLiteral](expr).data
 
 proc new_ex_literal*(v: Value): ExLiteral =
@@ -488,7 +488,7 @@ type
   ExString* = ref object of Expr
     data*: string
 
-proc eval_string(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_string(frame: Frame, expr: var Expr): Value =
   return "" & cast[ExString](expr).data
 
 proc new_ex_string*(v: Value): ExString =
@@ -503,9 +503,9 @@ type
   ExGroup* = ref object of Expr
     children*: seq[Expr]
 
-proc eval_group*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_group*(frame: Frame, expr: var Expr): Value =
   for item in cast[ExGroup](expr).children.mitems:
-    result = self.eval(frame, item)
+    result = eval(frame, item)
 
 proc new_ex_group*(): ExGroup =
   result = ExGroup(
@@ -518,7 +518,7 @@ type
   ExException* = ref object of Expr
     ex*: ref system.Exception
 
-proc eval_exception(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_exception(frame: Frame, expr: var Expr): Value =
   # raise cast[ExException](expr).ex
   not_allowed("eval_exception")
 
@@ -559,8 +559,8 @@ type
   ExExplode* = ref object of Expr
     data*: Expr
 
-proc eval_explode*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var data = self.eval(frame, cast[ExExplode](expr).data)
+proc eval_explode*(frame: Frame, expr: var Expr): Value =
+  var data = eval(frame, cast[ExExplode](expr).data)
   Value(
     kind: VkExplode,
     explode: data,
@@ -587,13 +587,13 @@ proc check_explode*(self: var ExArguments) =
       self.has_explode = true
       return
 
-proc eval_args*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_args*(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExArguments](expr)
   result = new_gene_gene()
   for k, v in expr.props.mpairs:
-    result.gene_props[k] = self.eval(frame, v)
+    result.gene_props[k] = eval(frame, v)
   for _, v in expr.children.mpairs:
-    var value = self.eval(frame, v)
+    var value = eval(frame, v)
     if value.is_nil:
       discard
     elif value.kind == VkExplode:
@@ -626,18 +626,18 @@ type
     meth*: string
     args*: Value
 
-proc eval_invoke*(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.} =
+proc eval_invoke*(frame: Frame, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExInvoke](expr)
   var instance: Value
   var self_expr = cast[ExInvoke](expr).self
   if self_expr == nil:
     instance = frame.self
   else:
-    instance = self.eval(frame, self_expr)
+    instance = eval(frame, self_expr)
   if instance == nil:
     raise new_exception(types.Exception, "Invoking " & expr.meth.to_s & " on nil.")
 
-  self.invoke(frame, instance, expr.meth, expr.args)
+  invoke(frame, instance, expr.meth, expr.args)
 
 proc translate_invoke*(value: Value): Expr {.gcsafe.} =
   var r = ExInvoke(
@@ -687,7 +687,7 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
           var args = new_gene_gene()
           args.gene_children.add(m.index)
           args.gene_children.add(value)
-          return VM.invoke(new_frame(), target, "set_child", args)
+          return invoke(new_frame(), target, "set_child", args)
         else:
           not_allowed("set_child " & $target & " " & $m.index & " " & $value)
     of SmByName:
@@ -728,7 +728,7 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
             var args = new_gene_gene()
             args.gene_children.add(m.name.to_s)
             args.gene_children.add(value)
-            return VM.invoke(new_frame(), target, "set", args)
+            return invoke(new_frame(), target, "set", args)
           else:
             target.instance_props[m.name] = value
         else:
@@ -742,7 +742,7 @@ proc update(self: SelectorItem, target: Value, value: Value): bool =
             var args = new_gene_gene()
             args.gene_children.add(m.name.to_s)
             args.gene_children.add(value)
-            return VM.invoke(new_frame(), target, "set", args)
+            return invoke(new_frame(), target, "set", args)
           else:
             not_allowed("update " & $target & " " & m.name.to_s & " " & $value)
         else:
@@ -755,15 +755,15 @@ proc update*(self: Selector, target: Value, value: Value): bool =
   for child in self.children:
     result = result or child.update(target, value)
 
-proc eval_set*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_set*(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExSet](expr)
   var target =
     if expr.target == nil:
       frame.self
     else:
-      self.eval(frame, expr.target)
-  var selector = self.eval(frame, expr.selector)
-  result = self.eval(frame, expr.value)
+      eval(frame, expr.target)
+  var selector = eval(frame, expr.selector)
+  result = eval(frame, expr.value)
   case selector.kind:
   of VkSelector:
     var success = selector.selector.update(target, result)
@@ -805,14 +805,14 @@ proc translate_set*(value: Value): Expr {.gcsafe.} =
 
 var BREAK_EXPR* {.threadvar.}: Expr
 
-proc eval_break(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_break(frame: Frame, expr: var Expr): Value =
   var e: Break
   e.new
   raise e
 
 var CONTINUE_EXPR* {.threadvar.}: Expr
 
-proc eval_continue(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_continue(frame: Frame, expr: var Expr): Value =
   var e: Continue
   e.new
   raise e
@@ -910,7 +910,7 @@ proc init_app_and_vm*() =
   VM.global_ns.ns["genex"] = VM.genex_ns
 
   for callback in VmCreatedCallbacks:
-    callback(VM)
+    callback()
 
 proc init_app_and_vm_for_thread*(thread_id: int) {.gcsafe.} =
   VM = new_vm()
@@ -943,7 +943,7 @@ proc init_app_and_vm_for_thread*(thread_id: int) {.gcsafe.} =
 
   var callbacks = cast[ptr seq[VmCallback]](VmCreatedCallbacksAddr)
   for callback in callbacks[]:
-    callback(VM)
+    callback()
 
 proc wait_for_futures*(self: VirtualMachine) =
   try:
@@ -959,13 +959,13 @@ proc init_package*(self: VirtualMachine, dir: string) =
   self.app.pkg.reset_load_paths()
   self.app.dep_root = self.app.pkg.build_dep_tree()
 
-proc eval_prepare*(self: VirtualMachine, pkg: Package): Frame =
+proc eval_prepare*(pkg: Package): Frame =
   var module = new_module(pkg)
   result = new_frame(FrModule)
   result.ns = module.ns
   result.scope = new_scope()
 
-proc eval*(self: VirtualMachine, frame: Frame, code: string): Value {.gcsafe.} =
+proc eval*(frame: Frame, code: string): Value {.gcsafe.} =
   var parser = new_parser()
   parser.open(code)
   while true:
@@ -974,38 +974,38 @@ proc eval*(self: VirtualMachine, frame: Frame, code: string): Value {.gcsafe.} =
       if value.is_nil:
         continue
       var expr = translate(value)
-      result = self.eval(frame, expr)
+      result = eval(frame, expr)
     except ParseEofError:
       parser.close()
       break
 
-proc eval*(self: VirtualMachine, pkg: Package, code: string, module_name: string): Value {.gcsafe.} =
+proc eval*(pkg: Package, code: string, module_name: string): Value {.gcsafe.} =
   var module = new_module(pkg, module_name)
   if module.name.len > 0:
-    self.modules[module.name] = module.ns
+    VM.modules[module.name] = module.ns
   var frame = new_frame(FrModule)
   frame.ns = module.ns
   frame.scope = new_scope()
-  self.eval(frame, code)
+  eval(frame, code)
 
-proc eval*(self: VirtualMachine, pkg: Package, code: string): Value =
-  self.eval(pkg, code, "")
+proc eval*(pkg: Package, code: string): Value =
+  eval(pkg, code, "")
 
-proc eval*(self: VirtualMachine, code: string): Value =
-  self.eval(VM.app.pkg, code)
+proc eval*(code: string): Value =
+  eval(VM.app.pkg, code)
 
-proc eval*(self: VirtualMachine, code: string, module_name: string): Value =
-  self.eval(VM.app.pkg, code, module_name)
+proc eval*(code: string, module_name: string): Value =
+  eval(VM.app.pkg, code, module_name)
 
-proc run_file*(self: VirtualMachine, file: string): Value =
-  var module = new_module(VM.app.pkg, file, self.app.pkg.ns)
+proc run_file*(file: string): Value =
+  var module = new_module(VM.app.pkg, file, VM.app.pkg.ns)
   VM.app.main_module = module
   var frame = new_frame(FrModule)
   frame.ns = module.ns
   frame.scope = new_scope()
   var code = read_file(file)
-  result = self.eval(frame, code)
-  self.wait_for_futures()
+  result = eval(frame, code)
+  VM.wait_for_futures()
 
 proc find_main_module(self: Table[string, Value]): Value =
   if self.len == 0:
@@ -1040,7 +1040,7 @@ proc find_main_module(self: Value): Value =
   else:
     not_allowed("find_main_module " & $self)
 
-proc run_archive_file*(self: VirtualMachine, file: string): Value =
+proc run_archive_file*(file: string): Value =
   var name = extract_filename(file)
   if name.ends_with(".gar"):
     name = name[0..^5]
@@ -1052,7 +1052,7 @@ proc run_archive_file*(self: VirtualMachine, file: string): Value =
   parsed.stream = parser.read_all(module_source.file_content.str)
   var expr = translate(parsed)
 
-  var module = new_module(VM.app.pkg, name, self.app.pkg.ns)
+  var module = new_module(VM.app.pkg, name, VM.app.pkg.ns)
   module.source = module_source
   VM.app.main_module = module
   var frame = new_frame(FrModule)
@@ -1060,25 +1060,25 @@ proc run_archive_file*(self: VirtualMachine, file: string): Value =
   frame.ns["$dir"] = module_source.file_parent
   frame.ns["$file"] = module_source
   frame.scope = new_scope()
-  result = self.eval(frame, expr)
-  self.wait_for_futures()
+  result = eval(frame, expr)
+  VM.wait_for_futures()
 
-proc repl_on_error*(self: VirtualMachine, frame: Frame, e: ref system.Exception): Value =
+proc repl_on_error*(frame: Frame, e: ref system.Exception): Value =
   echo "An exception was thrown: " & e.msg
   echo "Opening debug console..."
   echo "Note: the exception can be accessed as $ex"
   var ex = exception_to_value(e)
   frame.scope.def_member("$ex", ex)
-  result = repl(self, frame, eval, true)
+  result = repl(frame, eval, true)
 
-proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, args: Value) =
-  var match_result = self.match(frame, matcher, args)
+proc process_args*(frame: Frame, matcher: RootMatcher, args: Value) =
+  var match_result = match(frame, matcher, args)
   case match_result.kind:
   of MatchSuccess:
     discard
     # for field in match_result.fields:
     #   if field.value_expr != nil:
-    #     frame.scope.def_member(field.name, self.eval(frame, field.value_expr))
+    #     frame.scope.def_member(field.name, eval(frame, field.value_expr))
     #     frame.scope.def_member(field.name, field.value)
   of MatchMissingFields:
     for field in match_result.missing:
@@ -1086,7 +1086,7 @@ proc process_args*(self: VirtualMachine, frame: Frame, matcher: RootMatcher, arg
   else:
     todo()
 
-proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args: Value): Value {.gcsafe.} =
+proc call*(frame: Frame, this: Value, target: Value, args: Value): Value {.gcsafe.} =
   case target.kind:
   of VkFunction:
     var fn_scope = new_scope()
@@ -1095,8 +1095,8 @@ proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args:
     new_frame.self = this
     new_frame.parent = frame
 
-    self.process_args(new_frame, target.fn.matcher, args)
-    result = self.call_fn_skip_args(new_frame, target)
+    process_args(new_frame, target.fn.matcher, args)
+    result = call_fn_skip_args(new_frame, target)
   of VkBlock:
     var scope = new_scope()
     scope.set_parent(target.block.parent_scope, target.block.parent_scope_max)
@@ -1117,12 +1117,12 @@ proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args:
       todo()
 
     try:
-      result = self.eval(new_frame, target.block.body_compiled)
+      result = eval(new_frame, target.block.body_compiled)
     except Return as r:
       result = r.val
     except system.Exception as e:
-      if self.repl_on_error:
-        result = repl_on_error(self, frame, e)
+      if VM.repl_on_error:
+        result = repl_on_error(frame, e)
         discard
       else:
         raise
@@ -1136,8 +1136,8 @@ proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args:
     new_frame.self = target
     new_frame.parent = frame
 
-    self.process_args(new_frame, fn.matcher, args)
-    result = self.call_fn_skip_args(new_frame, meth.callable)
+    process_args(new_frame, fn.matcher, args)
+    result = call_fn_skip_args(new_frame, meth.callable)
   else:
     # TODO: Support
     # VkAny / VkCustom => similar to VkInstance
@@ -1145,20 +1145,20 @@ proc call*(self: VirtualMachine, frame: Frame, this: Value, target: Value, args:
     # VkNativeFn/VkNativeFn2 => call the native function/procedure
     todo($target.kind)
 
-proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMatcher, args_expr: ExArguments) {.inline.} =
+proc handle_args*(frame, new_frame: Frame, matcher: RootMatcher, args_expr: ExArguments) {.inline.} =
   case matcher.hint.mode:
   of MhNone:
     for _, v in args_expr.props.mpairs:
-      discard self.eval(frame, v)
+      discard eval(frame, v)
     for i, v in args_expr.children.mpairs:
-      discard self.eval(frame, v)
+      discard eval(frame, v)
   of MhSimpleData:
     for _, v in args_expr.props.mpairs:
-      discard self.eval(frame, v)
+      discard eval(frame, v)
     if args_expr.has_explode:
       var children: seq[Value] = @[]
       for i, v in args_expr.children.mpairs:
-        let value = self.eval(frame, v)
+        let value = eval(frame, v)
         if value.kind == VkExplode:
           for item in value.explode.vec:
             children.add(item)
@@ -1173,28 +1173,28 @@ proc handle_args*(self: VirtualMachine, frame, new_frame: Frame, matcher: RootMa
     else:
       for i, v in args_expr.children.mpairs:
         let field = matcher.children[i]
-        let value = self.eval(frame, v)
+        let value = eval(frame, v)
         if field.is_prop:
           new_frame.self.instance_props[field.name] = value
         else:
           new_frame.scope.def_member(field.name, value)
   else:
     var expr = cast[Expr](args_expr)
-    var args = self.eval_args(frame, expr)
-    self.process_args(new_frame, matcher, args)
+    var args = eval_args(frame, expr)
+    process_args(new_frame, matcher, args)
 
-proc call*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
-  self.call(frame, nil, target, args)
+proc call*(frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
+  call(frame, nil, target, args)
 
-proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Value {.gcsafe.} =
+proc call_fn_skip_args*(frame: Frame, target: Value): Value {.gcsafe.} =
   if target.fn.body_compiled == nil:
     target.fn.body_compiled = translate(target.fn.body)
 
   try:
     if target.fn.ret.is_nil:
-      result = self.eval(frame, target.fn.body_compiled)
+      result = eval(frame, target.fn.body_compiled)
     else:
-      discard self.eval(frame, target.fn.body_compiled)
+      discard eval(frame, target.fn.body_compiled)
   except Return as r:
     # return's frame is the same as new_frame(current function's frame)
     if r.frame == frame:
@@ -1203,9 +1203,9 @@ proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Valu
     else:
       raise
   except system.Exception as e:
-    if self.repl_on_error:
+    if VM.repl_on_error:
       if target.fn.ret.is_nil:
-        result = repl_on_error(self, frame, e)
+        result = repl_on_error(frame, e)
     else:
       raise
 
@@ -1214,7 +1214,7 @@ proc call_fn_skip_args*(self: VirtualMachine, frame: Frame, target: Value): Valu
     future.complete(result)
     result = new_gene_future(future)
 
-proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: string, args: Value): Value =
+proc invoke*(frame: Frame, instance: Value, method_name: string, args: Value): Value =
   var class = instance.get_class
   var meth = class.get_method(method_name)
   # var is_method_missing = false
@@ -1233,16 +1233,16 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
   of VkNativeMethod, VkNativeMethod2:
     if meth.is_macro:
       if callable.kind == VkNativeMethod:
-        result = meth.callable.native_method(instance, args)
+        result = meth.callable.native_method(frame, instance, args)
       else:
-        result = meth.callable.native_method2(instance, args)
+        result = meth.callable.native_method2(frame, instance, args)
     else:
       var args_expr: Expr = new_ex_arg(args)
-      var args = self.eval_args(frame, args_expr)
+      var args = eval_args(frame, args_expr)
       if callable.kind == VkNativeMethod:
-        result = meth.callable.native_method(instance, args)
+        result = meth.callable.native_method(frame, instance, args)
       else:
-        result = meth.callable.native_method2(instance, args)
+        result = meth.callable.native_method2(frame, instance, args)
 
   of VkFunction:
     var fn_scope = new_scope()
@@ -1258,9 +1258,9 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
 
     try:
       var args_expr: Expr = new_ex_arg(args)
-      var args = self.eval_args(frame, args_expr)
-      self.process_args(new_frame, callable.fn.matcher, args)
-      result = self.eval(new_frame, callable.fn.body_compiled)
+      var args = eval_args(frame, args_expr)
+      process_args(new_frame, callable.fn.matcher, args)
+      result = eval(new_frame, callable.fn.body_compiled)
     except Return as r:
       # return's frame is the same as new_frame(current function's frame)
       if r.frame == new_frame:
@@ -1268,8 +1268,8 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
       else:
         raise
     except system.Exception as e:
-      if self.repl_on_error:
-        result = repl_on_error(self, frame, e)
+      if VM.repl_on_error:
+        result = repl_on_error(frame, e)
         discard
       else:
         raise
@@ -1281,7 +1281,7 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
     new_frame.self = instance
     new_frame.callable = Value(kind: VkMethod, `method`: meth)
 
-    var match_result = self.match(new_frame, callable.macro.matcher, args)
+    var match_result = match(new_frame, callable.macro.matcher, args)
     case match_result.kind:
     of MatchSuccess:
       discard
@@ -1295,12 +1295,12 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
       callable.macro.body_compiled = translate(callable.macro.body)
 
     try:
-      result = self.eval(new_frame, callable.macro.body_compiled)
+      result = eval(new_frame, callable.macro.body_compiled)
     except Return as r:
       result = r.val
     except system.Exception as e:
-      if self.repl_on_error:
-        result = repl_on_error(self, frame, e)
+      if VM.repl_on_error:
+        result = repl_on_error(frame, e)
         discard
       else:
         raise
@@ -1308,9 +1308,9 @@ proc invoke*(self: VirtualMachine, frame: Frame, instance: Value, method_name: s
   else:
     todo()
 
-proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
+proc call_catch*(frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
   try:
-    result = self.call(frame, target, args)
+    result = call(frame, target, args)
   except system.Exception as e:
     result = Value(
       kind: VkException,
@@ -1318,13 +1318,13 @@ proc call_catch*(self: VirtualMachine, frame: Frame, target: Value, args: Value)
     )
 
 proc call_wrap*(invoke: Invoke): Invoke =
-  return proc(self: VirtualMachine, frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
-    result = self.invoke(frame, target, args)
+  return proc(frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
+    result = invoke(frame, target, args)
     if result != nil and result.kind == VkException:
       raise result.exception
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     NOOP_EXPR = Expr(evaluator: eval_noop)
     BREAK_EXPR = Expr(evaluator: eval_break)
     CONTINUE_EXPR = Expr(evaluator: eval_continue)

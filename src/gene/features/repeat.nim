@@ -10,7 +10,7 @@ type
     index*: Value
     total*: Value
 
-proc eval_repeat(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_repeat(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExRepeat](expr)
   var old_scope = frame.scope
   try:
@@ -18,7 +18,7 @@ proc eval_repeat(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
     scope.set_parent(old_scope, old_scope.max)
     frame.scope = scope
 
-    var times = (int)self.eval(frame, expr.times).int
+    var times = (int)eval(frame, expr.times).int
     var i = 0
     if expr.total != nil:
       scope.def_member(expr.total.str, new_gene_int(times))
@@ -31,7 +31,7 @@ proc eval_repeat(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
       i += 1
       try:
         for item in expr.code.mitems:
-          discard self.eval(frame, item)
+          discard eval(frame, item)
       except Continue:
         discard
       except Break:
@@ -51,5 +51,5 @@ proc translate_repeat(value: Value): Expr {.gcsafe.} =
   result = r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["repeat"] = translate_repeat

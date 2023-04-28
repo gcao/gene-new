@@ -44,14 +44,14 @@ proc case_equals(input: Value, pattern: Value): bool =
     else:
       result = input == pattern
 
-proc eval_case(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_case(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExCase](expr)
-  var input = self.eval(frame, expr.case_input)
+  var input = eval(frame, expr.case_input)
   for pair in expr.case_more_mapping.mitems:
-    var pattern = self.eval(frame, pair[0])
+    var pattern = eval(frame, pair[0])
     if input.case_equals(pattern):
-      return self.eval(frame, expr.case_blks[pair[1]])
-  result = self.eval(frame, expr.case_else)
+      return eval(frame, expr.case_blks[pair[1]])
+  result = eval(frame, expr.case_else)
 
 proc translate_case(node: Value): Expr {.gcsafe.} =
   # Create a variable because result can not be accessed from closure.
@@ -111,5 +111,5 @@ proc translate_case(node: Value): Expr {.gcsafe.} =
   result = expr
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["case"] = translate_case

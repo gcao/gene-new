@@ -63,9 +63,9 @@ type
   ExAnd* = ref object of Expr
     children*: seq[Expr]
 
-proc eval_bin(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var first = self.eval(frame, cast[ExBinOp](expr).op1)
-  var second = self.eval(frame, cast[ExBinOp](expr).op2)
+proc eval_bin(frame: Frame, expr: var Expr): Value =
+  var first = eval(frame, cast[ExBinOp](expr).op1)
+  var second = eval(frame, cast[ExBinOp](expr).op2)
   case cast[ExBinOp](expr).op:
   of BinAdd:
     result = new_gene_int(first.int + second.int)
@@ -98,20 +98,20 @@ proc eval_bin(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   else:
     todo("eval_bin " & $cast[ExBinOp](expr).op)
 
-proc eval_logical(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_logical(frame: Frame, expr: var Expr): Value =
   var op = cast[ExBinOp](expr).op
-  var first = self.eval(frame, cast[ExBinOp](expr).op1)
+  var first = eval(frame, cast[ExBinOp](expr).op1)
   case op:
   of BinAnd:
     if first.is_truthy:
-      result = self.eval(frame, cast[ExBinOp](expr).op2)
+      result = eval(frame, cast[ExBinOp](expr).op2)
     else:
       result = first
   of BinOr:
     if first.is_truthy:
       result = first
     else:
-      result = self.eval(frame, cast[ExBinOp](expr).op2)
+      result = eval(frame, cast[ExBinOp](expr).op2)
   else:
     not_allowed("eval_logical " & $op)
 
@@ -213,9 +213,9 @@ proc translate_arithmetic*(children: seq[Value]): Expr {.gcsafe.} =
   else:
     not_allowed("translate_arithmetic " & $children)
 
-proc eval_and(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_and(frame: Frame, expr: var Expr): Value =
   for e in cast[ExAnd](expr).children.mitems:
-    if not self.eval(frame, e):
+    if not eval(frame, e):
       return false
   return true
 
@@ -258,7 +258,7 @@ proc translate_logic*(children: seq[Value]): Expr {.gcsafe.} =
     not_allowed("translate_logic " & $children)
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["+"  ] = translate_arithmetic
     VM.gene_translators["-"  ] = translate_arithmetic
     VM.gene_translators["*"  ] = translate_arithmetic

@@ -27,7 +27,7 @@ proc thread_handler(thread_id: int) =
 
   # Run code
   var expr = translate(payload)
-  var r = VM.eval(frame, expr)
+  var r = eval(frame, expr)
 
   # Send result to caller thread thru channel
   var parent_id = Threads[thread_id].parent_id
@@ -36,15 +36,15 @@ proc thread_handler(thread_id: int) =
   # Free resources
   cleanup_thread(thread_id)
 
-proc eval_spawn(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcsafe.} =
+proc eval_spawn(frame: Frame, expr: var Expr): Value {.gcsafe.} =
   var e = cast[ExSpawn](expr)
 
   # 1. Obtain a free thread.
   #    If there is no thread available, wait for one to be available or throw an error ?!
   var child_thread_id = get_free_thread()
-  init_thread(child_thread_id, self.thread_id)
-  Threads[child_thread_id].parent_id = self.thread_id
-  Threads[child_thread_id].parent_secret = Threads[self.thread_id].secret
+  init_thread(child_thread_id, VM.thread_id)
+  Threads[child_thread_id].parent_id = VM.thread_id
+  Threads[child_thread_id].parent_secret = Threads[VM.thread_id].secret
 
   # 2. Create thread
   create_thread(Threads[child_thread_id].thread, thread_handler, child_thread_id)
@@ -57,7 +57,7 @@ proc eval_spawn(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcs
     # 4. Handle result (by creating an asynchronous Future object)
     var r = new_gene_future(new_future[Value]())
     result = r
-    var channel = Threads[self.thread_id].channel.addr
+    var channel = Threads[VM.thread_id].channel.addr
     add_timer WAIT_INTERVAL, false, proc(fd: AsyncFD): bool =
       let tried = channel[].try_recv()
       if tried.data_available:
@@ -66,13 +66,13 @@ proc eval_spawn(self: VirtualMachine, frame: Frame, expr: var Expr): Value {.gcs
           r.future.complete(tried.msg.payload)
           return true
         of SEND_MESSAGE:
-          var thread = self.global_ns.ns["$thread"]
-          if self.thread_callbacks.len > 0:
+          var thread = VM.global_ns.ns["$thread"]
+          if VM.thread_callbacks.len > 0:
             var callback_args = new_gene_gene()
             callback_args.gene_children.add(tried.msg.payload)
             var frame = Frame()
-            for callback in self.thread_callbacks:
-              discard self.call(frame, thread, callback, callback_args)
+            for callback in VM.thread_callbacks:
+              discard call(frame, thread, callback, callback_args)
         else:
           not_allowed()
   else:
@@ -90,43 +90,43 @@ proc translate_spawn(value: Value): Expr {.gcsafe.} =
   )
   return r
 
-proc thread_parent(self: Value, args: Value): Value =
+proc thread_parent(frame: Frame, self: Value, args: Value): Value =
   result = Value(
     kind: VkThread,
     thread_id: Threads[VM.thread_id].parent_id,
     thread_secret: Threads[VM.thread_id].parent_secret,
   )
 
-proc thread_join(self: Value, args: Value): Value =
+proc thread_join(frame: Frame, self: Value, args: Value): Value =
   Threads[self.thread_id].thread.join_thread()
 
-proc thread_send(self: Value, args: Value): Value =
+proc thread_send(frame: Frame,self: Value, args: Value): Value =
   if Threads[self.thread_id].secret != self.thread_secret:
     not_allowed("The receiving thread has ended.")
   var channel = Threads[self.thread_id].channel.addr
   channel[].send((name: SEND_MESSAGE, payload: args.gene_children[0]))
 
-proc thread_on_message(self: Value, args: Value): Value =
+proc thread_on_message(frame: Frame, self: Value, args: Value): Value =
   VM.thread_callbacks.add(args.gene_children[0])
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
-    self.thread_class = Value(kind: VkClass, class: new_class("Thread"))
-    self.thread_class.class.parent = self.object_class.class
-    self.thread_class.def_native_method("parent", thread_parent)
-    self.thread_class.def_native_method("join", thread_join)
-    self.thread_class.def_native_method("send", thread_send)
-    self.thread_class.def_native_method("on_message", thread_on_message)
-    self.gene_ns.ns["Thread"] = self.thread_class
+  VmCreatedCallbacks.add proc() =
+    VM.thread_class = Value(kind: VkClass, class: new_class("Thread"))
+    VM.thread_class.class.parent = VM.object_class.class
+    VM.thread_class.def_native_method("parent", thread_parent)
+    VM.thread_class.def_native_method("join", thread_join)
+    VM.thread_class.def_native_method("send", thread_send)
+    VM.thread_class.def_native_method("on_message", thread_on_message)
+    VM.gene_ns.ns["Thread"] = VM.thread_class
 
     let spawn = new_gene_processor(translate_spawn)
-    self.global_ns.ns["spawn"] = spawn
-    self.gene_ns.ns["spawn"] = spawn
-    self.global_ns.ns["spawn_return"] = spawn
-    self.gene_ns.ns["spawn_return"] = spawn
+    VM.global_ns.ns["spawn"] = spawn
+    VM.gene_ns.ns["spawn"] = spawn
+    VM.global_ns.ns["spawn_return"] = spawn
+    VM.gene_ns.ns["spawn_return"] = spawn
 
-    self.global_ns.ns["$thread"] = Value(
+    VM.global_ns.ns["$thread"] = Value(
       kind: VkThread,
-      thread_id: self.thread_id,
-      thread_secret: Threads[self.thread_id].secret,
+      thread_id: VM.thread_id,
+      thread_secret: Threads[VM.thread_id].secret,
     )

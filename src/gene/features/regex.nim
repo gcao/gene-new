@@ -14,10 +14,10 @@ type
     flags: set[RegexFlag]
     data*: seq[Expr]
 
-proc eval_match(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_match(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
-  var input = self.eval(frame, expr.input)
-  var pattern = self.eval(frame, expr.pattern)
+  var input = eval(frame, expr.input)
+  var pattern = eval(frame, expr.pattern)
   var r = input.str.match(pattern.regex)
   if r.is_some():
     var m = r.get()
@@ -34,10 +34,10 @@ proc eval_match(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   else:
     return Value(kind: VkNil)
 
-proc eval_not_match(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_not_match(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
-  var input = self.eval(frame, expr.input)
-  var pattern = self.eval(frame, expr.pattern)
+  var input = eval(frame, expr.input)
+  var pattern = eval(frame, expr.pattern)
   var m = input.str.match(pattern.regex)
   return m.is_none()
 
@@ -57,11 +57,11 @@ proc translate_match*(value: Value): Expr {.gcsafe.} =
     pattern: translate(value.gene_children[1]),
   )
 
-proc eval_regex(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_regex(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExRegex](expr)
   var s = ""
   for e in expr.data.mitems:
-    s &= self.eval(frame, e).to_s
+    s &= eval(frame, e).to_s
   result = new_gene_regex(s, expr.flags)
 
 proc translate_regex*(value: Value): Expr {.gcsafe.} =
@@ -77,7 +77,7 @@ proc translate_regex*(value: Value): Expr {.gcsafe.} =
   return r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.gene_translators["$regex"] = translate_regex
     # Handled in src/gene/features/gene.nim
     # VM.gene_translators["=~"] = translate_match

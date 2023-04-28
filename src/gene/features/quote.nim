@@ -6,7 +6,7 @@ type
   ExQuote* = ref object of Expr
     data*: Value
 
-proc eval_quote(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_quote(frame: Frame, expr: var Expr): Value =
   cast[ExQuote](expr).data
 
 proc translate_quote(value: Value): Expr {.gcsafe.} =
@@ -16,5 +16,5 @@ proc translate_quote(value: Value): Expr {.gcsafe.} =
   )
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     VM.translators[VkQuote] = translate_quote

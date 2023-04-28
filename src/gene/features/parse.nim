@@ -6,8 +6,8 @@ type
   ExParse* = ref object of Expr
     data*: Expr
 
-proc eval_parse(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var s = self.eval(frame, cast[ExParse](expr).data).str
+proc eval_parse(frame: Frame, expr: var Expr): Value =
+  var s = eval(frame, cast[ExParse](expr).data).str
   var vals = read_all(s)
   if vals.len == 0:
     result = Value(kind: VkNil)
@@ -24,5 +24,5 @@ proc translate_parse(value: Value): Expr {.gcsafe.} =
   result = r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
-    self.global_ns.ns["$parse"] = new_gene_processor(translate_parse)
+  VmCreatedCallbacks.add proc() =
+    VM.global_ns.ns["$parse"] = new_gene_processor(translate_parse)

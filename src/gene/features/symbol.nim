@@ -28,31 +28,31 @@ type
 
 var SELF_EXPR {.threadvar.}: Expr
 
-proc eval_self(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_self(frame: Frame, expr: var Expr): Value =
   frame.self
 
 var NS_EXPR {.threadvar.}: Expr
 
-proc eval_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_ns(frame: Frame, expr: var Expr): Value =
   Value(kind: VkNamespace, ns: frame.ns)
 
 var PKG_EXPR {.threadvar.}: Expr
 
-proc eval_pkg(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_pkg(frame: Frame, expr: var Expr): Value =
   Value(kind: VkPackage, pkg: frame.ns.package)
 
 var MOD_EXPR {.threadvar.}: Expr
 
-proc eval_mod(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_mod(frame: Frame, expr: var Expr): Value =
   Value(kind: VkModule, module: frame.ns.module)
 
-proc eval_symbol_scope(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_symbol_scope(frame: Frame, expr: var Expr): Value =
   frame.scope[cast[ExSymbol](expr).name]
 
-proc eval_symbol_ns(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_symbol_ns(frame: Frame, expr: var Expr): Value =
   frame.ns[cast[ExSymbol](expr).name]
 
-proc eval_my_member(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_my_member(frame: Frame, expr: var Expr): Value =
   result = frame.scope[cast[ExMyMember](expr).name]
   if result == nil:
     expr.evaluator = eval_symbol_ns
@@ -60,13 +60,13 @@ proc eval_my_member(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   else:
     expr.evaluator = eval_symbol_scope
 
-proc eval_member(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var v = self.eval(frame, cast[ExMember](expr).container)
+proc eval_member(frame: Frame, expr: var Expr): Value =
+  var v = eval(frame, cast[ExMember](expr).container)
   var key = cast[ExMember](expr).name
   return v.get_member(key)
 
-proc eval_child(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  var v = self.eval(frame, cast[ExMember](expr).container)
+proc eval_child(frame: Frame, expr: var Expr): Value =
+  var v = eval(frame, cast[ExMember](expr).container)
   var i = cast[ExChild](expr).index
   return v.get_child(i)
 
@@ -139,9 +139,9 @@ proc translate_complex_symbol(value: Value): Expr {.gcsafe.} =
   else:
     translate(value.csymbol)
 
-proc eval_define_ns_or_scope(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
+proc eval_define_ns_or_scope(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExDefineNsOrScope](expr)
-  result = self.eval(frame, expr.value)
+  result = eval(frame, expr.value)
 
   var ns: Namespace
   if frame.kind == FrModule:
@@ -192,7 +192,7 @@ proc translate_definition*(name: Value, value: Expr): Expr {.gcsafe.} =
     todo("translate_definition " & $name)
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: var VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     SELF_EXPR = Expr(evaluator: eval_self)
     NS_EXPR = Expr(evaluator: eval_ns)
     PKG_EXPR = Expr(evaluator: eval_pkg)
