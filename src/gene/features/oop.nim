@@ -349,21 +349,6 @@ proc eval_method_eq*(self: VirtualMachine, frame: Frame, expr: var Expr): Value 
     `method`: m,
   )
 
-proc translate_method(value: Value): Expr {.gcsafe.} =
-  if value.gene_children.len >= 3 and value.gene_children[1].is_symbol("="):
-    return ExMethodEq(
-      evaluator: eval_method_eq,
-      name: value.gene_children[0].str,
-      value: translate(value.gene_children[2])
-    )
-
-  var fn = to_function(value)
-  ExMethod(
-    evaluator: eval_method,
-    name: value.gene_children[0].str,
-    fn: fn,
-  )
-
 proc eval_constructor*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
   var expr = cast[ExConstructor](expr)
   var class = frame.self.class
@@ -565,7 +550,6 @@ proc init*() =
     VM.gene_translators["mixin"] = translate_mixin
     VM.gene_translators["include"] = translate_include
     VM.gene_translators["new"] = translate_new
-    VM.gene_translators["method"] = translate_method
     VM.gene_translators["super"] = translate_super
     VM.gene_translators["$invoke_method"] = translate_invoke
     VM.gene_translators["$invoke_dynamic"] = translate_invoke_dynamic

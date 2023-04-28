@@ -35,7 +35,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method call [x y]
+    (.fn call [x y]
       (x + y)
     )
   )

@@ -234,7 +234,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test x
+    (.fn test x
       ($set @x x)
     )
   )
@@ -245,7 +245,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init []
+    (.fn init []
       (/description = "Class A")
     )
   )
@@ -279,7 +279,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -288,7 +288,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -297,7 +297,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       1
     )
   )

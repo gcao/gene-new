@@ -76,7 +76,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method init _
+    (.fn init _
       (/prop = 1)
     )
   )
@@ -86,7 +86,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method init _
+    (.fn init _
       (/prop = 1)
     )
   )
@@ -96,7 +96,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -106,7 +106,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -116,7 +116,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method test _
+    (.fn test _
       (/p = 1)
     )
   )

@@ -4,10 +4,10 @@
 
 # test_interpreter """
 #   (class A
-#     (method init _
+#     (.fn init _
 #       ($set_prop "data" {^p 1})
 #     )
-#     (method get key
+#     (.fn get key
 #       (($get_prop "data") ./ key)
 #     )
 #   )
@@ -17,13 +17,13 @@
 
 # test_interpreter """
 #   (class A
-#     (method init _
+#     (.fn init _
 #       ($set_prop "data" {^p 1})
 #     )
-#     (method get key
+#     (.fn get key
 #       (($get_prop "data") ./ key)
 #     )
-#     (method set [key value]
+#     (.fn set [key value]
 #       ($set ($get_prop "data") (@ key) value)
 #       value
 #     )

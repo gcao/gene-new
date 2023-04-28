@@ -54,7 +54,22 @@ proc class_fn(self: Value, args: Value): Value =
     name: fn.name,
     callable: Value(kind: VkFunction, fn: fn),
   )
-  m.callable.fn.ns = self.class.ns
+  case self.kind:
+  of VkClass:
+    m.class = self.class
+    fn.ns = self.class.ns
+    self.class.methods[m.name] = m
+  of VkMixin:
+    fn.ns = self.mixin.ns
+    self.mixin.methods[m.name] = m
+  else:
+    not_allowed()
+
+proc class_method(self: Value, args: Value): Value =
+  var m = Method(
+    name: args.gene_children[0].str,
+    callable: args.gene_children[1],
+  )
   case self.kind:
   of VkClass:
     m.class = self.class
@@ -128,12 +143,13 @@ proc class_macro(self: Value, args: Value): Value =
     name: mac.name,
     callable: Value(kind: VkMacro, `macro`: mac),
   )
-  m.callable.macro.ns = self.class.ns
   case self.kind:
   of VkClass:
     m.class = self.class
+    mac.ns = self.class.ns
     self.class.methods[m.name] = m
   of VkMixin:
+    mac.ns = self.mixin.ns
     self.mixin.methods[m.name] = m
   else:
     not_allowed()
@@ -412,6 +428,7 @@ proc init*() =
       Value(kind: VkClass, class: self.class.parent)
     self.class_class.def_native_macro_method "fn", class_fn
     self.class_class.def_native_macro_method "macro", class_macro
+    self.class_class.def_native_method "method", class_method
     self.class_class.def_native_method "members", proc(self: Value, args: Value): Value {.name:"class_members".} =
       self.class.ns.get_members()
     self.class_class.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"class_member_names".} =
@@ -429,6 +446,9 @@ proc init*() =
     self.mixin_class.class.parent = self.object_class.class
     self.mixin_class.def_native_method "name", proc(self: Value, args: Value): Value {.name:"mixin_name".} =
       self.mixin.name
+    self.mixin_class.def_native_macro_method "fn", class_fn
+    self.mixin_class.def_native_macro_method "macro", class_macro
+    self.mixin_class.def_native_method "method", class_method
     self.mixin_class.def_native_method "members", proc(self: Value, args: Value): Value {.name:"mixin_members".} =
       self.mixin.ns.get_members()
     self.mixin_class.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"mixin_member_names".} =
@@ -611,19 +631,19 @@ proc init*() =
 
     discard self.eval(self.runtime.pkg, """
     ($with gene/String
-      (method lines _
+      (.fn lines _
         (self .split "\n")
       )
     )
 
     ($with gene/Array
-      (method each block
+      (.fn each block
         (for item in self
           (block item)
         )
       )
 
-      (method map block
+      (.fn map block
         (var result [])
         (for item in self
           (result .add (block item))
@@ -631,7 +651,7 @@ proc init*() =
         result
       )
 
-      (method find block
+      (.fn find block
         (for item in self
           (if (block item)
             (return item)
@@ -639,7 +659,7 @@ proc init*() =
         )
       )
 
-      (method select block
+      (.fn select block
         (var result [])
         (for item in self
           (if (block item) (result .add item))
@@ -647,7 +667,7 @@ proc init*() =
         result
       )
 
-      (method join [with = ""]
+      (.fn join [with = ""]
         (var s "")
         (for [i item] in self
           (s .append item/.to_s (if (i < (/.size - 1)) with))
@@ -657,7 +677,7 @@ proc init*() =
     )
 
     ($with gene/Map
-      (method map block
+      (.fn map block
         (var result [])
         (for [k v] in self
           (result .add (block k v))
@@ -684,13 +704,13 @@ proc init*() =
 
     (ns genex/html
       (class Tag
-        (method init [name attrs = {} children = []]
+        (.fn init [name attrs = {} children = []]
           (/name     = name)
           (/attrs    = attrs)
           (/children = children)
         )
 
-        (method to_s _
+        (.fn to_s _
           ("<" /name
             ((/attrs .map
               ([k v] ->

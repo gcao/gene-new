@@ -7,12 +7,12 @@ import ./helpers
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       1
     )
   )
   (class B
-    (method test _
+    (.fn test _
       2
     )
   )

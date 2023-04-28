@@ -8,7 +8,6 @@ import ./arithmetic
 import ./module
 import ./regex
 import ./selector
-import ./native
 import ./range
 
 type

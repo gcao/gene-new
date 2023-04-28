@@ -27,36 +27,36 @@
 )
 
 (class Orm
-  (method init /conn
+  (.fn init /conn
   )
 
-  (method exec [query params...]
+  (.fn exec [query params...]
     (/conn .exec query/.to_s params...)
   )
 )
 
 (class Query
-  (method init /table
+  (.fn init /table
   )
 
-  (method select /select...
+  (.fn select /select...
   )
 
-  (method join join
+  (.fn join join
     (/joins ||= [])
     (/joins .add join)
   )
 
-  (method where /where
+  (.fn where /where
   )
 
-  (method order_by /order_by
+  (.fn order_by /order_by
   )
 
-  (method limit /limit
+  (.fn limit /limit
   )
 
-  (method to_s _
+  (.fn to_s _
     (var sql "SELECT ")
     (if /select
       (sql .append (/select .join ",") " ")
@@ -131,7 +131,7 @@
     columns
   )
 
-  (method insert _
+  (.fn insert _
     (var columns (/.class . /.class/columns_except_id))
     (var sql
       ("INSERT INTO " /.class/table "(" (columns .join ", ") ") "
@@ -142,7 +142,7 @@
     (/.class/orm .exec sql params...)
   )
 
-  (method update _
+  (.fn update _
     (var sql
       ("UPDATE " /.class/table " SET status = ? WHERE id = ?")
     )
@@ -150,7 +150,7 @@
   )
 
   # If no id, insert into the table, else update existing row.
-  (method save _
+  (.fn save _
     (if not /id
       /.insert
     else
@@ -158,7 +158,7 @@
     )
   )
 
-  (method delete _
+  (.fn delete _
     (var sql
       ("DELETE FROM " /.class/table " WHERE id = ?")
     )
@@ -170,25 +170,25 @@
   (var /table "todos")
   (var /columns ["id" "description" "status"])
 
-  (method init props
+  (.fn init props
     (/id = props/id)
     (/description = props/description)
     (/status = (props/status || 0))
   )
 
-  (method done _
+  (.fn done _
     (/status/.to_s == "1")
   )
 
-  (method set_done _
+  (.fn set_done _
     (/status = 1)
   )
 
-  (method set_todo _
+  (.fn set_todo _
     (/status = 0)
   )
 
-  (method to_html _
+  (.fn to_html _
     (LI ^class ("py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item" (if /.done " done"))
       (DIV
         (INPUT ^type "checkbox" ^id /id ^class "cbx hidden" ^checked /.done)
@@ -210,7 +210,7 @@
 
 (class App
 
-  (method init /port
+  (.fn init /port
     (/middlewares = [])
 
     # Open connection to the database
@@ -221,7 +221,7 @@
     (var Record/orm orm)
   )
 
-  (method construct_handler middleware_index
+  (.fn construct_handler middleware_index
     (if (middleware_index < /middlewares/.size)
       (var middleware (/middlewares ./ middleware_index))
       (var handler    (.construct_handler (middleware_index + 1)))
@@ -231,7 +231,7 @@
     )
   )
 
-  (method start _
+  (.fn start _
     (println "Starting HTTP server at port" /port "...")
 
     (var root_handler (.construct_handler 0))
@@ -242,7 +242,7 @@
 
 # Base class for controllers
 (class Controller
-  (method layout [title = "TODO App" content]
+  (.fn layout [title = "TODO App" content]
     (HTML
       (HEAD
         (META ^charset "utf-8")
@@ -540,19 +540,19 @@
     )
   )
 
-  (method render args...
+  (.fn render args...
     (respond ((.layout args...).to_s))
   )
 )
 
 (class HomeController < Controller
-  (method index req
+  (.fn index req
     (redirect "/todos")
   )
 )
 
 (class TodosController < Controller
-  (method index req
+  (.fn index req
     (var todos (Todo . Todo/all))
     (.render
       (UL ^class "list-reset"
@@ -563,13 +563,13 @@
     )
   )
 
-  (method create req
+  (.fn create req
     (var todo (new Todo req/.body_params))
     todo/.save
     (redirect "/todos")
   )
 
-  (method update req
+  (.fn update req
     (match [^id ^status] req/.body_params)
     (var todo (Todo . Todo/find id))
     ($set todo @status status)
@@ -578,7 +578,7 @@
     (respond ({^status "success"}.to_json))
   )
 
-  (method delete req
+  (.fn delete req
     (var id req/.body_params/id)
     (var todo (Todo . Todo/find id))
     (if not todo
@@ -590,11 +590,11 @@
 )
 
 (class Mapping
-  (method init [/path /controller /action /http_methods]
+  (.fn init [/path /controller /action /http_methods]
   )
 
   # Return bool: whether the path/method/... of the request matches
-  (method match req
+  (.fn match req
     (
       (req/.path == /path) &&
       (/http_methods/.empty || (/http_methods .contains req/.method))
@@ -603,11 +603,11 @@
 )
 
 (class Router
-  (method init _
+  (.fn init _
     (/mappings = [])
   )
 
-  (method map [^options... path controller action = "index"]
+  (.fn map [^options... path controller action = "index"]
     (var http_methods [])
     (for method in ["GET" "POST" "PUT" "PATCH" "DELETE"]
       (if (options ./ method)
@@ -617,7 +617,7 @@
     (/mappings .add (new Mapping path controller action http_methods))
   )
 
-  (method call req
+  (.fn call req
     (for m in /mappings
       (if (m .match req)
         (var result ((new m/controller) . m/action req))

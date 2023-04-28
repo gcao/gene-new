@@ -42,7 +42,7 @@ import ./helpers
 #     ))
 #   )
 #   (class C
-#     (method test a
+#     (.fn test a
 #       a
 #     )
 #   )

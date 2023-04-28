@@ -4,10 +4,10 @@ import ./helpers
 
 test_interpreter """
   (class A
-    (method init _
+    (.fn init _
       (/data = [0])
     )
-    (method get_child i
+    (.fn get_child i
       (/data ./ i)
     )
   )
@@ -17,13 +17,13 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init _
+    (.fn init _
       (/data = [0])
     )
-    (method get_child i
+    (.fn get_child i
       (/data ./ i)
     )
-    (method set_child [i value]
+    (.fn set_child [i value]
       ($set /data i value)
       value
     )

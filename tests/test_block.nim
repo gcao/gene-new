@@ -66,7 +66,7 @@ test_interpreter """
     (block)
   )
   (class A
-    (method test _
+    (.fn test _
       (f (-> /.class/.name))
     )
   )

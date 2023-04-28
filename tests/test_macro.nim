@@ -52,7 +52,7 @@ test_interpreter """
 # test_core """
 #   (macro m _
 #     (class A
-#       (method test _ "A.test")
+#       (.fn test _ "A.test")
 #     )
 #     ($caller_eval
 #       (:$def_ns_member "B" A)
@@ -65,7 +65,7 @@ test_interpreter """
 # test_core """
 #   (macro m name
 #     (class A
-#       (method test _ "A.test")
+#       (.fn test _ "A.test")
 #     )
 #     ($caller_eval
 #       (:$def_ns_member name A)
