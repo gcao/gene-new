@@ -55,6 +55,7 @@ type
     VkQuote
     VkUnquote
     VkReference
+    VkRefTarget
     # Time part should be 00:00:00 and timezone should not matter
     VkDate
     # Date + time + timezone
@@ -192,6 +193,8 @@ type
       unquote_discard*: bool
     of VkReference:
       reference*: Reference
+    of VkRefTarget:
+      ref_target*: RefTarget
     of VkExplode:
       explode*: Value
     of VkSelector:
@@ -264,8 +267,11 @@ type
 
   Reference* = object
     name*: string
+    registry*: References
+
+  RefTarget* = object
+    name*: string
     value*: Value
-    resolved*: bool
     registry*: References
 
   # applicable to numbers, characters
@@ -885,6 +891,9 @@ proc `[]`*(self: References, key: string): Value =
 
 proc `[]=`*(self: var References, key: string, val: Value) =
   self.data[key] = val
+
+proc value*(self: Reference): Value =
+  self.registry[self.name].ref_target.value
 
 #################### VM ##########################
 

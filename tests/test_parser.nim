@@ -540,9 +540,9 @@ test_parser """
 test_parser """
   (#Ref "x" 1)
 """, proc(r: Value) =
-  check r.kind == VkReference
-  check r.reference.name  == "x"
-  check r.reference.value == 1
+  check r.kind == VkRefTarget
+  check r.ref_target.name  == "x"
+  check r.ref_target.value == 1
 
 test_parser """
   [

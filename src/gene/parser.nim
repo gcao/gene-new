@@ -833,12 +833,7 @@ proc read_decorator(self: var Parser): Value =
 
 proc read_reference(self: var Parser): Value =
   var name  = self.read_token(false)
-  if self.references.has_key(name):
-    return self.references[name]
-  else:
-    let reference = new_gene_reference(name, self.references)
-    self.references[name] = reference
-    return reference
+  result = new_gene_reference(name, self.references)
 
 proc read_dispatch(self: var Parser): Value =
   let ch = self.buf[self.bufpos]
@@ -929,20 +924,14 @@ proc handle_ignore(self: var Parser, value: Value): Value =
 proc handle_reference(self: var Parser, value: Value): Value =
   let name = value.gene_children[0].str
   if self.references.has_key(name):
-    result = self.references[name]
-    if result.reference.resolved:
-      raise new_exception(ParseError, "Duplicate reference: " & name)
-
-    result.reference.resolved = true
-    result.reference.value = value.gene_children[1]
+    raise new_exception(ParseError, "Duplicate reference: " & name)
   else:
-    let reference = Reference(
+    let target = RefTarget(
       name: name,
       value: value.gene_children[1],
-      resolved: true,
       registry: self.references,
     )
-    result = Value(kind: VkReference, reference: reference)
+    result = Value(kind: VkRefTarget, ref_target: target)
     self.references[name] = result
 
 proc init_handlers() =
