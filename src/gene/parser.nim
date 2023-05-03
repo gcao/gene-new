@@ -829,6 +829,10 @@ proc read_decorator(self: var Parser): Value =
 # proc read_star(self: var Parser): Value =
 #   return new_gene_gene(self.read())
 
+proc read_reference(self: var Parser): Value =
+  var first  = self.read_token(false)
+  return new_gene_reference(first)
+
 proc read_dispatch(self: var Parser): Value =
   let ch = self.buf[self.bufpos]
   let m = dispatch_macros[ch]
@@ -861,6 +865,7 @@ proc init_dispatch_macro_array() =
   dispatch_macros['/'] = read_regex
   dispatch_macros['@'] = read_decorator
   # dispatch_macros['*'] = read_star
+  dispatch_macros['&'] = read_reference
 
 proc handle_file(self: var Parser, value: Value): Value =
     result = Value(kind: VkFile)

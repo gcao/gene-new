@@ -54,6 +54,7 @@ type
     VkSelector
     VkQuote
     VkUnquote
+    VkReference
     # Time part should be 00:00:00 and timezone should not matter
     VkDate
     # Date + time + timezone
@@ -189,6 +190,8 @@ type
     of VkUnquote:
       unquote*: Value
       unquote_discard*: bool
+    of VkReference:
+      reference*: Reference
     of VkExplode:
       explode*: Value
     of VkSelector:
@@ -254,6 +257,16 @@ type
     `type`: Value
     props*: Table[string, Value]
     children*: seq[Value]
+    # references*: References # Uncomment this when it's needed.
+
+  References* = ref object
+    data*: Table[string, Value]
+
+  Reference* = object
+    name*: string
+    value*: Value
+    resolved*: bool
+    registry*: References
 
   # applicable to numbers, characters
   Range* = ref object
@@ -313,6 +326,7 @@ type
     app*: Application
     runtime*: Runtime
     modules*: Table[string, Namespace]
+    references*: References
     repl_on_error*: bool
 
     async_wait*: uint
@@ -1472,6 +1486,10 @@ proc new_gene_complex_symbol*(strs: seq[string]): Value =
     kind: VkComplexSymbol,
     csymbol: strs,
   )
+
+proc new_gene_reference*(s: string): Value {.gcsafe.} =
+  let reference = Reference(name: s)
+  return Value(kind: VkReference, reference: reference)
 
 proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
   var s = ""

@@ -531,6 +531,12 @@ test_parser """
   (#Ignore) 1
 """, 1
 
+test_parser """
+  #&x
+""", proc(r: Value) =
+  check r.kind == VkReference
+  check r.reference.name == "x"
+
 # test_parser """
 #   #"#a/b#" # same as ("" a/b)
 # """, "TODO"
