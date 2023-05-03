@@ -32,7 +32,7 @@ type
     document*: Document
     token_kind*: TokenKind
     error*: ParseErrorKind
-    # stored_references*: Table[string, Value]
+    references*: References
     document_props_done*: bool  # flag to tell whether we have read document properties
 
   TokenKind* = enum
@@ -187,6 +187,7 @@ proc new_parser*(options: ParseOptions): Parser =
   return Parser(
     document: Document(),
     options: new_options(options),
+    references: References(),
   )
 
 proc new_parser*(): Parser =
@@ -196,6 +197,7 @@ proc new_parser*(): Parser =
   return Parser(
     document: Document(),
     options: default_options(),
+    references: References(),
   )
 
 proc non_constituent(c: char): bool =
@@ -830,8 +832,13 @@ proc read_decorator(self: var Parser): Value =
 #   return new_gene_gene(self.read())
 
 proc read_reference(self: var Parser): Value =
-  var first  = self.read_token(false)
-  return new_gene_reference(first)
+  var name  = self.read_token(false)
+  if self.references.has_key(name):
+    return self.references[name]
+  else:
+    let reference = new_gene_reference(name, self.references)
+    self.references[name] = reference
+    return reference
 
 proc read_dispatch(self: var Parser): Value =
   let ch = self.buf[self.bufpos]
@@ -919,7 +926,27 @@ proc handle_set(self: var Parser, value: Value): Value =
 proc handle_ignore(self: var Parser, value: Value): Value =
   Ignore
 
+proc handle_reference(self: var Parser, value: Value): Value =
+  let name = value.gene_children[0].str
+  if self.references.has_key(name):
+    result = self.references[name]
+    if result.reference.resolved:
+      raise new_exception(ParseError, "Duplicate reference: " & name)
+
+    result.reference.resolved = true
+    result.reference.value = value.gene_children[1]
+  else:
+    let reference = Reference(
+      name: name,
+      value: value.gene_children[1],
+      resolved: true,
+      registry: self.references,
+    )
+    result = Value(kind: VkReference, reference: reference)
+    self.references[name] = result
+
 proc init_handlers() =
+  handlers["#Ref"] = handle_reference
   handlers["#File"] = handle_file
   handlers["#Dir"] = handle_dir
   handlers["#Gar"] = handle_arc

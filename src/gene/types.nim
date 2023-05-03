@@ -875,6 +875,17 @@ converter scope_index_to_int*(v: NameIndexScope): int = cast[int](v)
 
 converter gene_to_ns*(v: Value): Namespace = todo()
 
+#################### References ##################
+
+proc has_key*(self: References, key: string): bool =
+  self.data.has_key(key)
+
+proc `[]`*(self: References, key: string): Value =
+  self.data[key]
+
+proc `[]=`*(self: var References, key: string, val: Value) =
+  self.data[key] = val
+
 #################### VM ##########################
 
 proc new_vm*(): VirtualMachine =
@@ -1487,8 +1498,11 @@ proc new_gene_complex_symbol*(strs: seq[string]): Value =
     csymbol: strs,
   )
 
-proc new_gene_reference*(s: string): Value {.gcsafe.} =
-  let reference = Reference(name: s)
+proc new_gene_reference*(s: string, references: References): Value {.gcsafe.} =
+  let reference = Reference(
+    name: s,
+    registry: references,
+  )
   return Value(kind: VkReference, reference: reference)
 
 proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =

@@ -537,6 +537,42 @@ test_parser """
   check r.kind == VkReference
   check r.reference.name == "x"
 
+test_parser """
+  (#Ref "x" 1)
+""", proc(r: Value) =
+  check r.kind == VkReference
+  check r.reference.name  == "x"
+  check r.reference.value == 1
+
+test_parser """
+  [
+    (#Ref "x" 1)
+    #&x
+  ]
+""", proc(r: Value) =
+  let last = r.vec[^1]
+  check last.kind == VkReference
+  check last.reference.name  == "x"
+  check last.reference.value == 1
+
+test_parser """
+  [
+    #&x
+    (#Ref "x" 1)
+  ]
+""", proc(r: Value) =
+  let first = r.vec[0]
+  check first.kind == VkReference
+  check first.reference.name  == "x"
+  check first.reference.value == 1
+
+test_parser_error """
+  [
+    (#Ref "x" 1)
+    (#Ref "x" 2) # Should trigger parser error
+  ]
+"""
+
 # test_parser """
 #   #"#a/b#" # same as ("" a/b)
 # """, "TODO"
