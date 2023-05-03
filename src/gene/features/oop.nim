@@ -324,19 +324,6 @@ proc assign_method(frame: Frame, m: Method) =
   else:
     not_allowed()
 
-proc eval_method(frame: Frame, expr: var Expr): Value =
-  var m = Method(
-    name: cast[ExMethod](expr).name,
-    callable: Value(kind: VkFunction, fn: cast[ExMethod](expr).fn),
-  )
-  m.callable.fn.ns = frame.ns
-  assign_method(frame, m)
-
-  Value(
-    kind: VkMethod,
-    `method`: m,
-  )
-
 proc eval_method_eq*(frame: Frame, expr: var Expr): Value =
   var m = Method(
     name: cast[ExMethodEq](expr).name,

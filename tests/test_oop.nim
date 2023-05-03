@@ -8,8 +8,12 @@ import ./helpers
 # OOP:
 #
 # * Single inheritance
-# * private / protected / public .fns
-# * .fn_missing - can only be defined in classes
+# * private / protected / public methods
+# * on_extended
+# * ctor (constructor) - can only be defined in classes
+# * on_method - can only be defined in classes
+# * on_method_missing - can only be defined in classes
+# * call_method - can only be defined in classes
 # * Mixin: all stuff in mixin are copied to the target class/mixin
 # * Properties: just a shortcut for defining .prop/.prop= .fns
 
@@ -34,7 +38,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init _
+    (.ctor _
       (/p = 1)
     )
   )

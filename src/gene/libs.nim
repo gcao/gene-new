@@ -31,6 +31,24 @@ proc on_member_missing(frame: Frame, self: Value, args: Value): Value =
   else:
     todo("member_missing " & $self.kind)
 
+proc to_ctor(node: Value): Function =
+  var name = "ctor"
+
+  var matcher = new_arg_matcher()
+  matcher.parse(node.gene_children[0])
+
+  var body: seq[Value] = @[]
+  for i in 1..<node.gene_children.len:
+    body.add node.gene_children[i]
+
+  body = wrap_with_try(body)
+  result = new_fn(name, matcher, body)
+
+proc class_ctor(frame: Frame, self: Value, args: Value): Value =
+  var fn = to_ctor(args)
+  fn.ns = frame.ns
+  self.class.constructor = Value(kind: VkFunction, fn: fn)
+
 proc to_function(node: Value): Function =
   var first = node.gene_children[0]
   var name = first.str
@@ -426,6 +444,7 @@ proc init*() =
       self.class.name
     VM.class_class.def_native_method "parent", proc(frame: Frame, self: Value, args: Value): Value =
       Value(kind: VkClass, class: self.class.parent)
+    VM.class_class.def_native_macro_method "ctor", class_ctor
     VM.class_class.def_native_macro_method "fn", class_fn
     VM.class_class.def_native_macro_method "macro", class_macro
     VM.class_class.def_native_method "method", class_method
