@@ -77,9 +77,11 @@ test_interpreter """
   )
   # (before f ...) will return a new object not associated with "f"
   # (var f ...)    will associate the new object with "f"
-  (var f (before f (fnx a
-    ($args/0 = (a + 2)) # have to update the $args object, changing a will not affect the original $args object.
+  (f = (before f
+    (fnx a
+      ($args/0 = (a + 2)) # have to update the $args object, changing a will not affect the original $args object.
+    )
   ))
   (f 1)
-  # (var f f/.wrapped) # replace f with the original function that was wrapped
+  # (f = f/.wrapped) # replace f with the original function that was wrapped
 """, 3

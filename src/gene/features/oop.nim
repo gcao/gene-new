@@ -313,22 +313,6 @@ proc translate_new(value: Value): Expr {.gcsafe.} =
     r.args.gene_children.add(v)
   return r
 
-# TODO: this is almost the same as to_function in fp.nim
-proc to_function(node: Value): Function =
-  var first = node.gene_children[0]
-  var name = first.str
-
-  var matcher = new_arg_matcher()
-  matcher.parse(node.gene_children[1])
-
-  var body: seq[Value] = @[]
-  for i in 2..<node.gene_children.len:
-    body.add node.gene_children[i]
-
-  body = wrap_with_try(body)
-  result = new_fn(name, matcher, body)
-  result.async = node.gene_props.get_or_default("async", false)
-
 proc to_constructor(node: Value): Function =
   var name = "new"
 

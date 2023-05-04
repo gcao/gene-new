@@ -157,3 +157,16 @@ test_interpreter """
   )
   (n/a + n/b)
 """, 3
+
+test_interpreter """
+  ($ns/a = 1)
+  (a = 2)
+  $ns/a
+""", 2
+
+test_interpreter """
+  (var a 1)
+  ($ns/a = 1)
+  (a = 2)
+  $ns/a
+""", 1

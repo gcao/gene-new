@@ -94,6 +94,7 @@ type
     VkCast
     VkEnum
     VkEnumMember
+    VkInterception
     VkExpr
     VkExplode
     VkFuture
@@ -244,6 +245,8 @@ type
     of VkInstance:
       instance_class*: Class
       instance_props*: Table[string, Value]
+    of VkInterception:
+      interception*: Interception
     of VkExpr:
       expr*: Expr
     of VkFuture:
@@ -296,6 +299,13 @@ type
     second*: int
     nanosec*: int
     timezone*: Timezone
+
+  Interception* = ref object
+    target*: Value
+    advice*: Value
+
+  ClassInterception* = ref object
+    target*: Value
 
   Exception* = object of CatchableError
     instance*: Value  # instance of Gene exception class
