@@ -22,9 +22,9 @@ test_serdes """
 """, {"a": new_gene_int(1)}.toTable
 
 test_serdes """
-  (1 ^a 2 3 4)
+  (:a ^a 2 3 4)
 """, proc(r: Value) =
-  check r.gene_type == 1
+  check r.gene_type == new_gene_symbol("a")
   check r.gene_props == {"a": new_gene_int(2)}.toTable
   check r.gene_children == @[3, 4]
 

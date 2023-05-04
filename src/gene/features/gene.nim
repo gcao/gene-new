@@ -213,8 +213,7 @@ proc eval_gene*(frame: Frame, expr: var Expr): Value =
     else:
       not_allowed("Interception target must be a function: " & $target.kind)
 
-  else:
-    # todo("eval_gene " & $`type`.kind)
+  of VkSymbol, VkPlaceholder, VkNil:
     result = new_gene_gene(`type`)
     var args_expr = cast[ExArguments](translate_arguments(expr.args))
     for k, v in args_expr.props.mpairs:
@@ -227,6 +226,9 @@ proc eval_gene*(frame: Frame, expr: var Expr): Value =
       else:
         result.gene_children.add(r)
     return result
+
+  else:
+    todo("eval_gene " & $`type`.kind)
 
 proc default_translator(value: Value): Expr =
   ExGene(

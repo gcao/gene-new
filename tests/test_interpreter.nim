@@ -330,7 +330,7 @@ test_interpreter """
 """, @[1, 2, 3, 4]
 
 test_interpreter """
-  (1 (... [2 3]) 4)
+  (_ (... [2 3]) 4)
 """, proc(r: Value) =
   check r.gene_children[0] == 2
   check r.gene_children[1] == 3

@@ -162,6 +162,7 @@ type
       gene_props*: Table[string, Value]
       gene_children*: seq[Value]
     of VkArguments:
+      # arg_self*: Value
       arg_props*: Table[string, Value]
       arg_children*: seq[Value]
     of VkEnum:

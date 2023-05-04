@@ -30,8 +30,8 @@ test_interpreter """
 """, "{^a \"a\"}"
 
 test_interpreter """
-  ((1 ^a "a" "b") .to_s)
-""", "(1 ^a \"a\" \"b\")"
+  ((:x ^a "a" "b") .to_s)
+""", "(x ^a \"a\" \"b\")"
 
 test_interpreter """
   (class A
