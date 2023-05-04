@@ -723,7 +723,7 @@ proc init*() =
 
     (ns genex/html
       (class Tag
-        (.fn init [name attrs = {} children = []]
+        (.ctor [name attrs = {} children = []]
           (/name     = name)
           (/attrs    = attrs)
           (/children = children)

@@ -1250,12 +1250,11 @@ proc new_class*(name: string): Class =
   new_class(name, parent)
 
 proc get_constructor*(self: Class): Value =
-  self.constructor
-  # if self.constructor.is_nil:
-  #   if not self.parent.is_nil:
-  #     return self.parent.get_constructor()
-  # else:
-  #   return self.constructor
+  if self.constructor.is_nil:
+    if not self.parent.is_nil:
+      return self.parent.get_constructor()
+  else:
+    return self.constructor
 
 proc has_method*(self: Class, name: string): bool =
   if self.methods.has_key(name):

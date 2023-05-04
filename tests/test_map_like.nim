@@ -4,7 +4,7 @@
 
 # test_interpreter """
 #   (class A
-#     (.fn init _
+#     (.ctor _
 #       ($set_prop "data" {^p 1})
 #     )
 #     (.fn get key
@@ -17,7 +17,7 @@
 
 # test_interpreter """
 #   (class A
-#     (.fn init _
+#     (.ctor _
 #       ($set_prop "data" {^p 1})
 #     )
 #     (.fn get key

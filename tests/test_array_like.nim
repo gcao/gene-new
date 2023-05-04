@@ -4,7 +4,7 @@ import ./helpers
 
 test_interpreter """
   (class A
-    (.fn init _
+    (.ctor _
       (/data = [0])
     )
     (.fn get_child i
@@ -17,7 +17,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init _
+    (.ctor _
       (/data = [0])
     )
     (.fn get_child i

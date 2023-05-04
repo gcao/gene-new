@@ -76,7 +76,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (.fn init _
+    (.ctor _
       (/prop = 1)
     )
   )
@@ -86,7 +86,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (.fn init _
+    (.ctor _
       (/prop = 1)
     )
   )

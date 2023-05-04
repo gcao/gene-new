@@ -8,7 +8,7 @@
 
    # Constructor
    # First arg is automatically stored as `port` property in the instance
-   (.fn init /port
+   (.ctor /port
       # Initializes `middleware` property as an empty array
       (/middlewares = [])
    )
@@ -40,7 +40,7 @@
 (class DummyRouter
 
    # Constructor
-   (.fn init _
+   (.ctor _
       (/handlers = [])
    )
 

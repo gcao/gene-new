@@ -245,7 +245,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init []
+    (.ctor []
       (/description = "Class A")
     )
   )

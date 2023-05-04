@@ -4,8 +4,6 @@ import ../types
 import ../interpreter_base
 import ./symbol
 
-const INIT_KEY = "init"
-
 type
   ExClass* = ref object of Expr
     parent*: Expr
@@ -141,9 +139,43 @@ proc eval_object(frame: Frame, expr: var Expr): Value =
   new_frame.self = class_val
   discard eval(new_frame, e.body)
 
-  var init = class.get_method(INIT_KEY)
-  if init != nil:
-    discard invoke(frame, result, INIT_KEY, Value(kind: VkNil))
+  let ctor = class.get_constructor()
+  if ctor.is_nil:
+    return
+
+  case ctor.kind:
+  of VkNativeFn, VkNativeFn2:
+    var args = Value(kind: VkNil)
+    if ctor.kind == VkNativeFn:
+      result = ctor.native_fn(frame, args)
+    else:
+      result = ctor.native_fn2(frame, args)
+  of VkFunction:
+    result = Value(
+      kind: VkInstance,
+      instance_class: class,
+    )
+    var fn_scope = new_scope()
+    var new_frame = Frame(ns: ctor.fn.ns, scope: fn_scope)
+    new_frame.parent = frame
+    new_frame.self = result
+
+    var args = new_ex_arg()
+    handle_args(frame, new_frame, ctor.fn.matcher, args)
+
+    if ctor.fn.body_compiled == nil:
+      ctor.fn.body_compiled = translate(ctor.fn.body)
+
+    try:
+      discard eval(new_frame, ctor.fn.body_compiled)
+    except Return as r:
+      # return's frame is the same as new_frame(current function's frame)
+      if r.frame == new_frame:
+        return
+      else:
+        raise
+  else:
+    todo("eval_object " & $ctor.kind)
 
 proc translate_object(value: Value): Expr {.gcsafe.} =
   var e = ExObject(
@@ -233,10 +265,6 @@ proc eval_new(frame: Frame, expr: var Expr): Value =
       kind: VkInstance,
       instance_class: class,
     )
-    # TODO: should "init" be called for instances created by custom constructors?
-    var init = class.get_method(INIT_KEY)
-    if init != nil:
-      discard invoke(frame, result, INIT_KEY, expr.args)
   else:
     case ctor.kind:
     of VkNativeFn, VkNativeFn2:

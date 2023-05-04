@@ -32,7 +32,7 @@
 
 # * on_new - called when an instance is created
 #            should be called with the instance fully initialized(after `new` is called)?
-#            Do we even need this? all logic can be added to (.fn init ...)
+#            Do we even need this? all logic can be added to (.ctor ...)
 
 # Mixin
 # * on_included - can not be undone

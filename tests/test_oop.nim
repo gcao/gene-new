@@ -81,7 +81,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init _
+    (.ctor _
       (/a = 1)
     )
     # gene/native/test2 is defined in tests/helpers.nim:init_all()
@@ -128,7 +128,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init []
+    (.ctor []
       (/description = "Class A")
     )
   )
@@ -138,7 +138,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init []
+    (.ctor []
       (/description = "Class A")
     )
   )
@@ -147,7 +147,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init description
+    (.ctor description
       (/description = description)
     )
   )
@@ -156,7 +156,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init /name
+    (.ctor /name
     )
   )
   ((new A 1)./name)
@@ -164,7 +164,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init /p
+    (.ctor /p
     )
     (.fn test _
       /p
@@ -195,7 +195,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init [/name = 1]
+    (.ctor [/name = 1]
     )
   )
   ((new A)./name)
@@ -203,7 +203,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init [/p = 1]
+    (.ctor [/p = 1]
     )
     (.fn test _
       /p
@@ -214,7 +214,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (.fn init _
+#     (.ctor _
 #       ($set_prop "data" {^p 1})
 #     )
 #     (.fn test _
@@ -227,7 +227,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init [/p = 1]
+    (.ctor [/p = 1]
     )
   )
   ((new A)./p)
@@ -245,7 +245,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (.fn init ^/name
+#     (.ctor ^/name
 #     )
 #   )
 #   ((new A ^name "x")./name)
@@ -253,7 +253,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (.fn init ^/name ^/...
+#     (.ctor ^/name ^/...
 #       # All properties except name are added to the instance
 #     )
 #   )
@@ -262,7 +262,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (.fn init ^/name ^/x...
+#     (.ctor ^/name ^/x...
 #       # All properties except name are added to the instance as x
 #     )
 #   )
@@ -377,7 +377,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (.fn init _
+    (.ctor _
       (/test = 1)
     )
   )
@@ -489,7 +489,7 @@ test_interpreter """
 #     cls
 #   )
 #   (my_class "A"
-#     (.fn init []
+#     (.ctor []
 #       (/description = "Class A")
 #     )
 #   )
@@ -509,7 +509,7 @@ test_interpreter """
 #     )
 #   )
 #   (object Config < A
-#     (.fn init _
+#     (.ctor _
 #       (/name = "Config")
 #     )
 #   )
@@ -540,7 +540,7 @@ test_interpreter """
 
 test_interpreter """
   ($object a
-    (.fn init _
+    (.ctor _
       (/test = 1)
     )
 
