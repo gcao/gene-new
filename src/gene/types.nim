@@ -66,6 +66,7 @@ type
     VkMap
     VkSet
     VkGene
+    VkArguments
     VkStream
     VkDocument
     VkFile
@@ -159,6 +160,9 @@ type
       gene_type*: Value
       gene_props*: Table[string, Value]
       gene_children*: seq[Value]
+    of VkArguments:
+      arg_props*: Table[string, Value]
+      arg_children*: seq[Value]
     of VkEnum:
       `enum`*: Enum
     of VkEnumMember:
