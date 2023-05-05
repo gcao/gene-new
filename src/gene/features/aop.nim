@@ -7,10 +7,10 @@ type
   # ExAspect* = ref object of Expr
   #   name*: string
 
-  ExAdvice* = ref object of Expr
-    kind*: AdviceKind
+  ExInterception* = ref object of Expr
+    kind*: InterceptionKind
     target*: Expr
-    advice*: Expr
+    logic*: Expr
 
 # proc eval_aspect(frame: Frame, expr: var Expr): Value =
 #   todo()
@@ -21,33 +21,33 @@ type
 #     evaluator: eval_aspect,
 #   )
 
-proc eval_advice(frame: Frame, expr: var Expr): Value =
-  var expr = cast[ExAdvice](expr)
+proc eval_interception(frame: Frame, expr: var Expr): Value =
+  var expr = cast[ExInterception](expr)
   var interception = Interception(
     target: eval(frame, expr.target),
-    advice_kind: expr.kind,
-    advice: eval(frame, expr.advice),
+    kind: expr.kind,
+    logic: eval(frame, expr.logic),
   )
   result = Value(kind: VkInterception, interception: interception)
 
-proc translate_advice(value: Value): Expr {.gcsafe.} =
-  var e = ExAdvice(
-    evaluator: eval_advice,
+proc translate_interception(value: Value): Expr {.gcsafe.} =
+  var e = ExInterception(
+    evaluator: eval_interception,
     target: translate(value.gene_children[0]),
-    advice: translate(value.gene_children[1]),
+    logic: translate(value.gene_children[1]),
   )
   case value.gene_type.str:
   of "before":
-    e.kind = AdBefore
+    e.kind = IcBefore
   of "after":
-    e.kind = AdAfter
+    e.kind = IcAfter
   of "around":
-    e.kind = AdAround
+    e.kind = IcAround
   return e
 
 proc init*() =
   VmCreatedCallbacks.add proc() =
     # VM.gene_translators["aspect"] = translate_aspect
-    VM.gene_translators["before"] = translate_advice
-    VM.gene_translators["after"]  = translate_advice
-    VM.gene_translators["around"] = translate_advice
+    VM.gene_translators["before"] = translate_interception
+    VM.gene_translators["after"]  = translate_interception
+    VM.gene_translators["around"] = translate_interception

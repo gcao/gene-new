@@ -301,18 +301,37 @@ type
     nanosec*: int
     timezone*: Timezone
 
-  AdviceKind* = enum
-    AdBefore
-    AdAfter
-    AdAround
+  ThreeWayState* = enum
+    StDefault
+    StActive
+    StInactive
+
+  InterceptionKind* = enum
+    IcBefore
+    IcAfter
+    IcAround
 
   Interception* = ref object
+    kind*: InterceptionKind
+    logic*: Value
     target*: Value
-    advice_kind*: AdviceKind
-    advice*: Value
+    state*: ThreeWayState
+
+  ClassAspect* = ref object
+    ns*: Namespace
+    name*: string
+    matcher*: RootMatcher
+    body*: seq[Value]
+    body_compiled*: Expr
+    state*: ThreeWayState
+
+  ClassAdvice* = ref object
+    matcher*: Value
+    logic*: Value
 
   ClassInterception* = ref object
     target*: Value
+    state*: ThreeWayState
 
   Exception* = object of CatchableError
     instance*: Value  # instance of Gene exception class
