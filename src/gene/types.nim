@@ -308,8 +308,11 @@ type
 
   InterceptionKind* = enum
     IcBefore
-    IcAfter
+    IcBeforeFilter # logic run before target - useful for filtering
+    IcBeforeAfter # logic run before and after target - useful for invariant checking, a special variable is passed to the logic to indicate whether it's before or after
     IcAround
+    IcAfter
+    IcAfterError # logic run after target if target throws an error
 
   Interception* = ref object
     kind*: InterceptionKind
@@ -318,7 +321,7 @@ type
     state*: ThreeWayState
 
   ClassAspect* = ref object
-    ns*: Namespace
+    ns*: Namespace # the namespace where the aspect is defined
     name*: string
     matcher*: RootMatcher
     body*: seq[Value]
@@ -329,8 +332,10 @@ type
     CaBeforeCreation
     CaAfterCreation
     CaBeforeMethod
+    CaBeforeAfterMethod
     CaAroundMethod
     CaAfterMethod
+    CaAfterMethodError
 
   ClassAdvice* = ref object
     kind*: ClassAdviceKind

@@ -15,9 +15,9 @@ import ./helpers
 # * on_method_missing - can only be defined in classes
 # * call_method - can only be defined in classes
 # * Mixin: all stuff in mixin are copied to the target class/mixin
-# * Properties: just a shortcut for defining .prop/.prop= .fns
+# * Properties: just a shortcut for defining .prop/.prop= methods
 
-# TODO: test remove_.fn
+# TODO: test remove_method
 
 test_interpreter "(class A)", proc(r: Value) =
   check r.class.name == "A"
@@ -416,7 +416,7 @@ test_interpreter """
   ([] .is Array)
 """, true
 
-# # Single inheritance with flexibility of changing class, overwriting .fns
+# # Single inheritance with flexibility of changing class, overwriting methods
 # # test_interpreter """
 # #   (class A
 # #     (.fn test _
@@ -453,13 +453,13 @@ test_interpreter """
 # #    ) .test)
 # # """, 3
 
-# test "Interpreter / eval: native .fn":
+# test "Interpreter / eval: native method":
 #   init_all()
 #   VM.app.ns["test_fn"] = proc(self: Value, props: Table[string, Value], children: seq[Value]): Value =
 #     children[0].int + children[1].int
 #   var code = cleanup """
 #     (class A
-#       (native_.fn test test_fn)
+#       (.method test test_fn)
 #     )
 #     ((new A) .test 1 2)
 #   """

@@ -98,3 +98,15 @@ test_interpreter """
   ))
   (f 1)
 """, 3
+
+# test_interpreter """
+#   (fn f a
+#     a
+#   )
+#   (f = (around f
+#     (fnx a
+#       (($target) + 2) # $target triggers the wrapped function with the same args
+#     )
+#   ))
+#   (f 1)
+# """, 3
