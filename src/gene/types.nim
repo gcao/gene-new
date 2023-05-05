@@ -325,12 +325,21 @@ type
     body_compiled*: Expr
     state*: ThreeWayState
 
+  ClassAdviceKind* = enum
+    CaBeforeCreation
+    CaAfterCreation
+    CaBeforeMethod
+    CaAroundMethod
+    CaAfterMethod
+
   ClassAdvice* = ref object
+    kind*: ClassAdviceKind
     matcher*: Value
     logic*: Value
 
   ClassInterception* = ref object
     target*: Value
+    advices*: Table[ClassAdviceKind, seq[ClassAdvice]]
     state*: ThreeWayState
 
   Exception* = object of CatchableError
