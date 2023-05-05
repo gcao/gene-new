@@ -6,10 +6,7 @@ import ../interpreter_base
 type
   # ExAspect* = ref object of Expr
   #   name*: string
-  AdviceKind* = enum
-    AdBefore
-    AdAfter
-    AdAround
+
   ExAdvice* = ref object of Expr
     kind*: AdviceKind
     target*: Expr
@@ -28,6 +25,7 @@ proc eval_advice(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExAdvice](expr)
   var interception = Interception(
     target: eval(frame, expr.target),
+    advice_kind: expr.kind,
     advice: eval(frame, expr.advice),
   )
   result = Value(kind: VkInterception, interception: interception)
@@ -51,3 +49,5 @@ proc init*() =
   VmCreatedCallbacks.add proc() =
     # VM.gene_translators["aspect"] = translate_aspect
     VM.gene_translators["before"] = translate_advice
+    VM.gene_translators["after"]  = translate_advice
+    VM.gene_translators["around"] = translate_advice

@@ -301,8 +301,14 @@ type
     nanosec*: int
     timezone*: Timezone
 
+  AdviceKind* = enum
+    AdBefore
+    AdAfter
+    AdAround
+
   Interception* = ref object
     target*: Value
+    advice_kind*: AdviceKind
     advice*: Value
 
   ClassInterception* = ref object

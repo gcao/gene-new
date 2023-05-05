@@ -57,8 +57,9 @@ import ./helpers
 
 # test_interpreter """
 #   # aspect: define aspects that are applicable to classes
-#   (aspect A [target m] # target is required, m is the matcher for arguments passed in when applied
-#     (.before_call m (fnx a
+#   (aspect A [m] # m is the matcher for arguments passed in when applied
+#     # self/.target is the class object
+#     (.before_method m (fnx a
 #       ($args/0 = (a + 1)) # have to update the args object
 #     ))
 #   )
@@ -84,4 +85,16 @@ test_interpreter """
   ))
   (f 1)
   # (f = f/.wrapped) # replace f with the original function that was wrapped
+""", 3
+
+test_interpreter """
+  (fn f a
+    a
+  )
+  (f = (after f
+    (fnx a
+      ($result += 2)
+    )
+  ))
+  (f 1)
 """, 3

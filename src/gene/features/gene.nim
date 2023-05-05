@@ -178,8 +178,10 @@ proc eval_gene*(frame: Frame, expr: var Expr): Value =
     return eval_invoke(frame, expr.args_expr)
 
   of VkInterception:
-    let target = `type`.interception.target
-    let advice = `type`.interception.advice
+    let interception = `type`.interception
+    let target = interception.target
+    let advice_kind = interception.advice_kind
+    let advice = interception.advice
     case target.kind:
     of VkFunction:
       var args_expr = new_ex_arg()
@@ -191,25 +193,40 @@ proc eval_gene*(frame: Frame, expr: var Expr): Value =
       var e = cast[Expr](args_expr)
       var args = eval_args(frame, e)
 
-      var advice_fn = advice.fn
-      var advice_fn_scope = new_scope()
-      advice_fn_scope.set_parent(advice_fn.parent_scope, advice_fn.parent_scope_max)
-      advice_fn_scope.def_member("$args", args)
-      var new_frame = Frame(ns: advice_fn.ns, scope: advice_fn_scope)
-      new_frame.parent = frame
+      if advice_kind == AdBefore:
+        var advice_fn = advice.fn
+        var advice_fn_scope = new_scope()
+        advice_fn_scope.set_parent(advice_fn.parent_scope, advice_fn.parent_scope_max)
+        advice_fn_scope.def_member("$args", args)
+        var new_frame = Frame(ns: advice_fn.ns, scope: advice_fn_scope)
+        new_frame.parent = frame
 
-      process_args(new_frame, advice_fn.matcher, args)
-      discard call_fn_skip_args(new_frame, advice)
+        process_args(new_frame, advice_fn.matcher, args)
+        discard call_fn_skip_args(new_frame, advice)
 
       var fn = target.fn
       var fn_scope = new_scope()
       fn_scope.set_parent(fn.parent_scope, fn.parent_scope_max)
-      new_frame = Frame(ns: fn.ns, scope: fn_scope)
+      var new_frame = Frame(ns: fn.ns, scope: fn_scope)
       new_frame.parent = frame
 
       process_args(new_frame, fn.matcher, args)
-      return call_fn_skip_args(new_frame, target)
+      result = call_fn_skip_args(new_frame, target)
 
+      if advice_kind == AdAfter:
+        var advice_fn = advice.fn
+        var advice_fn_scope = new_scope()
+        advice_fn_scope.set_parent(advice_fn.parent_scope, advice_fn.parent_scope_max)
+        advice_fn_scope.def_member("$args", args)
+        advice_fn_scope.def_member("$result", result)
+        var new_frame = Frame(ns: advice_fn.ns, scope: advice_fn_scope)
+        new_frame.parent = frame
+
+        process_args(new_frame, advice_fn.matcher, args)
+        discard call_fn_skip_args(new_frame, advice)
+        result = advice_fn_scope["$result"]
+
+      return result
     else:
       not_allowed("Interception target must be a function: " & $target.kind)
 
