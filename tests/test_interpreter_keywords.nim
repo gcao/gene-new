@@ -7,13 +7,13 @@ import ./helpers
 # Keywords:
 # nil
 # true/false
-# void: void or (void ...)
-# noop
+# discard: discard the result of an expression (borrowed from Nim) - should we use dump instead?
+# noop: (noop) do nothing and return nil
 # var, let, const
 # if, elif, else
 # and, or, xor, not
 # for, in: loop over a collection
-# while
+# while, until: loop while/until a condition is true
 # repeat: loop x times
 # loop: loop forever
 # break, continue
@@ -21,7 +21,7 @@ import ./helpers
 # enum
 # range ??
 # do
-# scoped ??
+# scoped ??: create a new scope and run the code in it
 # try, throw, catch, finally, retry (go back to the start of the try block)
 # ns
 # class, new, super, object
