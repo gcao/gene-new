@@ -568,6 +568,7 @@ type
     on_extended*: Value
     # method_missing*: Value
     ns*: Namespace # Class can act like a namespace
+    for_one_instance*: bool # if it's the class associated with a single object, can not be extended
 
   Mixin* = ref object
     name*: string

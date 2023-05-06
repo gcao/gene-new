@@ -105,7 +105,7 @@ test_interpreter """
 #   )
 #   (f = (around f
 #     (fnx a
-#       (($target) + 2) # $target triggers the wrapped function with the same args
+#       (($call_target) + 2) # $call_target triggers the wrapped function with the same args
 #     )
 #   ))
 #   (f 1)

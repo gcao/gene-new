@@ -157,11 +157,10 @@ test_interpreter """
   (await
     (spawn_return
       (gene/sleep 100)
-      (1 ^a 2 3 4)
+      (_ ^a 2 3 4)
     )
   )
 """, proc(r: Value) =
-  check r.gene_type == 1
   check r.gene_props["a"] == 2
   check r.gene_children == new_gene_vec(3, 4)
 
