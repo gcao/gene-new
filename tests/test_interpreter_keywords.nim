@@ -19,7 +19,7 @@ import ./helpers
 # break, continue
 # case, when, else
 # enum
-# range ??
+# range = gene/range
 # do
 # scoped ??: create a new scope and run the code in it
 # try, throw, catch, finally, retry (go back to the start of the try block)
@@ -33,11 +33,11 @@ import ./helpers
 # return
 # import, export, include
 # match
-# print, println ??
-# assert ??
-# async, await: should start as a library and make its way into the language until it's stable
-# spawn ??: spawn a new thread, should start as a library and make its way into the language until it's stable
-# exit
+# print, println = gene/print, gene/println so that it's easy to override them
+# assert = gene/assert so that it's easy to override it
+# async, await = gene/async, gene/await: should start as a library and make its way into the language until it's stable
+# spawn = gene/spawn: spawn a new thread, should start as a library and make its way into the language until it's stable
+# exit = gene/exit
 
 # Operators or symbols with special meaning:
 # _
@@ -50,6 +50,7 @@ import ./helpers
 
 # Special variables:
 # $vm: the current VM instance, can be used to access the VM's version, flags etc
+# $vm/.runtime
 # $app
 # $pkg
 # $module
@@ -58,15 +59,19 @@ import ./helpers
 # $class: skip because this should be accessible as self/.class
 # $caller: the caller function/macro/block/method
 # $callee: the current function/macro/block/method
-# $dir $file $line
+# $ctx: the current context
+# $ctx/.caller_eval: evaluate in the caller's context. Is there a better name?
+# $dir $file $line: these are known during parsing phase, change to #Dir, #File, #Line
 # $full_cmd $cmd $cmd_args
 # $main_file $main_dir: the main file/directory of the current program
-# $cwd
+# $cwd: the current working directory
 # $user
 # $home
-# $ex
+# $os
+# $ex: the last exception
 # $result
-# $thread
+# $thread, $main_thread
+# $start_time
 
 # For any $x not mentioned above, $x = gene/x
 # So it's important to define the $x variables in the gene namespace to avoid conflicts
@@ -74,8 +79,7 @@ import ./helpers
 
 # Or maybe we can do this:
 
-# $$x = gene/x: the cons of this is that it's not very readable, e.g. ($$print ...) vs (print ...)
-
+# $$x = gene/x, e.g. $$sleep = gene/sleep
 
 # test_interpreter """
 #   $home
