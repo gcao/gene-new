@@ -404,9 +404,7 @@ proc init*() =
       if args.gene_children.len >= 1:
         time = args.gene_children[0].int
       sleep(time)
-      # sleep will trigger async event check
-      for i in 1..ASYNC_WAIT_LIMIT:
-        discard eval(nil, NOOP_EXPR)
+      check_async_ops_and_channel()
 
     VM.gene_ns.ns["sleep_async"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_sleep_async".} =
       var f = sleep_async(args.gene_children[0].int)

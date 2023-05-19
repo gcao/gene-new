@@ -31,14 +31,18 @@ import ./helpers
 # AOP(Aspect Oriented Programming):
 #
 # * before
+# * before_filter: conditional logic that runs before the target, if false, the target is not run
+# * before_and_after: logic that runs before and after the target
 # * after
+# * after_error
 # * around
 #
-# * Can alter arguments (The same args object must be passed to the advices)
-# * Can alter result
+# * Can alter arguments (The same *$args* object must be passed to the advices)
+# * Can alter result (The $result object is shared between the target and the *after* advices)
 # * Can add functionality
-# * Can skip run
-# * Can trigger retry
+# * Can skip run (supported by *before_filter* and *around*)
+# * Can trigger retry (supported by *around*)
+# * Can catch errors (supported by *after_error* and *around*)
 # * ...
 #
 # Aspects should be grouped, but how?
@@ -46,7 +50,7 @@ import ./helpers
 #   on class level
 #
 # * Functions:
-#   on scope/ns level, a new object with same name is created in
+#   on scope/ns level, a new object with the same name is created in
 #   the ns/scope which stores a reference of the old function object
 #
 # Design by Contract - can be implemented with AOP

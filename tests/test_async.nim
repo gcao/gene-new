@@ -17,6 +17,22 @@ import ./helpers
 # * cancellation
 # * await: convert to synchronous call
 #
+# Pseudo futures: futures don't run on top of os asynchroneous functionality
+# e.g. async_sleep, async_read_file, async_write_file, async_http_request etc
+#
+# In order to make pseudo futures work, we need to have a way to let them
+# run like regular futures.
+# How?
+# First, we should not wait for a future that will never finish - that'll be a
+# programmatic error and should be caught by the interpreter. For example, if
+# there is no os asynchronous stuff going on, then we should not be waiting for
+# a pseudo future.
+# Second, if we have to wait for a pseudo future, we probably need to create a
+# timer on demand and wait for the timer to finish. While we wait for the timer,
+# other code can run and resolve the pseudo future. The other code could be a
+# channel callback that is invoked when message is received from the channel.
+# The issue here is that other code may not be able to run because the interpreter
+# is only going to call callbacks of os asynchronous stuff.
 
 test_interpreter """
   (var future (new gene/Future))
@@ -202,6 +218,12 @@ test_interpreter """
   ($await_all)
   result
 """, 2000
+
+test_interpreter """
+  (var result (new gene/Future))
+  ((gene/sleep_async 1000).on_success(-> (result .complete 1)))
+  (await result)
+""", 1
 
 # test_interpreter """
 #   (var result false)

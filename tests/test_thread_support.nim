@@ -20,15 +20,20 @@ import ./helpers
 #     deeply copied)
 
 #   $spawn
-#   $spawn_wait wait for result
+#   # $spawn_wait wait for result
 #   $spawn_return
 #     Spawn a thread
 #     Run the code in the thread
 #     Return the result
 #     The result is wrapped in a Future object (similar to how async works here)
 #     The result can be ignored or used.
+#   $keep_thread_alive: keep the thread alive until it's forced to stop
+#   (thread .stop): stop the thread and all its children, if the thread has stopped, do nothing
+#   If a thread has child threads, it should stay alive until all child threads to finish.
+#     There is no need to call $keep_thread_alive in this case unless the user wants to
+#     keep the thread alive for other reasons.
 #   $thread - the current thread
-#   $wait_for_threads
+#   $wait_for_threads - should be called implicitly when the thread finishes its work.
 #     can take an optional list of threads
 #     if no argument is given, wait for all threads created by myself
 #     wait recursively for threads created directly or indirectly by myself
@@ -44,7 +49,16 @@ import ./helpers
 #     to make sure no message is sent to a channel if the VM doesn't handle
 #     them.
 #
+#   Thread channels can run in two modes:
+#     Blocking when the message threshold is reached
+#     Discard old messages when the message threshold is reached
+#
 #   Message handlers can be deregistered when it is not needed any more.
+#   When there is no message handler, the VM will keep the message in the queue
+#     until it is full. When the queue is full, the VM will discard the oldest
+#     message or block the sender depending on the channel mode.
+#   When a message handler is registered, the VM will check the message queue for
+#     stored messages. If there is any, the VM will run the message handler.
 #
 #   Message and reply
 #     Can be used to simulate real time communication
@@ -87,6 +101,14 @@ import ./helpers
 #   If we reuse worker threads, some requests may change the global environment by
 #     accident. This will cause hard-to-catch bugs.
 #   We probably should let the developer decide whether a thread should be reused.
+
+# Threads are really expensive, use them wisely.
+# The design and implementation above is somewhat like Actor model but heavy. Actor
+# model is lightweight.
+
+# Can the channel message queue be implemented as a priority queue?! What is the
+# implication if we do so?! It may not be a good idea because the order of messages
+# may be important.
 
 test_interpreter """
   (await
@@ -212,26 +234,26 @@ test_interpreter """
 #   (await result)
 # """, 1
 
-# test_interpreter """
-#   (spawn
-#     (gene/sleep 100)
-#     (var thread $thread/.parent)
-#     (thread .send 1)
-#     (thread .send 2)
-#     (thread .send "over")
-#   )
+test_interpreter """
+  (spawn
+    (gene/sleep 100)
+    (var thread $thread/.parent)
+    (thread .send 1)
+    (thread .send 2)
+    (thread .send "over")
+  )
 
-#   (var result)
+  (var result)
 
-#   ($thread .on_message (msg ->
-#     (if (msg == "over")
-#       (break)
-#     )
-#     (result = msg)
-#   ))
+  ($thread .on_message (msg ->
+    (if (msg != "over")
+      (result = msg)
+    )
+  ))
 
-#   result
-# """, 2
+  (gene/sleep 1000)
+  result
+""", 2
 
 # test_interpreter """
 #   (var thread

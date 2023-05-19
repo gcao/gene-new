@@ -1,8 +1,10 @@
-import tables
+import tables, std/os
 import asyncdispatch
 
 import ../types
 import ../interpreter_base
+
+const AWAIT_INTERVAL = 2
 
 type
   ExAsync* = ref object of Expr
@@ -35,10 +37,10 @@ proc translate_async(value: Value): Expr {.gcsafe.} =
 proc await(self: Value): Value =
     case self.kind:
     of VkFuture:
-      if self.future.finished:
-        result = self.future.read()
-      else:
-        result = wait_for(self.future)
+      while not self.future.finished:
+        check_async_ops_and_channel()
+        sleep(AWAIT_INTERVAL)
+      result = self.future.read()
     else:
       todo()
 

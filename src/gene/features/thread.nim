@@ -64,6 +64,8 @@ proc eval_spawn(frame: Frame, expr: var Expr): Value {.gcsafe.} =
         case tried.msg.name:
         of SEND_RETURN:
           r.future.complete(tried.msg.payload)
+          # When the callback returns true, does it stop the timer?
+          # The answer is Yes.
           return true
         of SEND_MESSAGE:
           var thread = VM.global_ns.ns["$thread"]

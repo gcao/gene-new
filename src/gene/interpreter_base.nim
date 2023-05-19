@@ -23,7 +23,7 @@ proc invoke*(frame: Frame, instance: Value, method_name: string, args: Value): V
 
 #################### Value #######################
 
-proc check_channel*() =
+template check_channel*() =
   let channel = Threads[VM.thread_id].channel.addr
   var tried = channel[].try_recv()
   while tried.data_available:
@@ -34,6 +34,11 @@ proc check_channel*() =
         args.gene_children.add(tried.msg.payload)
         discard call(frame, nil, callback, args)
     tried = channel[].try_recv()
+
+template check_async_ops_and_channel*() =
+  if has_pending_operations():
+    poll()
+  check_channel()
 
 template eval*(frame: Frame, expr: var Expr): Value =
   if VM.async_wait == 0:

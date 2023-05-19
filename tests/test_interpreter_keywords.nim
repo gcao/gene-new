@@ -48,30 +48,34 @@ import ./helpers
 # + - * / % ** << >> & | ^ ~ ...
 # @ @*
 
+# Use $$x for special variables, and $x for gene/x ?!
+
 # Special variables:
 # $vm: the current VM instance, can be used to access the VM's version, flags etc
 # $vm/.runtime
 # $app
-# $pkg
-# $module
-# $ns
-# $args
+# $pkg - the package where the code is defined
+# $module - the module where the code is defined
+# $ns - the current namespace
+# $args - the arguments passed to the function/macro/block/method etc
 # $class: skip because this should be accessible as self/.class
 # $caller: the caller function/macro/block/method
 # $callee: the current function/macro/block/method
-# $ctx: the current context
+# $ctx: the current context, what is included in it?
 # $ctx/.caller_eval: evaluate in the caller's context. Is there a better name?
 # $dir $file $line: these are known during parsing phase, change to #Dir, #File, #Line
 # $full_cmd $cmd $cmd_args
 # $main_file $main_dir: the main file/directory of the current program
+# $env
 # $cwd: the current working directory
-# $user
-# $home
-# $os
+# $user: same as $env/USER
+# $home: same as $env/HOME
+# $os: the current OS
 # $ex: the last exception
-# $result
-# $thread, $main_thread
-# $start_time
+# $result: the result to be returned by the current function/macro/block/method
+# $thread: the current thread
+# $main_thread
+# $start_time: the time when the program started
 
 # For any $x not mentioned above, $x = gene/x
 # So it's important to define the $x variables in the gene namespace to avoid conflicts

@@ -5,6 +5,7 @@ import dynlib
 import macros
 
 const ASYNC_WAIT_LIMIT*   = 10
+const CHANNEL_WAIT_LIMIT*   = 10
 
 const DEFAULT_ERROR_MESSAGE* = "Error occurred."
 
@@ -13,7 +14,7 @@ const SEND_CODE*    = "code"
 const SEND_RETURN*  = "return"
 const SEND_MESSAGE* = "message"
 
-const CHANNEL_LIMIT* = 256
+const CHANNEL_LIMIT* = 1024
 
 type
   RegexFlag* = enum
@@ -628,10 +629,10 @@ type
     value*: int
 
   InterThreadMessageType* = enum
-    MtRun           # Run code and forget
-    MtRunWithReply  # Run code and expect a reply
     MtSend          # Send and forget
     MtSendWithReply # Send and expect a reply
+    MtRun           # Run code and forget
+    MtRunWithReply  # Run code and expect a reply
     MtReply         # Reply
 
   InterThreadMessage* = object
