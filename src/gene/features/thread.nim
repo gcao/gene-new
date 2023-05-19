@@ -1,3 +1,4 @@
+import tables
 import asyncdispatch, asyncfutures
 
 import ../types
@@ -8,6 +9,7 @@ const WAIT_INTERVAL = 5
 type
   ExSpawn* = ref object of Expr
     return_value*: bool
+    args*: Table[string, Expr]
     body*: seq[Value]
 
 proc thread_handler(thread_id: int) =
@@ -25,8 +27,11 @@ proc thread_handler(thread_id: int) =
   if name != SEND_CODE:
     todo("Expecting code but received " & name)
 
+  for k, v in payload.gene_props:
+    frame.scope.def_member(k, v)
+
   # Run code
-  var expr = translate(payload)
+  var expr = translate(payload.gene_children)
   var r = eval(frame, expr)
 
   # Send result to caller thread thru channel
@@ -51,7 +56,13 @@ proc eval_spawn(frame: Frame, expr: var Expr): Value {.gcsafe.} =
 
   # 3. Send code to run
   var child_channel = Threads[child_thread_id].channel.addr
-  child_channel[].send((name: SEND_CODE, payload: new_gene_stream(e.body)))
+  var payload = new_gene_gene()
+  payload.gene_children = e.body
+
+  for k, v in e.args.mpairs:
+    payload.gene_props[k] = eval(frame, v)
+
+  child_channel[].send((name: SEND_CODE, payload: payload))
 
   if e.return_value:
     # 4. Handle result (by creating an asynchronous Future object)
@@ -90,6 +101,9 @@ proc translate_spawn(value: Value): Expr {.gcsafe.} =
     return_value: value.gene_type.is_symbol("spawn_return"),
     body: value.gene_children,
   )
+  if value.gene_props.has_key("args"):
+    for k, v in value.gene_props["args"].map:
+      r.args[k] = translate(v)
   return r
 
 proc thread_parent(frame: Frame, self: Value, args: Value): Value =
