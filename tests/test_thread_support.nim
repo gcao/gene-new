@@ -119,14 +119,14 @@ test_interpreter """
   )
 """, 3
 
-# test_interpreter """
-#   (await
-#     (spawn_return ^args {^first 1 ^second 2}
-#       (gene/sleep 100)
-#       (first + second)
-#     )
-#   )
-# """, 3
+test_interpreter """
+  (await
+    (spawn_return ^args {^first 1 ^second 2}
+      (gene/sleep 100)
+      (first + second)
+    )
+  )
+""", 3
 
 test_interpreter """
   (await
@@ -257,17 +257,20 @@ test_interpreter """
 
 # test_interpreter """
 #   (var thread
-#     (spawn ^args {^x 100}
-#       (var global/finished false)
-#       (while (not global/finished)
-#         (gene/sleep x)
-#       )
+#     (spawn ^args {^x 1}
+#       (global/test = x)
+#       (gene/sleep 1000)
 #     )
 #   )
 #   (gene/sleep 200)
-#   (thread .run ^args {^x true}
-#     (global/finished = x)
+#   (thread .run ^args {^x 2}
+#     (global/test = x)
+#   )
+#   (var result
+#     (thread .run ^^return ^args {^x 2}
+#       global/test
+#     )
 #   )
 #   (thread .join)
-#   1
-# """, 1
+#   result
+# """, 2

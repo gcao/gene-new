@@ -10,9 +10,10 @@ const CHANNEL_WAIT_LIMIT*   = 10
 const DEFAULT_ERROR_MESSAGE* = "Error occurred."
 
 # Channel message names
-const SEND_CODE*    = "code"
-const SEND_RETURN*  = "return"
-const SEND_MESSAGE* = "message"
+const RUN*            = "run"
+const RUN_AND_RETURN* = "run_and_return"
+const SEND_RETURN*    = "send_return"
+const SEND_MESSAGE*   = "send_message"
 
 const CHANNEL_LIMIT* = 1024
 
