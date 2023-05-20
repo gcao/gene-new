@@ -186,53 +186,53 @@ test_interpreter """
   check r.gene_props["a"] == 2
   check r.gene_children == new_gene_vec(3, 4)
 
-# test_interpreter """
-#   # spawn:
-#   # Spawn a thread
-#   # Run the code in the thread
-#   # Return the thread
-#   # The result of thread execution can be ignored or accessed using (thread .result)
+test_interpreter """
+  # spawn:
+  # Spawn a thread
+  # Run the code in the thread
+  # Return the thread
+  # The result of thread execution can be ignored or accessed using (thread .result)
 
-#   # All threads can send or receive messages
-#   # The messages are deeply copied on the receiver end.
+  # All threads can send or receive messages
+  # The messages are deeply copied on the receiver end.
 
-#   (var thread
-#     (spawn
-#       (var done false)
-#       ($thread .on_message (msg ->
-#         (if (msg == "stop")
-#           (done = true)
-#           true # tell the interpreter that the message is handled, do not pass the message to next callback
-#         )
-#       ))
-#       (while (not done)
-#         (gene/sleep 100)
-#       )
-#     )
-#   )
-#   (gene/sleep 100)
-#   (thread .send "stop")
-#   (thread .join)
-#   1
-# """, 1
+  (var thread
+    (spawn
+      (var done false)
+      ($thread .on_message (msg ->
+        (if (msg == "stop")
+          (done = true)
+          true # tell the interpreter that the message is handled, do not pass the message to next callback
+        )
+      ))
+      (while (not done)
+        (gene/sleep 100)
+      )
+    )
+  )
+  (gene/sleep 100)
+  (thread .send "stop")
+  (thread .join)
+  1
+""", 1
 
-# test_interpreter """
-#   (spawn
-#     (gene/sleep 100)
-#     (var thread $thread/.parent)
-#     (thread .send 1)
-#   )
+test_interpreter """
+  (spawn
+    (gene/sleep 100)
+    (var thread $thread/.parent)
+    (thread .send 1)
+  )
 
-#   (var result (new gene/Future))
+  (var result (new gene/Future))
 
-#   # $thread - the current thread which is the main thread here.
-#   ($thread .on_message (msg ->
-#     (result .complete msg)
-#     true
-#   ))
+  # $thread - the current thread which is the main thread here.
+  ($thread .on_message (msg ->
+    (result .complete msg)
+    true
+  ))
 
-#   (await result)
-# """, 1
+  (await result)
+""", 1
 
 test_interpreter """
   (spawn
@@ -259,7 +259,7 @@ test_interpreter """
 #   (var thread
 #     (spawn ^args {^x 1}
 #       (global/test = x)
-#       (gene/sleep 1000)
+#       $thread/.keep_alive
 #     )
 #   )
 #   (gene/sleep 200)
@@ -272,5 +272,5 @@ test_interpreter """
 #     )
 #   )
 #   (thread .join)
-#   result
+#   (await result)
 # """, 2

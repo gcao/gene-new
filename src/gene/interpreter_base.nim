@@ -27,12 +27,15 @@ template check_channel*() =
   let channel = Threads[VM.thread_id].channel.addr
   var tried = channel[].try_recv()
   while tried.data_available:
-    if tried.msg.name == SEND_MESSAGE:
+    case tried.msg.type:
+    of MtSend:
       for callback in VM.thread_callbacks:
         var frame = new_frame()
         var args = new_gene_gene()
         args.gene_children.add(tried.msg.payload)
         discard call(frame, nil, callback, args)
+    else:
+      todo($tried.msg.type)
     tried = channel[].try_recv()
 
 template check_async_ops_and_channel*() =

@@ -23,28 +23,25 @@ proc thread_handler(thread_id: int) =
   frame.scope = new_scope()
 
   # Receive code from my channel
-  var (name, payload) = Threads[thread_id].channel.recv()
+  # .recv() will block until a message is received.
+  var msg = Threads[thread_id].channel.recv()
 
-  var send_return = false
-  case name:
-  of RUN:
-    discard
-  of RUN_AND_RETURN:
-    send_return = true
-  else:
-    todo(name)
-
-  for k, v in payload.gene_props:
+  for k, v in msg.payload.gene_props:
     frame.scope.def_member(k, v)
 
   # Run code
-  var expr = translate(payload.gene_children)
+  var expr = translate(msg.payload.gene_children)
   var r = eval(frame, expr)
 
-  if send_return:
+  if msg.type == MtRunWithReply:
     # Send result to caller thread thru channel
     var parent_id = Threads[thread_id].parent_id
-    Threads[parent_id].channel.send((name: SEND_RETURN, payload: r))
+    var reply = InterThreadMessage(
+      `type`: MtReply,
+      payload: r,
+      from_message_id: msg.id,
+    )
+    Threads[parent_id].channel.send(reply)
 
   # Free resources
   cleanup_thread(thread_id)
@@ -70,10 +67,13 @@ proc eval_spawn(frame: Frame, expr: var Expr): Value {.gcsafe.} =
   for k, v in e.args.mpairs:
     payload.gene_props[k] = eval(frame, v)
 
-  var name = RUN
-  if e.return_value:
-    name = RUN_AND_RETURN
-  child_channel[].send((name: name, payload: payload))
+  var msg_type = if e.return_value: MtRunWithReply else: MtRun
+  var msg = InterThreadMessage(
+    id: rand(),
+    `type`: msg_type,
+    payload: payload,
+  )
+  child_channel[].send(msg)
 
   if e.return_value:
     # 4. Handle result (by creating an asynchronous Future object)
@@ -83,13 +83,13 @@ proc eval_spawn(frame: Frame, expr: var Expr): Value {.gcsafe.} =
     add_timer WAIT_INTERVAL, false, proc(fd: AsyncFD): bool =
       let tried = channel[].try_recv()
       if tried.data_available:
-        case tried.msg.name:
-        of SEND_RETURN:
+        case tried.msg.type:
+        of MtReply:
           r.future.complete(tried.msg.payload)
           # When the callback returns true, does it stop the timer?
           # The answer is Yes.
           return true
-        of SEND_MESSAGE:
+        of MtSend:
           var thread = VM.global_ns.ns["$thread"]
           if VM.thread_callbacks.len > 0:
             var callback_args = new_gene_gene()
@@ -98,7 +98,7 @@ proc eval_spawn(frame: Frame, expr: var Expr): Value {.gcsafe.} =
             for callback in VM.thread_callbacks:
               discard call(frame, thread, callback, callback_args)
         else:
-          todo(tried.msg.name)
+          todo($tried.msg.type)
   else:
     result = Value(
       kind: VkThread,
@@ -131,7 +131,11 @@ proc thread_send(frame: Frame, self: Value, args: Value): Value =
   if Threads[self.thread_id].secret != self.thread_secret:
     not_allowed("The receiving thread has ended.")
   var channel = Threads[self.thread_id].channel.addr
-  channel[].send((name: SEND_MESSAGE, payload: args.gene_children[0]))
+  var msg = InterThreadMessage(
+    `type`: MtSend,
+    payload: args.gene_children[0],
+  )
+  channel[].send(msg)
 
 proc thread_on_message(frame: Frame, self: Value, args: Value): Value =
   VM.thread_callbacks.add(args.gene_children[0])
@@ -139,6 +143,7 @@ proc thread_on_message(frame: Frame, self: Value, args: Value): Value =
 proc thread_run(frame: Frame, self: Value, args: Value): Value =
   if Threads[self.thread_id].secret != self.thread_secret:
     not_allowed("The receiving thread has ended.")
+
   var channel = Threads[self.thread_id].channel.addr
   var payload = new_gene_gene()
   payload.gene_children = args.gene_children
@@ -147,10 +152,13 @@ proc thread_run(frame: Frame, self: Value, args: Value): Value =
       var e = translate(v)
       payload.gene_props[k] = eval(frame, e)
 
-  var name = RUN
-  if args.gene_props.has_key("return"):
-    name = RUN_AND_RETURN
-  channel[].send((name: name, payload: payload))
+  var msg_type = if args.gene_props.has_key("return"): MtRunWithReply else: MtRun
+  var msg = InterThreadMessage(
+    id: rand(),
+    `type`: msg_type,
+    payload: payload,
+  )
+  channel[].send(msg)
 
 proc init*() =
   VmCreatedCallbacks.add proc() =

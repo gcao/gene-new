@@ -5,17 +5,9 @@ import dynlib
 import macros
 
 const ASYNC_WAIT_LIMIT*   = 10
-const CHANNEL_WAIT_LIMIT*   = 10
+const CHANNEL_LIMIT* = 1024
 
 const DEFAULT_ERROR_MESSAGE* = "Error occurred."
-
-# Channel message names
-const RUN*            = "run"
-const RUN_AND_RETURN* = "run_and_return"
-const SEND_RETURN*    = "send_return"
-const SEND_MESSAGE*   = "send_message"
-
-const CHANNEL_LIMIT* = 1024
 
 type
   RegexFlag* = enum
@@ -258,7 +250,7 @@ type
       ft_failure_callbacks*: seq[Value]
     of VkThread: # This is actually a reference to a thread stored in the global Threads
       thread_id*: int
-      thread_secret*: float
+      thread_secret*: int
     of VkNativeFile:
       native_file*: File
     else:
@@ -392,6 +384,7 @@ type
     repl_on_error*: bool
 
     async_wait*: uint
+    futures*: Table[int, Value]
 
     main_thread*: bool
     thread_id*: int
@@ -635,6 +628,7 @@ type
     MtRun           # Run code and forget
     MtRunWithReply  # Run code and expect a reply
     MtReply         # Reply
+    # MtMessages      # Multiple messages in one batch
 
   InterThreadMessage* = object
     id*: int
@@ -642,7 +636,7 @@ type
     payload*: Value
     from_message_id*: int       # Used by MtReply
     from_thread_id*: int        # Used by MtReply
-    from_thread_secret*: float  # Used by MtReply
+    from_thread_secret*: int  # Used by MtReply
 
   ThreadState* = enum
     TsUninitialized
@@ -651,13 +645,13 @@ type
 
   ThreadMetadata* = object
     id*: int
-    secret*: float
+    secret*: int
     state*: ThreadState
     in_use*: bool
     parent_id*: int
-    parent_secret*: float
+    parent_secret*: int
     thread*: Thread[int]
-    channel*: Channel[tuple[name: string, payload: Value]]
+    channel*: Channel[InterThreadMessage]
 
   Expr* = ref object of RootObj
     evaluator*: Evaluator
@@ -894,6 +888,9 @@ macro name*(name: static string, f: untyped): untyped =
 
 proc is_symbol*(v: Value, s: string): bool =
   v.kind == VkSymbol and v.str == s
+
+proc rand*(): int {.inline.} =
+  random.rand(int.high)
 
 #################### Converters ##################
 
@@ -2063,7 +2060,7 @@ proc get_free_thread*(): int =
 proc init_thread*(id: int) =
   Threads[id].in_use = true
   randomize()
-  Threads[id].secret = rand(1.0)
+  Threads[id].secret = rand()
   Threads[id].channel.open(CHANNEL_LIMIT)
 
 proc init_thread*(id, parent_id: int) =
@@ -2073,7 +2070,7 @@ proc init_thread*(id, parent_id: int) =
 proc cleanup_thread*(id: int) =
   Threads[id].in_use = false
   randomize()
-  Threads[id].secret = rand(1.0)
+  Threads[id].secret = rand()
   # TODO: the channel should not be freed as it may be re-used later.
   # Threads[id].channel.close()
 
