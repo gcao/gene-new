@@ -290,3 +290,15 @@ test_interpreter """
   )
   (await result)
 """, 1
+
+test_interpreter """
+  (var start (gene/now))
+  (var thread
+    (spawn
+      (gene/sleep 1000)
+    )
+  )
+  thread/.join
+  start/.elapsed
+""", proc(r: Value) =
+  check r.float >= 1

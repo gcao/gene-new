@@ -413,6 +413,20 @@ proc init*() =
         future.complete(Value(kind: VkNil))
       result = new_gene_future(future)
 
+    # VM.gene_ns.ns["run_later"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_run_later".} =
+    #   var wait_time: int = args.gene_children[0].int
+    #   add_timer wait_time, true, proc(fd: AsyncFD): bool =
+    #     var e = translate(args.gene_children[1..^1])
+    #     discard eval(frame, e)
+
+    # VM.gene_ns.ns["run_periodically"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_run_periodically".} =
+    #   var interval: int = args.gene_children[0].int
+    #   add_timer interval, false, proc(fd: AsyncFD): bool =
+    #     var e = translate(args.gene_children[1..^1])
+    #     var r = eval(frame, e)
+    #     if not r.is_nil and r.kind == VkBool:
+    #       return r.bool
+
     VM.gene_ns.ns["base64"] = new_gene_native_fn proc(frame: Frame, args: Value): Value =
       encode(args.gene_children[0].str)
     VM.gene_ns.ns["base64_decode"] = new_gene_native_fn proc(frame: Frame, args: Value): Value =
