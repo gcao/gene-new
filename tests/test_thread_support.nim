@@ -302,3 +302,49 @@ test_interpreter """
   start/.elapsed
 """, proc(r: Value) =
   check r.float >= 1
+
+test_interpreter """
+  (var thread
+    (spawn
+      ($thread .on_message (msg ->
+        (global/test = 1)
+      ))
+      ($thread .on_message (msg ->
+        (global/test = 2)
+      ))
+      $thread/.keep_alive
+    )
+  )
+  (gene/sleep 200)
+  (var result
+    # Expect a reply
+    (thread .send ^^reply "test")
+  )
+  (await
+    (thread .run ^^return
+      global/test
+    )
+  )
+""", 2
+
+test_interpreter """
+  (var thread
+    (spawn
+      ($thread .on_message (msg ->
+        (global/test = 1)
+        msg/.mark_handled
+      ))
+      ($thread .on_message (msg ->
+        (global/test = 2)
+      ))
+      $thread/.keep_alive
+    )
+  )
+  (gene/sleep 200)
+  (thread .send "test")
+  (await
+    (thread .run ^^return
+      global/test
+    )
+  )
+""", 1

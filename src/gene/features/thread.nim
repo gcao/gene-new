@@ -4,8 +4,6 @@ import asyncdispatch, asyncfutures
 import ../types
 import ../interpreter_base
 
-const WAIT_INTERVAL = 5
-
 type
   ExSpawn* = ref object of Expr
     return_value*: bool
@@ -172,6 +170,9 @@ proc message_reply(frame: Frame, self: Value, args: Value): Value =
   )
   Threads[from_thread_id].channel.send(reply)
 
+proc message_mark_handled(frame: Frame, self: Value, args: Value): Value =
+  self.thread_message.handled = true
+
 proc init*() =
   VmCreatedCallbacks.add proc() =
     VM.thread_class = Value(kind: VkClass, class: new_class("Thread"))
@@ -188,6 +189,7 @@ proc init*() =
     VM.thread_message_class.class.parent = VM.object_class.class
     VM.thread_message_class.def_native_method("payload", message_payload)
     VM.thread_message_class.def_native_method("reply", message_reply)
+    VM.thread_message_class.def_native_method("mark_handled", message_mark_handled)
 
     let spawn = new_gene_processor(translate_spawn)
     VM.global_ns.ns["spawn"] = spawn

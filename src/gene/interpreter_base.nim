@@ -29,9 +29,12 @@ template handle(msg: ThreadMessage) =
     var thread = VM.global_ns.ns["$thread"]
     var frame = new_frame()
     var args = new_gene_gene()
-    args.gene_children.add(Value(kind: VkThreadMessage, thread_message: msg))
+    var first = Value(kind: VkThreadMessage, thread_message: msg)
+    args.gene_children.add(first)
     for callback in VM.thread_callbacks:
       discard call(frame, thread, callback, args)
+      if first.thread_message.handled:
+        break
 
   of MtRun, MtRunWithReply:
     var frame = new_frame()

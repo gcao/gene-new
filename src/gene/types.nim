@@ -253,6 +253,7 @@ type
       thread_id*: int
       thread_secret*: int
     of VkThreadMessage:
+      # TODO: ThreadMessage is an object that is bigger than size of other variants
       thread_message*: ThreadMessage
     of VkNativeFile:
       native_file*: File
@@ -643,6 +644,7 @@ type
     from_message_id*: int     # Used by MtReply
     from_thread_id*: int      # Used by MtSendWithReply and MtRunWithReply
     from_thread_secret*: int  # Used by MtSendWithReply and MtRunWithReply
+    handled*: bool            # if it's handled, don't pass to the next handler
 
   ThreadState* = enum
     TsUninitialized
