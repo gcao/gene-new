@@ -23,13 +23,13 @@ proc invoke*(frame: Frame, instance: Value, method_name: string, args: Value): V
 
 #################### Value #######################
 
-template handle(msg: InterThreadMessage) =
+template handle(msg: ThreadMessage) =
   case msg.type:
-  of MtSend:
+  of MtSend, MtSendWithReply:
     var thread = VM.global_ns.ns["$thread"]
     var frame = new_frame()
     var args = new_gene_gene()
-    args.gene_children.add(msg.payload)
+    args.gene_children.add(Value(kind: VkThreadMessage, thread_message: msg))
     for callback in VM.thread_callbacks:
       discard call(frame, thread, callback, args)
 
@@ -44,7 +44,7 @@ template handle(msg: InterThreadMessage) =
     if msg.type == MtRunWithReply:
       # Send result to caller thread thru channel
       var from_id = msg.from_thread_id
-      var reply = InterThreadMessage(
+      var reply = ThreadMessage(
         `type`: MtReply,
         payload: r,
         from_message_id: msg.id,
@@ -55,9 +55,6 @@ template handle(msg: InterThreadMessage) =
     var f = VM.futures[msg.from_message_id]
     f.future.complete(msg.payload)
     VM.futures.del(msg.from_message_id)
-
-  else:
-    todo($msg.type)
 
 template check_channel*() =
   let channel = Threads[VM.thread_id].channel.addr

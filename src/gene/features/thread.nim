@@ -36,7 +36,7 @@ proc thread_handler(thread_id: int) =
   if msg.type == MtRunWithReply:
     # Send result to caller thread thru channel
     var parent_id = Threads[thread_id].parent_id
-    var reply = InterThreadMessage(
+    var reply = ThreadMessage(
       `type`: MtReply,
       payload: r,
       from_thread_id: VM.thread_id,
@@ -69,7 +69,7 @@ proc eval_spawn(frame: Frame, expr: var Expr): Value {.gcsafe.} =
     payload.gene_props[k] = eval(frame, v)
 
   var msg_type = if e.return_value: MtRunWithReply else: MtRun
-  var msg = InterThreadMessage(
+  var msg = ThreadMessage(
     id: rand(),
     `type`: msg_type,
     payload: payload,
@@ -111,12 +111,19 @@ proc thread_join(frame: Frame, self: Value, args: Value): Value =
 proc thread_send(frame: Frame, self: Value, args: Value): Value =
   if Threads[self.thread_id].secret != self.thread_secret:
     not_allowed("The receiving thread has ended.")
-  var channel = Threads[self.thread_id].channel.addr
-  var msg = InterThreadMessage(
-    `type`: MtSend,
+
+  var msg_type = if args.gene_props.has_key("reply"): MtSendWithReply else: MtSend
+  var msg = ThreadMessage(
+    id: rand(),
+    `type`: msg_type,
     payload: args.gene_children[0],
+    from_thread_id: VM.thread_id,
   )
+  var channel = Threads[self.thread_id].channel.addr
   channel[].send(msg)
+  if msg_type == MtSendWithReply:
+    result = new_gene_future(new_future[Value]())
+    VM.futures[msg.id] = result
 
 proc thread_on_message(frame: Frame, self: Value, args: Value): Value =
   VM.thread_callbacks.add(args.gene_children[0])
@@ -134,7 +141,7 @@ proc thread_run(frame: Frame, self: Value, args: Value): Value =
       payload.gene_props[k] = eval(frame, e)
 
   var msg_type = if args.gene_props.has_key("return"): MtRunWithReply else: MtRun
-  var msg = InterThreadMessage(
+  var msg = ThreadMessage(
     id: rand(),
     `type`: msg_type,
     payload: payload,
@@ -152,6 +159,19 @@ proc thread_keep_alive(frame: Frame, self: Value, args: Value): Value =
     check_async_ops_and_channel()
     # TODO: if we receive a message to stop this thread, stop it.
 
+proc message_payload(frame: Frame, self: Value, args: Value): Value =
+  self.thread_message.payload
+
+proc message_reply(frame: Frame, self: Value, args: Value): Value =
+  var from_thread_id = self.thread_message.from_thread_id
+  var from_message_id = self.thread_message.id
+  var reply = ThreadMessage(
+    `type`: MtReply,
+    payload: args.gene_children[0],
+    from_message_id: from_message_id,
+  )
+  Threads[from_thread_id].channel.send(reply)
+
 proc init*() =
   VmCreatedCallbacks.add proc() =
     VM.thread_class = Value(kind: VkClass, class: new_class("Thread"))
@@ -163,6 +183,11 @@ proc init*() =
     VM.thread_class.def_native_macro_method("run", thread_run)
     VM.thread_class.def_native_method("keep_alive", thread_keep_alive)
     VM.gene_ns.ns["Thread"] = VM.thread_class
+
+    VM.thread_message_class = Value(kind: VkClass, class: new_class("ThreadMessage"))
+    VM.thread_message_class.class.parent = VM.object_class.class
+    VM.thread_message_class.def_native_method("payload", message_payload)
+    VM.thread_message_class.def_native_method("reply", message_reply)
 
     let spawn = new_gene_processor(translate_spawn)
     VM.global_ns.ns["spawn"] = spawn

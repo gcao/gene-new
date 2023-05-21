@@ -200,7 +200,7 @@ test_interpreter """
     (spawn
       (var done false)
       ($thread .on_message (msg ->
-        (if (msg == "stop")
+        (if (msg/.payload == "stop")
           (done = true)
           true # tell the interpreter that the message is handled, do not pass the message to next callback
         )
@@ -227,7 +227,7 @@ test_interpreter """
 
   # $thread - the current thread which is the main thread here.
   ($thread .on_message (msg ->
-    (result .complete msg)
+    (result .complete msg/.payload)
     true
   ))
 
@@ -246,8 +246,8 @@ test_interpreter """
   (var result)
 
   ($thread .on_message (msg ->
-    (if (msg != "over")
-      (result = msg)
+    (if (msg/.payload != "over")
+      (result = msg/.payload)
     )
   ))
 
@@ -273,3 +273,20 @@ test_interpreter """
   )
   (await result)
 """, 2
+
+test_interpreter """
+  (var thread
+    (spawn
+      ($thread .on_message (msg ->
+        (msg .reply 1)
+      ))
+      $thread/.keep_alive
+    )
+  )
+  (gene/sleep 200)
+  (var result
+    # Expect a reply
+    (thread .send ^^reply "test")
+  )
+  (await result)
+""", 1

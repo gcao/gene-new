@@ -93,6 +93,7 @@ type
     VkExplode
     VkFuture
     VkThread
+    VkThreadMessage
     VkNativeFile
 
   Value* {.acyclic.} = ref object
@@ -251,6 +252,8 @@ type
     of VkThread: # This is actually a reference to a thread stored in the global Threads
       thread_id*: int
       thread_secret*: int
+    of VkThreadMessage:
+      thread_message*: ThreadMessage
     of VkNativeFile:
       native_file*: File
     else:
@@ -432,6 +435,8 @@ type
     block_class*    : Value
     future_class*   : Value
     thread_class*   : Value
+    thread_message_class* : Value
+    thread_message_type_class* : Value
     file_class*     : Value
 
   # VirtualMachine depends on a Runtime
@@ -622,22 +627,22 @@ type
     name*: string
     value*: int
 
-  InterThreadMessageType* = enum
+  ThreadMessageType* = enum
     MtSend          # Send and forget
     MtSendWithReply # Send and expect a reply
     MtRun           # Run code and forget
     MtRunWithReply  # Run code and expect a reply
     MtReply         # Reply
-    MtStop          # Stop the thread
+    # MtStop          # Stop the thread
     # MtMulti       # Multiple messages in one batch
 
-  InterThreadMessage* = object
+  ThreadMessage* = object
     id*: int
-    `type`*: InterThreadMessageType
+    `type`*: ThreadMessageType
     payload*: Value
-    from_message_id*: int       # Used by MtReply
-    from_thread_id*: int        # Used by MtReply
-    from_thread_secret*: int  # Used by MtReply
+    from_message_id*: int     # Used by MtReply
+    from_thread_id*: int      # Used by MtSendWithReply and MtRunWithReply
+    from_thread_secret*: int  # Used by MtSendWithReply and MtRunWithReply
 
   ThreadState* = enum
     TsUninitialized
@@ -652,7 +657,7 @@ type
     parent_id*: int
     parent_secret*: int
     thread*: Thread[int]
-    channel*: Channel[InterThreadMessage]
+    channel*: Channel[ThreadMessage]
 
   Expr* = ref object of RootObj
     evaluator*: Evaluator
@@ -1351,6 +1356,8 @@ proc get_class*(val: Value): Class =
     return VM.future_class.class
   of VkThread:
     return VM.thread_class.class
+  of VkThreadMessage:
+    return VM.thread_message_class.class
   of VkNativeFile:
     return VM.file_class.class
   of VkException:
