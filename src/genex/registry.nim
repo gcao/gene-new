@@ -135,7 +135,7 @@ proc next_applicable(self: Middleware, req: Request): Middleware =
   of MtAround: self.registry.middlewares_around.next(pos, req)
   of MtAfter:  self.registry.middlewares_after .next(pos, req)
 
-proc handle_request(self: Value, req: Value): Response =
+proc handle_request(self: Value, req: Value): Response {.gcsafe.} =
   var registry = (Registry)self.custom
   var request = (Request)req.custom
   var resource = registry[request.path.str]
@@ -170,7 +170,8 @@ proc init*() =
       var name = ""
       if args.gene_children.len > 0:
         name = args.gene_children[0].to_s
-      new_gene_custom(Registry(name: name), RegistryClass.class)
+      {.cast(gcsafe).}:
+        new_gene_custom(Registry(name: name), RegistryClass.class)
 
     RegistryClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"registry_name".} =
       ((Registry)self.custom).name
@@ -206,40 +207,41 @@ proc init*() =
         args: args.gene_children[1..^1],
       )
 
-      var req_value = new_gene_custom(req, RequestClass.class)
-      var registry = (Registry)self.custom
-      var response: Response
+      {.cast(gcsafe).}:
+        var req_value = new_gene_custom(req, RequestClass.class)
+        var registry = (Registry)self.custom
+        var response: Response
 
-      # invokes BEFORE middlewares
-      if registry.middlewares_before.len > 0:
-        for middleware in registry.middlewares_before:
-          var callback = middleware.callback
-          var args = new_gene_gene()
-          args.gene_children.add(self)
-          args.gene_children.add(req_value)
-          var frame = Frame()
-          discard VM.call(frame, callback, args)
+        # invokes BEFORE middlewares
+        if registry.middlewares_before.len > 0:
+          for middleware in registry.middlewares_before:
+            var callback = middleware.callback
+            var args = new_gene_gene()
+            args.gene_children.add(self)
+            args.gene_children.add(req_value)
+            var frame = Frame()
+            discard VM.call(frame, callback, args)
 
-      # invokes AROUND middlewares
-      if registry.middlewares_around.len > 0:
-        var middleware = registry.middlewares_around[0]
-        response = middleware.call(req)
-      else:
-        response = self.handle_request(req_value)
+        # invokes AROUND middlewares
+        if registry.middlewares_around.len > 0:
+          var middleware = registry.middlewares_around[0]
+          response = middleware.call(req)
+        else:
+          response = self.handle_request(req_value)
 
-      # invokes AFTER middlewares
-      if registry.middlewares_after.len > 0:
-        var res_value = new_gene_custom(response, ResponseClass.class)
-        for middleware in registry.middlewares_after:
-          var callback = middleware.callback
-          var args = new_gene_gene()
-          args.gene_children.add(self)
-          args.gene_children.add(req_value)
-          args.gene_children.add(res_value)
-          var frame = Frame()
-          discard VM.call(frame, callback, args)
+        # invokes AFTER middlewares
+        if registry.middlewares_after.len > 0:
+          var res_value = new_gene_custom(response, ResponseClass.class)
+          for middleware in registry.middlewares_after:
+            var callback = middleware.callback
+            var args = new_gene_gene()
+            args.gene_children.add(self)
+            args.gene_children.add(req_value)
+            args.gene_children.add(res_value)
+            var frame = Frame()
+            discard VM.call(frame, callback, args)
 
-      return registry.handle_response(req, response)
+        return registry.handle_response(req, response)
 
     RegistryClass.def_native_method "req_async", proc(self: Value, args: Value): Value {.name:"registry_req_async".} =
       var name = args.gene_children[0].str
@@ -291,9 +293,11 @@ proc init*() =
       var req = (Request)self.custom
       raise new_exception(ResourceNotFoundError, $req.path)
 
-    MiddlewareClass.def_native_method "call_next", proc(self: Value, args: Value): Value {.name:"middleware_handle".} =
+    MiddlewareClass.def_native_method "call_next", proc(self: Value, args: Value): Value {.gcsafe, name:"middleware_handle".} =
       var middleware = (Middleware)self.custom
-      var registry = new_gene_custom(middleware.registry, RegistryClass.class)
+      var registry: Value
+      {.cast(gcsafe).}:
+        registry = new_gene_custom(middleware.registry, RegistryClass.class)
       var req = args.gene_children[0]
       if middleware.type != MtAround:
         not_allowed("middleware_handle: " & $middleware.type)
@@ -302,5 +306,6 @@ proc init*() =
       if next.is_nil:
         response = registry.handle_request(req)
       else:
-        response = next.call((Request)req.custom)
+        {.cast(gcsafe).}:
+          response = next.call((Request)req.custom)
       return middleware.registry.handle_response((Request)req.custom, response)

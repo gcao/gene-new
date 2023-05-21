@@ -10,7 +10,8 @@ proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var s = self.eval(frame, cast[ExParse](expr).data).str
   var vals = read_all(s)
   if vals.len == 0:
-    result = Nil
+    {.cast(gcsafe).}:
+      result = Nil
   elif vals.len == 1:
     result = vals[0]
   else:

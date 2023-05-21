@@ -11,7 +11,7 @@ proc eval_enum(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   result = cast[ExEnum](expr).data
   frame.ns[result.enum.name] = result
 
-proc translate_enum(value: Value): Expr =
+proc translate_enum(value: Value): Expr {.gcsafe.} =
   var r = ExEnum(
     evaluator: eval_enum,
   )
@@ -21,10 +21,11 @@ proc translate_enum(value: Value): Expr =
   while i < value.gene_children.len:
     var name = value.gene_children[i].str
     i += 1
-    if i < value.gene_children.len and value.gene_children[i] == Equals:
-      i += 1
-      v = value.gene_children[i].int
-      i += 1
+    {.cast(gcsafe).}:
+      if i < value.gene_children.len and value.gene_children[i] == Equals:
+        i += 1
+        v = value.gene_children[i].int
+        i += 1
     e.add_member(name, v)
     v += 1
 

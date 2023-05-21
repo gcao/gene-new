@@ -14,7 +14,7 @@ type
 
 let LOOP_KEY* = add_key("loop")
 
-proc eval_loop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_loop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   while true:
     try:
       for item in cast[ExLoop](expr).data.mitems:
@@ -34,12 +34,14 @@ proc translate_loop(value: Value): Expr =
   result = r
 
 proc translate_break(value: Value): Expr =
-  BREAK_EXPR
+  {.cast(gcsafe).}:
+    BREAK_EXPR
 
 proc translate_continue(value: Value): Expr =
-  CONTINUE_EXPR
+  {.cast(gcsafe).}:
+    CONTINUE_EXPR
 
-proc eval_once(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_once(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExOnce](expr)
   if expr.input.gene_props.has_key(RETURN_KEY):
     result = expr.input.gene_props[RETURN_KEY]

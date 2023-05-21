@@ -21,7 +21,7 @@ type
   ExEmit* = ref object of Expr
     data*: seq[Expr]
 
-proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExFor](expr)
   var old_scope = frame.scope
   try:
@@ -29,7 +29,8 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     scope.set_parent(old_scope, old_scope.max)
     frame.scope = scope
 
-    scope.def_member(expr.name.to_key, Nil)
+    {.cast(gcsafe).}:
+      scope.def_member(expr.name.to_key, Nil)
     var loop_output = new_gene_vec(@[])
     scope.def_member(LOOP_OUTPUT_KEY, loop_output)
     var data = self.eval(frame, expr.data)
@@ -61,7 +62,7 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   finally:
     frame.scope = old_scope
 
-proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExFor2](expr)
   var old_scope = frame.scope
   try:
@@ -69,8 +70,9 @@ proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
     scope.set_parent(old_scope, old_scope.max)
     frame.scope = scope
 
-    scope.def_member(expr.key_name.to_key, Nil)
-    scope.def_member(expr.val_name.to_key, Nil)
+    {.cast(gcsafe).}:
+      scope.def_member(expr.key_name.to_key, Nil)
+      scope.def_member(expr.val_name.to_key, Nil)
     scope.def_member(LOOP_OUTPUT_KEY, @[])
     var data = self.eval(frame, expr.data)
     case data.kind:

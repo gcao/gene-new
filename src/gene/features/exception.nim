@@ -51,7 +51,7 @@ proc eval_try(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     if not handled:
       raise
 
-proc translate_try(value: Value): Expr =
+proc translate_try(value: Value): Expr {.gcsafe.} =
   var r = ExTry(
     evaluator: eval_try,
   )
@@ -60,35 +60,36 @@ proc translate_try(value: Value): Expr =
   var catch_exception: Value
   var catch_body: seq[Value] = @[]
   var `finally`: seq[Value] = @[]
-  for item in value.gene_children:
-    case state:
-    of TryBody:
-      if item == CATCH:
-        state = TryCatch
-      elif item == FINALLY:
-        state = TryFinally
-      else:
-        body.add(item)
-    of TryCatch:
-      if item == CATCH:
-        not_allowed()
-      elif item == FINALLY:
-        not_allowed()
-      else:
-        state = TryCatchBody
-        catch_exception = item
-    of TryCatchBody:
-      if item == CATCH:
-        state = TryCatch
-        r.catches.add((translate(catch_exception), translate(catch_body)))
-        catch_exception = nil
-        catch_body = @[]
-      elif item == FINALLY:
-        state = TryFinally
-      else:
-        catch_body.add(item)
-    of TryFinally:
-      `finally`.add(item)
+  {.cast(gcsafe).}:
+    for item in value.gene_children:
+      case state:
+      of TryBody:
+        if item == CATCH:
+          state = TryCatch
+        elif item == FINALLY:
+          state = TryFinally
+        else:
+          body.add(item)
+      of TryCatch:
+        if item == CATCH:
+          not_allowed()
+        elif item == FINALLY:
+          not_allowed()
+        else:
+          state = TryCatchBody
+          catch_exception = item
+      of TryCatchBody:
+        if item == CATCH:
+          state = TryCatch
+          r.catches.add((translate(catch_exception), translate(catch_body)))
+          catch_exception = nil
+          catch_body = @[]
+        elif item == FINALLY:
+          state = TryFinally
+        else:
+          catch_body.add(item)
+      of TryFinally:
+        `finally`.add(item)
 
   r.body = translate(body)
   if state in [TryCatch, TryCatchBody]:
@@ -100,7 +101,7 @@ proc translate_try(value: Value): Expr =
     r.finally = translate(`finally`)
   return r
 
-proc eval_throw(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_throw(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExThrow](expr)
   if expr.first != nil:
     var class = self.eval(frame, expr.first)
@@ -112,13 +113,15 @@ proc eval_throw(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     elif class.kind == VkException:
       raise class.exception
     elif class.kind == VkString:
-      raise new_gene_exception(class.str, Value(kind: VkInstance, instance_class: ExceptionClass.class))
+      {.cast(gcsafe).}:
+        raise new_gene_exception(class.str, Value(kind: VkInstance, instance_class: ExceptionClass.class))
     else:
       todo()
   else:
-    raise new_gene_exception(Value(kind: VkInstance, instance_class: ExceptionClass.class))
+    {.cast(gcsafe).}:
+      raise new_gene_exception(Value(kind: VkInstance, instance_class: ExceptionClass.class))
 
-proc translate_throw(value: Value): Expr =
+proc translate_throw(value: Value): Expr {.gcsafe.} =
   var r = ExThrow(
     evaluator: eval_throw,
   )

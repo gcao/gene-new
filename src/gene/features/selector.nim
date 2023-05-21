@@ -25,9 +25,9 @@ type
     selector*: Expr
     target*: Expr
 
-proc search*(self: Selector, target: Value, r: SelectorResult)
+proc search*(self: Selector, target: Value, r: SelectorResult) {.gcsafe.}
 
-proc search_first(self: SelectorMatcher, target: Value): Value =
+proc search_first(self: SelectorMatcher, target: Value): Value {.gcsafe.} =
   case self.kind:
   of SmByIndex:
     case target.kind:
@@ -62,7 +62,8 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
       else:
         raise NoResult.new
     of VkInstance:
-      return target.instance_props.get_or_default(self.name, Nil)
+      {.cast(gcsafe).}:
+        return target.instance_props.get_or_default(self.name, Nil)
     of VkNamespace:
       return target.ns[self.name]
     of VkClass:
@@ -80,7 +81,7 @@ proc search_first(self: SelectorMatcher, target: Value): Value =
     else:
       todo($target.kind)
   of SmInvoke:
-    var args = new_gene_gene(Nil)
+    var args = new_gene_gene()
     return VM.invoke(new_frame(), target, self.invoke_name, args)
   else:
     todo()
@@ -97,7 +98,7 @@ proc add_self_and_descendants(self: var seq[Value], v: Value) =
   else:
     discard
 
-proc search(self: SelectorMatcher, target: Value): seq[Value] =
+proc search(self: SelectorMatcher, target: Value): seq[Value] {.gcsafe.} =
   case self.kind:
   of SmByIndex:
     case target.kind:
@@ -160,7 +161,7 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
   of SmSelfAndDescendants:
     result.add_self_and_descendants(target)
   of SmCallback:
-    var args = new_gene_gene(Nil)
+    var args = new_gene_gene()
     args.gene_children.add(target)
     var v = VM.call(nil, self.callback, args)
     if v.kind == VkGene and v.gene_type.kind == VkSymbol:
@@ -172,12 +173,12 @@ proc search(self: SelectorMatcher, target: Value): seq[Value] =
     else:
       result.add(v)
   of SmInvoke:
-    var args = new_gene_gene(Nil)
+    var args = new_gene_gene()
     result.add(VM.invoke(new_frame(), target, self.invoke_name, args))
   else:
     todo("search " & $self.kind)
 
-proc search(self: SelectorItem, target: Value, r: SelectorResult) =
+proc search(self: SelectorItem, target: Value, r: SelectorResult) {.gcsafe.} =
   case self.kind:
   of SiDefault:
     if self.is_last():
@@ -203,7 +204,7 @@ proc search(self: SelectorItem, target: Value, r: SelectorResult) =
   of SiSelector:
     self.selector.search(target, r)
 
-proc search(self: Selector, target: Value, r: SelectorResult) =
+proc search(self: Selector, target: Value, r: SelectorResult) {.gcsafe.} =
   case r.mode:
   of SrFirst:
     for child in self.children:
@@ -214,7 +215,7 @@ proc search(self: Selector, target: Value, r: SelectorResult) =
     for child in self.children:
       child.search(target, r)
 
-proc search*(self: Selector, target: Value): Value =
+proc search*(self: Selector, target: Value): Value {.gcsafe.} =
   try:
     if self.is_singular():
       var r = SelectorResult(mode: SrFirst)
@@ -224,16 +225,18 @@ proc search*(self: Selector, target: Value): Value =
         # TODO: invoke callbacks
       else:
         # raise new_exception(SelectorNoResult, "No result is found for the selector.")
-        result = Nil
+        {.cast(gcsafe).}:
+          result = Nil
     else:
       var r = SelectorResult(mode: SrAll)
       self.search(target, r)
       result = new_gene_vec(r.all)
       # TODO: invoke callbacks
   except NoResult:
-    result = Nil
+    {.cast(gcsafe).}:
+      result = Nil
 
-proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc selector_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExSelectorInvoker](expr)
   var selector = target.selector
   var v: Value
@@ -263,7 +266,7 @@ proc selector_arg_translator*(value: Value): Expr =
     r.data = translate(value.gene_children[0])
   return r
 
-proc eval_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var selector = new_selector()
   selector.translator = selector_arg_translator
   var v = self.eval(frame, cast[ExSelector](expr).data)
@@ -283,7 +286,7 @@ proc new_ex_selector*(name: string): ExSelector =
       data: new_ex_literal(new_gene_string(name)),
     )
 
-proc eval_selector2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_selector2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExSelector2](expr)
   var selector = new_selector()
   selector.translator = selector_arg_translator
@@ -321,7 +324,7 @@ proc new_ex_selector*(parallel_mode: bool, data: seq[Value]): Expr =
       r.data.add(translate(item))
     return r
 
-proc eval_invoke_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_invoke_selector(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExInvokeSelector](expr)
   var selector = new_selector()
   selector.translator = selector_arg_translator
@@ -338,7 +341,7 @@ proc new_ex_invoke_selector*(s: string): Expr =
     args: new_ex_arg(),
   )
 
-proc new_ex_invoke_selector*(value: Value): Expr =
+proc new_ex_invoke_selector*(value: Value): Expr {.gcsafe.} =
   var e = ExInvokeSelector(
     evaluator: eval_invoke_selector,
   )
@@ -356,7 +359,7 @@ proc new_ex_invoke_selector*(value: Value): Expr =
   e.args = args
   return e
 
-proc translate_selector(value: Value): Expr =
+proc translate_selector(value: Value): Expr {.gcsafe.} =
   if value.gene_type.str == "@.":
     return new_ex_invoke_selector(value)
   else:
@@ -372,7 +375,7 @@ proc handle_item*(item: string): Expr =
     result = translate(item)
 
 # @a/1
-proc translate_csymbol_selector*(csymbol: seq[string]): Expr =
+proc translate_csymbol_selector*(csymbol: seq[string]): Expr {.gcsafe.} =
   var r = ExSelector2(
     evaluator: eval_selector2,
   )
@@ -381,7 +384,7 @@ proc translate_csymbol_selector*(csymbol: seq[string]): Expr =
     r.data.add(handle_item(item))
   return r
 
-proc eval_selector_invoker2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_selector_invoker2*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
   var expr = cast[ExSelectorInvoker2](expr)
   var value: Value
   if expr.target == nil:

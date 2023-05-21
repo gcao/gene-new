@@ -63,11 +63,11 @@ type
     method_wrap     : NativeMethodWrap,
   ) {.nimcall.}
 
-proc call_set_globals(p: pointer)
+proc call_set_globals(p: pointer) {.gcsafe.}
 
 # TODO: unload dynamic libraries before reloading
 
-proc load_dynlib*(pkg: Package, path: string): Module =
+proc load_dynlib*(pkg: Package, path: string): Module {.gcsafe.} =
   result = new_module(pkg, path)
   var handle = load_lib(path)
   result.handle = handle
@@ -80,7 +80,8 @@ proc load_dynlib*(pkg: Package, path: string): Module =
   var init = handle.sym_addr("init")
   var init_result: Value
   if init != nil:
-    init_result = cast[Init](init)(result)
+    {.cast(gcsafe).}:
+      init_result = cast[Init](init)(result)
   if init_result == nil:
     return
   case init_result.kind:
@@ -91,50 +92,51 @@ proc load_dynlib*(pkg: Package, path: string): Module =
   else:
     todo("load_dynlib " & $init_result.kind)
 
-proc call_set_globals(p: pointer) =
-  cast[SetGlobals](p)(
-    get_global_dispatcher(),
-    mapping,
-    Translators,
-    GeneTranslators,
-    VM,
-    GLOBAL_NS,
-    GENE_NS,
-    GENE_NATIVE_NS,
-    GENEX_NS,
-    ObjectClass,
-    ClassClass,
-    ExceptionClass,
-    FutureClass,
-    NamespaceClass,
-    MixinClass,
-    FunctionClass,
-    MacroClass,
-    BlockClass,
-    NilClass,
-    BoolClass,
-    IntClass,
-    FloatClass,
-    CharClass,
-    StringClass,
-    SymbolClass,
-    ArrayClass,
-    MapClass,
-    StreamClass,
-    SetClass,
-    GeneClass,
-    DocumentClass,
-    FileClass,
-    DateClass,
-    DatetimeClass,
-    TimeClass,
-    SelectorClass,
-    eval_catch,
-    eval_wrap,
-    translate_catch,
-    translate_wrap,
-    call_catch,
-    call_wrap,
-    fn_wrap,
-    method_wrap,
-  )
+proc call_set_globals(p: pointer) {.gcsafe.} =
+  {.cast(gcsafe).}:
+    cast[SetGlobals](p)(
+      get_global_dispatcher(),
+      mapping,
+      Translators,
+      GeneTranslators,
+      VM,
+      GLOBAL_NS,
+      GENE_NS,
+      GENE_NATIVE_NS,
+      GENEX_NS,
+      ObjectClass,
+      ClassClass,
+      ExceptionClass,
+      FutureClass,
+      NamespaceClass,
+      MixinClass,
+      FunctionClass,
+      MacroClass,
+      BlockClass,
+      NilClass,
+      BoolClass,
+      IntClass,
+      FloatClass,
+      CharClass,
+      StringClass,
+      SymbolClass,
+      ArrayClass,
+      MapClass,
+      StreamClass,
+      SetClass,
+      GeneClass,
+      DocumentClass,
+      FileClass,
+      DateClass,
+      DatetimeClass,
+      TimeClass,
+      SelectorClass,
+      eval_catch,
+      eval_wrap,
+      translate_catch,
+      translate_wrap,
+      call_catch,
+      call_wrap,
+      fn_wrap,
+      method_wrap,
+    )
