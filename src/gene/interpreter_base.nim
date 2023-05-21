@@ -23,19 +23,47 @@ proc invoke*(frame: Frame, instance: Value, method_name: string, args: Value): V
 
 #################### Value #######################
 
+template handle(msg: InterThreadMessage) =
+  case msg.type:
+  of MtSend:
+    var thread = VM.global_ns.ns["$thread"]
+    var frame = new_frame()
+    var args = new_gene_gene()
+    args.gene_children.add(msg.payload)
+    for callback in VM.thread_callbacks:
+      discard call(frame, thread, callback, args)
+
+  of MtRun, MtRunWithReply:
+    var frame = new_frame()
+    frame.ns = VM.app.ns
+    frame.scope = new_scope()
+    for k, v in msg.payload.gene_props:
+      frame.scope.def_member(k, v)
+    var expr = translate(msg.payload.gene_children)
+    var r = eval(frame, expr)
+    if msg.type == MtRunWithReply:
+      # Send result to caller thread thru channel
+      var from_id = msg.from_thread_id
+      var reply = InterThreadMessage(
+        `type`: MtReply,
+        payload: r,
+        from_message_id: msg.id,
+      )
+      Threads[from_id].channel.send(reply)
+
+  of MtReply:
+    var f = VM.futures[msg.from_message_id]
+    f.future.complete(msg.payload)
+    VM.futures.del(msg.from_message_id)
+
+  else:
+    todo($msg.type)
+
 template check_channel*() =
   let channel = Threads[VM.thread_id].channel.addr
   var tried = channel[].try_recv()
   while tried.data_available:
-    case tried.msg.type:
-    of MtSend:
-      for callback in VM.thread_callbacks:
-        var frame = new_frame()
-        var args = new_gene_gene()
-        args.gene_children.add(tried.msg.payload)
-        discard call(frame, nil, callback, args)
-    else:
-      todo($tried.msg.type)
+    handle(tried.msg)
     tried = channel[].try_recv()
 
 template check_async_ops_and_channel*() =

@@ -628,7 +628,8 @@ type
     MtRun           # Run code and forget
     MtRunWithReply  # Run code and expect a reply
     MtReply         # Reply
-    # MtMessages      # Multiple messages in one batch
+    MtStop          # Stop the thread
+    # MtMulti       # Multiple messages in one batch
 
   InterThreadMessage* = object
     id*: int

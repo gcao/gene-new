@@ -1,4 +1,4 @@
-import tables
+import tables, std/os
 import asyncdispatch, asyncfutures
 
 import ../types
@@ -39,6 +39,7 @@ proc thread_handler(thread_id: int) =
     var reply = InterThreadMessage(
       `type`: MtReply,
       payload: r,
+      from_thread_id: VM.thread_id,
       from_message_id: msg.id,
     )
     Threads[parent_id].channel.send(reply)
@@ -72,33 +73,13 @@ proc eval_spawn(frame: Frame, expr: var Expr): Value {.gcsafe.} =
     id: rand(),
     `type`: msg_type,
     payload: payload,
+    from_thread_id: VM.thread_id,
   )
   child_channel[].send(msg)
 
   if e.return_value:
-    # 4. Handle result (by creating an asynchronous Future object)
-    var r = new_gene_future(new_future[Value]())
-    result = r
-    var channel = Threads[VM.thread_id].channel.addr
-    add_timer WAIT_INTERVAL, false, proc(fd: AsyncFD): bool =
-      let tried = channel[].try_recv()
-      if tried.data_available:
-        case tried.msg.type:
-        of MtReply:
-          r.future.complete(tried.msg.payload)
-          # When the callback returns true, does it stop the timer?
-          # The answer is Yes.
-          return true
-        of MtSend:
-          var thread = VM.global_ns.ns["$thread"]
-          if VM.thread_callbacks.len > 0:
-            var callback_args = new_gene_gene()
-            callback_args.gene_children.add(tried.msg.payload)
-            var frame = Frame()
-            for callback in VM.thread_callbacks:
-              discard call(frame, thread, callback, callback_args)
-        else:
-          todo($tried.msg.type)
+    result = new_gene_future(new_future[Value]())
+    VM.futures[msg.id] = result
   else:
     result = Value(
       kind: VkThread,
@@ -157,8 +138,19 @@ proc thread_run(frame: Frame, self: Value, args: Value): Value =
     id: rand(),
     `type`: msg_type,
     payload: payload,
+    from_thread_id: VM.thread_id,
   )
   channel[].send(msg)
+
+  if msg_type == MtRunWithReply:
+    result = new_gene_future(new_future[Value]())
+    VM.futures[msg.id] = result
+
+proc thread_keep_alive(frame: Frame, self: Value, args: Value): Value =
+  while true:
+    sleep(1)
+    check_async_ops_and_channel()
+    # TODO: if we receive a message to stop this thread, stop it.
 
 proc init*() =
   VmCreatedCallbacks.add proc() =
@@ -169,6 +161,7 @@ proc init*() =
     VM.thread_class.def_native_method("send", thread_send)
     VM.thread_class.def_native_method("on_message", thread_on_message)
     VM.thread_class.def_native_macro_method("run", thread_run)
+    VM.thread_class.def_native_method("keep_alive", thread_keep_alive)
     VM.gene_ns.ns["Thread"] = VM.thread_class
 
     let spawn = new_gene_processor(translate_spawn)

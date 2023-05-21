@@ -255,22 +255,21 @@ test_interpreter """
   result
 """, 2
 
-# test_interpreter """
-#   (var thread
-#     (spawn ^args {^x 1}
-#       (global/test = x)
-#       $thread/.keep_alive
-#     )
-#   )
-#   (gene/sleep 200)
-#   (thread .run ^args {^x 2}
-#     (global/test = x)
-#   )
-#   (var result
-#     (thread .run ^^return ^args {^x 2}
-#       global/test
-#     )
-#   )
-#   (thread .join)
-#   (await result)
-# """, 2
+test_interpreter """
+  (var thread
+    (spawn ^args {^x 1}
+      (global/test = x)
+      $thread/.keep_alive
+    )
+  )
+  (gene/sleep 200)
+  (thread .run ^args {^x 2}
+    (global/test = x)
+  )
+  (var result
+    (thread .run ^^return
+      global/test
+    )
+  )
+  (await result)
+""", 2
