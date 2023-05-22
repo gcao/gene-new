@@ -89,7 +89,7 @@ proc eval_gene*(frame: Frame, expr: var Expr): Value =
       return eval(new_frame, `macro`.body_compiled)
     except Return as r:
       return r.val
-    except system.Exception as e:
+    except CatchableError as e:
       if VM.repl_on_error:
         return repl_on_error(frame, e)
       else:
@@ -116,7 +116,7 @@ proc eval_gene*(frame: Frame, expr: var Expr): Value =
       return eval(new_frame, `block`.body_compiled)
     except Return as r:
       return r.val
-    except system.Exception as e:
+    except CatchableError as e:
       if VM.repl_on_error:
         return repl_on_error(frame, e)
       else:

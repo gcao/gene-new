@@ -1364,8 +1364,8 @@ proc get_class*(val: Value): Class =
     return VM.file_class.class
   of VkException:
     var ex = val.exception
-    if ex is Exception:
-      var ex = cast[Exception](ex)
+    if ex is ref Exception:
+      var ex = cast[ref Exception](ex)
       if ex.instance != nil:
         return ex.instance.instance_class
       else:
@@ -1558,8 +1558,8 @@ proc new_gene_string*(s: string): Value {.gcsafe.} =
   return Value(kind: VkString, str: s)
 
 proc new_gene_string_move*(s: string): Value =
-  result = Value(kind: VkString)
-  shallowCopy(result.str, s)
+  result = Value(kind: VkString, str: s)
+  # shallowCopy(result.str, s)
 
 proc new_gene_symbol*(name: string): Value =
   return Value(kind: VkSymbol, str: name)
@@ -1612,6 +1612,7 @@ proc new_gene_date*(year, month, day: int): Value =
   return Value(
     kind: VkDate,
     date_internal: DateTimeInternal(data: init_date_time(day, cast[Month](month), year, 0, 0, 0, utc())),
+    # date_internal: DateTimeInternal(data: date_time(year, cast[Month](month), day, 0, 0, 0, 0, utc())),
   )
 
 proc new_gene_date*(date: DateTime): Value =
@@ -1702,7 +1703,7 @@ proc new_mixin*(name: string): Mixin =
 # Do not allow auto conversion between CatchableError and Value
 # because there are sub-classes of CatchableError that need to be
 # handled differently.
-proc exception_to_value*(ex: ref system.Exception): Value =
+proc exception_to_value*(ex: ref system.CatchableError): Value =
   return Value(
     kind: VkException,
     exception: ex,
@@ -1839,70 +1840,71 @@ proc table_equals*(this, that: Table): bool =
   return this.len == 0 and that.len == 0 or
     this.len > 0 and that.len > 0 and this == that
 
-proc `==`*(this, that: Value): bool =
-  if this.is_nil:
-    if that.is_nil: return true
-    return false
-  elif that.is_nil or this.kind != that.kind:
-    return false
-  else:
-    case this.kind
-    of VkAny:
-      return this.any == that.any
-    of VkNil, VkPlaceholder:
-      return true
-    of VkBool:
-      return this.bool == that.bool
-    of VkChar:
-      return this.char == that.char
-    of VkInt:
-      return this.int == that.int
-    of VkRatio:
-      return this.ratio_num == that.ratio_num and this.ratio_denom == that.ratio_denom
-    of VkFloat:
-      return this.float == that.float
-    of VkString, VkSymbol:
-      return this.str == that.str
-    of VkComplexSymbol:
-      return this.csymbol == that.csymbol
-    of VkDate, VkDateTime:
-      return this.date == that.date
-    of VkTime:
-      return this.time == that.time
-    of VkTimezone:
-      return this.timezone == that.timezone
-    of VkSet:
-      if this.set.len == that.set.len:
-        for v in this.set.items:
-          if not that.set.contains(v):
-            return false
-        return true
-      else:
-        return false
-    of VkGene:
-      return this.gene_type == that.gene_type and
-        this.gene_children == that.gene_children and
-        table_equals(this.gene_props, that.gene_props)
-    of VkMap:
-      return table_equals(this.map, that.map)
-    of VkVector:
-      return this.vec == that.vec
-    of VkStream:
-      return this.stream == that.stream
-    of VkRegex:
-      return this.regex == that.regex
-    of VkRange:
-      return this.range == that.range
-    of VkClass:
-      return this.class == that.class
-    of VkEnum:
-      return this.enum == that.enum
-    of VkEnumMember:
-      return this.enum_member == that.enum_member
-    of VkCustom:
-      return this.custom_class == that.custom_class and this.custom == that.custom
+proc `==`*(this, that: Value): bool {.noSideEffect.} =
+  {.cast(noSideEffect).}:
+    if this.is_nil:
+      if that.is_nil: return true
+      return false
+    elif that.is_nil or this.kind != that.kind:
+      return false
     else:
-      todo($this.kind)
+      case this.kind
+      of VkAny:
+        return this.any == that.any
+      of VkNil, VkPlaceholder:
+        return true
+      of VkBool:
+        return this.bool == that.bool
+      of VkChar:
+        return this.char == that.char
+      of VkInt:
+        return this.int == that.int
+      of VkRatio:
+        return this.ratio_num == that.ratio_num and this.ratio_denom == that.ratio_denom
+      of VkFloat:
+        return this.float == that.float
+      of VkString, VkSymbol:
+        return this.str == that.str
+      of VkComplexSymbol:
+        return this.csymbol == that.csymbol
+      of VkDate, VkDateTime:
+        return this.date == that.date
+      of VkTime:
+        return this.time == that.time
+      of VkTimezone:
+        return this.timezone == that.timezone
+      of VkSet:
+        if this.set.len == that.set.len:
+          for v in this.set.items:
+            if not that.set.contains(v):
+              return false
+          return true
+        else:
+          return false
+      of VkGene:
+        return this.gene_type == that.gene_type and
+          this.gene_children == that.gene_children and
+          table_equals(this.gene_props, that.gene_props)
+      of VkMap:
+        return table_equals(this.map, that.map)
+      of VkVector:
+        return this.vec == that.vec
+      of VkStream:
+        return this.stream == that.stream
+      of VkRegex:
+        return this.regex == that.regex
+      of VkRange:
+        return this.range == that.range
+      of VkClass:
+        return this.class == that.class
+      of VkEnum:
+        return this.enum == that.enum
+      of VkEnumMember:
+        return this.enum_member == that.enum_member
+      of VkCustom:
+        return this.custom_class == that.custom_class and this.custom == that.custom
+      else:
+        todo($this.kind)
 
 proc hash*(node: Value): Hash =
   var h: Hash = 0
@@ -1960,13 +1962,14 @@ proc is_literal*(self: Value): bool =
   else:
     return false
 
-proc `$`*(self: Class): string =
-  if self.parent.is_nil or self.parent == VM.object_class.class:
-    result = "(class $#)" % [self.name]
-  else:
-    result = "(class $# < $#)" % [self.name, self.parent.name]
+proc `$`*(self: Class): string {.noSideEffect.} =
+  {.cast(noSideEffect).}:
+    if self.parent.is_nil or self.parent == VM.object_class.class:
+      result = "(class $#)" % [self.name]
+    else:
+      result = "(class $# < $#)" % [self.name, self.parent.name]
 
-proc `$`*(node: Value): string =
+proc `$`*(node: Value): string {.noSideEffect.} =
   if node.is_nil:
     return "nil"
   case node.kind

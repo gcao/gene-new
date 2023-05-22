@@ -400,7 +400,7 @@ proc eval_invoke_dynamic(frame: Frame, expr: var Expr): Value =
         result = r.val
       else:
         raise
-    except system.Exception as e:
+    except CatchableError as e:
       if VM.repl_on_error:
         result = repl_on_error(frame, e)
         discard
@@ -444,7 +444,7 @@ proc eval_super(frame: Frame, expr: var Expr): Value =
       result = r.val
     else:
       raise
-  except system.Exception as e:
+  except CatchableError as e:
     if VM.repl_on_error:
       result = repl_on_error(frame, e)
       discard

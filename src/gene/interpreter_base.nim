@@ -84,7 +84,7 @@ template eval*(frame: Frame, expr: var Expr): Value =
 proc eval_catch*(frame: Frame, expr: var Expr): Value =
   try:
     result = eval(frame, expr)
-  except system.Exception as e:
+  except CatchableError as e:
     # echo e.msg & "\n" & e.getStackTrace()
     result = Value(
       kind: VkException,
@@ -552,13 +552,13 @@ proc new_ex_group*(): ExGroup =
 
 type
   ExException* = ref object of Expr
-    ex*: ref system.Exception
+    ex*: ref CatchableError
 
 proc eval_exception(frame: Frame, expr: var Expr): Value =
   # raise cast[ExException](expr).ex
   not_allowed("eval_exception")
 
-proc new_ex_exception*(ex: ref system.Exception): ExException =
+proc new_ex_exception*(ex: ref CatchableError): ExException =
   ExException(
     evaluator: eval_exception, # Should never be called
     ex: ex,
@@ -579,7 +579,7 @@ macro wrap_exception*(p: untyped): untyped =
     p[6] = nnkTryStmt.newTree(
       p[6],
       nnkExceptBranch.newTree(
-        infix(newDotExpr(ident"system", ident"Exception"), "as", ident"ex"),
+        infix(newDotExpr(ident"system", ident"CatchableError"), "as", ident"ex"),
         nnkReturnStmt.newTree(
           nnkCall.newTree(ident(convert), ident"ex"),
         ),
@@ -897,7 +897,7 @@ proc translate_arguments*(value: Value, eval: Evaluator): Expr {.gcsafe.} =
 proc translate_catch*(value: Value): Expr {.gcsafe.} =
   try:
     result = translate(value)
-  except system.Exception as e:
+  except CatchableError as e:
     # echo e.msg
     # echo e.get_stack_trace()
     result = new_ex_exception(e)
@@ -1099,13 +1099,14 @@ proc run_archive_file*(file: string): Value =
   result = eval(frame, expr)
   VM.wait_for_futures()
 
-proc repl_on_error*(frame: Frame, e: ref system.Exception): Value =
+proc repl_on_error*(frame: Frame, e: ref CatchableError): Value {.gcsafe.} =
   echo "An exception was thrown: " & e.msg
   echo "Opening debug console..."
   echo "Note: the exception can be accessed as $ex"
-  var ex = exception_to_value(e)
-  frame.scope.def_member("$ex", ex)
-  result = repl(frame, eval, true)
+  {.cast(gcsafe).}:
+    var ex = exception_to_value(e)
+    frame.scope.def_member("$ex", ex)
+    result = repl(frame, eval, true)
 
 proc process_args*(frame: Frame, matcher: RootMatcher, args: Value) =
   var match_result = match(frame, matcher, args)
@@ -1156,7 +1157,7 @@ proc call*(frame: Frame, this: Value, target: Value, args: Value): Value {.gcsaf
       result = eval(new_frame, target.block.body_compiled)
     except Return as r:
       result = r.val
-    except system.Exception as e:
+    except CatchableError as e:
       if VM.repl_on_error:
         result = repl_on_error(frame, e)
         discard
@@ -1238,7 +1239,7 @@ proc call_fn_skip_args*(frame: Frame, target: Value): Value {.gcsafe.} =
         result = r.val
     else:
       raise
-  except system.Exception as e:
+  except CatchableError as e:
     if VM.repl_on_error:
       if target.fn.ret.is_nil:
         result = repl_on_error(frame, e)
@@ -1303,7 +1304,7 @@ proc invoke*(frame: Frame, instance: Value, method_name: string, args: Value): V
         result = r.val
       else:
         raise
-    except system.Exception as e:
+    except CatchableError as e:
       if VM.repl_on_error:
         result = repl_on_error(frame, e)
         discard
@@ -1334,7 +1335,7 @@ proc invoke*(frame: Frame, instance: Value, method_name: string, args: Value): V
       result = eval(new_frame, callable.macro.body_compiled)
     except Return as r:
       result = r.val
-    except system.Exception as e:
+    except CatchableError as e:
       if VM.repl_on_error:
         result = repl_on_error(frame, e)
         discard
@@ -1347,7 +1348,7 @@ proc invoke*(frame: Frame, instance: Value, method_name: string, args: Value): V
 proc call_catch*(frame: Frame, target: Value, args: Value): Value {.gcsafe.} =
   try:
     result = call(frame, target, args)
-  except system.Exception as e:
+  except CatchableError as e:
     result = Value(
       kind: VkException,
       exception: e,

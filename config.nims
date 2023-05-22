@@ -1,6 +1,7 @@
 # switch("d", "release")
 switch("d", "ssl")
 switch("d", "useMalloc")
+# switch("debuginfo", "on")
 switch("threads", "on")
 switch("gc", "orc")
 switch("path", "src")

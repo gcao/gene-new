@@ -84,7 +84,7 @@ proc repl*(frame: Frame, eval: Eval, return_value: bool): Value =
         result = r.val
         stdout.write_line(result)
         break
-      except system.Exception as e:
+      except system.CatchableError as e:
         result = Value(kind: VkNil)
         input = ""
         var s = e.get_stack_trace()

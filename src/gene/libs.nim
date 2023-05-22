@@ -122,7 +122,7 @@ proc macro_invoker*(frame: Frame, expr: var Expr): Value =
     result = eval(new_frame, target.macro.body_compiled)
   except Return as r:
     result = r.val
-  except system.Exception as e:
+  except CatchableError as e:
     if VM.repl_on_error:
       result = repl_on_error(frame, e)
       discard
@@ -367,7 +367,7 @@ proc csv_parse(frame: Frame, args: Value): Value =
 
 proc today(frame: Frame, args: Value): Value =
   var date = now()
-  result = new_gene_date(date.year, cast[int](date.month), date.monthday)
+  result = new_gene_date(date.year, int(date.month), date.monthday)
 
 proc now(frame: Frame, args: Value): Value =
   var date = now()
