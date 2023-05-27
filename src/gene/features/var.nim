@@ -11,13 +11,12 @@ type
     name*: MapKey
     value*: Expr
 
-proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExVar](expr)
   if e.container == nil:
     result = self.eval(frame, e.value)
     if result == nil:
-      {.cast(gcsafe).}:
-        result = Nil
+      result = Nil
     frame.scope.def_member(e.name, result)
   else:
     var container = self.eval(frame, e.container)
@@ -34,18 +33,16 @@ proc eval_var(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 
     result = self.eval(frame, e.value)
     if result == nil:
-      {.cast(gcsafe).}:
-        result = Nil
+      result = Nil
     ns[e.name] = result
 
-proc translate_var(value: Value): Expr {.gcsafe.} =
+proc translate_var(value: Value): Expr =
   var name = value.gene_children[0]
   var v: Expr
   if value.gene_children.len > 1:
     v = translate(value.gene_children[1])
   else:
-    {.cast(gcsafe).}:
-      v = new_ex_literal(Nil)
+    v = new_ex_literal(Nil)
   case name.kind:
   of VkSymbol:
     result = ExVar(

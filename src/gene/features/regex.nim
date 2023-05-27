@@ -15,7 +15,7 @@ type
     flags: set[RegexFlag]
     data*: seq[Expr]
 
-proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
   var input = self.eval(frame, expr.input)
   var pattern = self.eval(frame, expr.pattern)
@@ -27,18 +27,15 @@ proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     var i = 0
     for item in m.captures.to_seq:
       var name = "$~" & $i
-      var value: Value
-      {.cast(gcsafe).}:
-        value = Nil
+      var value = Nil
       if item.is_some():
         value = item.get()
       frame.scope.def_member(name.to_key, value)
       i += 1
   else:
-    {.cast(gcsafe).}:
-      return Nil
+    return Nil
 
-proc eval_not_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_not_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
   var input = self.eval(frame, expr.input)
   var pattern = self.eval(frame, expr.pattern)
@@ -61,7 +58,7 @@ proc translate_match*(value: Value): Expr =
     pattern: translate(value.gene_children[1]),
   )
 
-proc eval_regex(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_regex(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExRegex](expr)
   var s = ""
   for e in expr.data.mitems:

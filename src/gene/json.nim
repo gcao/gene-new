@@ -28,11 +28,10 @@ proc `%`*(self: Value): JsonNode =
   else:
     todo($self.kind)
 
-converter json_to_gene*(node: JsonNode): Value {.gcsafe.} =
+converter json_to_gene*(node: JsonNode): Value =
   case node.kind:
   of JNull:
-    {.cast(gcsafe).}:
-      return Nil
+    return Nil
   of JBool:
     return node.bval
   of JInt:

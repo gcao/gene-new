@@ -207,7 +207,7 @@ proc file_write(args: Value): Value =
   var content = args.gene_children[1]
   write_file(file.str, content.str)
 
-proc json_parse(args: Value): Value {.gcsafe.} =
+proc json_parse(args: Value): Value =
   result = args.gene_children[0].str.parse_json
 
 proc csv_parse(args: Value): Value =
@@ -299,8 +299,7 @@ proc init*() =
       var f = sleep_async(args.gene_children[0].int)
       var future = new_future[Value]()
       f.add_callback proc() {.gcsafe.} =
-        {.cast(gcsafe).}:
-          future.complete(Nil)
+        future.complete(Nil)
       result = new_gene_future(future)
     GENE_NS.ns["base64"] = new_gene_native_fn proc(args: Value): Value =
       encode(args.gene_children[0].str)

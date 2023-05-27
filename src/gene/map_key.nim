@@ -23,20 +23,17 @@ proc add_key*(s: string): MapKey {.inline.} =
     mapping.keys.add(s)
     mapping.map[s] = result
 
-proc to_key*(s: string): MapKey {.inline, gcsafe.} =
-  {.cast(gcsafe).}:
-    if mapping.map.has_key(s):
-      result = mapping.map[s]
-    else:
-      result = add_key(s)
+proc to_key*(s: string): MapKey {.inline.} =
+  if mapping.map.has_key(s):
+    result = mapping.map[s]
+  else:
+    result = add_key(s)
 
-proc to_s*(self: MapKey): string {.inline, gcsafe.} =
-  {.cast(gcsafe).}:
-    result = mapping.keys[cast[int](self)]
+proc to_s*(self: MapKey): string {.inline.} =
+  result = mapping.keys[cast[int](self)]
 
-proc `%`*(self: MapKey): string {.gcsafe.} =
-  {.cast(gcsafe).}:
-    result = mapping.keys[cast[int](self)]
+proc `%`*(self: MapKey): string =
+  result = mapping.keys[cast[int](self)]
 
 converter to_strings*(self: seq[MapKey]): seq[string] {.inline.} =
   for k in self:

@@ -10,28 +10,25 @@ type
 
 var ExtensionClass: Value
 
-proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExTest](expr)
-  {.cast(gcsafe).}:
-    self.eval(frame, expr.data)
+  self.eval(frame, expr.data)
 
 proc translate_test(value: Value): Expr {.wrap_exception.} =
-  {.cast(gcsafe).}:
-    return ExTest(
-      evaluator: eval_wrap(eval_test),
-      data: translate(value.gene_children[0]),
-    )
+  return ExTest(
+    evaluator: eval_wrap(eval_test),
+    data: translate(value.gene_children[0]),
+  )
 
 proc new_extension*(args: Value): Value {.wrap_exception.} =
-  {.cast(gcsafe).}:
-    Value(
-      kind: VkCustom,
-      custom_class: ExtensionClass.class,
-      custom: Extension(
-        i: args.gene_children[0].int,
-        s: args.gene_children[1].str,
-      ),
-    )
+  Value(
+    kind: VkCustom,
+    custom_class: ExtensionClass.class,
+    custom: Extension(
+      i: args.gene_children[0].int,
+      s: args.gene_children[1].str,
+    ),
+  )
 
 proc get_i*(args: Value): Value {.wrap_exception.} =
   Extension(args.gene_children[0].custom).i

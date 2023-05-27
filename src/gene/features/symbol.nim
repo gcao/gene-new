@@ -67,7 +67,7 @@ proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
   var i = cast[ExChild](expr).index
   return v.get_child(i)
 
-proc translate*(name: string): Expr {.gcsafe.} =
+proc translate*(name: string): Expr {.inline.} =
   if name.starts_with("@"):
     if name[1] == '.':
       return new_ex_invoke_selector(name[2..^1])
@@ -78,29 +78,28 @@ proc translate*(name: string): Expr {.gcsafe.} =
     r.data = translate(new_gene_symbol(name[0..^4]))
     return r
 
-  {.cast(gcsafe).}:
-    case name:
-    of "", "self":
-      result = SELF_EXPR
-    of "global":
-      result = new_ex_literal(GLOBAL_NS)
-    of "_":
-      result = new_ex_literal(Placeholder)
-    of "$app":
-      result = new_ex_literal(Value(kind: VkApplication, app: VM.app))
-    of "$ns":
-      result = NS_EXPR
-    of "$pkg":
-      result = PKG_EXPR
-    of "$module":
-      result = MOD_EXPR
-    of "$cmd_args":
-      result = new_ex_literal(VM.app.args.map(str_to_gene))
-    else:
-      result = ExMyMember(
-        evaluator: eval_my_member,
-        name: name.to_key,
-      )
+  case name:
+  of "", "self":
+    result = SELF_EXPR
+  of "global":
+    result = new_ex_literal(GLOBAL_NS)
+  of "_":
+    result = new_ex_literal(Placeholder)
+  of "$app":
+    result = new_ex_literal(Value(kind: VkApplication, app: VM.app))
+  of "$ns":
+    result = NS_EXPR
+  of "$pkg":
+    result = PKG_EXPR
+  of "$module":
+    result = MOD_EXPR
+  of "$cmd_args":
+    result = new_ex_literal(VM.app.args.map(str_to_gene))
+  else:
+    result = ExMyMember(
+      evaluator: eval_my_member,
+      name: name.to_key,
+    )
 
 proc translate*(names: seq[string]): Expr =
   if names.len == 1:
@@ -129,10 +128,10 @@ proc translate*(names: seq[string]): Expr =
           name: name.to_key,
         )
 
-proc translate_symbol(value: Value): Expr {.gcsafe.} =
+proc translate_symbol(value: Value): Expr =
   translate(value.str)
 
-proc translate_complex_symbol(value: Value): Expr {.gcsafe.} =
+proc translate_complex_symbol(value: Value): Expr =
   if value.csymbol[0].starts_with("@"):
     translate_csymbol_selector(value.csymbol)
   else:
@@ -171,7 +170,7 @@ proc eval_define_ns_or_scope(self: VirtualMachine, frame: Frame, target: Value, 
 # Else they are defined on the current scope
 #
 # (fn n/m/f ...) will add f to n/m no matter what n/m is
-proc translate_definition*(name: Value, value: Expr): Expr {.gcsafe.} =
+proc translate_definition*(name: Value, value: Expr): Expr =
   case name.kind:
   of VkSymbol, VkString:
     return ExDefineNsOrScope(

@@ -65,13 +65,12 @@ type
   # ExMethodMissing* = ref object of Expr
   #   fn: Function
 
-proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_class(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExClass](expr)
   var class = new_class(e.name)
   result = Value(kind: VkClass, class: class)
   if e.parent == nil:
-    {.cast(gcsafe).}:
-      class.parent = ObjectClass.class
+    class.parent = ObjectClass.class
   else:
     var parent = self.eval(frame, e.parent)
     class.parent = parent.class
@@ -108,21 +107,19 @@ proc translate_class(value: Value): Expr =
     todo()
 
   var body_start = 1
-  {.cast(gcsafe).}:
-    if value.gene_children.len >= 3 and value.gene_children[1] == LESS_THAN:
-      body_start = 3
-      e.parent = translate(value.gene_children[2])
+  if value.gene_children.len >= 3 and value.gene_children[1] == LESS_THAN:
+    body_start = 3
+    e.parent = translate(value.gene_children[2])
   e.body = translate(value.gene_children[body_start..^1])
   return translate_definition(value.gene_children[0], e)
 
-proc eval_object(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_object(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExObject](expr)
   var class = new_class(e.name)
   var class_val = Value(kind: VkClass, class: class)
   result = new_gene_instance(class, Table[MapKey, Value]())
   if e.parent == nil:
-    {.cast(gcsafe).}:
-      class.parent = ObjectClass.class
+    class.parent = ObjectClass.class
   else:
     var parent = self.eval(frame, e.parent)
     class.parent = parent.class
@@ -147,8 +144,7 @@ proc eval_object(self: VirtualMachine, frame: Frame, target: Value, expr: var Ex
 
   var init = class.get_method(INIT_KEY)
   if init != nil:
-    {.cast(gcsafe).}:
-      discard self.invoke(frame, result, INIT_KEY, Nil)
+    discard self.invoke(frame, result, INIT_KEY, Nil)
 
 proc translate_object(value: Value): Expr =
   var e = ExObject(
@@ -165,14 +161,13 @@ proc translate_object(value: Value): Expr =
     todo()
 
   var body_start = 1
-  {.cast(gcsafe).}:
-    if value.gene_children.len >= 3 and value.gene_children[1] == LESS_THAN:
-      body_start = 3
-      e.parent = translate(value.gene_children[2])
+  if value.gene_children.len >= 3 and value.gene_children[1] == LESS_THAN:
+    body_start = 3
+    e.parent = translate(value.gene_children[2])
   e.body = translate(value.gene_children[body_start..^1])
   return translate_definition(value.gene_children[0], e)
 
-proc eval_mixin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_mixin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var e = cast[ExMixin](expr)
   var m = new_mixin(e.name)
   m.ns.parent = frame.ns
@@ -206,7 +201,7 @@ proc translate_mixin(value: Value): Expr =
   e.body = translate(value.gene_children[body_start..^1])
   result = e
 
-proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_include(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var x = frame.self
   for e in cast[ExInclude](expr).data.mitems:
     var m = self.eval(frame, e).mixin
@@ -230,7 +225,7 @@ proc translate_include(value: Value): Expr =
 
   result = e
 
-proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_new(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExNew](expr)
   var class = self.eval(frame, expr.class).class
   var ctor = class.get_constructor()
@@ -355,13 +350,12 @@ proc eval_method_eq*(self: VirtualMachine, frame: Frame, target: Value, expr: va
   )
 
 proc translate_method(value: Value): Expr =
-  {.cast(gcsafe).}:
-    if value.gene_children.len >= 3 and value.gene_children[1] == Equals:
-      return ExMethodEq(
-        evaluator: eval_method_eq,
-        name: value.gene_children[0].str,
-        value: translate(value.gene_children[2])
-      )
+  if value.gene_children.len >= 3 and value.gene_children[1] == Equals:
+    return ExMethodEq(
+      evaluator: eval_method_eq,
+      name: value.gene_children[0].str,
+      value: translate(value.gene_children[2])
+    )
 
   var fn = to_function(value)
   ExMethod(

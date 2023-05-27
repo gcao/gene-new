@@ -38,7 +38,7 @@ proc show_result(v: Value) =
   elif v.kind != VkPlaceholder:
     stdout.write_line(v)
 
-proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): Value {.gcsafe.} =
+proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): Value =
   echo "Welcome to interactive Gene!"
   echo "Note: press Ctrl-D to exit."
 
@@ -85,8 +85,7 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
         stdout.write_line(result)
         break
       except system.Exception as e:
-        {.cast(gcsafe).}:
-          result = Nil
+        result = Nil
         input = ""
         var s = e.get_stack_trace()
         s.strip_line_end()
@@ -96,8 +95,6 @@ proc repl*(self: VirtualMachine, frame: Frame, eval: Eval, return_value: bool): 
     unset_control_c_hook()
   if return_value:
     if result == nil:
-      {.cast(gcsafe).}:
-        result = Nil
+      result = Nil
   else:
-    {.cast(gcsafe).}:
-      return Nil
+    return Nil

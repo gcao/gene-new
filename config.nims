@@ -2,6 +2,5 @@
 switch("d", "ssl")
 switch("d", "useMalloc")
 switch("gc", "orc")
-switch("threads", "on")
 switch("path", "src")
 switch("outdir", "bin")

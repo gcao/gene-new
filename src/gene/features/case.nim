@@ -45,7 +45,7 @@ proc case_equals(input: Value, pattern: Value): bool =
     else:
       result = input == pattern
 
-proc eval_case(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value {.gcsafe.} =
+proc eval_case(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
   var expr = cast[ExCase](expr)
   var input = self.eval(frame, expr.case_input)
   for pair in expr.case_more_mapping.mitems:
@@ -55,62 +55,61 @@ proc eval_case(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
   result = self.eval(frame, expr.case_else)
 
 proc translate_case(node: Value): Expr =
-  {.cast(gcsafe).}:
-    # Create a variable because result can not be accessed from closure.
-    var expr = ExCase(
-      evaluator: eval_case,
-    )
-    expr.case_input = translate(node.gene_children[0])
+  # Create a variable because result can not be accessed from closure.
+  var expr = ExCase(
+    evaluator: eval_case,
+  )
+  expr.case_input = translate(node.gene_children[0])
 
-    var state = CsInput
-    var cond: Value
-    var logic: seq[Value]
+  var state = CsInput
+  var cond: Value
+  var logic: seq[Value]
 
-    proc update_mapping(cond: Value, logic: seq[Value]) =
-      var index = expr.case_blks.len
-      expr.case_blks.add(translate(logic))
-      if cond.kind == VkVector:
-        for item in cond.vec:
-          expr.case_more_mapping.add((translate(item), index))
+  proc update_mapping(cond: Value, logic: seq[Value]) =
+    var index = expr.case_blks.len
+    expr.case_blks.add(translate(logic))
+    if cond.kind == VkVector:
+      for item in cond.vec:
+        expr.case_more_mapping.add((translate(item), index))
+    else:
+      expr.case_more_mapping.add((translate(cond), index))
+
+  proc handler(input: Value) =
+    case state:
+    of CsInput:
+      if input == When:
+        state = CsWhen
       else:
-        expr.case_more_mapping.add((translate(cond), index))
-
-    proc handler(input: Value) =
-      case state:
-      of CsInput:
-        if input == When:
-          state = CsWhen
-        else:
-          not_allowed()
-      of CsWhen:
-        state = CsWhenLogic
-        cond = input
+        not_allowed()
+    of CsWhen:
+      state = CsWhenLogic
+      cond = input
+      logic = @[]
+    of CsWhenLogic:
+      if input == nil:
+        update_mapping(cond, logic)
+      elif input == When:
+        state = CsWhen
+        update_mapping(cond, logic)
+      elif input == Else:
+        state = CsElse
+        update_mapping(cond, logic)
         logic = @[]
-      of CsWhenLogic:
-        if input == nil:
-          update_mapping(cond, logic)
-        elif input == When:
-          state = CsWhen
-          update_mapping(cond, logic)
-        elif input == Else:
-          state = CsElse
-          update_mapping(cond, logic)
-          logic = @[]
-        else:
-          logic.add(input)
-      of CsElse:
-        if input == nil:
-          expr.case_else = translate(logic)
-        else:
-          logic.add(input)
+      else:
+        logic.add(input)
+    of CsElse:
+      if input == nil:
+        expr.case_else = translate(logic)
+      else:
+        logic.add(input)
 
-    var i = 1
-    while i < node.gene_children.len:
-      handler(node.gene_children[i])
-      i += 1
-    handler(nil)
+  var i = 1
+  while i < node.gene_children.len:
+    handler(node.gene_children[i])
+    i += 1
+  handler(nil)
 
-    result = expr
+  result = expr
 
 proc init*() =
   GeneTranslators["case"] = translate_case
