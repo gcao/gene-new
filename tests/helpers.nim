@@ -23,8 +23,8 @@ proc init_all*() =
   init_thread(thread_id)
   init_app_and_vm()
   VM.thread_id = thread_id
-  VM.gene_native_ns.ns["test"] = new_gene_native_method(test)
-  VM.gene_native_ns.ns["test2"] = new_gene_native_method(test2)
+  VM.gene_ns.ns["test1"] = new_gene_native_method(test)
+  VM.gene_ns.ns["test2"] = new_gene_native_method(test2)
 
 converter seq_to_gene*(self: seq[int]): Value =
   result = new_gene_vec()

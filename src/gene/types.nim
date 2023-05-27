@@ -399,7 +399,6 @@ type
 
     global_ns*     : Value
     gene_ns*       : Value
-    gene_native_ns*: Value
     genex_ns*      : Value
 
     object_class*   : Value

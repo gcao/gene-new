@@ -938,8 +938,6 @@ proc init_app_and_vm*() =
   VM.global_ns.ns["stderr"] = stderr
 
   VM.gene_ns = Value(kind: VkNamespace, ns: new_namespace("gene"))
-  VM.gene_native_ns = Value(kind: VkNamespace, ns: new_namespace("native"))
-  VM.gene_ns.ns["native"] = VM.gene_native_ns
   VM.global_ns.ns["gene"] = VM.gene_ns
 
   VM.genex_ns = Value(kind: VkNamespace, ns: new_namespace("genex"))
@@ -970,8 +968,6 @@ proc init_app_and_vm_for_thread*(thread_id: int) {.gcsafe.} =
   VM.global_ns.ns["stderr"] = stderr
 
   VM.gene_ns = Value(kind: VkNamespace, ns: new_namespace("gene"))
-  VM.gene_native_ns = Value(kind: VkNamespace, ns: new_namespace("native"))
-  VM.gene_ns.ns["native"] = VM.gene_native_ns
   VM.global_ns.ns["gene"] = VM.gene_ns
 
   VM.genex_ns = Value(kind: VkNamespace, ns: new_namespace("genex"))

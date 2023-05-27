@@ -5,8 +5,8 @@ import gene/types
 import ./helpers
 
 # Keywords:
-# nil
-# true/false
+# nil: parsed as nil
+# true/false: parsed as true/false
 # discard: discard the result of an expression (borrowed from Nim) - should we use dump instead?
 # noop: (noop) do nothing and return nil
 # var, let, const
@@ -69,7 +69,7 @@ import ./helpers
 # $env
 # $cwd: the current working directory
 # $user: same as $env/USER
-# $home: same as $env/HOME
+# $home: same as $env/HOME or a path object
 # $os: the current OS
 # $ex: the last exception
 # $result: the result to be returned by the current function/macro/block/method
