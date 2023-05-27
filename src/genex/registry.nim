@@ -2,7 +2,6 @@ import tables, nre
 import asyncdispatch
 
 import ../gene/types
-import ../gene/map_key
 import ../gene/interpreter_base
 
 type
@@ -44,7 +43,7 @@ type
     `type`*: RequestType
     async*: bool
     path*: Value
-    params*: Table[MapKey, Value]
+    params*: Table[string, Value]
     args*: seq[Value]
 
   ResponseType* = enum
@@ -76,10 +75,10 @@ type
     path*: Value
     callback*: Value
 
-var RegistryClass*   : Value
-var RequestClass*    : Value
-var ResponseClass*   : Value
-var MiddlewareClass* : Value
+var RegistryClass*   {.threadvar.}: Value
+var RequestClass*    {.threadvar.}: Value
+var ResponseClass*   {.threadvar.}: Value
+var MiddlewareClass* {.threadvar.}: Value
 
 proc to_response(self: Value): Response =
   if self.is_nil:
@@ -121,7 +120,7 @@ proc call(self: Middleware, req: Request): Response =
   args.gene_children.add(new_gene_custom(self, MiddlewareClass.class))
   args.gene_children.add(new_gene_custom(req, RequestClass.class))
   var frame = Frame()
-  var value = VM.call(frame, self.callback, args)
+  var value = call(frame, self.callback, args)
   return value.to_response()
 
 proc next(self: seq[Middleware], i: int, req: Request): Middleware =
@@ -146,7 +145,7 @@ proc handle_request(self: Value, req: Value): Response =
     args.gene_children.add(self)
     args.gene_children.add(req)
     var frame = Frame()
-    return Response(`type`: RsDefault, value: VM.call(frame, resource.data, args))
+    return Response(`type`: RsDefault, value: call(frame, resource.data, args))
   else:
     return Response(`type`: RsDefault, value: resource.data)
 
@@ -158,24 +157,24 @@ proc handle_response(self: var Registry, req: Request, res: Response): Value =
     return res.value
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     RegistryClass = Value(kind: VkClass, class: new_class("Registry"))
     RequestClass  = Value(kind: VkClass, class: new_class("Request"))
     ResponseClass = Value(kind: VkClass, class: new_class("Response"))
     MiddlewareClass = Value(kind: VkClass, class: new_class("Middleware"))
 
-    GENEX_NS.ns["Registry"] = RegistryClass
-    RegistryClass.class.parent = ObjectClass.class
-    RegistryClass.def_native_constructor proc(args: Value): Value {.name:"registry_new".} =
+    VM.genex_ns.ns["Registry"] = RegistryClass
+    RegistryClass.class.parent = VM.object_class.class
+    RegistryClass.def_native_constructor proc(frame: Frame, args: Value): Value {.gcsafe, name:"registry_new".} =
       var name = ""
       if args.gene_children.len > 0:
         name = args.gene_children[0].to_s
       new_gene_custom(Registry(name: name), RegistryClass.class)
 
-    RegistryClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"registry_name".} =
+    RegistryClass.def_native_method "name", proc(frame: Frame, self: Value, args: Value): Value {.name:"registry_name".} =
       ((Registry)self.custom).name
 
-    RegistryClass.def_native_method "register", proc(self: Value, args: Value): Value {.name:"registry_register".} =
+    RegistryClass.def_native_method "register", proc(frame: Frame, self: Value, args: Value): Value {.name:"registry_register".} =
       var resource = Resource(
         data: args.gene_children[1],
       )
@@ -189,7 +188,7 @@ proc init*() =
         ((Registry)self.custom).resources_map[path] = resource
       else:
         not_allowed("registry_register: " & $first.kind)
-    RegistryClass.def_native_method "register_callback", proc(self: Value, args: Value): Value {.name:"registry_register_callback".} =
+    RegistryClass.def_native_method "register_callback", proc(frame: Frame, self: Value, args: Value): Value {.name:"registry_register_callback".} =
       var name = args.gene_children[0].str
       var resource = Resource(
         is_callback: true,
@@ -197,7 +196,7 @@ proc init*() =
       )
       ((Registry)self.custom).resources_map[name] = resource
 
-    RegistryClass.def_native_method "request", proc(self: Value, args: Value): Value {.name:"registry_request".} =
+    RegistryClass.def_native_method "request", proc(frame: Frame, self: Value, args: Value): Value {.gcsafe, name:"registry_request".} =
       var path = args.gene_children[0].str
       var req = Request(
         `type`: RqDefault,
@@ -218,7 +217,7 @@ proc init*() =
           args.gene_children.add(self)
           args.gene_children.add(req_value)
           var frame = Frame()
-          discard VM.call(frame, callback, args)
+          discard call(frame, callback, args)
 
       # invokes AROUND middlewares
       if registry.middlewares_around.len > 0:
@@ -237,11 +236,11 @@ proc init*() =
           args.gene_children.add(req_value)
           args.gene_children.add(res_value)
           var frame = Frame()
-          discard VM.call(frame, callback, args)
+          discard call(frame, callback, args)
 
       return registry.handle_response(req, response)
 
-    RegistryClass.def_native_method "req_async", proc(self: Value, args: Value): Value {.name:"registry_req_async".} =
+    RegistryClass.def_native_method "req_async", proc(frame: Frame, self: Value, args: Value): Value {.name:"registry_req_async".} =
       var name = args.gene_children[0].str
       var future = new_future[Value]()
       result = new_gene_future(future)
@@ -260,38 +259,38 @@ proc init*() =
           else:
             future.complete(resource.data)
 
-    RegistryClass.def_native_method "before", proc(self: Value, args: Value): Value {.name:"registry_before".} =
+    RegistryClass.def_native_method "before", proc(frame: Frame, self: Value, args: Value): Value {.name:"registry_before".} =
       var path = args.gene_children[0]
       var callback = args.gene_children[1]
       ((Registry)self.custom).add_middleware(MtBefore, path, callback)
 
-    RegistryClass.def_native_method "around", proc(self: Value, args: Value): Value {.name:"registry_around".} =
+    RegistryClass.def_native_method "around", proc(frame: Frame, self: Value, args: Value): Value {.name:"registry_around".} =
       var path = args.gene_children[0]
       var callback = args.gene_children[1]
       ((Registry)self.custom).add_middleware(MtAround, path, callback)
 
-    RegistryClass.def_native_method "after", proc(self: Value, args: Value): Value {.name:"registry_after".} =
+    RegistryClass.def_native_method "after", proc(frame: Frame, self: Value, args: Value): Value {.name:"registry_after".} =
       var path = args.gene_children[0]
       var callback = args.gene_children[1]
       ((Registry)self.custom).add_middleware(MtAfter, path, callback)
 
-    ResponseClass.def_native_method "value", proc(self: Value, args: Value): Value {.name:"response_value".} =
+    ResponseClass.def_native_method "value", proc(frame: Frame, self: Value, args: Value): Value {.name:"response_value".} =
       var res = (Response)self.custom
       return res.value
 
-    ResponseClass.def_native_method "set_value", proc(self: Value, args: Value): Value {.name:"response_set_value".} =
+    ResponseClass.def_native_method "set_value", proc(frame: Frame, self: Value, args: Value): Value {.name:"response_set_value".} =
       var res = (Response)self.custom
       res.value = args.gene_children[0]
 
-    RequestClass.def_native_method "args", proc(self: Value, args: Value): Value {.name:"request_args".} =
+    RequestClass.def_native_method "args", proc(frame: Frame, self: Value, args: Value): Value {.name:"request_args".} =
       var req = (Request)self.custom
       return req.args
 
-    RequestClass.def_native_method "not_found", proc(self: Value, args: Value): Value {.name:"request_not_found".} =
+    RequestClass.def_native_method "not_found", proc(frame: Frame, self: Value, args: Value): Value {.name:"request_not_found".} =
       var req = (Request)self.custom
       raise new_exception(ResourceNotFoundError, $req.path)
 
-    MiddlewareClass.def_native_method "call_next", proc(self: Value, args: Value): Value {.name:"middleware_handle".} =
+    MiddlewareClass.def_native_method "call_next", proc(frame: Frame, self: Value, args: Value): Value {.gcsafe, name:"middleware_handle".} =
       var middleware = (Middleware)self.custom
       var registry = new_gene_custom(middleware.registry, RegistryClass.class)
       var req = args.gene_children[0]

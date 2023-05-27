@@ -9,7 +9,11 @@ import ./helpers
 #
 # * Single inheritance
 # * private / protected / public methods
-# * method_missing - can only be defined in classes
+# * on_extended
+# * ctor (constructor) - can only be defined in classes
+# * on_method - can only be defined in classes
+# * on_method_missing - can only be defined in classes
+# * call_method - can only be defined in classes
 # * Mixin: all stuff in mixin are copied to the target class/mixin
 # * Properties: just a shortcut for defining .prop/.prop= methods
 
@@ -34,7 +38,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init _
+    (.ctor _
       (/p = 1)
     )
   )
@@ -51,7 +55,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -60,7 +64,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       (/a ||= 1)
     )
   )
@@ -70,25 +74,25 @@ test_interpreter """
 test_interpreter """
   (class A
     # gene/native/test is defined in tests/helpers.nim:init_all()
-    (method test = gene/native/test)
+    (.method :test gene/native/test)
   )
   ((new A).test)
 """, 1
 
 test_interpreter """
   (class A
-    (method init _
+    (.ctor _
       (/a = 1)
     )
     # gene/native/test2 is defined in tests/helpers.nim:init_all()
-    (method test2 = gene/native/test2)
+    (.method :test2 gene/native/test2)
   )
   ((new A).test2 2 3)
 """, 6
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       (f)
     )
     (fn f _
@@ -101,7 +105,7 @@ test_interpreter """
 test_interpreter """
   (class A)
 """, proc(r: Value) =
-  check r.class.parent == ObjectClass.class
+  check r.class.parent == VM.object_class.class
 
 test_interpreter """
   (class A)
@@ -111,7 +115,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       (. f)
     )
     (fn f _
@@ -124,7 +128,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init []
+    (.ctor []
       (/description = "Class A")
     )
   )
@@ -134,7 +138,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init []
+    (.ctor []
       (/description = "Class A")
     )
   )
@@ -143,7 +147,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init description
+    (.ctor description
       (/description = description)
     )
   )
@@ -152,7 +156,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init /name
+    (.ctor /name
     )
   )
   ((new A 1)./name)
@@ -160,9 +164,9 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init /p
+    (.ctor /p
     )
-    (method test _
+    (.fn test _
       /p
     )
   )
@@ -171,7 +175,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test /name
+    (.fn test /name
     )
   )
   (var a (new A))
@@ -181,7 +185,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test /name
+    (.fn test /name
     )
   )
   (var a (new A))
@@ -191,7 +195,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init [/name = 1]
+    (.ctor [/name = 1]
     )
   )
   ((new A)./name)
@@ -199,9 +203,9 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init [/p = 1]
+    (.ctor [/p = 1]
     )
-    (method test _
+    (.fn test _
       /p
     )
   )
@@ -210,10 +214,10 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (method init _
+#     (.ctor _
 #       ($set_prop "data" {^p 1})
 #     )
-#     (method test _
+#     (.fn test _
 #       (($get_prop "data") ./p)
 #     )
 #   )
@@ -223,7 +227,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init [/p = 1]
+    (.ctor [/p = 1]
     )
   )
   ((new A)./p)
@@ -231,7 +235,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test /x...
+    (.fn test /x...
     )
   )
   (var a (new A))
@@ -241,7 +245,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (method init ^/name
+#     (.ctor ^/name
 #     )
 #   )
 #   ((new A ^name "x")./name)
@@ -249,7 +253,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (method init ^/name ^/...
+#     (.ctor ^/name ^/...
 #       # All properties except name are added to the instance
 #     )
 #   )
@@ -258,7 +262,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (method init ^/name ^/x...
+#     (.ctor ^/name ^/x...
 #       # All properties except name are added to the instance as x
 #     )
 #   )
@@ -267,11 +271,11 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test a
+    (.fn test a
       a
     )
 
-    (method test2 a
+    (.fn test2 a
       (.test a)
     )
   )
@@ -280,7 +284,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test [a b]
+    (.fn test [a b]
       (a + b)
     )
   )
@@ -290,7 +294,7 @@ test_interpreter """
 test_interpreter """
   (fn f _ 1)
   (class A
-    (method test _
+    (.fn test _
       (f)
     )
   )
@@ -303,7 +307,7 @@ test_interpreter """
     (fn g _
       (f)
     )
-    (method test _
+    (.fn test _
       (g)
     )
   )
@@ -316,7 +320,7 @@ test_interpreter """
     (var /x
       (f)
     )
-    (method test _
+    (.fn test _
       x
     )
   )
@@ -329,7 +333,7 @@ test_interpreter """
 #     (var /x
 #       (/f) # A's parent namespace should be the module namespace!
 #     )
-#     (method test _
+#     (.fn test _
 #       x
 #     )
 #   )
@@ -338,7 +342,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test []
+    (.fn test []
       "A.test"
     )
   )
@@ -349,7 +353,7 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (method test _
+#     (.fn test _
 #       $args
 #     )
 #   )
@@ -359,12 +363,12 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test a
+    (.fn test a
       a
     )
   )
   (class B < A
-    (method test a
+    (.fn test a
       (super a)
     )
   )
@@ -373,7 +377,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init _
+    (.ctor _
       (/test = 1)
     )
   )
@@ -383,7 +387,7 @@ test_interpreter """
 
 test_interpreter """
   (mixin M
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -395,7 +399,7 @@ test_interpreter """
 
 test_interpreter """
   (mixin M1
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -415,12 +419,12 @@ test_interpreter """
 # # Single inheritance with flexibility of changing class, overwriting methods
 # # test_interpreter """
 # #   (class A
-# #     (method test _
+# #     (.fn test _
 # #       1
 # #     )
 # #   )
 # #   (class B
-# #     (method test _
+# #     (.fn test _
 # #       2
 # #     )
 # #   )
@@ -430,19 +434,19 @@ test_interpreter """
 
 # # test_interpreter """
 # #   (class A
-# #     (method test _
+# #     (.fn test _
 # #       1
 # #     )
 # #   )
 # #   (class B
-# #     (method test _
+# #     (.fn test _
 # #       2
 # #     )
 # #   )
 # #   (var a (new A))
 # #   ((a as
 # #     (class < B
-# #       (method test _
+# #       (.fn test _
 # #         3
 # #       )
 # #     )
@@ -451,11 +455,11 @@ test_interpreter """
 
 # test "Interpreter / eval: native method":
 #   init_all()
-#   VM.app.ns["test_fn"] = proc(self: Value, props: Table[MapKey, Value], children: seq[Value]): Value =
+#   VM.app.ns["test_fn"] = proc(self: Value, props: Table[string, Value], children: seq[Value]): Value =
 #     children[0].int + children[1].int
 #   var code = cleanup """
 #     (class A
-#       (native_method test test_fn)
+#       (.method test test_fn)
 #     )
 #     ((new A) .test 1 2)
 #   """
@@ -485,7 +489,7 @@ test_interpreter """
 #     cls
 #   )
 #   (my_class "A"
-#     (method init []
+#     (.ctor []
 #       (/description = "Class A")
 #     )
 #   )
@@ -500,12 +504,12 @@ test_interpreter """
 
 # test_interpreter """
 #   (class A
-#     (method test _
+#     (.fn test _
 #       ("" (./name) ".test")
 #     )
 #   )
 #   (object Config < A
-#     (method init _
+#     (.ctor _
 #       (/name = "Config")
 #     )
 #   )
@@ -527,7 +531,7 @@ test_interpreter """
 
 test_interpreter """
   ($object a
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -536,11 +540,11 @@ test_interpreter """
 
 test_interpreter """
   ($object a
-    (method init _
+    (.ctor _
       (/test = 1)
     )
 
-    (method test _
+    (.fn test _
       /test
     )
   )
@@ -549,14 +553,44 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       1
     )
   )
   ($object a < A
-    (method test _
+    (.fn test _
       ((super) + 1)
     )
   )
   a/.test
 """, 2
+
+test_interpreter """
+  (class A
+    (.fn test a
+      a
+    )
+  )
+  (var b 1)
+  ((new A) .test b)
+""", 1
+
+test_interpreter """
+  (class A
+    (.macro test a
+      a
+    )
+  )
+  (var b 1)
+  ((new A) .test b)
+""", new_gene_symbol("b")
+
+test_interpreter """
+  (class A
+    (.macro test a
+      ($caller_eval a)
+    )
+  )
+  (var b 1)
+  ((new A) .test b)
+""", 1

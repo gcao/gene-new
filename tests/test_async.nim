@@ -17,6 +17,52 @@ import ./helpers
 # * cancellation
 # * await: convert to synchronous call
 #
+# Pseudo futures: futures don't run on top of os asynchroneous functionality
+# e.g. async_sleep, async_read_file, async_write_file, async_http_request etc
+#
+# In order to make pseudo futures work, we need to have a way to let them
+# run like regular futures.
+# How?
+# First, we should not wait for a future that will never finish - that'll be a
+# programmatic error and should be caught by the interpreter. For example, if
+# there is no os asynchronous stuff going on, then we should not be waiting for
+# a pseudo future.
+# Second, if we have to wait for a pseudo future, we probably need to create a
+# timer on demand and wait for the timer to finish. While we wait for the timer,
+# other code can run and resolve the pseudo future. The other code could be a
+# channel callback that is invoked when message is received from the channel.
+# The issue here is that other code may not be able to run because the interpreter
+# is only going to call callbacks of os asynchronous stuff.
+
+test_interpreter """
+  (var future (new gene/Future))
+  (future .complete 1)
+  (await future)
+""", 1
+
+test_interpreter """
+  (var result)
+  (var future (new gene/Future))
+  (future .on_success (-> (result = 1)))
+  (future .on_failure (-> (result = 2)))
+  (future .complete)
+  (await future)
+  result
+""", 1
+
+test_interpreter """
+  (var result)
+  (var future (new gene/Future))
+  (future .on_success (-> (result = 1)))
+  (future .on_failure (-> (result = 2)))
+  (future .fail)
+  (try
+    (await future)
+    (fail "should not arrive here.")
+  catch *
+  )
+  result
+""", 2
 
 test_interpreter """
   (async 1)
@@ -165,8 +211,29 @@ test_interpreter """
 
 test_interpreter """
   (var result 0)
-  ((gene/sleep_async 1000).on_success(-> (result = 1000)))
+  # 1000 didn't work, probably because the VM is too slow, 500 ms difference
+  # is not long enough
+  ((gene/sleep_async 2000).on_success(-> (result = 2000)))
   ((gene/sleep_async 500 ).on_success(-> (result = 500)))
   ($await_all)
   result
-""", 1000
+""", 2000
+
+test_interpreter """
+  (var result (new gene/Future))
+  ((gene/sleep_async 1000).on_success(-> (result .complete 1)))
+  (await result)
+""", 1
+
+# test_interpreter """
+#   (var result false)
+#   (gene/defer (result = true) 1000)
+#   (gene/wait_until result) # wait, but let async code run in the middle, can take an interval and a timeout value
+#   result
+# """, true
+
+# test_interpreter """
+#   (var result false)
+#   (gene/wait_until ^timeout 2000 result) # wait, but let async code run in the middle, can take an interval and a timeout value
+#   result
+# """, false

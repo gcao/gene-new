@@ -8,7 +8,7 @@ import ./helpers
 
 test_interpreter """
   (!!("a" =~ #/a/))
-""", True
+""", Value(kind: VkBool, bool: true)
 
 test_interpreter """
   ("a" =~ #/(a)/)
@@ -17,7 +17,7 @@ test_interpreter """
 
 test_interpreter """
   ("a" !~ #/a/)
-""", False
+""", Value(kind: VkBool, bool: false)
 
 test_interpreter """
   ("ab" =~ ($regex "(a" "b)"))

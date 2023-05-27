@@ -1,4 +1,4 @@
-import strutils
+import strutils, tables
 import asynchttpserver as stdhttp, asyncdispatch
 import httpclient, uri
 
@@ -102,10 +102,10 @@ type
     headers: Table[string, Value]
     props: Table[string, Value]
 
-var RequestClass: Value
-var ResponseClass: Value
+var RequestClass {.threadvar.}: Value
+var ResponseClass {.threadvar.}: Value
 
-proc new_response*(args: Value): Value {.wrap_exception.} =
+proc new_response*(frame: Frame, args: Value): Value {.wrap_exception.} =
   var resp = Response()
   if args.gene_children.len == 0:
     resp.status = 200
@@ -242,40 +242,40 @@ iterator decodeQuery*(data: string): tuple[key, value: string] =
           uriParseError("'&' expected at index '$#' for '$#'" % [$i, data])
       inc(i)
 
-proc req_method*(self: Value, args: Value): Value {.wrap_exception.} =
+proc req_method*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Request](self.custom).req.req_method
 
-proc req_url*(self: Value, args: Value): Value {.wrap_exception.} =
+proc req_url*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Request](self.custom).req.url
 
-proc req_path*(self: Value, args: Value): Value {.wrap_exception.} =
+proc req_path*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Request](self.custom).req.url.path
 
-proc req_body*(self: Value, args: Value): Value {.wrap_exception.} =
+proc req_body*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Request](self.custom).req.body
 
-proc req_body_params*(self: Value, args: Value): Value {.wrap_exception.} =
+proc req_body_params*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   result = new_gene_map()
   var req = cast[Request](self.custom).req
   for k, v in decode_query(req.body):
     result.map[k] = v
 
-proc req_params*(self: Value, args: Value): Value {.wrap_exception.} =
+proc req_params*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   result = new_gene_map()
   var req = cast[Request](self.custom).req
   for k, v in decode_query(req.url.query):
     result.map[k] = v
 
-proc req_headers*(self: Value, args: Value): Value {.wrap_exception.} =
+proc req_headers*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   result = new_gene_map()
   var req = cast[Request](self.custom).req
   for key, val in req.headers.pairs:
-    result.map[key.to_key] = val
+    result.map[key] = val
 
-proc resp_status*(self: Value, args: Value): Value {.wrap_exception.} =
+proc resp_status*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   return $cast[Response](self.custom).status
 
-proc start_server_internal*(args: Value): Value =
+proc start_server_internal*(frame: Frame, args: Value): Value =
   var port = if args.gene_children[0].kind == VkString:
     args.gene_children[0].str.parse_int
   else:
@@ -285,7 +285,7 @@ proc start_server_internal*(args: Value): Value =
     echo "HTTP REQ : " & $req.req_method & " " & $req.url
     var my_args = new_gene_gene()
     my_args.gene_children.add(new_gene_request(req))
-    var res = VM.invoke_catch(nil, args.gene_children[1], my_args)
+    var res = invoke_catch(nil, args.gene_children[1], my_args)
     if res == nil or res.kind == VkNil:
       echo "HTTP RESP: 404"
       echo()
@@ -319,10 +319,10 @@ proc start_server_internal*(args: Value): Value =
   var server = new_async_http_server()
   async_check server.serve(Port(port), handler)
 
-proc start_server*(args: Value): Value {.wrap_exception.} =
-  start_server_internal(args)
+proc start_server*(frame: Frame, args: Value): Value {.wrap_exception.} =
+  start_server_internal(frame, args)
 
-proc http_get(args: Value): Value {.wrap_exception.} =
+proc http_get(frame: Frame, args: Value): Value {.wrap_exception.} =
   var url = args.gene_children[0].str
   var headers = newHttpHeaders()
   if args.gene_children.len > 2:
@@ -332,7 +332,7 @@ proc http_get(args: Value): Value {.wrap_exception.} =
   client.headers = headers
   result = client.get_content(url)
 
-proc http_get_json(args: Value): Value {.wrap_exception.} =
+proc http_get_json(frame: Frame, args: Value): Value {.wrap_exception.} =
   var url = args.gene_children[0].str
   var headers = newHttpHeaders()
   if args.gene_children.len > 2:
@@ -342,7 +342,7 @@ proc http_get_json(args: Value): Value {.wrap_exception.} =
   client.headers = headers
   result = client.get_content(url).parse_json
 
-proc http_get_async(args: Value): Value {.wrap_exception.} =
+proc http_get_async(frame: Frame, args: Value): Value {.wrap_exception.} =
   var url = args.gene_children[0].str
   var headers = newHttpHeaders()
   if args.gene_children.len > 2:
@@ -361,7 +361,7 @@ proc http_get_async(args: Value): Value {.wrap_exception.} =
 proc init*(module: Module): Value {.wrap_exception.} =
   result = new_namespace("http")
   result.ns.module = module
-  GENEX_NS.ns["http"] = result
+  VM.genex_ns.ns["http"] = result
 
   result.ns["respond"] = new_gene_processor(translate_wrap(translate_respond))
   result.ns["redirect"] = new_gene_processor(translate_wrap(translate_respond))

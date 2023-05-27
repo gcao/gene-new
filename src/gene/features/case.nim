@@ -1,6 +1,5 @@
 import tables, nre
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -12,7 +11,7 @@ type
     case_input*: Expr
     case_blks*: seq[Expr]   # Code blocks
     case_else*: Expr        # Else block
-    case_lite_mapping*: Table[MapKey, int]  # literal -> block index
+    case_lite_mapping*: Table[string, int]  # literal -> block index
     case_more_mapping*: seq[(Expr, int)]    # non-literal -> block index
 
 proc case_equals(input: Value, pattern: Value): bool =
@@ -45,16 +44,16 @@ proc case_equals(input: Value, pattern: Value): bool =
     else:
       result = input == pattern
 
-proc eval_case(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_case(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExCase](expr)
-  var input = self.eval(frame, expr.case_input)
+  var input = eval(frame, expr.case_input)
   for pair in expr.case_more_mapping.mitems:
-    var pattern = self.eval(frame, pair[0])
+    var pattern = eval(frame, pair[0])
     if input.case_equals(pattern):
-      return self.eval(frame, expr.case_blks[pair[1]])
-  result = self.eval(frame, expr.case_else)
+      return eval(frame, expr.case_blks[pair[1]])
+  result = eval(frame, expr.case_else)
 
-proc translate_case(node: Value): Expr =
+proc translate_case(node: Value): Expr {.gcsafe.} =
   # Create a variable because result can not be accessed from closure.
   var expr = ExCase(
     evaluator: eval_case,
@@ -77,7 +76,7 @@ proc translate_case(node: Value): Expr =
   proc handler(input: Value) =
     case state:
     of CsInput:
-      if input == When:
+      if input.is_symbol("when"):
         state = CsWhen
       else:
         not_allowed()
@@ -88,10 +87,10 @@ proc translate_case(node: Value): Expr =
     of CsWhenLogic:
       if input == nil:
         update_mapping(cond, logic)
-      elif input == When:
+      elif input.is_symbol("when"):
         state = CsWhen
         update_mapping(cond, logic)
-      elif input == Else:
+      elif input.is_symbol("else"):
         state = CsElse
         update_mapping(cond, logic)
         logic = @[]
@@ -112,4 +111,5 @@ proc translate_case(node: Value): Expr =
   result = expr
 
 proc init*() =
-  GeneTranslators["case"] = translate_case
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["case"] = translate_case

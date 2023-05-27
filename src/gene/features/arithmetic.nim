@@ -63,9 +63,9 @@ type
   ExAnd* = ref object of Expr
     children*: seq[Expr]
 
-proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var first = self.eval(frame, cast[ExBinOp](expr).op1)
-  var second = self.eval(frame, cast[ExBinOp](expr).op2)
+proc eval_bin(frame: Frame, expr: var Expr): Value =
+  var first = eval(frame, cast[ExBinOp](expr).op1)
+  var second = eval(frame, cast[ExBinOp](expr).op2)
   case cast[ExBinOp](expr).op:
   of BinAdd:
     result = new_gene_int(first.int + second.int)
@@ -98,20 +98,20 @@ proc eval_bin(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   else:
     todo("eval_bin " & $cast[ExBinOp](expr).op)
 
-proc eval_logical(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_logical(frame: Frame, expr: var Expr): Value =
   var op = cast[ExBinOp](expr).op
-  var first = self.eval(frame, cast[ExBinOp](expr).op1)
+  var first = eval(frame, cast[ExBinOp](expr).op1)
   case op:
   of BinAnd:
     if first.is_truthy:
-      result = self.eval(frame, cast[ExBinOp](expr).op2)
+      result = eval(frame, cast[ExBinOp](expr).op2)
     else:
       result = first
   of BinOr:
     if first.is_truthy:
       result = first
     else:
-      result = self.eval(frame, cast[ExBinOp](expr).op2)
+      result = eval(frame, cast[ExBinOp](expr).op2)
   else:
     not_allowed("eval_logical " & $op)
 
@@ -128,7 +128,7 @@ proc new_ex_bin*(op: BinOp): ExBinOp =
       op: op,
     )
 
-proc translate_op*(op: string, op1, op2: Expr): Expr =
+proc translate_op*(op: string, op1, op2: Expr): Expr {.gcsafe.} =
   case op:
   of "+":
     result = new_ex_bin(BinAdd)
@@ -160,7 +160,7 @@ proc translate_op*(op: string, op1, op2: Expr): Expr =
   cast[ExBinOp](result).op1 = op1
   cast[ExBinOp](result).op2 = op2
 
-proc translate_arithmetic*(value: Value): Expr =
+proc translate_arithmetic*(value: Value): Expr {.gcsafe.} =
   case value.gene_type.str:
   of "+":
     result = new_ex_bin(BinAdd)
@@ -190,7 +190,7 @@ proc translate_arithmetic*(value: Value): Expr =
   cast[ExBinOp](result).op1 = translate(value.gene_children[0])
   cast[ExBinOp](result).op2 = translate(value.gene_children[1])
 
-proc translate_arithmetic*(children: seq[Value]): Expr =
+proc translate_arithmetic*(children: seq[Value]): Expr {.gcsafe.} =
   if children.len == 1:
     return translate(children[0])
   elif children.len == 3:
@@ -213,13 +213,13 @@ proc translate_arithmetic*(children: seq[Value]): Expr =
   else:
     not_allowed("translate_arithmetic " & $children)
 
-proc eval_and(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_and(frame: Frame, expr: var Expr): Value =
   for e in cast[ExAnd](expr).children.mitems:
-    if not self.eval(frame, e):
+    if not eval(frame, e):
       return false
   return true
 
-proc translate_comparisons*(children: seq[Value]): Expr =
+proc translate_comparisons*(children: seq[Value]): Expr {.gcsafe.} =
   if children.len == 1:
     return translate(children[0])
   elif children.len == 3:
@@ -234,7 +234,7 @@ proc translate_comparisons*(children: seq[Value]): Expr =
   else:
     not_allowed("translate_comparisons " & $children)
 
-proc translate_logic*(children: seq[Value]): Expr =
+proc translate_logic*(children: seq[Value]): Expr {.gcsafe.} =
   if children.len == 1:
     return translate(children[0])
   elif children.len == 3:
@@ -258,21 +258,22 @@ proc translate_logic*(children: seq[Value]): Expr =
     not_allowed("translate_logic " & $children)
 
 proc init*() =
-  GeneTranslators["+"  ] = translate_arithmetic
-  GeneTranslators["-"  ] = translate_arithmetic
-  GeneTranslators["*"  ] = translate_arithmetic
-  GeneTranslators["/"  ] = translate_arithmetic
-  GeneTranslators["**" ] = translate_arithmetic # power
-  GeneTranslators[">>" ] = translate_arithmetic # shift right
-  GeneTranslators["<<" ] = translate_arithmetic # shift left
-  GeneTranslators["&"  ] = translate_arithmetic  # bit-and
-  GeneTranslators["|"  ] = translate_arithmetic  # bit-or
-  GeneTranslators["==" ] = translate_arithmetic
-  GeneTranslators["!=" ] = translate_arithmetic
-  GeneTranslators["<"  ] = translate_arithmetic
-  GeneTranslators["<=" ] = translate_arithmetic
-  GeneTranslators[">"  ] = translate_arithmetic
-  GeneTranslators[">=" ] = translate_arithmetic
-  GeneTranslators["&&" ] = translate_arithmetic
-  GeneTranslators["||" ] = translate_arithmetic
-  GeneTranslators["||*"] = translate_arithmetic  # xor
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["+"  ] = translate_arithmetic
+    VM.gene_translators["-"  ] = translate_arithmetic
+    VM.gene_translators["*"  ] = translate_arithmetic
+    VM.gene_translators["/"  ] = translate_arithmetic
+    VM.gene_translators["**" ] = translate_arithmetic # power
+    VM.gene_translators[">>" ] = translate_arithmetic # shift right
+    VM.gene_translators["<<" ] = translate_arithmetic # shift left
+    VM.gene_translators["&"  ] = translate_arithmetic  # bit-and
+    VM.gene_translators["|"  ] = translate_arithmetic  # bit-or
+    VM.gene_translators["==" ] = translate_arithmetic
+    VM.gene_translators["!=" ] = translate_arithmetic
+    VM.gene_translators["<"  ] = translate_arithmetic
+    VM.gene_translators["<=" ] = translate_arithmetic
+    VM.gene_translators[">"  ] = translate_arithmetic
+    VM.gene_translators[">=" ] = translate_arithmetic
+    VM.gene_translators["&&" ] = translate_arithmetic
+    VM.gene_translators["||" ] = translate_arithmetic
+    VM.gene_translators["||*"] = translate_arithmetic  # xor

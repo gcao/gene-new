@@ -13,22 +13,22 @@ type
   ExMemberMissing* = ref object of Expr
     data: Expr
 
-proc eval_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_ns(frame: Frame, expr: var Expr): Value =
   var e = cast[ExNamespace](expr)
   var ns = new_namespace(frame.ns, e.name)
   result = Value(kind: VkNamespace, ns: ns)
   var container = frame.ns
   if e.container != nil:
-    container = self.eval(frame, e.container).ns
+    container = eval(frame, e.container).ns
   container[e.name] = result
 
   var new_frame = new_frame()
   new_frame.ns = ns
   new_frame.scope = new_scope()
   new_frame.self = result
-  discard self.eval(new_frame, e.body)
+  discard eval(new_frame, e.body)
 
-proc translate_ns(value: Value): Expr =
+proc translate_ns(value: Value): Expr {.gcsafe.} =
   var e = ExNamespace(
     evaluator: eval_ns,
     body: translate(value.gene_children[1..^1]),
@@ -45,4 +45,5 @@ proc translate_ns(value: Value): Expr =
   result = e
 
 proc init*() =
-  GeneTranslators["ns"] = translate_ns
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["ns"] = translate_ns

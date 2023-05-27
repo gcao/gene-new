@@ -1,21 +1,20 @@
 import strutils, sequtils, tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 import ./selector
 
 type
   ExSymbol* = ref object of Expr
-    name*: MapKey
+    name*: string
 
   ExDefineNsOrScope* = ref object of Expr
-    name*: MapKey
+    name*: string
     value*: Expr
 
   ExMember* = ref object of Expr
     container*: Expr
-    name*: MapKey
+    name*: string
 
   ExChild* = ref object of Expr
     container*: Expr
@@ -23,33 +22,37 @@ type
 
   # member of self
   ExMyMember* = ref object of Expr
-    name*: MapKey
+    name*: string
 
   ExPackage* = ref object of Expr
 
-let SELF_EXPR = Expr()
-SELF_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+var SELF_EXPR {.threadvar.}: Expr
+
+proc eval_self(frame: Frame, expr: var Expr): Value =
   frame.self
 
-let NS_EXPR = Expr()
-NS_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+var NS_EXPR {.threadvar.}: Expr
+
+proc eval_ns(frame: Frame, expr: var Expr): Value =
   Value(kind: VkNamespace, ns: frame.ns)
 
-let PKG_EXPR = Expr()
-PKG_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+var PKG_EXPR {.threadvar.}: Expr
+
+proc eval_pkg(frame: Frame, expr: var Expr): Value =
   Value(kind: VkPackage, pkg: frame.ns.package)
 
-let MOD_EXPR = Expr()
-MOD_EXPR.evaluator = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+var MOD_EXPR {.threadvar.}: Expr
+
+proc eval_mod(frame: Frame, expr: var Expr): Value =
   Value(kind: VkModule, module: frame.ns.module)
 
-proc eval_symbol_scope(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_symbol_scope(frame: Frame, expr: var Expr): Value =
   frame.scope[cast[ExSymbol](expr).name]
 
-proc eval_symbol_ns(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_symbol_ns(frame: Frame, expr: var Expr): Value =
   frame.ns[cast[ExSymbol](expr).name]
 
-proc eval_my_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_my_member(frame: Frame, expr: var Expr): Value =
   result = frame.scope[cast[ExMyMember](expr).name]
   if result == nil:
     expr.evaluator = eval_symbol_ns
@@ -57,17 +60,17 @@ proc eval_my_member(self: VirtualMachine, frame: Frame, target: Value, expr: var
   else:
     expr.evaluator = eval_symbol_scope
 
-proc eval_member(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var v = self.eval(frame, cast[ExMember](expr).container)
+proc eval_member(frame: Frame, expr: var Expr): Value =
+  var v = eval(frame, cast[ExMember](expr).container)
   var key = cast[ExMember](expr).name
   return v.get_member(key)
 
-proc eval_child(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var v = self.eval(frame, cast[ExMember](expr).container)
+proc eval_child(frame: Frame, expr: var Expr): Value =
+  var v = eval(frame, cast[ExMember](expr).container)
   var i = cast[ExChild](expr).index
   return v.get_child(i)
 
-proc translate*(name: string): Expr {.inline.} =
+proc translate*(name: string): Expr {.gcsafe, inline.} =
   if name.starts_with("@"):
     if name[1] == '.':
       return new_ex_invoke_selector(name[2..^1])
@@ -82,9 +85,9 @@ proc translate*(name: string): Expr {.inline.} =
   of "", "self":
     result = SELF_EXPR
   of "global":
-    result = new_ex_literal(GLOBAL_NS)
+    result = new_ex_literal(VM.global_ns)
   of "_":
-    result = new_ex_literal(Placeholder)
+    result = new_ex_literal(Value(kind: VkPlaceholder))
   of "$app":
     result = new_ex_literal(Value(kind: VkApplication, app: VM.app))
   of "$ns":
@@ -98,10 +101,10 @@ proc translate*(name: string): Expr {.inline.} =
   else:
     result = ExMyMember(
       evaluator: eval_my_member,
-      name: name.to_key,
+      name: name,
     )
 
-proc translate*(names: seq[string]): Expr =
+proc translate*(names: seq[string]): Expr {.gcsafe.} =
   if names.len == 1:
     return translate(names[0])
   else:
@@ -110,8 +113,7 @@ proc translate*(names: seq[string]): Expr =
       return ExInvoke(
         evaluator: eval_invoke,
         self: translate(names[0..^2]),
-        meth: name[1..^1].to_key,
-        args: new_ex_arg(),
+        meth: name[1..^1],
       )
     else:
       try:
@@ -125,21 +127,21 @@ proc translate*(names: seq[string]): Expr =
         return ExMember(
           evaluator: eval_member,
           container: translate(names[0..^2]),
-          name: name.to_key,
+          name: name,
         )
 
-proc translate_symbol(value: Value): Expr =
+proc translate_symbol(value: Value): Expr {.gcsafe.} =
   translate(value.str)
 
-proc translate_complex_symbol(value: Value): Expr =
+proc translate_complex_symbol(value: Value): Expr {.gcsafe.} =
   if value.csymbol[0].starts_with("@"):
     translate_csymbol_selector(value.csymbol)
   else:
     translate(value.csymbol)
 
-proc eval_define_ns_or_scope(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_define_ns_or_scope(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExDefineNsOrScope](expr)
-  result = self.eval(frame, expr.value)
+  result = eval(frame, expr.value)
 
   var ns: Namespace
   if frame.kind == FrModule:
@@ -170,12 +172,12 @@ proc eval_define_ns_or_scope(self: VirtualMachine, frame: Frame, target: Value, 
 # Else they are defined on the current scope
 #
 # (fn n/m/f ...) will add f to n/m no matter what n/m is
-proc translate_definition*(name: Value, value: Expr): Expr =
+proc translate_definition*(name: Value, value: Expr): Expr {.gcsafe.} =
   case name.kind:
   of VkSymbol, VkString:
     return ExDefineNsOrScope(
       evaluator: eval_define_ns_or_scope,
-      name: name.str.to_key,
+      name: name.str,
       value: value,
     )
   of VkComplexSymbol:
@@ -190,5 +192,11 @@ proc translate_definition*(name: Value, value: Expr): Expr =
     todo("translate_definition " & $name)
 
 proc init*() =
-  Translators[VkSymbol] = translate_symbol
-  Translators[VkComplexSymbol] = translate_complex_symbol
+  VmCreatedCallbacks.add proc() =
+    SELF_EXPR = Expr(evaluator: eval_self)
+    NS_EXPR = Expr(evaluator: eval_ns)
+    PKG_EXPR = Expr(evaluator: eval_pkg)
+    MOD_EXPR = Expr(evaluator: eval_mod)
+
+    VM.translators[VkSymbol] = translate_symbol
+    VM.translators[VkComplexSymbol] = translate_complex_symbol

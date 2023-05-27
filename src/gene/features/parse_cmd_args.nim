@@ -1,7 +1,6 @@
 import strutils, sequtils, tables
 
 import ../types
-import ../map_key
 import ../interpreter_base
 
 type
@@ -122,14 +121,14 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
     of "option":
       var option = ArgMatcher(kind: ArgOption)
       option.parse_data_type(item)
-      option.toggle = item.gene_props.get_or_default(TOGGLE_KEY, false)
+      option.toggle = item.gene_props.get_or_default("toggle", false)
       if option.toggle:
         option.data_type = ArgBool
       else:
-        option.multiple = item.gene_props.get_or_default(MULTIPLE_KEY, false)
-        option.required = item.gene_props.get_or_default(REQUIRED_KEY, false)
-      if item.gene_props.has_key(DEFAULT_KEY):
-        option.default = item.gene_props[DEFAULT_KEY]
+        option.multiple = item.gene_props.get_or_default("multiple", false)
+        option.required = item.gene_props.get_or_default("required", false)
+      if item.gene_props.has_key("default"):
+        option.default = item.gene_props["default"]
         option.required = false
       for item in item.gene_children:
         if item.str[0] == '-':
@@ -148,14 +147,14 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
     of "argument":
       var arg = ArgMatcher(kind: ArgPositional)
       arg.arg_name = item.gene_children[0].str
-      if item.gene_props.has_key(DEFAULT_KEY):
-        arg.default = item.gene_props[DEFAULT_KEY]
+      if item.gene_props.has_key("default"):
+        arg.default = item.gene_props["default"]
         arg.required = false
       arg.parse_data_type(item)
       var is_last = i == schema.vec.len - 1
       if is_last:
-        arg.multiple = item.gene_props.get_or_default(MULTIPLE_KEY, false)
-        arg.required = item.gene_props.get_or_default(REQUIRED_KEY, false)
+        arg.multiple = item.gene_props.get_or_default("multiple", false)
+        arg.required = item.gene_props.get_or_default("required", false)
       else:
         arg.required = true
       self.args.add(arg)
@@ -163,7 +162,7 @@ proc parse*(self: var ArgMatcherRoot, schema: Value) =
     else:
       not_allowed()
 
-proc translate(self: ArgMatcher, value: string): Value =
+proc translate(self: ArgMatcher, value: string): Value {.gcsafe.} =
   if self.data_type == ArgInt:
     return value.parse_int
   elif self.data_type == ArgBool:
@@ -244,9 +243,9 @@ proc match*(self: var ArgMatcherRoot, input: string): ArgMatchingResult =
     parts = s.split(" ")
   return self.match(parts)
 
-proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_parse(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExParseCmdArgs](expr)
-  var cmd_args = self.eval(frame, expr.cmd_args)
+  var cmd_args = eval(frame, expr.cmd_args)
   var r = expr.cmd_args_schema.match(cmd_args.vec.map(proc(v: Value): string = v.str))
   if r.kind == AmSuccess:
     for k, v in r.fields:
@@ -255,11 +254,11 @@ proc eval_parse(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
         name = k[2..^1]
       elif k.starts_with("-"):
         name = k[1..^1]
-      frame.scope.def_member(name.to_key, v)
+      frame.scope.def_member(name, v)
   else:
     todo()
 
-proc translate_parse(value: Value): Expr =
+proc translate_parse(value: Value): Expr {.gcsafe.} =
   var r = ExParseCmdArgs(
     evaluator: eval_parse,
     cmd_args: translate(value.gene_children[1]),
@@ -270,6 +269,7 @@ proc translate_parse(value: Value): Expr =
   return r
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GLOBAL_NS.ns["$parse_cmd_args"] = new_gene_processor(translate_parse)
-    GENE_NS.ns["$parse_cmd_args"] = GLOBAL_NS.ns["$parse_cmd_args"]
+  VmCreatedCallbacks.add proc() =
+    let parse = new_gene_processor(translate_parse)
+    VM.global_ns.ns["$parse_cmd_args"] = parse
+    VM.gene_ns.ns["$parse_cmd_args"] = parse

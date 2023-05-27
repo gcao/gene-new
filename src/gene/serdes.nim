@@ -1,6 +1,5 @@
 import tables, strutils
 
-import ./map_key
 import ./types
 import ./parser
 import ./interpreter_base
@@ -10,9 +9,9 @@ type
     references*: Table[string, Value]
     data*: Value
 
-proc serialize*(self: Serialization, value: Value): Value
-proc to_path*(self: Value): string
-proc to_path*(self: Class): string
+proc serialize*(self: Serialization, value: Value): Value {.gcsafe.}
+proc to_path*(self: Value): string {.gcsafe.}
+proc to_path*(self: Class): string {.gcsafe.}
 
 proc new_ref(path: string): Value =
   new_gene_gene(new_gene_complex_symbol(@["gene", "ref"]), new_gene_string(path))
@@ -89,16 +88,16 @@ proc to_s*(self: Serialization): string =
 
 #################### Deserialization #############
 
-proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value
+proc deserialize*(self: Serialization, value: Value): Value {.gcsafe.}
 
-proc deref*(self: Serialization, vm: VirtualMachine, s: string): Value =
+proc deref*(self: Serialization, s: string): Value =
   var parts = s.split(":")
   var module_name = parts[0]
   var ns_path = parts[1].split("/")
-  var ns = vm.modules[module_name.to_key]
+  var ns = VM.modules[module_name]
   while ns_path.len > 1:
     ns_path.delete(0)
-    var key = ns_path[0].to_key
+    var key = ns_path[0]
     result = ns[key]
     if ns_path.len > 1:
       case result.kind:
@@ -109,27 +108,27 @@ proc deref*(self: Serialization, vm: VirtualMachine, s: string): Value =
       else:
         not_allowed("deref " & s & " " & $result.kind)
 
-proc deserialize*(vm: VirtualMachine, s: string): Value =
+proc deserialize*(s: string): Value =
   var ser = Serialization(
     references: Table[string, Value](),
   )
-  ser.deserialize(vm, read(s))
+  ser.deserialize(read(s))
 
-proc deserialize*(self: Serialization, vm: VirtualMachine, value: Value): Value =
+proc deserialize*(self: Serialization, value: Value): Value =
   case value.kind:
   of VkGene:
     case value.gene_type.kind:
     of VkComplexSymbol:
       case $value.gene_type:
       of "gene/serialization":
-        return self.deserialize(vm, value.gene_children[0])
+        return self.deserialize(value.gene_children[0])
       of "gene/ref":
-        return self.deref(vm, value.gene_children[0].str)
+        return self.deref(value.gene_children[0].str)
       of "gene/instance":
-        var class = self.deserialize(vm, value.gene_children[0]).class
-        var props = Table[MapKey, Value]()
+        var class = self.deserialize(value.gene_children[0]).class
+        var props = Table[string, Value]()
         for k, v in value.gene_children[1].map:
-          props[k] = self.deserialize(vm, v)
+          props[k] = self.deserialize(v)
         return new_gene_instance(class, props)
       else:
         return value
@@ -147,29 +146,29 @@ type
   ExDeser* = ref object of Expr
     value*: Expr
 
-proc eval_ser(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_ser(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExSer](expr)
-  return serialize(self.eval(frame, expr.value)).to_s
+  return serialize(eval(frame, expr.value)).to_s
 
-proc translate_ser(value: Value): Expr =
+proc translate_ser(value: Value): Expr {.gcsafe.} =
   return ExSer(
     evaluator: eval_ser,
     value: translate(value.gene_children[0]),
   )
 
-proc eval_deser(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_deser(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExDeser](expr)
-  return self.deserialize(self.eval(frame, expr.value).str)
+  return deserialize(eval(frame, expr.value).str)
 
-proc translate_deser(value: Value): Expr =
+proc translate_deser(value: Value): Expr {.gcsafe.} =
   return ExDeser(
     evaluator: eval_deser,
     value: translate(value.gene_children[0]),
   )
 
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
+  VmCreatedCallbacks.add proc() =
     var serdes = new_namespace("serdes")
     serdes["serialize"] = new_gene_processor(translate_ser)
     serdes["deserialize"] = new_gene_processor(translate_deser)
-    GENE_NS.ns["serdes"] = Value(kind: VkNamespace, ns: serdes)
+    VM.gene_ns.ns["serdes"] = Value(kind: VkNamespace, ns: serdes)

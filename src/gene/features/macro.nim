@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 import ./symbol
@@ -12,48 +11,12 @@ type
   ExCallerEval* = ref object of Expr
     data*: Expr
 
-proc macro_invoker*(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var scope = new_scope()
-  scope.set_parent(target.macro.parent_scope, target.macro.parent_scope_max)
-  var new_frame = Frame(ns: target.macro.ns, scope: scope)
-  new_frame.parent = frame
-
-  var args = cast[ExLiteral](expr).data
-  var match_result = self.match(new_frame, target.macro.matcher, args)
-  case match_result.kind:
-  of MatchSuccess:
-    discard
-  of MatchMissingFields:
-    for field in match_result.missing:
-      not_allowed("Argument " & field.to_s & " is missing.")
-  else:
-    todo()
-
-  if target.macro.body_compiled == nil:
-    target.macro.body_compiled = translate(target.macro.body)
-
-  try:
-    result = self.eval(new_frame, target.macro.body_compiled)
-  except Return as r:
-    result = r.val
-  except system.Exception as e:
-    if self.repl_on_error:
-      result = repl_on_error(self, frame, e)
-      discard
-    else:
-      raise
-
-proc eval_macro(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_macro(frame: Frame, expr: var Expr): Value =
   result = Value(
     kind: VkMacro,
     `macro`: cast[ExMacro](expr).data,
   )
   result.macro.ns = frame.ns
-
-proc arg_translator(value: Value): Expr =
-  var expr = new_ex_literal(value)
-  expr.evaluator = macro_invoker
-  result = expr
 
 proc to_macro(node: Value): Macro =
   var first = node.gene_children[0]
@@ -72,9 +35,8 @@ proc to_macro(node: Value): Macro =
 
   body = wrap_with_try(body)
   result = new_macro(name, matcher, body)
-  result.translator = arg_translator
 
-proc translate_macro(value: Value): Expr =
+proc translate_macro(value: Value): Expr {.gcsafe.} =
   var mac = to_macro(value)
   var mac_expr = ExMacro(
     evaluator: eval_macro,
@@ -82,18 +44,19 @@ proc translate_macro(value: Value): Expr =
   )
   return translate_definition(value.gene_children[0], mac_expr)
 
-proc eval_caller_eval(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  var v = self.eval(frame, cast[ExCallerEval](expr).data)
+proc eval_caller_eval(frame: Frame, expr: var Expr): Value =
+  var v = eval(frame, cast[ExCallerEval](expr).data)
   var e = translate(v)
-  self.eval(frame.parent, e)
+  eval(frame.parent, e)
 
-proc translate_caller_eval(value: Value): Expr =
+proc translate_caller_eval(value: Value): Expr {.gcsafe.} =
   ExCallerEval(
     evaluator: eval_caller_eval,
     data: translate(value.gene_children[0]),
   )
 
 proc init*() =
-  GeneTranslators["macro"] = translate_macro
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["$caller_eval"] = new_gene_processor(translate_caller_eval)
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["macro"] = translate_macro
+
+    VM.global_ns.ns["$caller_eval"] = new_gene_processor(translate_caller_eval)

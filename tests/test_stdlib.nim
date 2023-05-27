@@ -30,12 +30,12 @@ test_interpreter """
 """, "{^a \"a\"}"
 
 test_interpreter """
-  ((1 ^a "a" "b") .to_s)
-""", "(1 ^a \"a\" \"b\")"
+  ((:x ^a "a" "b") .to_s)
+""", "(x ^a \"a\" \"b\")"
 
 test_interpreter """
   (class A
-    (method call [x y]
+    (.fn call [x y]
       (x + y)
     )
   )

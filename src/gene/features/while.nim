@@ -8,21 +8,21 @@ type
     cond*: Expr
     body: seq[Expr]
 
-proc eval_while(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_while(frame: Frame, expr: var Expr): Value =
   while true:
-    var cond = self.eval(frame, cast[ExWhile](expr).cond)
+    var cond = eval(frame, cast[ExWhile](expr).cond)
     if not cond.bool:
       break
     try:
       for item in cast[ExWhile](expr).body.mitems:
-        result = self.eval(frame, item)
+        result = eval(frame, item)
     except Continue:
       discard
     except Break as b:
       result = b.val
       break
 
-proc translate_while(value: Value): Expr =
+proc translate_while(value: Value): Expr {.gcsafe.} =
   var r = ExWhile(
     evaluator: eval_while,
   )
@@ -32,4 +32,5 @@ proc translate_while(value: Value): Expr =
   result = r
 
 proc init*() =
-  GeneTranslators["while"] = translate_while
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["while"] = translate_while

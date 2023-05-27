@@ -1,4 +1,4 @@
-import ./interpreter_base
+import ./interpreter_base; interpreter_base.init()
 export interpreter_base
 
 import "./features/core" as core_feature; core_feature.init()
@@ -22,12 +22,14 @@ import "./features/async" as async_feature; async_feature.init()
 import "./features/namespace" as namespace_feature; namespace_feature.init()
 import "./features/selector" as selector_feature; selector_feature.init()
 import "./features/native" as native_feature; native_feature.init()
+import "./features/thread" as thread_feature; thread_feature.init()
 import "./features/loop" as loop_feature; loop_feature.init()
 import "./features/while" as while_feature; while_feature.init()
 import "./features/repeat" as repeat_feature; repeat_feature.init()
 import "./features/for" as for_feature; for_feature.init()
 import "./features/case" as case_feature; case_feature.init()
 import "./features/oop" as oop_feature; oop_feature.init()
+import "./features/aop" as aop_feature; aop_feature.init()
 import "./features/cast" as cast_feature; cast_feature.init()
 import "./features/eval" as eval_feature; eval_feature.init()
 import "./features/parse" as parse_feature; parse_feature.init()

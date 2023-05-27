@@ -1,6 +1,5 @@
 import tables, std/json
 
-import ./map_key
 import ./types
 
 export parse_json
@@ -24,14 +23,14 @@ proc `%`*(self: Value): JsonNode =
   of VkMap:
     result = newJObject()
     for k, v in self.map:
-      result[k.to_s] = %v
+      result[k] = %v
   else:
     todo($self.kind)
 
 converter json_to_gene*(node: JsonNode): Value =
   case node.kind:
   of JNull:
-    return Nil
+    return Value(kind: VkNil)
   of JBool:
     return node.bval
   of JInt:
@@ -43,7 +42,7 @@ converter json_to_gene*(node: JsonNode): Value =
   of JObject:
     result = new_gene_map()
     for k, v in node.fields:
-      result.map[k.to_key] = v.json_to_gene
+      result.map[k] = v.json_to_gene
   of JArray:
     result = new_gene_vec()
     for elem in node.elems:

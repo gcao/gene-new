@@ -70,13 +70,13 @@ test_interpreter """
   A/second
 """, proc(r: Value) =
   var m = r.enum_member
-  check m.parent.name == "A"
+  check m.parent.enum.name == "A"
   check m.name == "second"
   check m.value == 1
 
 test_interpreter """
   (class C
-    (method init _
+    (.ctor _
       (/prop = 1)
     )
   )
@@ -86,7 +86,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method init _
+    (.ctor _
       (/prop = 1)
     )
   )
@@ -96,7 +96,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -106,7 +106,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -116,7 +116,7 @@ test_interpreter """
 
 test_interpreter """
   (class C
-    (method test _
+    (.fn test _
       (/p = 1)
     )
   )

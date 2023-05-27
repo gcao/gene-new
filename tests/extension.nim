@@ -8,19 +8,19 @@ type
   ExTest = ref object of Expr
     data: Expr
 
-var ExtensionClass: Value
+var ExtensionClass {.threadvar.}: Value
 
-proc eval_test(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_test(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExTest](expr)
-  self.eval(frame, expr.data)
+  eval(frame, expr.data)
 
-proc translate_test(value: Value): Expr {.wrap_exception.} =
+proc translate_test(value: Value): Expr {.gcsafe, wrap_exception.} =
   return ExTest(
     evaluator: eval_wrap(eval_test),
     data: translate(value.gene_children[0]),
   )
 
-proc new_extension*(args: Value): Value {.wrap_exception.} =
+proc new_extension*(frame: Frame, args: Value): Value {.wrap_exception.} =
   Value(
     kind: VkCustom,
     custom_class: ExtensionClass.class,
@@ -30,10 +30,10 @@ proc new_extension*(args: Value): Value {.wrap_exception.} =
     ),
   )
 
-proc get_i*(args: Value): Value {.wrap_exception.} =
+proc get_i*(frame: Frame, args: Value): Value {.wrap_exception.} =
   Extension(args.gene_children[0].custom).i
 
-proc get_i*(self: Value, args: Value): Value {.wrap_exception.} =
+proc get_i*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   Extension(self.custom).i
 
 {.push dynlib exportc.}

@@ -32,11 +32,11 @@ import ./helpers
 # ==, !=, > >= < <=
 # ->, =>
 
-test_interpreter "nil", Nil
+test_interpreter "nil", Value(kind: VkNil)
 test_interpreter "1", 1
 test_interpreter "true", true
 test_interpreter "false", false
-test_interpreter "_", Placeholder
+test_interpreter "_", Value(kind: VkPlaceholder)
 test_interpreter "\"string\"", "string"
 test_interpreter ":a", new_gene_symbol("a")
 
@@ -167,7 +167,7 @@ test_interpreter """
 test_interpreter """
   (var a (if false 1))
   a
-""", Nil
+""", Value(kind: VkNil)
 
 test_interpreter """
   (var a 1)
@@ -288,7 +288,7 @@ test_interpreter """
   i
 """, 3
 
-test_interpreter "self", Nil
+test_interpreter "self", Value(kind: VkNil)
 
 # # test_interpreter """
 # #   (call_native "str_size" "test")
@@ -330,7 +330,7 @@ test_interpreter """
 """, @[1, 2, 3, 4]
 
 test_interpreter """
-  (1 (... [2 3]) 4)
+  (_ (... [2 3]) 4)
 """, proc(r: Value) =
   check r.gene_children[0] == 2
   check r.gene_children[1] == 3
@@ -338,7 +338,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native function (test)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: Table[MapKey, Value], children: seq[Value]): Value =
+#   VM.app.ns["test"] = proc(props: Table[string, Value], children: seq[Value]): Value =
 #     1
 #   var code = cleanup """
 #     (test)
@@ -347,7 +347,7 @@ test_interpreter """
 
 # test "Interpreter / eval: native function (test 1 2)":
 #   init_all()
-#   VM.app.ns["test"] = proc(props: Table[MapKey, Value], children: seq[Value]): Value =
+#   VM.app.ns["test"] = proc(props: Table[string, Value], children: seq[Value]): Value =
 #     children[0].int + children[1].int
 #   var code = cleanup """
 #     (test 1 2)

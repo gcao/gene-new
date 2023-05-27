@@ -1,12 +1,13 @@
-import os, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm
+import os, random, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm
 import nre
 import asyncdispatch
 import dynlib
 import macros
 
-import ./map_key
+const ASYNC_WAIT_LIMIT*   = 10
+const CHANNEL_LIMIT* = 1024
 
-const DEFAULT_ERROR_MESSAGE = "Error occurred."
+const DEFAULT_ERROR_MESSAGE* = "Error occurred."
 
 type
   RegexFlag* = enum
@@ -47,6 +48,8 @@ type
     VkSelector
     VkQuote
     VkUnquote
+    VkReference
+    VkRefTarget
     # Time part should be 00:00:00 and timezone should not matter
     VkDate
     # Date + time + timezone
@@ -57,6 +60,7 @@ type
     VkMap
     VkSet
     VkGene
+    VkArguments
     VkStream
     VkDocument
     VkFile
@@ -84,9 +88,12 @@ type
     VkCast
     VkEnum
     VkEnumMember
+    VkInterception
     VkExpr
     VkExplode
     VkFuture
+    VkThread
+    VkThreadMessage
     VkNativeFile
 
   Value* {.acyclic.} = ref object
@@ -140,19 +147,22 @@ type
     of VkTimezone:
       timezone*: Timezone
     of VkMap:
-      map*: Table[MapKey, Value]
+      map*: Table[string, Value]
     of VkVector:
       vec*: seq[Value]
     of VkSet:
       set*: HashSet[Value]
     of VkGene:
       gene_type*: Value
-      gene_props*: Table[MapKey, Value]
+      gene_props*: Table[string, Value]
       gene_children*: seq[Value]
+    of VkArguments:
+      # arg_self*: Value
+      arg_props*: Table[string, Value]
+      arg_children*: seq[Value]
     of VkEnum:
       `enum`*: Enum
     of VkEnumMember:
-      `enum_parent`*: Enum
       `enum_member`*: EnumMember
     of VkStream:
       stream*: seq[Value]
@@ -160,7 +170,7 @@ type
       stream_ended*: bool
     of VkDocument:
       document_type*: Value
-      document_props*: Table[MapKey, Value]
+      document_props*: Table[string, Value]
       document_children*: seq[Value]
     of VkFile:
       file_parent*: Value
@@ -182,6 +192,10 @@ type
     of VkUnquote:
       unquote*: Value
       unquote_discard*: bool
+    of VkReference:
+      reference*: Reference
+    of VkRefTarget:
+      ref_target*: RefTarget
     of VkExplode:
       explode*: Value
     of VkSelector:
@@ -226,13 +240,21 @@ type
       native_method2*: NativeMethod2
     of VkInstance:
       instance_class*: Class
-      instance_props*: Table[MapKey, Value]
+      instance_props*: Table[string, Value]
+    of VkInterception:
+      interception*: Interception
     of VkExpr:
       expr*: Expr
     of VkFuture:
       future*: Future[Value]
       ft_success_callbacks*: seq[Value]
       ft_failure_callbacks*: seq[Value]
+    of VkThread: # This is actually a reference to a thread stored in the global Threads
+      thread_id*: int
+      thread_secret*: int
+    of VkThreadMessage:
+      # TODO: ThreadMessage is an object that is bigger than size of other variants
+      thread_message*: ThreadMessage
     of VkNativeFile:
       native_file*: File
     else:
@@ -242,8 +264,21 @@ type
 
   Document* = ref object
     `type`: Value
-    props*: Table[MapKey, Value]
+    props*: Table[string, Value]
     children*: seq[Value]
+    # references*: References # Uncomment this when it's needed.
+
+  References* = ref object
+    data*: Table[string, Value]
+
+  Reference* = object
+    name*: string
+    registry*: References
+
+  RefTarget* = object
+    name*: string
+    value*: Value
+    registry*: References
 
   # applicable to numbers, characters
   Range* = ref object
@@ -264,6 +299,52 @@ type
     nanosec*: int
     timezone*: Timezone
 
+  ThreeWayState* = enum
+    StDefault
+    StActive
+    StInactive
+
+  InterceptionKind* = enum
+    IcBefore
+    IcBeforeFilter # logic run before target - useful for filtering
+    IcBeforeAfter # logic run before and after target - useful for invariant checking, a special variable is passed to the logic to indicate whether it's before or after
+    IcAround
+    IcAfter
+    IcAfterError # logic run after target if target throws an error
+
+  Interception* = ref object
+    kind*: InterceptionKind
+    logic*: Value
+    target*: Value
+    state*: ThreeWayState
+
+  ClassAspect* = ref object
+    ns*: Namespace # the namespace where the aspect is defined
+    name*: string
+    matcher*: RootMatcher
+    body*: seq[Value]
+    body_compiled*: Expr
+    state*: ThreeWayState
+
+  ClassAdviceKind* = enum
+    CaBeforeCreation
+    CaAfterCreation
+    CaBeforeMethod
+    CaBeforeAfterMethod
+    CaAroundMethod
+    CaAfterMethod
+    CaAfterMethodError
+
+  ClassAdvice* = ref object
+    kind*: ClassAdviceKind
+    matcher*: Value
+    logic*: Value
+
+  ClassInterception* = ref object
+    target*: Value
+    advices*: Table[ClassAdviceKind, seq[ClassAdvice]]
+    state*: ThreeWayState
+
   Exception* = object of CatchableError
     instance*: Value  # instance of Gene exception class
 
@@ -274,21 +355,21 @@ type
   # index of a name in a scope
   NameIndexScope* = distinct int
 
-  Translator* = proc(value: Value): Expr
-  Evaluator* = proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value
+  Translator* = proc(value: Value): Expr {.gcsafe.}
+  Evaluator* = proc(frame: Frame, expr: var Expr): Value {.gcsafe.}
 
-  EvalCatch* = proc(self: VirtualMachine, frame: Frame, expr: var Expr): Value
-  EvalWrap* = proc(eval: Evaluator): Evaluator
+  EvalCatch* = proc(frame: Frame, expr: var Expr): Value {.gcsafe.}
+  EvalWrap* = proc(eval: Evaluator): Evaluator {.gcsafe.}
 
-  TranslateCatch* = proc(value: Value): Expr
-  TranslateWrap* = proc(translate: Translator): Translator
+  TranslateCatch* = proc(value: Value): Expr {.gcsafe.}
+  TranslateWrap* = proc(translate: Translator): Translator {.gcsafe.}
 
-  NativeFn* = proc(args: Value): Value {.nimcall.}
-  NativeFn2* = proc(args: Value): Value
-  NativeFnWrap* = proc(f: NativeFn): NativeFn2
-  NativeMethod* = proc(self: Value, args: Value): Value {.nimcall.}
-  NativeMethod2* = proc(self: Value, args: Value): Value
-  NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2
+  NativeFn* = proc(frame: Frame, args: Value): Value {.gcsafe, nimcall.}
+  NativeFn2* = proc(frame: Frame, args: Value): Value {.gcsafe.}
+  NativeFnWrap* = proc(f: NativeFn): NativeFn2 {.gcsafe.}
+  NativeMethod* = proc(frame: Frame, self: Value, args: Value): Value {.gcsafe, nimcall.}
+  NativeMethod2* = proc(frame: Frame, self: Value, args: Value): Value {.gcsafe.}
+  NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2 {.gcsafe.}
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
   # To distinguish NativeMacro and NativeMethod, we just create Value with different kind
@@ -302,8 +383,62 @@ type
   VirtualMachine* = ref object
     app*: Application
     runtime*: Runtime
-    modules*: Table[MapKey, Namespace]
+    modules*: Table[string, Namespace]
+    references*: References
     repl_on_error*: bool
+
+    async_wait*: uint
+    futures*: Table[int, Value]
+
+    main_thread*: bool
+    thread_id*: int
+    thread_callbacks*: seq[Value]
+
+    translators*: Table[ValueKind, Translator]
+    gene_translators*: Table[string, Translator]
+
+    global_ns*     : Value
+    gene_ns*       : Value
+    gene_native_ns*: Value
+    genex_ns*      : Value
+
+    object_class*   : Value
+    nil_class*      : Value
+    bool_class*     : Value
+    int_class*      : Value
+    float_class*    : Value
+    char_class*     : Value
+    string_class*   : Value
+    symbol_class*   : Value
+    complex_symbol_class*: Value
+    array_class*    : Value
+    map_class*      : Value
+    set_class*      : Value
+    gene_class*     : Value
+    stream_class*   : Value
+    document_class* : Value
+    regex_class*    : Value
+    range_class*    : Value
+    date_class*     : Value
+    datetime_class* : Value
+    time_class*     : Value
+    timezone_class* : Value
+    selector_class* : Value
+    exception_class*: Value
+    class_class*    : Value
+    mixin_class*    : Value
+    application_class*: Value
+    package_class*  : Value
+    module_class*   : Value
+    namespace_class*: Value
+    function_class* : Value
+    macro_class*    : Value
+    block_class*    : Value
+    future_class*   : Value
+    thread_class*   : Value
+    thread_message_class* : Value
+    thread_message_type_class* : Value
+    file_class*     : Value
 
   # VirtualMachine depends on a Runtime
   Runtime* = ref object
@@ -423,21 +558,22 @@ type
     parent*: Namespace
     stop_inheritance*: bool  # When set to true, stop looking up for members
     name*: string
-    members*: Table[MapKey, Value]
+    members*: Table[string, Value]
     on_member_missing*: seq[Value]
 
   Class* = ref object
     parent*: Class
     name*: string
     constructor*: Value
-    methods*: Table[MapKey, Method]
+    methods*: Table[string, Method]
     on_extended*: Value
     # method_missing*: Value
     ns*: Namespace # Class can act like a namespace
+    for_one_instance*: bool # if it's the class associated with a single object, can not be extended
 
   Mixin* = ref object
     name*: string
-    methods*: Table[MapKey, Method]
+    methods*: Table[string, Method]
     on_included*: Value
     ns*: Namespace # Mixin can act like a namespace
 
@@ -446,6 +582,7 @@ type
     name*: string
     callable*: Value
     # public*: bool
+    is_macro*: bool
 
   Function* = ref object of GeneProcessor
     async*: bool
@@ -487,42 +624,65 @@ type
     members*: Table[string, EnumMember]
 
   EnumMember* = ref object
-    parent*: Enum
+    parent*: Value
     name*: string
     value*: int
+
+  ThreadMessageType* = enum
+    MtSend          # Send and forget
+    MtSendWithReply # Send and expect a reply
+    MtRun           # Run code and forget
+    MtRunWithReply  # Run code and expect a reply
+    MtReply         # Reply
+    # MtStop          # Stop the thread
+    # MtMulti       # Multiple messages in one batch
+
+  ThreadMessage* = object
+    id*: int
+    `type`*: ThreadMessageType
+    payload*: Value
+    from_message_id*: int     # Used by MtReply
+    from_thread_id*: int      # Used by MtSendWithReply and MtRunWithReply
+    from_thread_secret*: int  # Used by MtSendWithReply and MtRunWithReply
+    handled*: bool            # if it's handled, don't pass to the next handler
+
+  ThreadState* = enum
+    TsUninitialized
+    TsFree
+    TsBusy
+
+  ThreadMetadata* = object
+    id*: int
+    secret*: int
+    state*: ThreadState
+    in_use*: bool
+    parent_id*: int
+    parent_secret*: int
+    thread*: Thread[int]
+    channel*: Channel[ThreadMessage]
 
   Expr* = ref object of RootObj
     evaluator*: Evaluator
 
   FrameKind* = enum
-    FrDefault
+    FrUnknown # used when a frame is returned to the pool
+    FrRoot
     FrModule
     FrFunction
     FrMacro
+    FrBlock
     FrMethod
-
-  FrameExtra* = ref object
-    case kind*: FrameKind
-    of FrModule:
-      `mod`*: Module
-    of FrFunction:
-      fn*: Function
-    of FrMacro:
-      `macro`*: Macro
-    of FrMethod:
-      `method`*: Method
-    else:
-      discard
-    args*: Value # This is only available in some frames (e.g. function/macro/block)
-    props*: Table[MapKey, Value]
+    FrOther
 
   Frame* = ref object
     parent*: Frame
-    kind*: FrameKind  # this is in both Frame and FrameExtra and must be kept in sync.
-    self*: Value
+    kind*: FrameKind
     ns*: Namespace
     scope*: Scope
-    extra*: FrameExtra
+    callable*: Value # the function/macro/method/block/native function/...
+    self*: Value
+    args*: Value # This is only available in some frames (e.g. function/macro/block)
+    props*: Table[string, Value]
 
   Scope* = ref object
     parent*: Scope
@@ -531,7 +691,7 @@ type
     # Value of mappings is composed of two bytes:
     #   first is the optional index in self.mapping_history + 1
     #   second is the index in self.members
-    mappings*: Table[MapKey, int]
+    mappings*: Table[string, int]
     mapping_history*: seq[seq[NameIndexScope]]
 
   Break* = ref object of CatchableError
@@ -572,7 +732,7 @@ type
     root*: RootMatcher
     kind*: MatcherKind
     next*: Matcher  # if kind is MatchData and is_splat is true, we may need to check next matcher
-    name*: MapKey
+    name*: string
     is_prop*: bool
     literal*: Value # if kind is MatchLiteral, this is required
     # match_name*: bool # Match symbol to name - useful for (myif true then ... else ...)
@@ -599,7 +759,7 @@ type
     # fields*: seq[MatchedField]
     # assign_only*: bool # If true, no new variables will be defined
     # If missing fields
-    missing*: seq[MapKey]
+    missing*: seq[string]
     # If wrong type
     expect_type*: string
     found_type*: string
@@ -607,7 +767,7 @@ type
   # Internal state when applying the matcher to an input
   # Limited to one level
   MatchState* = ref object
-    # prop_processed*: seq[MapKey]
+    # prop_processed*: seq[string]
     data_index*: int
 
   SelectorNoResult* = object of Exception
@@ -655,13 +815,13 @@ type
     of SmByIndexRange:
       range*: Range
     of SmByName:
-      name*: MapKey
+      name*: string
     of SmByType:
       by_type*: Value
     of SmCallback:
       callback*: Value
     of SmInvoke:
-      invoke_name*: MapKey
+      invoke_name*: string
       invoke_args*: Value
     else: discard
 
@@ -677,99 +837,36 @@ type
     of SrAll:
       all*: seq[Value]
 
-let
-  Void*  = Value(kind: VkVoid)
-  Nil*   = Value(kind: VkNil)
-  True*  = Value(kind: VkBool, bool: true)
-  False* = Value(kind: VkBool, bool: false)
-  Placeholder* = Value(kind: VkPlaceholder)
+  VmCallback* = proc() {.gcsafe.}
 
-  Quote*     = Value(kind: VkSymbol, str: "quote")
-  Unquote*   = Value(kind: VkSymbol, str: "unquote")
-  If*        = Value(kind: VkSymbol, str: "if")
-  Then*      = Value(kind: VkSymbol, str: "then")
-  Elif*      = Value(kind: VkSymbol, str: "elif")
-  Else*      = Value(kind: VkSymbol, str: "else")
-  Case*      = Value(kind: VkSymbol, str: "case")
-  When*      = Value(kind: VkSymbol, str: "when")
-  Not*       = Value(kind: VkSymbol, str: "not")
-  Try*       = Value(kind: VkSymbol, str: "try")
-  Catch*     = Value(kind: VkSymbol, str: "catch")
-  Finally*   = Value(kind: VkSymbol, str: "finally")
-  Call*      = Value(kind: VkSymbol, str: "call")
-  Do*        = Value(kind: VkSymbol, str: "do")
-  Equals*    = Value(kind: VkSymbol, str: "=")
-
-var Ints: array[111, Value]
-for i in 0..110:
-  Ints[i] = Value(kind: VkInt, int: i - 10)
-
-var VM*: VirtualMachine   # The current virtual machine
-var VmCreatedCallbacks*: seq[proc(self: VirtualMachine)] = @[]
-
-var GLOBAL_NS*     : Value
-var GENE_NS*       : Value
-var GENE_NATIVE_NS*: Value
-var GENEX_NS*      : Value
-
-var ObjectClass*   : Value
-var NilClass*      : Value
-var BoolClass*     : Value
-var IntClass*      : Value
-var FloatClass*    : Value
-var CharClass*     : Value
-var StringClass*   : Value
-var SymbolClass*   : Value
-var ComplexSymbolClass* : Value
-var ArrayClass*    : Value
-var MapClass*      : Value
-var SetClass*      : Value
-var GeneClass*     : Value
-var StreamClass*   : Value
-var DocumentClass* : Value
-var RegexClass*    : Value
-var RangeClass*    : Value
-var DateClass*     : Value
-var DatetimeClass* : Value
-var TimeClass*     : Value
-var TimezoneClass* : Value
-var SelectorClass* : Value
-var ExceptionClass*: Value
-var ClassClass*    : Value
-var MixinClass*    : Value
-var ApplicationClass* : Value
-var PackageClass*  : Value
-var ModuleClass*   : Value
-var NamespaceClass*: Value
-var FunctionClass* : Value
-var MacroClass*    : Value
-var BlockClass*    : Value
-var FutureClass*   : Value
-var FileClass*     : Value
+var VM* {.threadvar.}: VirtualMachine  # The current virtual machine
+# TODO: guard access to Threads with lock
+var Threads*: array[1..64, ThreadMetadata]
+var VmCreatedCallbacks*: seq[VmCallback] = @[]
+var VmCreatedCallbacksAddr* = VmCreatedCallbacks.addr
 
 #################### Definitions #################
 
-proc new_gene_bool*(val: bool): Value {.inline.}
-proc new_gene_int*(val: BiggestInt): Value {.inline.}
-proc new_gene_float*(val: float): Value
-proc new_gene_char*(c: char): Value
-proc new_gene_char*(c: Rune): Value
+proc new_gene_bool*(val: bool): Value {.gcsafe.}
+proc new_gene_int*(val: BiggestInt): Value {.gcsafe.}
+proc new_gene_float*(val: float): Value {.gcsafe.}
+proc new_gene_char*(c: char): Value {.gcsafe.}
+proc new_gene_char*(c: Rune): Value {.gcsafe.}
 proc new_gene_string*(s: string): Value {.gcsafe.}
-proc new_gene_string_move*(s: string): Value
+proc new_gene_string_move*(s: string): Value {.gcsafe.}
 proc new_gene_vec*(items: seq[Value]): Value {.gcsafe.}
-proc new_gene_vec*(items: varargs[Value]): Value
-proc new_gene_map*(): Value
-proc new_gene_map*(map: Table[MapKey, Value]): Value
-proc new_namespace*(): Namespace
-proc new_namespace*(name: string): Namespace
-proc new_namespace*(parent: Namespace): Namespace
-proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.inline.}
+proc new_gene_vec*(items: varargs[Value]): Value {.gcsafe.}
+proc new_gene_map*(): Value {.gcsafe.}
+proc new_gene_map*(map: Table[string, Value]): Value {.gcsafe.}
+proc new_namespace*(): Namespace {.gcsafe.}
+proc new_namespace*(name: string): Namespace {.gcsafe.}
+proc new_namespace*(parent: Namespace): Namespace {.gcsafe.}
 proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.}
-proc new_class*(name: string): Class
-proc new_class*(name: string, parent: Class): Class
-proc new_match_matcher*(): RootMatcher
-proc new_arg_matcher*(): RootMatcher
-proc hint*(self: RootMatcher): MatchingHint {.inline.}
+proc new_class*(name: string): Class {.gcsafe.}
+proc new_class*(name: string, parent: Class): Class {.gcsafe.}
+proc new_match_matcher*(): RootMatcher {.gcsafe.}
+proc new_arg_matcher*(): RootMatcher {.gcsafe.}
+proc hint*(self: RootMatcher): MatchingHint {.gcsafe.}
 
 ##################################################
 
@@ -797,16 +894,22 @@ macro name*(name: static string, f: untyped): untyped =
       `result`
       `id`
 
+proc is_symbol*(v: Value, s: string): bool =
+  v.kind == VkSymbol and v.str == s
+
+proc rand*(): int {.inline.} =
+  random.rand(int.high)
+
 #################### Converters ##################
 
-converter to_gene*(v: int): Value                      = new_gene_int(v)
-converter to_gene*(v: int64): Value                    = new_gene_int(v)
-converter to_gene*(v: bool): Value                     = new_gene_bool(v)
-converter to_gene*(v: float): Value                    = new_gene_float(v)
-converter to_gene*(v: string): Value                   = new_gene_string(v)
-converter to_gene*(v: char): Value                     = new_gene_char(v)
-converter to_gene*(v: Rune): Value                     = new_gene_char(v)
-converter to_gene*(v: Table[MapKey, Value]): Value = new_gene_map(v)
+converter to_gene*(v: int): Value                     {.gcsafe.} = new_gene_int(v)
+converter to_gene*(v: int64): Value                   {.gcsafe.} = new_gene_int(v)
+converter to_gene*(v: bool): Value                    {.gcsafe.} = new_gene_bool(v)
+converter to_gene*(v: float): Value                   {.gcsafe.} = new_gene_float(v)
+converter to_gene*(v: string): Value                  {.gcsafe.} = new_gene_string(v)
+converter to_gene*(v: char): Value                    {.gcsafe.} = new_gene_char(v)
+converter to_gene*(v: Rune): Value                    {.gcsafe.} = new_gene_char(v)
+converter to_gene*(v: Table[string, Value]): Value    {.gcsafe.} = new_gene_map(v)
 
 # Below converter causes problem with the hash function
 # converter to_gene*(v: seq[Value]): Value           = new_gene_vec(v)
@@ -835,30 +938,30 @@ converter file_to_gene*(file: File): Value =
     native_file: file,
   )
 
-converter to_map*(self: Table[string, Value]): Table[MapKey, Value] {.inline.} =
-  for k, v in self:
-    result[k.to_key] = v
-
-converter to_string_map*(self: Table[MapKey, Value]): Table[string, Value] {.inline.} =
-  for k, v in self:
-    result[k.to_s] = v
-
-converter to_gene*(v: Table[string, Value]): Value =
-  return Value(
-    kind: VkMap,
-    map: v,
-  )
-
 converter int_to_scope_index*(v: int): NameIndexScope = cast[NameIndexScope](v)
 converter scope_index_to_int*(v: NameIndexScope): int = cast[int](v)
 
 converter gene_to_ns*(v: Value): Namespace = todo()
 
+#################### References ##################
+
+proc has_key*(self: References, key: string): bool =
+  self.data.has_key(key)
+
+proc `[]`*(self: References, key: string): Value =
+  self.data[key]
+
+proc `[]=`*(self: var References, key: string, val: Value) =
+  self.data[key] = val
+
+proc value*(self: Reference): Value =
+  self.registry[self.name].ref_target.value
+
 #################### VM ##########################
 
-proc new_vm*(app: Application): VirtualMachine =
-  result = VirtualMachine(
-    app: app,
+proc new_vm*(): VirtualMachine =
+  return VirtualMachine(
+    async_wait: ASYNC_WAIT_LIMIT,
   )
 
 #################### Application #################
@@ -921,27 +1024,27 @@ proc new_module*(pkg: Package, ns: Namespace): Module =
 proc new_namespace*(): Namespace =
   return Namespace(
     name: "<root>",
-    members: Table[MapKey, Value](),
+    members: Table[string, Value](),
   )
 
 proc new_namespace*(parent: Namespace): Namespace =
   return Namespace(
     parent: parent,
     name: "<root>",
-    members: Table[MapKey, Value](),
+    members: Table[string, Value](),
   )
 
 proc new_namespace*(name: string): Namespace =
   return Namespace(
     name: name,
-    members: Table[MapKey, Value](),
+    members: Table[string, Value](),
   )
 
 proc new_namespace*(parent: Namespace, name: string): Namespace =
   return Namespace(
     parent: parent,
     name: name,
-    members: Table[MapKey, Value](),
+    members: Table[string, Value](),
   )
 
 proc root*(self: Namespace): Namespace =
@@ -962,18 +1065,18 @@ proc get_module*(self: Namespace): Module =
 proc package*(self: Namespace): Package =
   self.get_module().pkg
 
-proc has_key*(self: Namespace, key: MapKey): bool {.inline.} =
+proc has_key*(self: Namespace, key: string): bool {.inline.} =
   return self.members.has_key(key) or (self.parent != nil and self.parent.has_key(key))
 
-proc `[]`*(self: Namespace, key: MapKey): Value {.inline.} =
+proc `[]`*(self: Namespace, key: string): Value {.inline.} =
   if self.members.has_key(key):
     return self.members[key]
   elif not self.stop_inheritance and self.parent != nil:
     return self.parent[key]
   else:
-    raise new_exception(NotDefinedException, %key & " is not defined")
+    raise new_exception(NotDefinedException, key & " is not defined")
 
-proc locate*(self: Namespace, key: MapKey): (Value, Namespace) {.inline.} =
+proc locate*(self: Namespace, key: string): (Value, Namespace) {.inline.} =
   if self.members.has_key(key):
     result = (self.members[key], self)
   elif not self.stop_inheritance and self.parent != nil:
@@ -981,14 +1084,8 @@ proc locate*(self: Namespace, key: MapKey): (Value, Namespace) {.inline.} =
   else:
     not_allowed()
 
-proc `[]`*(self: Namespace, key: string): Value {.inline.} =
-  result = self[key.to_key]
-
-proc `[]=`*(self: var Namespace, key: MapKey, val: Value) {.inline.} =
-  self.members[key] = val
-
 proc `[]=`*(self: var Namespace, key: string, val: Value) {.inline.} =
-  self.members[key.to_key] = val
+  self.members[key] = val
 
 proc get_members*(self: Namespace): Value =
   result = new_gene_map()
@@ -998,13 +1095,13 @@ proc get_members*(self: Namespace): Value =
 proc member_names*(self: Namespace): Value =
   result = new_gene_vec()
   for k, _ in self.members:
-    result.vec.add(k.to_s)
+    result.vec.add(k)
 
 #################### Scope #######################
 
 proc new_scope*(): Scope = Scope(
   members: @[],
-  mappings: Table[MapKey, int](),
+  mappings: Table[string, int](),
   mapping_history: @[],
 )
 
@@ -1019,7 +1116,7 @@ proc reset*(self: var Scope) {.inline.} =
   self.parent = nil
   self.members.setLen(0)
 
-proc has_key(self: Scope, key: MapKey, max: int): bool {.inline.} =
+proc has_key(self: Scope, key: string, max: int): bool {.inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found < max:
@@ -1037,13 +1134,13 @@ proc has_key(self: Scope, key: MapKey, max: int): bool {.inline.} =
   if self.parent != nil:
     return self.parent.has_key(key, self.parent_index_max)
 
-proc has_key*(self: Scope, key: MapKey): bool {.inline.} =
+proc has_key*(self: Scope, key: string): bool {.inline.} =
   if self.mappings.has_key(key):
     return true
   elif self.parent != nil:
     return self.parent.has_key(key, self.parent_index_max)
 
-proc def_member*(self: var Scope, key: MapKey, val: Value) {.inline.} =
+proc def_member*(self: var Scope, key: string, val: Value) {.inline.} =
   var index = self.members.len
   self.members.add(val)
   if self.mappings.has_key_or_put(key, index):
@@ -1057,7 +1154,7 @@ proc def_member*(self: var Scope, key: MapKey, val: Value) {.inline.} =
       self.mapping_history.add(@[NameIndexScope(cur)])
       self.mappings[key] = (history_index + 1).shl(8) + index
 
-proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
+proc `[]`(self: Scope, key: string, max: int): Value {.inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found > 255:
@@ -1079,7 +1176,7 @@ proc `[]`(self: Scope, key: MapKey, max: int): Value {.inline.} =
   if self.parent != nil:
     return self.parent[key, self.parent_index_max]
 
-proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
+proc `[]`*(self: Scope, key: string): Value {.inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found > 255:
@@ -1088,7 +1185,7 @@ proc `[]`*(self: Scope, key: MapKey): Value {.inline.} =
   elif self.parent != nil:
     return self.parent[key, self.parent_index_max]
 
-proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
+proc `[]=`(self: var Scope, key: string, val: Value, max: int) {.inline.} =
   if self.mappings.has_key(key):
     var found = self.mappings[key]
     if found > 255:
@@ -1112,7 +1209,7 @@ proc `[]=`(self: var Scope, key: MapKey, val: Value, max: int) {.inline.} =
   else:
     not_allowed()
 
-proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.inline.} =
+proc `[]=`*(self: var Scope, key: string, val: Value) {.inline.} =
   if self.mappings.has_key(key):
     self.members[self.mappings[key].int] = val
   elif self.parent != nil:
@@ -1123,11 +1220,11 @@ proc `[]=`*(self: var Scope, key: MapKey, val: Value) {.inline.} =
 #################### Frame #######################
 
 proc new_frame*(): Frame = Frame(
-  self: Nil,
+  self: Value(kind: VkNil),
 )
 
 proc new_frame*(kind: FrameKind): Frame = Frame(
-  self: Nil,
+  self: Value(kind: VkNil),
   kind: kind,
 )
 
@@ -1135,9 +1232,8 @@ proc reset*(self: var Frame) {.inline.} =
   self.self = nil
   self.ns = nil
   self.scope = nil
-  self.extra = nil
 
-proc `[]`*(self: Frame, name: MapKey): Value {.inline.} =
+proc `[]`*(self: Frame, name: string): Value {.inline.} =
   result = self.scope[name]
   if result == nil:
     return self.ns[name]
@@ -1145,7 +1241,7 @@ proc `[]`*(self: Frame, name: MapKey): Value {.inline.} =
 proc `[]`*(self: Frame, name: Value): Value {.inline.} =
   case name.kind:
   of VkSymbol:
-    result = self[name.str.to_key]
+    result = self[name.str]
   # of VkComplexSymbol:
   #   var csymbol = name.csymbol
   #   if csymbol[0] == "global":
@@ -1159,7 +1255,7 @@ proc `[]`*(self: Frame, name: Value): Value {.inline.} =
   #     # result = self.ns
   #     todo()
   #   else:
-  #     result = self[csymbol[0].to_key]
+  #     result = self[csymbol[0]]
   #   for csymbol in csymbol[1..^1]:
   #     # result = result.get_member(csymbol)
   #     todo()
@@ -1211,25 +1307,24 @@ proc new_class*(name: string, parent: Class): Class =
 
 proc new_class*(name: string): Class =
   var parent: Class
-  if ObjectClass != nil:
-    parent = ObjectClass.class
+  if VM.object_class != nil:
+    parent = VM.object_class.class
   new_class(name, parent)
 
 proc get_constructor*(self: Class): Value =
-  self.constructor
-  # if self.constructor.is_nil:
-  #   if not self.parent.is_nil:
-  #     return self.parent.get_constructor()
-  # else:
-  #   return self.constructor
+  if self.constructor.is_nil:
+    if not self.parent.is_nil:
+      return self.parent.get_constructor()
+  else:
+    return self.constructor
 
-proc has_method*(self: Class, name: MapKey): bool =
+proc has_method*(self: Class, name: string): bool =
   if self.methods.has_key(name):
     return true
   elif self.parent != nil:
     return self.parent.has_method(name)
 
-proc get_method*(self: Class, name: MapKey): Method =
+proc get_method*(self: Class, name: string): Method =
   if self.methods.has_key(name):
     return self.methods[name]
   elif self.parent != nil:
@@ -1237,86 +1332,90 @@ proc get_method*(self: Class, name: MapKey): Method =
   # else:
   #   not_allowed("No method available: " & name.to_s)
 
-proc get_super_method*(self: Class, name: MapKey): Method =
+proc get_super_method*(self: Class, name: string): Method =
   if self.parent != nil:
     return self.parent.get_method(name)
   else:
-    not_allowed("No super method available: " & name.to_s)
+    not_allowed("No super method available: " & name)
 
 proc get_class*(val: Value): Class =
   case val.kind:
   of VkApplication:
-    return ApplicationClass.class
+    return VM.application_class.class
   of VkPackage:
-    return PackageClass.class
+    return VM.package_class.class
   of VkInstance:
     return val.instance_class
   of VkCast:
     return val.cast_class
   of VkClass:
-    return ClassClass.class
+    return VM.class_class.class
   of VkMixin:
-    return MixinClass.class
+    return VM.mixin_class.class
   of VkNamespace:
-    return NamespaceClass.class
+    return VM.namespace_class.class
   of VkFuture:
-    return FutureClass.class
+    return VM.future_class.class
+  of VkThread:
+    return VM.thread_class.class
+  of VkThreadMessage:
+    return VM.thread_message_class.class
   of VkNativeFile:
-    return FileClass.class
+    return VM.file_class.class
   of VkException:
     var ex = val.exception
-    if ex is Exception:
-      var ex = cast[Exception](ex)
+    if ex is ref Exception:
+      var ex = cast[ref Exception](ex)
       if ex.instance != nil:
         return ex.instance.instance_class
       else:
-        return ExceptionClass.class
+        return VM.exception_class.class
     else:
-      return ExceptionClass.class
+      return VM.exception_class.class
   of VkNil:
-    return NilClass.class
+    return VM.nil_class.class
   of VkBool:
-    return BoolClass.class
+    return VM.bool_class.class
   of VkInt:
-    return IntClass.class
+    return VM.int_class.class
   of VkChar:
-    return CharClass.class
+    return VM.char_class.class
   of VkString:
-    return StringClass.class
+    return VM.string_class.class
   of VkSymbol:
-    return SymbolClass.class
+    return VM.symbol_class.class
   of VkComplexSymbol:
-    return ComplexSymbolClass.class
+    return VM.complex_symbol_class.class
   of VkVector:
-    return ArrayClass.class
+    return VM.array_class.class
   of VkMap:
-    return MapClass.class
+    return VM.map_class.class
   of VkSet:
-    return SetClass.class
+    return VM.set_class.class
   of VkGene:
-    return GeneClass.class
+    return VM.gene_class.class
   of VkRegex:
-    return RegexClass.class
+    return VM.regex_class.class
   of VkRange:
-    return RangeClass.class
+    return VM.range_class.class
   of VkDate:
-    return DateClass.class
+    return VM.date_class.class
   of VkDateTime:
-    return DateTimeClass.class
+    return VM.datetime_class.class
   of VkTime:
-    return TimeClass.class
+    return VM.time_class.class
   of VkFunction:
-    return FunctionClass.class
+    return VM.function_class.class
   of VkTimezone:
-    return TimezoneClass.class
+    return VM.timezone_class.class
   of VkAny:
     if val.any_class == nil:
-      return ObjectClass.class
+      return VM.object_class.class
     else:
       return val.any_class
   of VkCustom:
     if val.custom_class == nil:
-      return ObjectClass.class
+      return VM.object_class.class
     else:
       return val.custom_class
   else:
@@ -1333,17 +1432,25 @@ proc is_a*(self: Value, class: Class): bool =
       my_class = my_class.parent
 
 proc def_native_method*(self: Value, name: string, m: NativeMethod) =
-  self.class.methods[name.to_key] = Method(
+  self.class.methods[name] = Method(
     class: self.class,
     name: name,
     callable: Value(kind: VkNativeMethod, native_method: m),
   )
 
 proc def_native_method*(self: Value, name: string, m: NativeMethod2) =
-  self.class.methods[name.to_key] = Method(
+  self.class.methods[name] = Method(
     class: self.class,
     name: name,
     callable: Value(kind: VkNativeMethod2, native_method2: m),
+  )
+
+proc def_native_macro_method*(self: Value, name: string, m: NativeMethod) =
+  self.class.methods[name] = Method(
+    class: self.class,
+    name: name,
+    callable: Value(kind: VkNativeMethod, native_method: m),
+    is_macro: true,
   )
 
 proc def_native_constructor*(self: Value, f: NativeFn) =
@@ -1377,8 +1484,12 @@ proc `[]`*(self: Enum, name: string): Value =
   # return new_gene_internal(self.members[name])
   todo()
 
-proc add_member*(self: var Enum, name: string, value: int) =
-  self.members[name] = EnumMember(parent: self, name: name, value: value)
+proc add_member*(self: var Value, name: string, value: int) =
+  self.enum.members[name] = EnumMember(
+    parent: self,
+    name: name,
+    value: value
+  )
 
 proc `==`*(this, that: EnumMember): bool =
   return this.parent == that.parent and this.name == that.name
@@ -1409,12 +1520,11 @@ proc new_gene_custom*(c: CustomValue, class: Class): Value =
     custom: c,
   )
 
-proc new_gene_bool*(val: bool): Value {.inline.} =
-  case val
-  of true: return True
-  of false: return False
-  # of true: return Value(kind: VkBool, boolVal: true)
-  # of false: return Value(kind: VkBool, boolVal: false)
+proc new_gene_bool*(val: bool): Value =
+  Value(kind: VkBool, bool: val)
+  # case val
+  # of true: return True
+  # of false: return False
 
 proc new_gene_bool*(s: string): Value =
   let parsed: bool = parseBool(s)
@@ -1426,12 +1536,8 @@ proc new_gene_int*(): Value =
 proc new_gene_int*(s: string): Value =
   return Value(kind: VkInt, int: parseBiggestInt(s))
 
-proc new_gene_int*(val: BiggestInt): Value {.inline.} =
-  # return Value(kind: VkInt, int: val)
-  if val > 100 or val < -10:
-    return Value(kind: VkInt, int: val)
-  else:
-    return Ints[val + 10]
+proc new_gene_int*(val: BiggestInt): Value {.gcsafe.} =
+  return Value(kind: VkInt, int: val)
 
 proc new_gene_ratio*(num, denom: BiggestInt): Value =
   return Value(kind: VkRatio, ratio_num: num, ratio_denom: denom)
@@ -1452,8 +1558,8 @@ proc new_gene_string*(s: string): Value {.gcsafe.} =
   return Value(kind: VkString, str: s)
 
 proc new_gene_string_move*(s: string): Value =
-  result = Value(kind: VkString)
-  shallowCopy(result.str, s)
+  result = Value(kind: VkString, str: s)
+  # shallowCopy(result.str, s)
 
 proc new_gene_symbol*(name: string): Value =
   return Value(kind: VkSymbol, str: name)
@@ -1463,6 +1569,13 @@ proc new_gene_complex_symbol*(strs: seq[string]): Value =
     kind: VkComplexSymbol,
     csymbol: strs,
   )
+
+proc new_gene_reference*(s: string, references: References): Value {.gcsafe.} =
+  let reference = Reference(
+    name: s,
+    registry: references,
+  )
+  return Value(kind: VkReference, reference: reference)
 
 proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
   var s = ""
@@ -1499,6 +1612,7 @@ proc new_gene_date*(year, month, day: int): Value =
   return Value(
     kind: VkDate,
     date_internal: DateTimeInternal(data: init_date_time(day, cast[Month](month), year, 0, 0, 0, utc())),
+    # date_internal: DateTimeInternal(data: date_time(year, cast[Month](month), day, 0, 0, 0, 0, utc())),
   )
 
 proc new_gene_date*(date: DateTime): Value =
@@ -1536,10 +1650,10 @@ proc new_gene_stream*(items: seq[Value]): Value =
 proc new_gene_map*(): Value =
   return Value(
     kind: VkMap,
-    map: Table[MapKey, Value](),
+    map: Table[string, Value](),
   )
 
-proc new_gene_map*(map: Table[MapKey, Value]): Value =
+proc new_gene_map*(map: Table[string, Value]): Value =
   return Value(
     kind: VkMap,
     map: map,
@@ -1556,7 +1670,7 @@ proc new_gene_set*(items: varargs[Value]): Value =
 proc new_gene_gene*(): Value =
   return Value(
     kind: VkGene,
-    gene_type: Nil,
+    gene_type: Value(kind: VkNil),
   )
 
 proc new_gene_gene*(`type`: Value, children: varargs[Value]): Value =
@@ -1566,7 +1680,7 @@ proc new_gene_gene*(`type`: Value, children: varargs[Value]): Value =
     gene_children: @children,
   )
 
-proc new_gene_gene*(`type`: Value, props: Table[MapKey, Value], children: varargs[Value]): Value =
+proc new_gene_gene*(`type`: Value, props: Table[string, Value], children: varargs[Value]): Value =
   return Value(
     kind: VkGene,
     gene_type: `type`,
@@ -1589,7 +1703,7 @@ proc new_mixin*(name: string): Mixin =
 # Do not allow auto conversion between CatchableError and Value
 # because there are sub-classes of CatchableError that need to be
 # handled differently.
-proc exception_to_value*(ex: ref system.Exception): Value =
+proc exception_to_value*(ex: ref system.CatchableError): Value =
   return Value(
     kind: VkException,
     exception: ex,
@@ -1645,7 +1759,7 @@ proc new_gene_class*(name: string): Value =
     class: new_class(name),
   )
 
-proc new_gene_instance*(class: Class, props: Table[MapKey, Value]): Value =
+proc new_gene_instance*(class: Class, props: Table[string, Value]): Value =
   return Value(
     kind: VkInstance,
     instance_class: class,
@@ -1662,7 +1776,7 @@ proc is_truthy*(self: Value): bool =
   case self.kind:
   of VkBool:
     return self.bool
-  of VkNil:
+  of VkNil, VkVoid:
     return false
   else:
     return true
@@ -1726,70 +1840,71 @@ proc table_equals*(this, that: Table): bool =
   return this.len == 0 and that.len == 0 or
     this.len > 0 and that.len > 0 and this == that
 
-proc `==`*(this, that: Value): bool =
-  if this.is_nil:
-    if that.is_nil: return true
-    return false
-  elif that.is_nil or this.kind != that.kind:
-    return false
-  else:
-    case this.kind
-    of VkAny:
-      return this.any == that.any
-    of VkNil, VkPlaceholder:
-      return true
-    of VkBool:
-      return this.bool == that.bool
-    of VkChar:
-      return this.char == that.char
-    of VkInt:
-      return this.int == that.int
-    of VkRatio:
-      return this.ratio_num == that.ratio_num and this.ratio_denom == that.ratio_denom
-    of VkFloat:
-      return this.float == that.float
-    of VkString, VkSymbol:
-      return this.str == that.str
-    of VkComplexSymbol:
-      return this.csymbol == that.csymbol
-    of VkDate, VkDateTime:
-      return this.date == that.date
-    of VkTime:
-      return this.time == that.time
-    of VkTimezone:
-      return this.timezone == that.timezone
-    of VkSet:
-      if this.set.len == that.set.len:
-        for v in this.set.items:
-          if not that.set.contains(v):
-            return false
-        return true
-      else:
-        return false
-    of VkGene:
-      return this.gene_type == that.gene_type and
-        this.gene_children == that.gene_children and
-        table_equals(this.gene_props, that.gene_props)
-    of VkMap:
-      return table_equals(this.map, that.map)
-    of VkVector:
-      return this.vec == that.vec
-    of VkStream:
-      return this.stream == that.stream
-    of VkRegex:
-      return this.regex == that.regex
-    of VkRange:
-      return this.range == that.range
-    of VkClass:
-      return this.class == that.class
-    of VkEnum:
-      return this.enum == that.enum
-    of VkEnumMember:
-      return this.enum_member == that.enum_member
-    of VkCustom:
-      return this.custom_class == that.custom_class and this.custom == that.custom
+proc `==`*(this, that: Value): bool {.noSideEffect.} =
+  {.cast(noSideEffect).}:
+    if this.is_nil:
+      if that.is_nil: return true
+      return false
+    elif that.is_nil or this.kind != that.kind:
+      return false
     else:
-      todo($this.kind)
+      case this.kind
+      of VkAny:
+        return this.any == that.any
+      of VkNil, VkPlaceholder:
+        return true
+      of VkBool:
+        return this.bool == that.bool
+      of VkChar:
+        return this.char == that.char
+      of VkInt:
+        return this.int == that.int
+      of VkRatio:
+        return this.ratio_num == that.ratio_num and this.ratio_denom == that.ratio_denom
+      of VkFloat:
+        return this.float == that.float
+      of VkString, VkSymbol:
+        return this.str == that.str
+      of VkComplexSymbol:
+        return this.csymbol == that.csymbol
+      of VkDate, VkDateTime:
+        return this.date == that.date
+      of VkTime:
+        return this.time == that.time
+      of VkTimezone:
+        return this.timezone == that.timezone
+      of VkSet:
+        if this.set.len == that.set.len:
+          for v in this.set.items:
+            if not that.set.contains(v):
+              return false
+          return true
+        else:
+          return false
+      of VkGene:
+        return this.gene_type == that.gene_type and
+          this.gene_children == that.gene_children and
+          table_equals(this.gene_props, that.gene_props)
+      of VkMap:
+        return table_equals(this.map, that.map)
+      of VkVector:
+        return this.vec == that.vec
+      of VkStream:
+        return this.stream == that.stream
+      of VkRegex:
+        return this.regex == that.regex
+      of VkRange:
+        return this.range == that.range
+      of VkClass:
+        return this.class == that.class
+      of VkEnum:
+        return this.enum == that.enum
+      of VkEnumMember:
+        return this.enum_member == that.enum_member
+      of VkCustom:
+        return this.custom_class == that.custom_class and this.custom == that.custom
+      else:
+        todo($this.kind)
 
 proc hash*(node: Value): Hash =
   var h: Hash = 0
@@ -1847,13 +1962,14 @@ proc is_literal*(self: Value): bool =
   else:
     return false
 
-proc `$`*(self: Class): string =
-  if self.parent.is_nil or self.parent == ObjectClass.class:
-    result = "(class $#)" % [self.name]
-  else:
-    result = "(class $# < $#)" % [self.name, self.parent.name]
+proc `$`*(self: Class): string {.noSideEffect.} =
+  {.cast(noSideEffect).}:
+    if self.parent.is_nil or self.parent == VM.object_class.class:
+      result = "(class $#)" % [self.name]
+    else:
+      result = "(class $# < $#)" % [self.name, self.parent.name]
 
-proc `$`*(node: Value): string =
+proc `$`*(node: Value): string {.noSideEffect.} =
   if node.is_nil:
     return "nil"
   case node.kind
@@ -1883,6 +1999,10 @@ proc `$`*(node: Value): string =
     result = "["
     result &= node.vec.join(" ")
     result &= "]"
+  of VkStream:
+    result = "(#Stream "
+    result &= node.stream.join(" ")
+    result &= ")"
   of VkMap:
     result = "{"
     var is_first = true
@@ -1892,7 +2012,7 @@ proc `$`*(node: Value): string =
       else:
         result &= " "
       result &= "^"
-      result &= k.to_s
+      result &= k
       result &= " "
       result &= $v
     result &= "}"
@@ -1900,7 +2020,7 @@ proc `$`*(node: Value): string =
     result = "(" & $node.gene_type
     if node.gene_props.len > 0:
       for k, v in node.gene_props:
-        result &= " ^" & k.to_s & " " & $v
+        result &= " ^" & k & " " & $v
     if node.gene_children.len > 0:
       result &= " " & node.gene_children.join(" ")
     result &= ")"
@@ -1921,7 +2041,7 @@ proc `$`*(node: Value): string =
       else:
         result &= " "
       result &= "^"
-      result &= k.to_s
+      result &= k
       result &= " "
       result &= $v
     result &= ")"
@@ -1932,21 +2052,40 @@ proc `$`*(node: Value): string =
   else:
     result = $node.kind
 
-proc `[]`*(self: Table[MapKey, Value], key: string): Value =
-  self[key.to_key]
-
-proc `[]=`*(self: var Table[MapKey, Value], key: string, value: Value) =
-  self[key.to_key] = value
-
 proc wrap_with_try*(body: seq[Value]): seq[Value] =
   var found_catch_or_finally = false
   for item in body:
-    if item == Catch or item == Finally:
+    if item.kind == VkSymbol and item.str in ["catch", "finally"]:
       found_catch_or_finally = true
   if found_catch_or_finally:
-    return @[new_gene_gene(Try, body)]
+    return @[new_gene_gene(new_gene_symbol("try"), body)]
   else:
     return body
+
+#################### Thread ######################
+
+proc get_free_thread*(): int =
+  # TODO: handle the case when all threads are in use
+  for i in 1..Threads.high:
+    if not Threads[i].in_use:
+      return i
+
+proc init_thread*(id: int) =
+  Threads[id].in_use = true
+  randomize()
+  Threads[id].secret = rand()
+  Threads[id].channel.open(CHANNEL_LIMIT)
+
+proc init_thread*(id, parent_id: int) =
+  init_thread(id)
+  Threads[id].parent_id = parent_id
+
+proc cleanup_thread*(id: int) =
+  Threads[id].in_use = false
+  randomize()
+  Threads[id].secret = rand()
+  # TODO: the channel should not be freed as it may be re-used later.
+  # Threads[id].channel.close()
 
 #################### Document ####################
 
@@ -1998,7 +2137,7 @@ proc gene_to_selector_item*(v: Value): SelectorItem =
     result.matchers.add(SelectorMatcher(kind: SmByIndex, index: v.int))
   of VkString:
     result = SelectorItem()
-    result.matchers.add(SelectorMatcher(kind: SmByName, name: v.str.to_key))
+    result.matchers.add(SelectorMatcher(kind: SmByName, name: v.str))
   of VkSymbol:
     result = SelectorItem()
     result.matchers.add(SelectorMatcher(kind: SmByType, by_type: v))
@@ -2012,7 +2151,7 @@ proc gene_to_selector_item*(v: Value): SelectorItem =
       of VkInt:
         result.matchers.add(SelectorMatcher(kind: SmByIndex, index: item.int))
       of VkString:
-        result.matchers.add(SelectorMatcher(kind: SmByName, name: item.str.to_key))
+        result.matchers.add(SelectorMatcher(kind: SmByName, name: item.str))
       of VkSymbol:
         result.matchers.add(SelectorMatcher(kind: SmByType, by_type: item))
       else:
@@ -2024,7 +2163,7 @@ proc gene_to_selector_item*(v: Value): SelectorItem =
     todo($v.kind)
 
 # Definition
-proc is_singular*(self: Selector): bool
+proc is_singular*(self: Selector): bool {.gcsafe.}
 
 proc is_singular*(self: SelectorItem): bool =
   case self.kind:
@@ -2070,7 +2209,7 @@ proc new_matcher*(root: RootMatcher, kind: MatcherKind): Matcher =
 proc required*(self: Matcher): bool =
   return self.default_value_expr == nil and not self.is_splat
 
-proc hint*(self: RootMatcher): MatchingHint {.inline.} =
+proc hint*(self: RootMatcher): MatchingHint =
   if self.children.len == 0:
     result.mode = MhNone
   else:
@@ -2080,53 +2219,40 @@ proc hint*(self: RootMatcher): MatchingHint {.inline.} =
         result.mode = MhDefault
         return
 
-# proc new_matched_field*(name: MapKey, value: Value): MatchedField =
+# proc new_matched_field*(name: string, value: Value): MatchedField =
 #   result = MatchedField(
 #     name: name,
 #     value: value,
 #   )
 
-proc props*(self: seq[Matcher]): HashSet[MapKey] =
+proc props*(self: seq[Matcher]): HashSet[string] =
   for m in self:
     if m.kind == MatchProp and not m.is_splat:
       result.incl(m.name)
 
-proc prop_splat*(self: seq[Matcher]): MapKey =
+proc prop_splat*(self: seq[Matcher]): string =
   for m in self:
     if m.kind == MatchProp and m.is_splat:
       return m.name
 
 ##################################################
 
-template eval*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  expr.evaluator(self, frame, nil, expr)
-
-proc eval_catch*(self: VirtualMachine, frame: Frame, expr: var Expr): Value =
-  try:
-    result = self.eval(frame, expr)
-  except system.Exception as e:
-    # echo e.msg & "\n" & e.getStackTrace()
-    result = Value(
-      kind: VkException,
-      exception: e,
-    )
-
 proc eval_wrap*(e: Evaluator): Evaluator =
-  return proc(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-    result = e(self, frame, target, expr)
+  return proc(frame: Frame, expr: var Expr): Value =
+    result = e(frame, expr)
     if result != nil and result.kind == VkException:
       raise result.exception
 
 # proc(){.nimcall.} can not access local variables
 # Workaround: create a new type like RemoteFn that does not use nimcall
 proc fn_wrap*(f: NativeFn): NativeFn2 =
-  return proc(args: Value): Value =
-    result = f(args)
+  return proc(frame: Frame, args: Value): Value {.gcsafe.} =
+    result = f(frame, args)
     if result != nil and result.kind == VkException:
       raise result.exception
 
 proc method_wrap*(m: NativeMethod): NativeMethod2 =
-  return proc(self, args: Value): Value =
-    result = m(self, args)
+  return proc(frame: Frame, self, args: Value): Value =
+    result = m(frame, self, args)
     if result != nil and result.kind == VkException:
       raise result.exception

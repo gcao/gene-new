@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 import ./arithmetic
@@ -18,25 +17,25 @@ import ./symbol
 
 type
   ExAssignment* = ref object of Expr
-    name*: MapKey
+    name*: string
     value*: Expr
 
-proc eval_assignment(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_assignment(frame: Frame, expr: var Expr): Value =
   var name = cast[ExAssignment](expr).name
   var value = cast[ExAssignment](expr).value
-  result = self.eval(frame, value)
+  result = eval(frame, value)
   if frame.scope.has_key(name):
     frame.scope[name] = result
   else:
     frame.ns[name] = result
 
-proc translate_assignment(value: Value): Expr =
+proc translate_assignment(value: Value): Expr {.gcsafe.} =
   var first = value.gene_children[0]
   case first.kind:
   of VkSymbol:
     result = ExAssignment(
       evaluator: eval_assignment,
-      name: first.str.to_key,
+      name: first.str,
       value: translate(value.gene_children[1]),
     )
   of VkComplexSymbol:
@@ -50,7 +49,7 @@ proc translate_assignment(value: Value): Expr =
   else:
     not_allowed("translate_assignment " & $first.kind)
 
-proc translate_op_eq(value: Value): Expr =
+proc translate_op_eq(value: Value): Expr {.gcsafe.} =
   var first = value.gene_children[0]
   var second = value.gene_children[1]
   var value_expr: ExBinOp
@@ -76,7 +75,7 @@ proc translate_op_eq(value: Value): Expr =
     value_expr.op2 = translate(second)
     return ExAssignment(
       evaluator: eval_assignment,
-      name: first.str.to_key,
+      name: first.str,
       value: value_expr,
     )
   of VkComplexSymbol:
@@ -93,12 +92,13 @@ proc translate_op_eq(value: Value): Expr =
     not_allowed("translate_op_eq " & $value)
 
 proc init*() =
-  GeneTranslators["="] = translate_assignment
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["="] = translate_assignment
 
-  GeneTranslators["+="] = translate_op_eq
-  GeneTranslators["-="] = translate_op_eq
-  GeneTranslators["*="] = translate_op_eq
-  GeneTranslators["/="] = translate_op_eq
-  GeneTranslators["**="] = translate_op_eq
-  GeneTranslators["&&="] = translate_op_eq
-  GeneTranslators["||="] = translate_op_eq
+    VM.gene_translators["+="] = translate_op_eq
+    VM.gene_translators["-="] = translate_op_eq
+    VM.gene_translators["*="] = translate_op_eq
+    VM.gene_translators["/="] = translate_op_eq
+    VM.gene_translators["**="] = translate_op_eq
+    VM.gene_translators["&&="] = translate_op_eq
+    VM.gene_translators["||="] = translate_op_eq

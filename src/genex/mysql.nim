@@ -6,10 +6,10 @@ type
   CustomConnection = ref object of CustomValue
     conn: DbConn
 
-var ConnectionClass: Value
-var StatementClass: Value
+var ConnectionClass {.threadvar.}: Value
+var StatementClass {.threadvar.}: Value
 
-proc open*(args: Value): Value {.wrap_exception.} =
+proc open*(frame: Frame, args: Value): Value {.wrap_exception.} =
   var host = args.gene_children[0].str
   var user = args.gene_children[1].str
   var pass = args.gene_children[2].str
@@ -17,7 +17,7 @@ proc open*(args: Value): Value {.wrap_exception.} =
   var db = open(host, user, pass, db_name)
   new_gene_custom(CustomConnection(conn: db), ConnectionClass.class)
 
-proc exec*(self: Value, args: Value): Value {.wrap_exception.} =
+proc exec*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   result = new_gene_vec()
   var conn = cast[CustomConnection](self.custom).conn
   var stmt: string
@@ -46,7 +46,7 @@ proc exec*(self: Value, args: Value): Value {.wrap_exception.} =
         item.vec.add(row[i])
       result.vec.add(item)
 
-proc close*(self: Value, args: Value): Value {.wrap_exception.} =
+proc close*(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
   cast[CustomConnection](self.custom).conn.close()
 
 {.push dynlib exportc.}
@@ -54,7 +54,7 @@ proc close*(self: Value, args: Value): Value {.wrap_exception.} =
 proc init*(module: Module): Value {.wrap_exception.} =
   result = new_namespace("mysql")
   result.ns.module = module
-  GENEX_NS.ns["mysql"] = result
+  VM.genex_ns.ns["mysql"] = result
 
   # result.ns["select"] = new_gene_processor(translate_select)
   result.ns["open"] = NativeFn(open)

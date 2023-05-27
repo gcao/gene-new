@@ -1,6 +1,5 @@
 import nre, tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -15,34 +14,34 @@ type
     flags: set[RegexFlag]
     data*: seq[Expr]
 
-proc eval_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_match(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
-  var input = self.eval(frame, expr.input)
-  var pattern = self.eval(frame, expr.pattern)
+  var input = eval(frame, expr.input)
+  var pattern = eval(frame, expr.pattern)
   var r = input.str.match(pattern.regex)
   if r.is_some():
     var m = r.get()
     result = Value(kind: VkRegexMatch, regex_match: m)
-    frame.scope.def_member("$~".to_key, result)
+    frame.scope.def_member("$~", result)
     var i = 0
     for item in m.captures.to_seq:
       var name = "$~" & $i
-      var value = Nil
+      var value = Value(kind: VkNil)
       if item.is_some():
         value = item.get()
-      frame.scope.def_member(name.to_key, value)
+      frame.scope.def_member(name, value)
       i += 1
   else:
-    return Nil
+    return Value(kind: VkNil)
 
-proc eval_not_match(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_not_match(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExMatch](expr)
-  var input = self.eval(frame, expr.input)
-  var pattern = self.eval(frame, expr.pattern)
+  var input = eval(frame, expr.input)
+  var pattern = eval(frame, expr.pattern)
   var m = input.str.match(pattern.regex)
   return m.is_none()
 
-proc translate_match*(value: Value): Expr =
+proc translate_match*(value: Value): Expr {.gcsafe.} =
   var evaluator: Evaluator
   case value.gene_children[0].str:
   of "=~":
@@ -58,27 +57,28 @@ proc translate_match*(value: Value): Expr =
     pattern: translate(value.gene_children[1]),
   )
 
-proc eval_regex(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_regex(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExRegex](expr)
   var s = ""
   for e in expr.data.mitems:
-    s &= self.eval(frame, e).to_s
+    s &= eval(frame, e).to_s
   result = new_gene_regex(s, expr.flags)
 
-proc translate_regex*(value: Value): Expr =
+proc translate_regex*(value: Value): Expr {.gcsafe.} =
   var r = ExRegex(
     evaluator: eval_regex,
   )
-  if value.gene_props.has_key("i".to_key):
+  if value.gene_props.has_key("i"):
     r.flags.incl(RfIgnoreCase)
-  if value.gene_props.has_key("m".to_key):
+  if value.gene_props.has_key("m"):
     r.flags.incl(RfMultiLine)
   for item in value.gene_children:
     r.data.add(translate(item))
   return r
 
 proc init*() =
-  GeneTranslators["$regex"] = translate_regex
-  # Handled in src/gene/features/gene.nim
-  # GeneTranslators["=~"] = translate_match
-  # GeneTranslators["!~"] = translate_match
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["$regex"] = translate_regex
+    # Handled in src/gene/features/gene.nim
+    # VM.gene_translators["=~"] = translate_match
+    # VM.gene_translators["!~"] = translate_match

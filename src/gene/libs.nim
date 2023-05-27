@@ -3,25 +3,24 @@ import asyncdispatch, asyncfile
 
 import ./types
 import ./json
-import ./map_key
 import ./interpreter_base
 
-proc object_class(self: Value, args: Value): Value =
+proc object_class(frame: Frame, self: Value, args: Value): Value =
   Value(kind: VkClass, class: self.get_class())
 
-proc object_is(self: Value, args: Value): Value =
+proc object_is(frame: Frame, self: Value, args: Value): Value =
   self.is_a(args.gene_children[0].class)
 
-proc object_to_json(self: Value, args: Value): Value =
+proc object_to_json(frame: Frame, self: Value, args: Value): Value =
   self.to_json()
 
-proc object_to_s(self: Value, args: Value): Value =
+proc object_to_s(frame: Frame, self: Value, args: Value): Value =
   self.to_s
 
-proc object_to_bool(self: Value, args: Value): Value =
+proc object_to_bool(frame: Frame, self: Value, args: Value): Value =
   self.to_bool
 
-proc on_member_missing(self: Value, args: Value): Value =
+proc on_member_missing(frame: Frame, self: Value, args: Value): Value =
   case self.kind
   of VkNamespace:
     self.ns.on_member_missing.add(args.gene_children[0])
@@ -32,28 +31,169 @@ proc on_member_missing(self: Value, args: Value): Value =
   else:
     todo("member_missing " & $self.kind)
 
-proc exception_message(self: Value, args: Value): Value =
+proc to_ctor(node: Value): Function =
+  var name = "ctor"
+
+  var matcher = new_arg_matcher()
+  matcher.parse(node.gene_children[0])
+
+  var body: seq[Value] = @[]
+  for i in 1..<node.gene_children.len:
+    body.add node.gene_children[i]
+
+  body = wrap_with_try(body)
+  result = new_fn(name, matcher, body)
+
+proc class_ctor(frame: Frame, self: Value, args: Value): Value =
+  var fn = to_ctor(args)
+  fn.ns = frame.ns
+  self.class.constructor = Value(kind: VkFunction, fn: fn)
+
+proc to_function(node: Value): Function =
+  var first = node.gene_children[0]
+  var name = first.str
+
+  var matcher = new_arg_matcher()
+  matcher.parse(node.gene_children[1])
+
+  var body: seq[Value] = @[]
+  for i in 2..<node.gene_children.len:
+    body.add node.gene_children[i]
+
+  body = wrap_with_try(body)
+  result = new_fn(name, matcher, body)
+  result.async = node.gene_props.get_or_default("async", false)
+
+proc class_fn(frame: Frame, self: Value, args: Value): Value =
+  # define a fn like method on a class
+  var fn = to_function(args)
+
+  var m = Method(
+    name: fn.name,
+    callable: Value(kind: VkFunction, fn: fn),
+  )
+  case self.kind:
+  of VkClass:
+    m.class = self.class
+    fn.ns = self.class.ns
+    self.class.methods[m.name] = m
+  of VkMixin:
+    fn.ns = self.mixin.ns
+    self.mixin.methods[m.name] = m
+  else:
+    not_allowed()
+
+proc class_method(frame: Frame, self: Value, args: Value): Value =
+  var m = Method(
+    name: args.gene_children[0].str,
+    callable: args.gene_children[1],
+  )
+  case self.kind:
+  of VkClass:
+    m.class = self.class
+    self.class.methods[m.name] = m
+  of VkMixin:
+    self.mixin.methods[m.name] = m
+  else:
+    not_allowed()
+
+proc macro_invoker*(frame: Frame, expr: var Expr): Value =
+  var target = frame.callable
+  var scope = new_scope()
+  scope.set_parent(target.macro.parent_scope, target.macro.parent_scope_max)
+  var new_frame = Frame(ns: target.macro.ns, scope: scope)
+  new_frame.parent = frame
+
+  var args = cast[ExLiteral](expr).data
+  var match_result = match(new_frame, target.macro.matcher, args)
+  case match_result.kind:
+  of MatchSuccess:
+    discard
+  of MatchMissingFields:
+    for field in match_result.missing:
+      not_allowed("Argument " & field.to_s & " is missing.")
+  else:
+    todo()
+
+  if target.macro.body_compiled == nil:
+    target.macro.body_compiled = translate(target.macro.body)
+
+  try:
+    result = eval(new_frame, target.macro.body_compiled)
+  except Return as r:
+    result = r.val
+  except CatchableError as e:
+    if VM.repl_on_error:
+      result = repl_on_error(frame, e)
+      discard
+    else:
+      raise
+
+proc arg_translator(value: Value): Expr {.gcsafe.} =
+  var expr = new_ex_literal(value)
+  expr.evaluator = macro_invoker
+  result = expr
+
+proc to_macro(node: Value): Macro =
+  var first = node.gene_children[0]
+  var name: string
+  if first.kind == VkSymbol:
+    name = first.str
+  elif first.kind == VkComplexSymbol:
+    name = first.csymbol[^1]
+
+  var matcher = new_arg_matcher()
+  matcher.parse(node.gene_children[1])
+
+  var body: seq[Value] = @[]
+  for i in 2..<node.gene_children.len:
+    body.add node.gene_children[i]
+
+  body = wrap_with_try(body)
+  result = new_macro(name, matcher, body)
+  result.translator = arg_translator
+
+proc class_macro(frame: Frame, self: Value, args: Value): Value =
+  # define a macro like method on a class
+  var mac = to_macro(args)
+
+  var m = Method(
+    name: mac.name,
+    callable: Value(kind: VkMacro, `macro`: mac),
+  )
+  case self.kind:
+  of VkClass:
+    m.class = self.class
+    mac.ns = self.class.ns
+    self.class.methods[m.name] = m
+  of VkMixin:
+    mac.ns = self.mixin.ns
+    self.mixin.methods[m.name] = m
+  else:
+    not_allowed()
+
+proc exception_message(frame: Frame, self: Value, args: Value): Value =
   self.exception.msg
 
-proc exception_stack(self: Value, args: Value): Value =
+proc exception_stack(frame: Frame, self: Value, args: Value): Value =
   self.exception.get_stack_trace()
 
-proc exception_to_s(self: Value, args: Value): Value =
+proc exception_to_s(frame: Frame, self: Value, args: Value): Value =
   self.exception.msg & "\n" & self.exception.get_stack_trace()
 
-proc string_size(self: Value, args: Value): Value =
+proc string_size(frame: Frame, self: Value, args: Value): Value =
   self.str.len
 
-proc string_to_i(self: Value, args: Value): Value =
+proc string_to_i(frame: Frame, self: Value, args: Value): Value =
   self.str.parse_int
 
-proc string_append(self: Value, args: Value): Value =
+proc string_append(frame: Frame, self: Value, args: Value): Value =
   result = self
   for item in args.gene_children:
     if not item.is_nil:
       self.str.add(item.to_s)
 
-proc string_substr(self: Value, args: Value): Value =
+proc string_substr(frame: Frame, self: Value, args: Value): Value =
   case args.gene_children.len:
   of 1:
     var start = args.gene_children[0].int
@@ -77,7 +217,7 @@ proc string_substr(self: Value, args: Value): Value =
   else:
     not_allowed("substr expects 1 or 2 arguments")
 
-proc string_split(self: Value, args: Value): Value =
+proc string_split(frame: Frame, self: Value, args: Value): Value =
   var separator = args.gene_children[0].str
   case args.gene_children.len:
   of 1:
@@ -94,89 +234,89 @@ proc string_split(self: Value, args: Value): Value =
   else:
     not_allowed("split expects 1 or 2 arguments")
 
-proc string_contains(self: Value, args: Value): Value =
+proc string_contains(frame: Frame, self: Value, args: Value): Value =
   var substr = args.gene_children[0].str
   result = self.str.find(substr) >= 0
 
-proc string_index(self: Value, args: Value): Value =
+proc string_index(frame: Frame, self: Value, args: Value): Value =
   var substr = args.gene_children[0].str
   result = self.str.find(substr)
 
-proc string_rindex(self: Value, args: Value): Value =
+proc string_rindex(frame: Frame, self: Value, args: Value): Value =
   var substr = args.gene_children[0].str
   result = self.str.rfind(substr)
 
-proc string_char_at(self: Value, args: Value): Value =
+proc string_char_at(frame: Frame, self: Value, args: Value): Value =
   var i = args.gene_children[0].int
   result = self.str[i]
 
-proc string_trim(self: Value, args: Value): Value =
+proc string_trim(frame: Frame, self: Value, args: Value): Value =
   result = self.str.strip
 
-proc string_starts_with(self: Value, args: Value): Value =
+proc string_starts_with(frame: Frame, self: Value, args: Value): Value =
   var substr = args.gene_children[0].str
   result = self.str.startsWith(substr)
 
-proc string_ends_with(self: Value, args: Value): Value =
+proc string_ends_with(frame: Frame, self: Value, args: Value): Value =
   var substr = args.gene_children[0].str
   result = self.str.endsWith(substr)
 
-proc string_to_uppercase(self: Value, args: Value): Value =
+proc string_to_uppercase(frame: Frame, self: Value, args: Value): Value =
   result = self.str.toUpper
 
-proc string_to_lowercase(self: Value, args: Value): Value =
+proc string_to_lowercase(frame: Frame, self: Value, args: Value): Value =
   result = self.str.toLower
 
-proc array_size(self: Value, args: Value): Value =
+proc array_size(frame: Frame, self: Value, args: Value): Value =
   result = self.vec.len
 
-proc array_add(self: Value, args: Value): Value =
+proc array_add(frame: Frame, self: Value, args: Value): Value =
   self.vec.add(args.gene_children[0])
   result = self
 
-proc array_del(self: Value, args: Value): Value =
+proc array_del(frame: Frame, self: Value, args: Value): Value =
   var index = args.gene_children[0].int
   result = self.vec[index]
   self.vec.delete(index)
 
-proc array_empty(self: Value, args: Value): Value =
+proc array_empty(frame: Frame, self: Value, args: Value): Value =
   result = self.vec.len == 0
 
-proc array_contains(self: Value, args: Value): Value =
+proc array_contains(frame: Frame, self: Value, args: Value): Value =
   result = self.vec.contains(args.gene_children[0])
 
-proc map_size(self: Value, args: Value): Value =
+proc map_size(frame: Frame, self: Value, args: Value): Value =
   result = self.map.len
 
-proc map_keys(self: Value, args: Value): Value =
+proc map_keys(frame: Frame, self: Value, args: Value): Value =
   result = new_gene_vec()
   for k, _ in self.map:
     result.vec.add(k.to_s)
 
-proc map_values(self: Value, args: Value): Value =
+proc map_values(frame: Frame, self: Value, args: Value): Value =
   result = new_gene_vec()
   for _, v in self.map:
     result.vec.add(v)
 
-proc gene_type(self: Value, args: Value): Value =
+proc gene_type(frame: Frame, self: Value, args: Value): Value =
   self.gene_type
 
-proc gene_props(self: Value, args: Value): Value =
+proc gene_props(frame: Frame, self: Value, args: Value): Value =
   result = new_gene_map()
   for k, v in self.gene_props:
     result.map[k] = v
 
-proc gene_children(self: Value, args: Value): Value =
+proc gene_children(frame: Frame, self: Value, args: Value): Value =
   result = new_gene_vec()
   for item in self.gene_children:
     result.vec.add(item)
 
-proc os_exec(args: Value): Value =
+proc os_exec(frame: Frame, args: Value): Value =
   var cmd = args.gene_children[0].str
   var (output, _) = execCmdEx(cmd)
   result = output
 
-proc file_read(args: Value): Value =
+proc file_read(frame: Frame, args: Value): Value =
   var file = args.gene_children[0]
   case file.kind:
   of VkString:
@@ -186,10 +326,10 @@ proc file_read(args: Value): Value =
   else:
     todo($file.kind)
 
-proc file_read(self: Value, args: Value): Value =
+proc file_read(frame: Frame, self: Value, args: Value): Value =
   self.native_file.read_all()
 
-proc file_read_async(args: Value): Value =
+proc file_read_async(frame: Frame, args: Value): Value =
   var file = args.gene_children[0]
   case file.kind:
   of VkString:
@@ -202,22 +342,22 @@ proc file_read_async(args: Value): Value =
   else:
     todo($file.kind)
 
-proc file_write(args: Value): Value =
+proc file_write(frame: Frame, args: Value): Value =
   var file = args.gene_children[0]
   var content = args.gene_children[1]
   write_file(file.str, content.str)
 
-proc json_parse(args: Value): Value =
+proc json_parse(frame: Frame, args: Value): Value =
   result = args.gene_children[0].str.parse_json
 
-proc csv_parse(args: Value): Value =
+proc csv_parse(frame: Frame, args: Value): Value =
   var parser = CsvParser()
   var sep = ','
   # Detect whether it's a tsv (Tab Separated Values)
   if args.gene_children[0].str.contains('\t'):
     sep = '\t'
   parser.open(new_string_stream(args.gene_children[0].str), "unknown.csv", sep)
-  if not args.gene_props.get_or_default("skip_headers".to_key, false):
+  if not args.gene_props.get_or_default("skip_headers", false):
     parser.read_header_row()
   result = new_gene_vec()
   while parser.read_row():
@@ -225,85 +365,71 @@ proc csv_parse(args: Value): Value =
     row.add(parser.row.map(proc(s: string): Value = new_gene_string(s)))
     result.vec.add(new_gene_vec(row))
 
-proc today(args: Value): Value =
+proc today(frame: Frame, args: Value): Value =
   var date = now()
-  result = new_gene_date(date.year, cast[int](date.month), date.monthday)
+  result = new_gene_date(date.year, int(date.month), date.monthday)
 
-proc now(args: Value): Value =
+proc now(frame: Frame, args: Value): Value =
   var date = now()
   result = new_gene_datetime(date)
 
-proc date_year(self: Value, args: Value): Value =
+proc date_year(frame: Frame, self: Value, args: Value): Value =
   result = self.date.year
 
-proc time_elapsed(self: Value, args: Value): Value =
+proc time_elapsed(frame: Frame, self: Value, args: Value): Value =
   var duration = now().toTime() - self.date.toTime()
   result = duration.inMicroseconds / 1000_000
 
-proc time_hour(self: Value, args: Value): Value =
+proc time_hour(frame: Frame, self: Value, args: Value): Value =
   result = self.time.hour
 
-proc add_success_callback(self: Value, args: Value): Value =
-  # Register callback to future
-  if self.future.finished:
-    if not self.future.failed:
-      var callback_args = new_gene_gene()
-      callback_args.gene_children.add(self.future.read())
-      var frame = Frame()
-      discard VM.call(frame, args.gene_children[0], callback_args)
-  else:
-    self.future.add_callback proc() {.gcsafe.} =
-      if not self.future.failed:
-        var callback_args = new_gene_gene()
-        callback_args.gene_children.add(self.future.read())
-        var frame = Frame()
-        discard VM.call(frame, args.gene_children[0], callback_args)
-
-proc add_failure_callback(self: Value, args: Value): Value =
-  # Register callback to future
-  if self.future.finished:
-    if self.future.failed:
-      var callback_args = new_gene_gene()
-      var ex = exception_to_value(cast[ref system.Exception](self.future.read_error()))
-      callback_args.gene_children.add(ex)
-      var frame = Frame()
-      discard VM.call(frame, args.gene_children[0], callback_args)
-  else:
-    self.future.add_callback proc() {.gcsafe.} =
-      if self.future.failed:
-        var callback_args = new_gene_gene()
-        var ex = exception_to_value(cast[ref system.Exception](self.future.read_error()))
-        callback_args.gene_children.add(ex)
-        var frame = Frame()
-        discard VM.call(frame, args.gene_children[0], callback_args)
-
 proc init*() =
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GENE_NS.ns["todo"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_todo".} =
+  VmCreatedCallbacks.add proc() =
+    VM.gene_ns.ns["todo"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_todo".} =
       todo(args.gene_children[0].to_s)
-    GLOBAL_NS.ns["todo"] = GENE_NS.ns["todo"]
-    GENE_NS.ns["not_allowed"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_not_allowed".} =
+    VM.global_ns.ns["todo"] = VM.gene_ns.ns["todo"]
+    VM.gene_ns.ns["not_allowed"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_not_allowed".} =
       not_allowed(args.gene_children[0].to_s)
-    GLOBAL_NS.ns["not_allowed"] = GENE_NS.ns["not_allowed"]
+    VM.global_ns.ns["not_allowed"] = VM.gene_ns.ns["not_allowed"]
 
 
-    GENE_NS.ns["rand"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_rand".} =
+    VM.gene_ns.ns["rand"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_rand".} =
       if args.gene_children.len == 0:
         return new_gene_float(rand(1.0))
       else:
         return rand(args.gene_children[0].int)
 
-    GENE_NS.ns["sleep"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep".} =
-      sleep(args.gene_children[0].int)
-    GENE_NS.ns["sleep_async"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_sleep_async".} =
+    VM.gene_ns.ns["sleep"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_sleep".} =
+      var time = 1
+      if args.gene_children.len >= 1:
+        time = args.gene_children[0].int
+      sleep(time)
+      check_async_ops_and_channel()
+
+    VM.gene_ns.ns["sleep_async"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_sleep_async".} =
       var f = sleep_async(args.gene_children[0].int)
       var future = new_future[Value]()
       f.add_callback proc() {.gcsafe.} =
-        future.complete(Nil)
+        future.complete(Value(kind: VkNil))
       result = new_gene_future(future)
-    GENE_NS.ns["base64"] = new_gene_native_fn proc(args: Value): Value =
+
+    # VM.gene_ns.ns["run_later"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_run_later".} =
+    #   var wait_time: int = args.gene_children[0].int
+    #   add_timer wait_time, true, proc(fd: AsyncFD): bool =
+    #     var e = translate(args.gene_children[1..^1])
+    #     discard eval(frame, e)
+
+    # VM.gene_ns.ns["run_periodically"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_run_periodically".} =
+    #   var interval: int = args.gene_children[0].int
+    #   add_timer interval, false, proc(fd: AsyncFD): bool =
+    #     var e = translate(args.gene_children[1..^1])
+    #     var r = eval(frame, e)
+    #     if not r.is_nil and r.kind == VkBool:
+    #       return r.bool
+
+    VM.gene_ns.ns["base64"] = new_gene_native_fn proc(frame: Frame, args: Value): Value =
       encode(args.gene_children[0].str)
-    GENE_NS.ns["base64_decode"] = new_gene_native_fn proc(args: Value): Value =
+    VM.gene_ns.ns["base64_decode"] = new_gene_native_fn proc(frame: Frame, args: Value): Value =
       case args.gene_children[0].kind:
       of VkString:
         return decode(args.gene_children[0].str)
@@ -311,125 +437,124 @@ proc init*() =
         return ""
       else:
         todo("base64_decode " & $args.gene_children[0].kind)
-    GENE_NS.ns["run_forever"] = new_gene_native_fn proc(args: Value): Value {.name:"gene_run_forever".} =
+    VM.gene_ns.ns["run_forever"] = new_gene_native_fn proc(frame: Frame, args: Value): Value {.name:"gene_run_forever".} =
       run_forever()
 
-    ObjectClass = Value(kind: VkClass, class: new_class("Object"))
-    ObjectClass.def_native_method("class", object_class)
-    ObjectClass.def_native_method("is", object_is)
-    ObjectClass.def_native_method("to_s", object_to_s)
-    ObjectClass.def_native_method("to_json", object_to_json)
-    ObjectClass.def_native_method("to_bool", object_to_bool)
-    ObjectClass.def_native_method "call", proc(self: Value, args: Value): Value {.name:"object_call".} =
+    VM.object_class.def_native_method("class", object_class)
+    VM.object_class.def_native_method("is", object_is)
+    VM.object_class.def_native_method("to_s", object_to_s)
+    VM.object_class.def_native_method("to_json", object_to_json)
+    VM.object_class.def_native_method("to_bool", object_to_bool)
+    VM.object_class.def_native_method "call", proc(frame: Frame, self: Value, args: Value): Value {.name:"object_call".} =
       todo("Object.call")
-    GENE_NS.ns["Object"] = ObjectClass
-    GLOBAL_NS.ns["Object"] = ObjectClass
+    VM.gene_ns.ns["Object"] = VM.object_class
+    VM.global_ns.ns["Object"] = VM.object_class
 
-    ClassClass = Value(kind: VkClass, class: new_class("Class"))
-    ClassClass.class.parent = ObjectClass.class
-    ClassClass.def_native_method "name", proc(self: Value, args: Value): Value =
+    VM.class_class = Value(kind: VkClass, class: new_class("Class"))
+    VM.class_class.class.parent = VM.object_class.class
+    VM.class_class.def_native_method "name", proc(frame: Frame, self: Value, args: Value): Value =
       self.class.name
-    ClassClass.def_native_method "parent", proc(self: Value, args: Value): Value =
+    VM.class_class.def_native_method "parent", proc(frame: Frame, self: Value, args: Value): Value =
       Value(kind: VkClass, class: self.class.parent)
-    ClassClass.def_native_method "members", proc(self: Value, args: Value): Value {.name:"class_members".} =
+    VM.class_class.def_native_macro_method "ctor", class_ctor
+    VM.class_class.def_native_macro_method "fn", class_fn
+    VM.class_class.def_native_macro_method "macro", class_macro
+    VM.class_class.def_native_method "method", class_method
+    VM.class_class.def_native_method "members", proc(frame: Frame, self: Value, args: Value): Value {.name:"class_members".} =
       self.class.ns.get_members()
-    ClassClass.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"class_member_names".} =
+    VM.class_class.def_native_method "member_names", proc(frame: Frame, self: Value, args: Value): Value {.name:"class_member_names".} =
       self.class.ns.member_names()
-    ClassClass.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"class_has_member".} =
-      self.class.ns.members.has_key(args[0].to_s.to_key)
-    ClassClass.def_native_method "on_member_missing", on_member_missing
-    ClassClass.def_native_method "on_extended", proc(self: Value, args: Value): Value {.name:"class_on_extended" } =
+    VM.class_class.def_native_method "has_member", proc(frame: Frame, self: Value, args: Value): Value {.name:"class_has_member".} =
+      self.class.ns.members.has_key(args[0].to_s)
+    VM.class_class.def_native_method "on_member_missing", on_member_missing
+    VM.class_class.def_native_method "on_extended", proc(frame: Frame, self: Value, args: Value): Value {.name:"class_on_extended" } =
       self.class.on_extended = args.gene_children[0]
 
-    GENE_NS.ns["Class"] = ClassClass
-    GLOBAL_NS.ns["Class"] = ClassClass
+    VM.gene_ns.ns["Class"] = VM.class_class
+    VM.global_ns.ns["Class"] = VM.class_class
 
-    MixinClass = Value(kind: VkClass, class: new_class("Mixin"))
-    MixinClass.class.parent = ObjectClass.class
-    MixinClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"mixin_name".} =
+    VM.mixin_class = Value(kind: VkClass, class: new_class("Mixin"))
+    VM.mixin_class.class.parent = VM.object_class.class
+    VM.mixin_class.def_native_method "name", proc(frame: Frame, self: Value, args: Value): Value {.name:"mixin_name".} =
       self.mixin.name
-    MixinClass.def_native_method "members", proc(self: Value, args: Value): Value {.name:"mixin_members".} =
+    VM.mixin_class.def_native_macro_method "fn", class_fn
+    VM.mixin_class.def_native_macro_method "macro", class_macro
+    VM.mixin_class.def_native_method "method", class_method
+    VM.mixin_class.def_native_method "members", proc(frame: Frame, self: Value, args: Value): Value {.name:"mixin_members".} =
       self.mixin.ns.get_members()
-    MixinClass.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"mixin_member_names".} =
+    VM.mixin_class.def_native_method "member_names", proc(frame: Frame, self: Value, args: Value): Value {.name:"mixin_member_names".} =
       self.mixin.ns.member_names()
-    MixinClass.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"mixin_has_member".} =
-      self.mixin.ns.members.has_key(args[0].to_s.to_key)
-    MixinClass.def_native_method "on_member_missing", on_member_missing
-    MixinClass.def_native_method "on_included", proc(self: Value, args: Value): Value {.name:"mixin_on_extended" } =
+    VM.mixin_class.def_native_method "has_member", proc(frame: Frame, self: Value, args: Value): Value {.name:"mixin_has_member".} =
+      self.mixin.ns.members.has_key(args[0].to_s)
+    VM.mixin_class.def_native_method "on_member_missing", on_member_missing
+    VM.mixin_class.def_native_method "on_included", proc(frame: Frame, self: Value, args: Value): Value {.name:"mixin_on_extended" } =
       self.class.on_extended = args.gene_children[0]
-    GENE_NS.ns["Mixin"] = MixinClass
-    GLOBAL_NS.ns["Mixin"] = MixinClass
+    VM.gene_ns.ns["Mixin"] = VM.mixin_class
+    VM.global_ns.ns["Mixin"] = VM.mixin_class
 
-    ExceptionClass = Value(kind: VkClass, class: new_class("Exception"))
-    ExceptionClass.class.parent = ObjectClass.class
-    ExceptionClass.def_native_method("message", exception_message)
-    ExceptionClass.def_native_method("stacktrace", exception_stack)
-    ExceptionClass.def_native_method("to_s", exception_to_s)
-    GENE_NS.ns["Exception"] = ExceptionClass
-    GLOBAL_NS.ns["Exception"] = ExceptionClass
+    VM.exception_class = Value(kind: VkClass, class: new_class("Exception"))
+    VM.exception_class.class.parent = VM.object_class.class
+    VM.exception_class.def_native_method("message", exception_message)
+    VM.exception_class.def_native_method("stacktrace", exception_stack)
+    VM.exception_class.def_native_method("to_s", exception_to_s)
+    VM.gene_ns.ns["Exception"] = VM.exception_class
+    VM.global_ns.ns["Exception"] = VM.exception_class
 
-    ModuleClass = Value(kind: VkClass, class: new_class("Module"))
-    ModuleClass.class.parent = ObjectClass.class
-    ModuleClass.def_native_method "name", proc(self: Value, args: Value): Value =
+    VM.module_class = Value(kind: VkClass, class: new_class("Module"))
+    VM.module_class.class.parent = VM.object_class.class
+    VM.module_class.def_native_method "name", proc(frame: Frame, self: Value, args: Value): Value =
       self.module.name
-    ModuleClass.def_native_method "set_name", proc(self: Value, args: Value): Value =
+    VM.module_class.def_native_method "set_name", proc(frame: Frame, self: Value, args: Value): Value =
       self.module.name = args.gene_children[0].str
 
-    NamespaceClass = Value(kind: VkClass, class: new_class("Namespace"))
-    NamespaceClass.class.parent = ObjectClass.class
-    NamespaceClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"ns_name".} =
+    VM.namespace_class = Value(kind: VkClass, class: new_class("Namespace"))
+    VM.namespace_class.class.parent = VM.object_class.class
+    VM.namespace_class.def_native_method "name", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_name".} =
       self.ns.name
-    NamespaceClass.def_native_method "members", proc(self: Value, args: Value): Value {.name:"ns_members".} =
+    VM.namespace_class.def_native_method "members", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_members".} =
       self.ns.get_members()
-    NamespaceClass.def_native_method "member_names", proc(self: Value, args: Value): Value {.name:"ns_member_names".} =
+    VM.namespace_class.def_native_method "member_names", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_member_names".} =
       self.ns.member_names()
-    NamespaceClass.def_native_method "has_member", proc(self: Value, args: Value): Value {.name:"ns_has_member".} =
-      self.ns.members.has_key(args[0].to_s.to_key)
-    NamespaceClass.def_native_method "on_member_missing", on_member_missing
-    GENE_NS.ns["Namespace"] = NamespaceClass
-    GLOBAL_NS.ns["Namespace"] = NamespaceClass
+    VM.namespace_class.def_native_method "has_member", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_has_member".} =
+      self.ns.members.has_key(args[0].to_s)
+    VM.namespace_class.def_native_method "on_member_missing", on_member_missing
+    VM.gene_ns.ns["Namespace"] = VM.namespace_class
+    VM.global_ns.ns["Namespace"] = VM.namespace_class
 
-    BoolClass = Value(kind: VkClass, class: new_class("Bool"))
-    BoolClass.class.parent = ObjectClass.class
-    GENE_NS.ns["Bool"] = BoolClass
-    GLOBAL_NS.ns["Bool"] = BoolClass
+    VM.bool_class = Value(kind: VkClass, class: new_class("Bool"))
+    VM.bool_class.class.parent = VM.object_class.class
+    VM.gene_ns.ns["Bool"] = VM.bool_class
+    VM.global_ns.ns["Bool"] = VM.bool_class
 
-    IntClass = Value(kind: VkClass, class: new_class("Int"))
-    IntClass.class.parent = ObjectClass.class
-    GENE_NS.ns["Int"] = IntClass
-    GLOBAL_NS.ns["Int"] = IntClass
+    VM.int_class = Value(kind: VkClass, class: new_class("Int"))
+    VM.int_class.class.parent = VM.object_class.class
+    VM.gene_ns.ns["Int"] = VM.int_class
+    VM.global_ns.ns["Int"] = VM.int_class
 
-    NilClass = Value(kind: VkClass, class: new_class("Nil"))
-    NilClass.class.parent = ObjectClass.class
-    GENE_NS.ns["Nil"] = NilClass
-    GLOBAL_NS.ns["Nil"] = NilClass
+    VM.nil_class = Value(kind: VkClass, class: new_class("Nil"))
+    VM.nil_class.class.parent = VM.object_class.class
+    VM.gene_ns.ns["Nil"] = VM.nil_class
+    VM.global_ns.ns["Nil"] = VM.nil_class
 
-    FutureClass = Value(kind: VkClass, class: new_class("Future"))
-    FutureClass.class.parent = ObjectClass.class
-    FutureClass.def_native_method("on_success", add_success_callback)
-    FutureClass.def_native_method("on_failure", add_failure_callback)
-    FutureClass.class.parent = ObjectClass.class
-    GENE_NS.ns["Future"] = FutureClass
-
-    StringClass = Value(kind: VkClass, class: new_class("String"))
-    StringClass.class.parent = ObjectClass.class
-    GENE_NS.ns["String"] = StringClass
-    GLOBAL_NS.ns["String"] = StringClass
-    StringClass.def_native_method("size", string_size)
-    StringClass.def_native_method("to_i", string_to_i)
-    StringClass.def_native_method("append", string_append)
-    StringClass.def_native_method("substr", string_substr)
-    StringClass.def_native_method("split", string_split)
-    StringClass.def_native_method("contains", string_contains)
-    StringClass.def_native_method("index", string_index)
-    StringClass.def_native_method("rindex", string_rindex)
-    StringClass.def_native_method("char_at", string_char_at)
-    StringClass.def_native_method("trim", string_trim)
-    StringClass.def_native_method("starts_with", string_starts_with)
-    StringClass.def_native_method("ends_with", string_ends_with)
-    StringClass.def_native_method("to_uppercase", string_to_uppercase)
-    StringClass.def_native_method("to_lowercase", string_to_lowercase)
-    StringClass.def_native_method "replace", proc(self: Value, args: Value): Value {.name:"string_replace".} =
+    VM.string_class = Value(kind: VkClass, class: new_class("String"))
+    VM.string_class.class.parent = VM.object_class.class
+    VM.gene_ns.ns["String"] = VM.string_class
+    VM.global_ns.ns["String"] = VM.string_class
+    VM.string_class.def_native_method("size", string_size)
+    VM.string_class.def_native_method("to_i", string_to_i)
+    VM.string_class.def_native_method("append", string_append)
+    VM.string_class.def_native_method("substr", string_substr)
+    VM.string_class.def_native_method("split", string_split)
+    VM.string_class.def_native_method("contains", string_contains)
+    VM.string_class.def_native_method("index", string_index)
+    VM.string_class.def_native_method("rindex", string_rindex)
+    VM.string_class.def_native_method("char_at", string_char_at)
+    VM.string_class.def_native_method("trim", string_trim)
+    VM.string_class.def_native_method("starts_with", string_starts_with)
+    VM.string_class.def_native_method("ends_with", string_ends_with)
+    VM.string_class.def_native_method("to_uppercase", string_to_uppercase)
+    VM.string_class.def_native_method("to_lowercase", string_to_lowercase)
+    VM.string_class.def_native_method "replace", proc(frame: Frame, self: Value, args: Value): Value {.name:"string_replace".} =
       var first = args.gene_children[0]
       var second = args.gene_children[1]
       case first.kind:
@@ -440,116 +565,116 @@ proc init*() =
       else:
         todo("string_replace " & $first.kind)
 
-    SymbolClass = Value(kind: VkClass, class: new_class("Symbol"))
-    SymbolClass.class.parent = ObjectClass.class
-    GENE_NS.ns["Symbol"] = SymbolClass
-    GLOBAL_NS.ns["Symbol"] = SymbolClass
+    VM.symbol_class = Value(kind: VkClass, class: new_class("Symbol"))
+    VM.symbol_class.class.parent = VM.object_class.class
+    VM.gene_ns.ns["Symbol"] = VM.symbol_class
+    VM.global_ns.ns["Symbol"] = VM.symbol_class
 
-    ComplexSymbolClass = Value(kind: VkClass, class: new_class("ComplexSymbol"))
-    ComplexSymbolClass.class.parent = ObjectClass.class
-    ComplexSymbolClass.def_native_method "parts", proc(self: Value, args: Value): Value {.name:"complex_symbol_parts".} =
+    VM.complex_symbol_class = Value(kind: VkClass, class: new_class("ComplexSymbol"))
+    VM.complex_symbol_class.class.parent = VM.object_class.class
+    VM.complex_symbol_class.def_native_method "parts", proc(frame: Frame, self: Value, args: Value): Value {.name:"complex_symbol_parts".} =
       result = new_gene_vec()
       for item in self.csymbol:
         result.vec.add(item)
-    GENE_NS.ns["ComplexSymbol"] = ComplexSymbolClass
-    GLOBAL_NS.ns["ComplexSymbol"] = ComplexSymbolClass
+    VM.gene_ns.ns["ComplexSymbol"] = VM.complex_symbol_class
+    VM.global_ns.ns["ComplexSymbol"] = VM.complex_symbol_class
 
-    ArrayClass = Value(kind: VkClass, class: new_class("Array"))
-    ArrayClass.class.parent = ObjectClass.class
-    ArrayClass.def_native_method("size", array_size)
-    ArrayClass.def_native_method("add", array_add)
-    ArrayClass.def_native_method("del", array_del)
-    ArrayClass.def_native_method("empty", array_empty)
-    ArrayClass.def_native_method("contains", array_contains)
-    GENE_NS.ns["Array"] = ArrayClass
-    GLOBAL_NS.ns["Array"] = ArrayClass
+    VM.array_class = Value(kind: VkClass, class: new_class("Array"))
+    VM.array_class.class.parent = VM.object_class.class
+    VM.array_class.def_native_method("size", array_size)
+    VM.array_class.def_native_method("add", array_add)
+    VM.array_class.def_native_method("del", array_del)
+    VM.array_class.def_native_method("empty", array_empty)
+    VM.array_class.def_native_method("contains", array_contains)
+    VM.gene_ns.ns["Array"] = VM.array_class
+    VM.global_ns.ns["Array"] = VM.array_class
 
-    MapClass = Value(kind: VkClass, class: new_class("Map"))
-    MapClass.class.parent = ObjectClass.class
-    MapClass.def_native_method("size", map_size)
-    MapClass.def_native_method("keys", map_keys)
-    MapClass.def_native_method("values", map_values)
-    MapClass.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"map_contains".} =
-      self.map.has_key(args.gene_children[0].str.to_key)
-    GENE_NS.ns["Map"] = MapClass
-    GLOBAL_NS.ns["Map"] = MapClass
+    VM.map_class = Value(kind: VkClass, class: new_class("Map"))
+    VM.map_class.class.parent = VM.object_class.class
+    VM.map_class.def_native_method("size", map_size)
+    VM.map_class.def_native_method("keys", map_keys)
+    VM.map_class.def_native_method("values", map_values)
+    VM.map_class.def_native_method "contains", proc(frame: Frame, self: Value, args: Value): Value {.name:"map_contains".} =
+      self.map.has_key(args.gene_children[0].str)
+    VM.gene_ns.ns["Map"] = VM.map_class
+    VM.global_ns.ns["Map"] = VM.map_class
 
-    GeneClass = Value(kind: VkClass, class: new_class("Gene"))
-    GeneClass.class.parent = ObjectClass.class
-    GeneClass.def_native_method("type", gene_type)
-    GeneClass.def_native_method("props", gene_props)
-    GeneClass.def_native_method("children", gene_children)
-    GeneClass.def_native_method "contains", proc(self: Value, args: Value): Value {.name:"gene_contains".} =
+    VM.gene_class = Value(kind: VkClass, class: new_class("Gene"))
+    VM.gene_class.class.parent = VM.object_class.class
+    VM.gene_class.def_native_method("type", gene_type)
+    VM.gene_class.def_native_method("props", gene_props)
+    VM.gene_class.def_native_method("children", gene_children)
+    VM.gene_class.def_native_method "contains", proc(frame: Frame, self: Value, args: Value): Value {.name:"gene_contains".} =
       var s = args.gene_children[0].str
-      result = self.gene_props.has_key(s.to_key)
-    GENE_NS.ns["Gene"] = GeneClass
-    GLOBAL_NS.ns["Gene"] = GeneClass
+      result = self.gene_props.has_key(s)
+    VM.gene_ns.ns["Gene"] = VM.gene_class
+    VM.global_ns.ns["Gene"] = VM.gene_class
 
-    FunctionClass = Value(kind: VkClass, class: new_class("Function"))
-    FunctionClass.class.parent = ObjectClass.class
-    FunctionClass.def_native_method "call", proc(self: Value, args: Value): Value {.name:"function_call".} =
-      VM.call(new_frame(), self, args)
+    VM.function_class = Value(kind: VkClass, class: new_class("Function"))
+    VM.function_class.class.parent = VM.object_class.class
+    VM.function_class.def_native_method "call", proc(frame: Frame, self: Value, args: Value): Value {.name:"function_call".} =
+      call(new_frame(), self, args)
 
-    FileClass = Value(kind: VkClass, class: new_class("File"))
-    FileClass.class.parent = ObjectClass.class
-    FileClass.class.ns["read"] = Value(kind: VkNativeFn, native_fn: file_read)
-    FileClass.class.ns["read_async"] = Value(kind: VkNativeFn, native_fn: file_read_async)
-    FileClass.class.ns["write"] = Value(kind: VkNativeFn, native_fn: file_write)
-    FileClass.def_native_method("read", file_read)
-    GENE_NS.ns["File"] = FileClass
+    VM.file_class = Value(kind: VkClass, class: new_class("File"))
+    VM.file_class.class.parent = VM.object_class.class
+    VM.file_class.class.ns["read"] = Value(kind: VkNativeFn, native_fn: file_read)
+    VM.file_class.class.ns["read_async"] = Value(kind: VkNativeFn, native_fn: file_read_async)
+    VM.file_class.class.ns["write"] = Value(kind: VkNativeFn, native_fn: file_write)
+    VM.file_class.def_native_method("read", file_read)
+    VM.gene_ns.ns["File"] = VM.file_class
 
     var os_ns = new_namespace("os")
     os_ns["exec"] = Value(kind: VkNativeFn, native_fn: os_exec)
-    GENE_NS.ns["os"] = Value(kind: VkNamespace, ns: os_ns)
+    VM.gene_ns.ns["os"] = Value(kind: VkNamespace, ns: os_ns)
 
     var json_ns = new_namespace("json")
     json_ns["parse"] = Value(kind: VkNativeFn, native_fn: json_parse)
-    GENE_NS.ns["json"] = Value(kind: VkNamespace, ns: json_ns)
+    VM.gene_ns.ns["json"] = Value(kind: VkNamespace, ns: json_ns)
 
     var csv_ns = new_namespace("csv")
     csv_ns["parse"] = Value(kind: VkNativeFn, native_fn: csv_parse)
-    GENE_NS.ns["csv"] = Value(kind: VkNamespace, ns: csv_ns)
+    VM.gene_ns.ns["csv"] = Value(kind: VkNamespace, ns: csv_ns)
 
-    DateClass = Value(kind: VkClass, class: new_class("Date"))
-    DateClass.class.parent = ObjectClass.class
-    DateClass.def_native_method("year", date_year)
+    VM.date_class = Value(kind: VkClass, class: new_class("Date"))
+    VM.date_class.class.parent = VM.object_class.class
+    VM.date_class.def_native_method("year", date_year)
 
-    DateTimeClass = Value(kind: VkClass, class: new_class("DateTime"))
-    DateTimeClass.class.parent = DateClass.class
-    DateTimeClass.def_native_method("elapsed", time_elapsed)
+    VM.datetime_class = Value(kind: VkClass, class: new_class("DateTime"))
+    VM.datetime_class.class.parent = VM.date_class.class
+    VM.datetime_class.def_native_method("elapsed", time_elapsed)
 
-    TimeClass = Value(kind: VkClass, class: new_class("Time"))
-    TimeClass.class.parent = ObjectClass.class
-    TimeClass.def_native_method("hour", time_hour)
+    VM.time_class = Value(kind: VkClass, class: new_class("Time"))
+    VM.time_class.class.parent = VM.object_class.class
+    VM.time_class.def_native_method("hour", time_hour)
 
-    SelectorClass = Value(kind: VkClass, class: new_class("Selector"))
-    SelectorClass.class.parent = ObjectClass.class
-    # SelectorClass.ns["descendants"] = ...
+    VM.selector_class = Value(kind: VkClass, class: new_class("Selector"))
+    VM.selector_class.class.parent = VM.object_class.class
+    # VM.selector_class.ns["descendants"] = ...
 
-    PackageClass = Value(kind: VkClass, class: new_class("Package"))
-    PackageClass.class.parent = ObjectClass.class
-    PackageClass.def_native_method "name", proc(self: Value, args: Value): Value {.name:"package_name".} =
+    VM.package_class = Value(kind: VkClass, class: new_class("Package"))
+    VM.package_class.class.parent = VM.object_class.class
+    VM.package_class.def_native_method "name", proc(frame: Frame, self: Value, args: Value): Value {.name:"package_name".} =
       self.pkg.name
-    GENE_NS.ns["Package"] = PackageClass
+    VM.gene_ns.ns["Package"] = VM.package_class
 
-    GENE_NS.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
-    GENE_NS.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
+    VM.gene_ns.ns["today"] = Value(kind: VkNativeFn, native_fn: today)
+    VM.gene_ns.ns["now"] = Value(kind: VkNativeFn, native_fn: now)
 
-    discard self.eval(self.runtime.pkg, """
+    discard eval(VM.runtime.pkg, """
     ($with gene/String
-      (method lines _
+      (.fn lines _
         (self .split "\n")
       )
     )
 
     ($with gene/Array
-      (method each block
+      (.fn each block
         (for item in self
           (block item)
         )
       )
 
-      (method map block
+      (.fn map block
         (var result [])
         (for item in self
           (result .add (block item))
@@ -557,7 +682,7 @@ proc init*() =
         result
       )
 
-      (method find block
+      (.fn find block
         (for item in self
           (if (block item)
             (return item)
@@ -565,7 +690,7 @@ proc init*() =
         )
       )
 
-      (method select block
+      (.fn select block
         (var result [])
         (for item in self
           (if (block item) (result .add item))
@@ -573,7 +698,7 @@ proc init*() =
         result
       )
 
-      (method join [with = ""]
+      (.fn join [with = ""]
         (var s "")
         (for [i item] in self
           (s .append item/.to_s (if (i < (/.size - 1)) with))
@@ -583,7 +708,7 @@ proc init*() =
     )
 
     ($with gene/Map
-      (method map block
+      (.fn map block
         (var result [])
         (for [k v] in self
           (result .add (block k v))
@@ -610,13 +735,13 @@ proc init*() =
 
     (ns genex/html
       (class Tag
-        (method init [name attrs = {} children = []]
+        (.ctor [name attrs = {} children = []]
           (/name     = name)
           (/attrs    = attrs)
           (/children = children)
         )
 
-        (method to_s _
+        (.fn to_s _
           ("<" /name
             ((/attrs .map
               ([k v] ->

@@ -9,7 +9,7 @@ test_interpreter """
   (gene/json/parse
     "{\"a\": true}"
   )
-""", {"a": True}.toTable
+""", {"a": Value(kind: VkBool, bool: true)}.toTable
 
 test_interpreter """
   ([1 2].to_json)

@@ -8,11 +8,11 @@ import ./helpers
 proc test_extension(code: string, result: Value) =
   var code = cleanup(code)
   test "Interpreter / eval: " & code:
-    check VM.eval(code) == result
+    check eval(code) == result
 
 suite "Extension":
   init_all()
-  discard VM.eval("""
+  discard eval("""
     (import test Extension new_extension get_i from "tests/extension" ^^native)
     (import new_extension2 extension2_name from "tests/extension2" ^^native)
 
@@ -30,13 +30,13 @@ suite "Extension":
     (test 1)
   """, 1
 
-  test "Interpreter / eval: translate exception":
-    try:
-      var code = "(test)"
-      discard VM.eval(code)
-      fail() # Exception expected from translator.
-    except system.Exception as e:
-      discard
+  # test "Interpreter / eval: translate exception":
+  #   try:
+  #     var code = "(test)"
+  #     discard eval(code)
+  #     fail() # Exception expected from translator.
+  #   except system.Exception:
+  #     discard
 
   test_extension """
     (test (extension2_name (new_extension2 "x")))

@@ -5,26 +5,7 @@
 
 import lexbase, streams, strutils, unicode, tables, sets, times, nre, base64, os
 
-import ./map_key
 import ./types
-
-let DEBUG = new_gene_symbol("debug")
-
-var DEFAULT_UNITS = {
-  "m": new_gene_int(60),        # m  = minute
-  "s": new_gene_int(1),         # s  = second (default)
-  "ms": new_gene_float(0.001),  # ms = millisecond
-  "ns": new_gene_float(1e-9),   # ns = nanosecond
-}.to_table()
-
-let HEX = {
-  '0': 0u8, '1': 1u8, '2': 2u8, '3': 3u8, '4': 4u8,
-  '5': 5u8, '6': 6u8, '7': 7u8, '8': 8u8, '9': 9u8,
-  'a': 10u8, 'b': 11u8, 'c': 12u8, 'd': 13u8, 'e': 14u8, 'f': 15u8,
-  'A': 10u8, 'B': 11u8, 'C': 12u8, 'D': 13u8, 'E': 14u8, 'F': 15u8,
-}.to_table()
-
-let Ignore = Value(kind: VkCustom, custom: CustomValue())
 
 type
   ParseError* = object of CatchableError
@@ -51,7 +32,7 @@ type
     document*: Document
     token_kind*: TokenKind
     error*: ParseErrorKind
-    # stored_references*: Table[MapKey, Value]
+    references*: References
     document_props_done*: bool  # flag to tell whether we have read document properties
 
   TokenKind* = enum
@@ -76,9 +57,9 @@ type
 
   ParseScope* = ref object
     parent*: ParseScope
-    mappings*: Table[MapKey, Value]
+    mappings*: Table[string, Value]
 
-  ParseFunction* = proc(self: var Parser, scope: ParseScope, props: Table[MapKey, Value], children: seq[Value]): Value
+  ParseFunction* = proc(self: var Parser, scope: ParseScope, props: Table[string, Value], children: seq[Value]): Value
 
   ParseHandlerType* = enum
     PhDefault
@@ -94,7 +75,7 @@ type
       args*: seq[Value]
       body*: seq[Value]
 
-  MacroReader = proc(p: var Parser): Value
+  MacroReader = proc(p: var Parser): Value {.gcsafe.}
   MacroArray = array[char, MacroReader]
 
   MapKind = enum
@@ -108,26 +89,34 @@ type
 
   DelimitedListResult = object
     list: seq[Value]
-    map: Table[MapKey, Value]
+    map: Table[string, Value]
 
-  Handler = proc(self: var Parser, input: Value): Value
+  Handler = proc(self: var Parser, input: Value): Value {.gcsafe.}
 
   StreamHandler = proc(value: Value)
 
 const non_constituents: seq[char] = @[]
 
-var macros: MacroArray
-var dispatch_macros: MacroArray
+var INITIALIZED {.threadvar.}: bool
+var DEFAULT_UNITS {.threadvar.}: Table[string, Value]
+var HEX {.threadvar.}: Table[char, uint8]
+var DATE_FORMAT {.threadvar.}: TimeFormat
+var DATETIME_FORMAT {.threadvar.}: TimeFormat
+var Ignore {.threadvar.}: Value
 
-var handlers: Table[string, Handler]
+var macros {.threadvar.}: MacroArray
+var dispatch_macros {.threadvar.}: MacroArray
+
+var handlers {.threadvar.}: Table[string, Handler]
 
 #################### Interfaces ##################
 
+proc init*() {.gcsafe.}
 proc keys*(self: ParseOptions): HashSet[string]
 proc `[]`*(self: ParseOptions, name: string): Value
 proc unit_keys*(self: ParseOptions): HashSet[string]
 proc `unit`*(self: ParseOptions, name: string): Value
-proc read*(self: var Parser): Value
+proc read*(self: var Parser): Value {.gcsafe.}
 proc skip_comment(self: var Parser)
 proc skip_block_comment(self: var Parser)
 
@@ -192,15 +181,23 @@ proc `unit`*(self: ParseOptions, name: string): Value =
 #################### Parser ######################
 
 proc new_parser*(options: ParseOptions): Parser =
+  if not INITIALIZED:
+    init()
+
   return Parser(
     document: Document(),
     options: new_options(options),
+    references: References(),
   )
 
 proc new_parser*(): Parser =
+  if not INITIALIZED:
+    init()
+
   return Parser(
     document: Document(),
     options: default_options(),
+    references: References(),
   )
 
 proc non_constituent(c: char): bool =
@@ -511,7 +508,7 @@ proc match_symbol(s: string): Value =
 proc interpret_token(token: string): Value =
   case token
   of "nil":
-    return Nil
+    return Value(kind: VkNil)
   of "true":
     return new_gene_bool(token)
   of "false":
@@ -522,7 +519,6 @@ proc interpret_token(token: string): Value =
 proc read_gene_type(self: var Parser): Value =
   var delimiter = ')'
   # the bufpos should be already be past the opening paren etc.
-  var count = 0
   while true:
     self.skip_ws()
     var pos = self.bufpos
@@ -532,7 +528,7 @@ proc read_gene_type(self: var Parser): Value =
       raise new_exception(ParseError, format(msg, delimiter, self.filename, self.line_number))
 
     if ch == delimiter:
-      # Do not increase position because we need to read other components in 
+      # Do not increase position because we need to read other components in
       # inc(pos)
       # p.bufpos = pos
       break
@@ -542,14 +538,13 @@ proc read_gene_type(self: var Parser): Value =
       inc(pos)
       self.bufpos = pos
       result = m(self)
-      if result != nil:
-        inc(count)
-        break
+      # if result != nil:
+      #   break
     else:
       result = self.read()
-      if result != nil:
-        inc(count)
-        break
+      # if result != nil:
+      #   break
+    break
 
 proc to_keys(self: string): seq[string] =
   # let parts = self.split("^")
@@ -569,12 +564,12 @@ proc to_keys(self: string): seq[string] =
 
   result.add(key)
 
-proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
+proc read_map(self: var Parser, mode: MapKind): Table[string, Value] =
   var ch: char
   var key: string
   var state = PropState.PropKey
 
-  result = init_table[MapKey, Value]()
+  result = init_table[string, Value]()
   var map = result.addr
 
   while true:
@@ -595,18 +590,18 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
         if self.buf[self.bufPos] == '^':
           self.bufPos.inc()
           key = self.read_token(false)
-          result[key.to_key] = True
+          result[key] = new_gene_bool(true)
         elif self.buf[self.bufPos] == '!':
           self.bufPos.inc()
           key = self.read_token(false)
-          result[key.to_key] = Nil
+          result[key] = Value(kind: VkNil)
         else:
           key = self.read_token(false)
           if key.contains('^'):
             let parts = key.to_keys()
             map = result.addr
             for part in parts[0..^2]:
-              if map[].has_key(part.to_key):
+              if map[].has_key(part):
                 map = map[][part].map.addr
               else:
                 var new_map = new_gene_map()
@@ -645,19 +640,19 @@ proc read_map(self: var Parser, mode: MapKind): Table[MapKey, Value] =
       state = PropState.PropKey
 
       var value = self.read()
-      if map[].has_key(key.to_key):
+      if map[].has_key(key):
         raise new_exception(ParseError, "Bad input at " & $self.bufpos & " (conflict with property shortcut found earlier.)")
         # if value.kind == VkMap:
         #   for k, v in value.map:
-        #     map[][key.to_key].map[k] = v
+        #     map[][key].map[k] = v
         # else:
         #   raise new_exception(ParseError, "Bad input: mixing map with non-map")
       else:
-        map[][key.to_key] = value
+        map[][key] = value
 
       map = result.addr
 
-proc read_delimited_list(self: var Parser, delimiter: char, is_recursive: bool): DelimitedListResult =
+proc read_delimited_list(self: var Parser, delimiter: char, is_recursive: bool): DelimitedListResult {.gcsafe.} =
   # the bufpos should be already be past the opening paren etc.
   var list: seq[Value] = @[]
   var in_gene = delimiter == ')'
@@ -708,7 +703,7 @@ proc add_line_col(self: var Parser, node: var Value) =
   # node.line = self.line_number
   # node.column = self.getColNumber(self.bufpos)
 
-proc read_gene(self: var Parser): Value =
+proc read_gene(self: var Parser): Value {.gcsafe.} =
   result = new_gene_gene()
   #echo "line ", getCurrentLine(p), "lineno: ", p.line_number, " col: ", getColNumber(p, p.bufpos)
   #echo $get_current_line(p) & " LINENO(" & $p.line_number & ")"
@@ -722,12 +717,12 @@ proc read_gene(self: var Parser): Value =
       let handler = handlers[result.gene_type.str]
       return handler(self, result)
 
-proc read_map(self: var Parser): Value =
+proc read_map(self: var Parser): Value {.gcsafe.} =
   result = Value(kind: VkMap)
   let map = self.read_map(MkMap)
   result.map = map
 
-proc read_vector(self: var Parser): Value =
+proc read_vector(self: var Parser): Value {.gcsafe.} =
   result = Value(kind: VkVector)
   let list_result = self.read_delimited_list(']', true)
   result.vec = list_result.list
@@ -836,6 +831,10 @@ proc read_decorator(self: var Parser): Value =
 # proc read_star(self: var Parser): Value =
 #   return new_gene_gene(self.read())
 
+proc read_reference(self: var Parser): Value =
+  var name  = self.read_token(false)
+  result = new_gene_reference(name, self.references)
+
 proc read_dispatch(self: var Parser): Value =
   let ch = self.buf[self.bufpos]
   let m = dispatch_macros[ch]
@@ -868,6 +867,7 @@ proc init_dispatch_macro_array() =
   dispatch_macros['/'] = read_regex
   dispatch_macros['@'] = read_decorator
   # dispatch_macros['*'] = read_star
+  dispatch_macros['&'] = read_reference
 
 proc handle_file(self: var Parser, value: Value): Value =
     result = Value(kind: VkFile)
@@ -913,7 +913,7 @@ proc handle_arc(self: var Parser, value: Value): Value =
     result.arc_file_members[child_name] = child
 
 proc handle_set(self: var Parser, value: Value): Value =
-  if value.gene_children[0] == DEBUG:
+  if value.gene_children[0].is_symbol("debug"):
     self.options["debug"] = value.gene_children[1].bool
   else:
     todo("#Set " & $value.gene_children[0])
@@ -921,19 +921,54 @@ proc handle_set(self: var Parser, value: Value): Value =
 proc handle_ignore(self: var Parser, value: Value): Value =
   Ignore
 
+proc handle_reference(self: var Parser, value: Value): Value =
+  let name = value.gene_children[0].str
+  if self.references.has_key(name):
+    raise new_exception(ParseError, "Duplicate reference: " & name)
+  else:
+    let target = RefTarget(
+      name: name,
+      value: value.gene_children[1],
+      registry: self.references,
+    )
+    result = Value(kind: VkRefTarget, ref_target: target)
+    self.references[name] = result
+
 proc init_handlers() =
+  handlers["#Ref"] = handle_reference
   handlers["#File"] = handle_file
   handlers["#Dir"] = handle_dir
   handlers["#Gar"] = handle_arc
   handlers["#Set"] = handle_set
   handlers["#Ignore"] = handle_ignore
 
-proc init_readers() =
+proc init*() =
+  if INITIALIZED:
+    return
+
+  INITIALIZED = true
+  DEFAULT_UNITS = {
+    "m": new_gene_int(60),        # m  = minute
+    "s": new_gene_int(1),         # s  = second (default)
+    "ms": new_gene_float(0.001),  # ms = millisecond
+    "ns": new_gene_float(1e-9),   # ns = nanosecond
+  }.to_table()
+
+  HEX = {
+    '0': 0u8, '1': 1u8, '2': 2u8, '3': 3u8, '4': 4u8,
+    '5': 5u8, '6': 6u8, '7': 7u8, '8': 8u8, '9': 9u8,
+    'a': 10u8, 'b': 11u8, 'c': 12u8, 'd': 13u8, 'e': 14u8, 'f': 15u8,
+    'A': 10u8, 'B': 11u8, 'C': 12u8, 'D': 13u8, 'E': 14u8, 'F': 15u8,
+  }.to_table()
+
+  Ignore = Value(kind: VkCustom, custom: CustomValue())
+
+  DATE_FORMAT = init_time_format("yyyy-MM-dd")
+  DATETIME_FORMAT = init_time_format("yyyy-MM-dd'T'HH:mm:sszzz")
+
   init_macro_array()
   init_dispatch_macro_array()
   init_handlers()
-
-init_readers()
 
 proc open*(self: var Parser, input: Stream, filename: string) =
   lexbase.open(self, input)
@@ -1119,9 +1154,6 @@ proc parse_number(self: var Parser): TokenKind =
       discard self.parse_number()
     result = TkNumberWithUnit
   self.bufpos = pos
-
-let DATE_FORMAT = init_time_format("yyyy-MM-dd")
-let DATETIME_FORMAT = init_time_format("yyyy-MM-dd'T'HH:mm:sszzz")
 
 proc read_number(self: var Parser): Value =
   if self.buf[self.bufpos] == '0':

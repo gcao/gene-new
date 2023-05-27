@@ -1,7 +1,6 @@
 import tables
 
 import ../types
-import ../map_key
 import ../interpreter_base
 
 type
@@ -12,19 +11,19 @@ type
     repo*: Expr
     commit*: Expr # applicable if repo is given
 
-proc eval_dep(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_dep(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExDependency](expr)
-  var name = self.eval(frame, expr.name).str
+  var name = eval(frame, expr.name).str
   var version = ""
   if expr.version != nil:
-    version = self.eval(frame, expr.version).str
+    version = eval(frame, expr.version).str
   var dep = Dependency(
     name: name,
     version: version,
   )
   if expr.path != nil:
     dep.type = "path"
-    dep.path = self.eval(frame, expr.path).str
+    dep.path = eval(frame, expr.path).str
 
   var pkg = frame.ns.package
   pkg.dependencies[name] = dep
@@ -45,16 +44,17 @@ proc eval_dep(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
 
   # Do the same for nested dependencies
 
-proc translate_dep(value: Value): Expr =
+proc translate_dep(value: Value): Expr {.gcsafe.} =
   var e = ExDependency(
     evaluator: eval_dep,
     name: translate(value.gene_children[0]),
   )
   if value.gene_children.len > 1:
     e.version = translate(value.gene_children[1])
-  if value.gene_props.has_key("path".to_key):
+  if value.gene_props.has_key("path"):
     e.path = translate(value.gene_props["path"])
   return e
 
 proc init*() =
-  GeneTranslators["$dep"] = translate_dep
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["$dep"] = translate_dep

@@ -36,7 +36,7 @@ import ./helpers
 # Parsing from a stream (like a log file that is being written to continually, or an incoming socket)
 # Parsing can be interrupted in these cases - what is the best way to stop?
 
-test_parser "nil", Nil
+test_parser "nil", Value(kind: VkNil)
 test_parser "true", true
 test_parser "false", false
 
@@ -116,10 +116,10 @@ test_parser "{}", Table[string, Value]()
 test_parser "{^a 1}", {"a": new_gene_int(1)}.toTable
 
 test_parser "{^a^b 1}", {"a": new_gene_map({"b": new_gene_int(1)}.toTable)}.toTable
-test_parser "{^a^^b}", {"a": new_gene_map({"b": True}.toTable)}.toTable
-test_parser "{^a^!b}", {"a": new_gene_map({"b": False}.toTable)}.toTable
+test_parser "{^a^^b}", {"a": new_gene_map({"b": new_gene_bool(true)}.toTable)}.toTable
+test_parser "{^a^!b}", {"a": new_gene_map({"b": new_gene_bool(false)}.toTable)}.toTable
 test_parser "{^a^b 1 ^a^c 2}", {"a": new_gene_map({"b": new_gene_int(1), "c": new_gene_int(2)}.toTable)}.toTable
-test_parser "{^a^^b ^a^c 2}", {"a": new_gene_map({"b": True, "c": new_gene_int(2)}.toTable)}.toTable
+test_parser "{^a^^b ^a^c 2}", {"a": new_gene_map({"b": new_gene_bool(true), "c": new_gene_int(2)}.toTable)}.toTable
 # test_parser "{^a^b 1 ^a {^c 2}}", {"a": new_gene_map({"b": new_gene_int(1), "c": new_gene_int(2)}.toTable)}.toTable
 test_parser_error "{^a^b 1 ^a 2}"
 test_parser_error "{^a^b 1 ^a {^c 2}}"
@@ -127,7 +127,7 @@ test_parser_error "{^a^b 1 ^a {^c 2}}"
 test_parser "(_ ^a^b 1)", proc(r: Value) =
   assert r.gene_props["a"].map["b"] == 1
 test_parser "(_ ^a^^b 1)", proc(r: Value) =
-  assert r.gene_props["a"].map["b"] == True
+  assert r.gene_props["a"].map["b"] == new_gene_bool(true)
   assert r.gene_children[0] == 1
 
 test_parser "[]", new_gene_vec()
@@ -159,6 +159,10 @@ test_parser "(1 2 3)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_children == @[2, 3]
 
+test_parser "(nil 2 3)", proc(r: Value) =
+  check r.gene_type.kind == VkNil
+  check r.gene_children == @[2, 3]
+
 test_parser """
   (_ 1 "test")
 """, proc(r: Value) =
@@ -177,17 +181,17 @@ test_parser "(1 2 ^a 3 4)", proc(r: Value) =
 
 test_parser "(1 ^^a 2 3)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_props == {"a": True}.toTable
+  check r.gene_props == {"a": new_gene_bool(true)}.toTable
   check r.gene_children == @[2, 3]
 
 test_parser "(1 ^!a 2 3)", proc(r: Value) =
   check r.gene_type == 1
-  check r.gene_props == {"a": Nil}.toTable()
+  check r.gene_props == {"a": Value(kind: VkNil)}.toTable()
   check r.gene_children == @[2, 3]
 
 test_parser "{^^x ^!y ^^z}", proc(r: Value) =
   check r.kind == VkMap
-  check r.map == {"x": True, "y": Nil, "z": True}.toTable
+  check r.map == {"x": new_gene_bool(true), "y": Value(kind: VkNil), "z": new_gene_bool(true)}.toTable
 
 test_parser ":foo", proc(r: Value) =
   check r.kind == VkQuote
@@ -526,3 +530,69 @@ test """Parser / read_stream:
 test_parser """
   (#Ignore) 1
 """, 1
+
+test_parser """
+  #&x
+""", proc(r: Value) =
+  check r.kind == VkReference
+  check r.reference.name == "x"
+
+test_parser """
+  (#Ref "x" 1)
+""", proc(r: Value) =
+  check r.kind == VkRefTarget
+  check r.ref_target.name  == "x"
+  check r.ref_target.value == 1
+
+test_parser """
+  [
+    (#Ref "x" 1)
+    #&x
+  ]
+""", proc(r: Value) =
+  let last = r.vec[^1]
+  check last.kind == VkReference
+  check last.reference.name  == "x"
+  check last.reference.value == 1
+
+test_parser """
+  [
+    #&x
+    (#Ref "x" 1)
+  ]
+""", proc(r: Value) =
+  let first = r.vec[0]
+  check first.kind == VkReference
+  check first.reference.name  == "x"
+  check first.reference.value == 1
+
+test_parser_error """
+  [
+    (#Ref "x" 1)
+    (#Ref "x" 2) # Should trigger parser error
+  ]
+"""
+
+# test_parser """
+#   #"#a/b#" # same as ("" a/b)
+# """, "TODO"
+
+# test_parser """
+#   #"#1#" # same as ("" 1)
+# """, "TODO"
+
+# test_parser """
+#   #"#true#" # same as ("" true)
+# """, "TODO"
+
+# test_parser """
+#   #"a#(1 + 2)" # same as ("a" (1 + 2))
+# """, "TODO"
+
+# test_parser """
+#   #"a#[1 2]" # same as ("a" [1 2])
+# """, "TODO"
+
+# test_parser """
+#   #"a#{^a b}" # same as ("a" {^a b})
+# """, "TODO"

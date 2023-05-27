@@ -7,10 +7,10 @@ type
   ExArray* = ref object of Expr
     children*: seq[Expr]
 
-proc eval_array(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_array(frame: Frame, expr: var Expr): Value =
   result = new_gene_vec()
   for e in cast[ExArray](expr).children.mitems:
-    let v = self.eval(frame, e)
+    let v = eval(frame, e)
     if v == nil:
       discard
     elif v.kind == VkExplode:
@@ -19,7 +19,7 @@ proc eval_array(self: VirtualMachine, frame: Frame, target: Value, expr: var Exp
     else:
       result.vec.add(v)
 
-proc translate_array(value: Value): Expr =
+proc translate_array(value: Value): Expr {.gcsafe.} =
   result = ExArray(
     evaluator: eval_array,
   )
@@ -27,4 +27,5 @@ proc translate_array(value: Value): Expr =
     cast[ExArray](result).children.add(translate(v))
 
 proc init*() =
-  Translators[VkVector] = translate_array
+  VmCreatedCallbacks.add proc() =
+    VM.translators[VkVector] = translate_array

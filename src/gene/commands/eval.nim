@@ -1,6 +1,5 @@
 import parseopt, sequtils, parsecsv, streams, re
 
-import ../map_key
 import ../types
 import ../parser
 import ../interpreter
@@ -111,10 +110,10 @@ proc parse_options(args: seq[string]): Options =
     of cmdEnd:
       discard
 
-proc eval_includes(vm: VirtualMachine, frame: Frame, options: Options) =
+proc eval_includes(frame: Frame, options: Options) =
   if options.includes.len > 0:
     for file in options.includes:
-      discard vm.eval(frame, read_file(file))
+      discard eval(frame, read_file(file))
 
 proc handle*(cmd: string, args: seq[string]): string =
   var options = parse_options(args)
@@ -122,16 +121,16 @@ proc handle*(cmd: string, args: seq[string]): string =
 
   init_app_and_vm()
   VM.app.args = @["<eval>"].concat(args)
-  var frame = VM.eval_prepare(VM.app.pkg)
+  var frame = eval_prepare(VM.app.pkg)
   VM.app.main_module = frame.ns.module
-  VM.eval_includes(frame, options)
+  eval_includes(frame, options)
   case options.input_mode:
   of ImCsv, ImGene, ImLine:
     var index_name = options.index_name
     var value_name = options.value_name
     var index = 0
-    frame.scope.def_member(index_name.to_key, index)
-    frame.scope.def_member(value_name.to_key, Nil)
+    frame.scope.def_member(index_name, index)
+    frame.scope.def_member(value_name, Value(kind: VkNil))
     if options.input_mode == ImCsv:
       var parser: CsvParser
       parser.open(new_file_stream(stdin), "<STDIN>")
@@ -141,9 +140,9 @@ proc handle*(cmd: string, args: seq[string]): string =
         var val = new_gene_vec()
         for item in parser.row:
           val.vec.add(item)
-        frame.scope[index_name.to_key] = index
-        frame.scope[value_name.to_key] = val
-        var res = VM.eval(frame, options.code)
+        frame.scope[index_name] = index
+        frame.scope[value_name] = val
+        var res = eval(frame, options.code)
         if options.print_result:
           if not options.filter_result or res:
             echo res.to_s
@@ -156,9 +155,9 @@ proc handle*(cmd: string, args: seq[string]): string =
         var val = parser.read()
         if val == nil:
           break
-        frame.scope[index_name.to_key] = index
-        frame.scope[value_name.to_key] = val
-        var res = VM.eval(frame, options.code)
+        frame.scope[index_name] = index
+        frame.scope[value_name] = val
+        var res = eval(frame, options.code)
         if options.print_result:
           if not options.filter_result or res:
             echo res.to_s
@@ -173,15 +172,15 @@ proc handle*(cmd: string, args: seq[string]): string =
           continue
         elif options.skip_empty and val.match(re"^\s*$"):
           continue
-        frame.scope[index_name.to_key] = index
-        frame.scope[value_name.to_key] = val
-        var res = VM.eval(frame, options.code)
+        frame.scope[index_name] = index
+        frame.scope[value_name] = val
+        var res = eval(frame, options.code)
         if options.print_result:
           if not options.filter_result or res:
             echo res.to_s
         index += 1
   else:
-    var res = VM.eval(frame, options.code)
+    var res = eval(frame, options.code)
     if options.print_result:
       echo res.to_s
 

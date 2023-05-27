@@ -1,7 +1,6 @@
 import tables
 
 import ../types
-import ../map_key
 import ../interpreter_base
 import ./symbol
 
@@ -21,12 +20,12 @@ type
     first*: Expr
     second*: Expr
 
-proc eval_try(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_try(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExTry](expr)
   try:
-    result = self.eval(frame, expr.body)
+    result = eval(frame, expr.body)
   except types.Exception as ex:
-    frame.scope.def_member(CUR_EXCEPTION_KEY, exception_to_value(ex))
+    frame.scope.def_member("$ex", exception_to_value(ex))
     var handled = false
     if expr.catches.len > 0:
       for catch in expr.catches.mitems:
@@ -34,24 +33,24 @@ proc eval_try(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
         if catch[0] of ExMyMember and cast[ExMyMember](catch[0]).name.to_s == "*":
           # class = GeneExceptionClass
           handled = true
-          result = self.eval(frame, catch[1])
+          result = eval(frame, catch[1])
           break
-        var class = self.eval(frame, catch[0])
+        var class = eval(frame, catch[0])
         if ex.instance == nil:
           raise
         if ex.instance.is_a(class.class):
           handled = true
-          result = self.eval(frame, catch[1])
+          result = eval(frame, catch[1])
           break
     if expr.finally != nil:
       try:
-        discard self.eval(frame, expr.finally)
+        discard eval(frame, expr.finally)
       except Return, Break:
         todo()
     if not handled:
       raise
 
-proc translate_try(value: Value): Expr =
+proc translate_try(value: Value): Expr {.gcsafe.} =
   var r = ExTry(
     evaluator: eval_try,
   )
@@ -63,27 +62,27 @@ proc translate_try(value: Value): Expr =
   for item in value.gene_children:
     case state:
     of TryBody:
-      if item == CATCH:
+      if item.is_symbol("catch"):
         state = TryCatch
-      elif item == FINALLY:
+      elif item.is_symbol("finally"):
         state = TryFinally
       else:
         body.add(item)
     of TryCatch:
-      if item == CATCH:
+      if item.is_symbol("catch"):
         not_allowed()
-      elif item == FINALLY:
+      elif item.is_symbol("finally"):
         not_allowed()
       else:
         state = TryCatchBody
         catch_exception = item
     of TryCatchBody:
-      if item == CATCH:
+      if item.is_symbol("catch"):
         state = TryCatch
         r.catches.add((translate(catch_exception), translate(catch_body)))
         catch_exception = nil
         catch_body = @[]
-      elif item == FINALLY:
+      elif item.is_symbol("finally"):
         state = TryFinally
       else:
         catch_body.add(item)
@@ -100,25 +99,25 @@ proc translate_try(value: Value): Expr =
     r.finally = translate(`finally`)
   return r
 
-proc eval_throw(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_throw(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExThrow](expr)
   if expr.first != nil:
-    var class = self.eval(frame, expr.first)
+    var class = eval(frame, expr.first)
     if expr.second != nil:
-      var message = self.eval(frame, expr.second)
+      var message = eval(frame, expr.second)
       raise new_gene_exception(message.str, Value(kind: VkInstance, instance_class: class.class))
     elif class.kind == VkClass:
       raise new_gene_exception(Value(kind: VkInstance, instance_class: class.class))
     elif class.kind == VkException:
       raise class.exception
     elif class.kind == VkString:
-      raise new_gene_exception(class.str, Value(kind: VkInstance, instance_class: ExceptionClass.class))
+      raise new_gene_exception(class.str, Value(kind: VkInstance, instance_class: VM.exception_class.class))
     else:
       todo()
   else:
-    raise new_gene_exception(Value(kind: VkInstance, instance_class: ExceptionClass.class))
+    raise new_gene_exception(Value(kind: VkInstance, instance_class: VM.exception_class.class))
 
-proc translate_throw(value: Value): Expr =
+proc translate_throw(value: Value): Expr {.gcsafe.} =
   var r = ExThrow(
     evaluator: eval_throw,
   )
@@ -130,5 +129,6 @@ proc translate_throw(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["try"] = translate_try
-  GeneTranslators["throw"] = translate_throw
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["try"] = translate_try
+    VM.gene_translators["throw"] = translate_throw

@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -29,7 +28,7 @@ type
     as_name*: string
     body*: Expr
 
-proc translate_do(value: Value): Expr =
+proc translate_do(value: Value): Expr {.gcsafe.} =
   var r = ExGroup(
     evaluator: eval_group,
   )
@@ -37,11 +36,14 @@ proc translate_do(value: Value): Expr =
     r.children.add translate(item)
   result = r
 
-proc eval_void(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
-  for item in cast[ExGroup](expr).children.mitems:
-    discard self.eval(frame, item)
+proc translate_noop(value: Value): Expr {.gcsafe.} =
+  new_ex_literal(Value(kind: VkNil))
 
-proc translate_void(value: Value): Expr =
+proc eval_void(frame: Frame, expr: var Expr): Value =
+  for item in cast[ExGroup](expr).children.mitems:
+    discard eval(frame, item)
+
+proc translate_void(value: Value): Expr {.gcsafe.} =
   var r = ExGroup(
     evaluator: eval_void,
   )
@@ -49,20 +51,20 @@ proc translate_void(value: Value): Expr =
     r.children.add translate(item)
   result = r
 
-proc translate_explode(value: Value): Expr =
+proc translate_explode(value: Value): Expr {.gcsafe.} =
   var r = new_ex_explode()
   r.data = translate(value.gene_children[0])
   result = r
 
-proc eval_string(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_string(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExStrings](expr)
   var s = ""
   s &= expr.first
   for item in expr.rest.mitems:
-    s &= self.eval(frame, item).to_s
+    s &= eval(frame, item).to_s
   return s
 
-proc translate_string*(value: Value): Expr =
+proc translate_string*(value: Value): Expr {.gcsafe.} =
   var e = ExStrings(
     evaluator: eval_string,
   )
@@ -75,31 +77,31 @@ proc translate_string*(value: Value): Expr =
     e.rest.add(translate(item))
   return e
 
-proc eval_with(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_with(frame: Frame, expr: var Expr): Value =
   var old_self = frame.self
   try:
-    frame.self = self.eval(frame, cast[ExWith](expr).self)
-    return self.eval(frame, cast[ExWith](expr).body)
+    frame.self = eval(frame, cast[ExWith](expr).self)
+    return eval(frame, cast[ExWith](expr).body)
   finally:
     frame.self = old_self
 
-proc translate_with(value: Value): Expr =
+proc translate_with(value: Value): Expr {.gcsafe.} =
   ExWith(
     evaluator: eval_with,
     self: translate(value.gene_children[0]),
     body: translate(value.gene_children[1..^1]),
   )
 
-proc eval_assert(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_assert(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExAssert](expr)
-  var value = self.eval(frame, expr.data)
+  var value = eval(frame, expr.data)
   if not value.to_bool():
     var message = "AssertionFailure: expression returned falsy value."
     if expr.message != nil:
-      message = self.eval(frame, expr.message).str
+      message = eval(frame, expr.message).str
     echo message
 
-proc translate_assert(value: Value): Expr =
+proc translate_assert(value: Value): Expr {.gcsafe.} =
   var r = ExAssert(
     evaluator: eval_assert,
     data: translate(value.gene_children[0]),
@@ -108,33 +110,33 @@ proc translate_assert(value: Value): Expr =
     r.message = translate(value.gene_children[1])
   return r
 
-proc eval_debug(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_debug(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExDebug](expr)
   echo "$debug: " & $expr.data
   var e = translate(expr.data)
-  result = self.eval(frame, e)
+  result = eval(frame, e)
   echo "$debug: " & $expr.data & " => " & $result
 
-proc translate_debug(value: Value): Expr =
+proc translate_debug(value: Value): Expr {.gcsafe.} =
   var r = ExDebug(
     evaluator: eval_debug,
   )
   r.data = value.gene_children[0]
   return r
 
-proc eval_if_main(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_if_main(frame: Frame, expr: var Expr): Value =
   if VM.app.main_module == frame.ns.get_module():
-    result = self.eval(frame, cast[ExIfMain](expr).body)
+    result = eval(frame, cast[ExIfMain](expr).body)
 
-proc translate_if_main(value: Value): Expr =
+proc translate_if_main(value: Value): Expr {.gcsafe.} =
   return ExIfMain(
     evaluator: eval_if_main,
     body: translate(value.gene_children)
   )
 
-proc eval_tap(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_tap(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExTap](expr)
-  result = self.eval(frame, expr.value)
+  result = eval(frame, expr.value)
   var old_self = frame.self
   var old_scope = frame.scope
   try:
@@ -143,13 +145,13 @@ proc eval_tap(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     if expr.as_self:
       frame.self = result
     else:
-      frame.scope.def_member(expr.as_name.to_key, result)
-    discard self.eval(frame, expr.body)
+      frame.scope.def_member(expr.as_name, result)
+    discard eval(frame, expr.body)
   finally:
     frame.self = old_self
     frame.scope = old_scope
 
-proc translate_tap(value: Value): Expr =
+proc translate_tap(value: Value): Expr {.gcsafe.} =
   var r = ExTap(
     evaluator: eval_tap,
     value: translate(value.gene_children[0]),
@@ -168,26 +170,30 @@ proc translate_tap(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["do"] = translate_do
-  GeneTranslators["void"] = translate_void
-  GeneTranslators["..."] = translate_explode
-  GeneTranslators["$"] = translate_string
-  GeneTranslators["$with"] = translate_with
-  # In IDE, a breakpoint should be set in eval_debug and when running in debug
-  # mode, execution should pause and allow the developer to debug the application
-  # from there.
-  GeneTranslators["$debug"] = translate_debug
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["do"] = translate_do
+    VM.gene_translators["noop"] = translate_noop
+    VM.gene_translators["void"] = translate_void
+    VM.gene_translators["..."] = translate_explode
+    VM.gene_translators["$"] = translate_string
+    VM.gene_translators["$with"] = translate_with
+    # In IDE, a breakpoint should be set in eval_debug and when running in debug
+    # mode, execution should pause and allow the developer to debug the application
+    # from there.
+    VM.gene_translators["$debug"] = translate_debug
 
-  # Code that'll be run if current module is the main module
-  # Run like "if isMainModule:" in Python
-  # It can appear on top level or inside functions etc.
-  # Example:
-  #   ($if_main
-  #     ...
-  #   )
-  GeneTranslators["$if_main"] = translate_if_main
-  GeneTranslators["$tap"] = translate_tap
+    # Code that'll be run if current module is the main module
+    # Run like "if isMainModule:" in Python
+    # It can appear on top level or inside functions etc.
+    # Example:
+    #   ($if_main
+    #     ...
+    #   )
+    VM.gene_translators["$if_main"] = translate_if_main
+    VM.gene_translators["$tap"] = translate_tap
 
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GLOBAL_NS.ns["assert"] = new_gene_processor("assert", translate_assert)
-    GENE_NS.ns["assert"] = GLOBAL_NS.ns["assert"]
+    let assert = new_gene_processor("assert", translate_assert)
+    VM.global_ns.ns["assert"] = assert
+    VM.gene_ns.ns["assert"] = assert
+
+    VM.object_class = Value(kind: VkClass, class: new_class("Object"))

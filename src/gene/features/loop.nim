@@ -1,6 +1,5 @@
 import tables
 
-import ../map_key
 import ../types
 import ../interpreter_base
 
@@ -12,20 +11,18 @@ type
     input*: Value
     code*: seq[Expr]
 
-let LOOP_KEY* = add_key("loop")
-
-proc eval_loop(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_loop(frame: Frame, expr: var Expr): Value =
   while true:
     try:
       for item in cast[ExLoop](expr).data.mitems:
-        result = self.eval(frame, item)
+        result = eval(frame, item)
     except Continue:
       discard
     except Break as b:
       result = b.val
       break
 
-proc translate_loop(value: Value): Expr =
+proc translate_loop(value: Value): Expr {.gcsafe.} =
   var r = ExLoop(
     evaluator: eval_loop,
   )
@@ -33,22 +30,22 @@ proc translate_loop(value: Value): Expr =
     r.data.add translate(item)
   result = r
 
-proc translate_break(value: Value): Expr =
+proc translate_break(value: Value): Expr {.gcsafe.} =
   BREAK_EXPR
 
-proc translate_continue(value: Value): Expr =
+proc translate_continue(value: Value): Expr {.gcsafe.} =
   CONTINUE_EXPR
 
-proc eval_once(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_once(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExOnce](expr)
-  if expr.input.gene_props.has_key(RETURN_KEY):
-    result = expr.input.gene_props[RETURN_KEY]
+  if expr.input.gene_props.has_key("return"):
+    result = expr.input.gene_props["return"]
   else:
     for item in expr.code.mitems:
-      result = self.eval(frame, item)
-    expr.input.gene_props[RETURN_KEY] = result
+      result = eval(frame, item)
+    expr.input.gene_props["return"] = result
 
-proc translate_once(value: Value): Expr =
+proc translate_once(value: Value): Expr {.gcsafe.} =
   var r = ExOnce(
     evaluator: eval_once,
     input: value,
@@ -58,9 +55,9 @@ proc translate_once(value: Value): Expr =
   result = r
 
 proc init*() =
-  GeneTranslators["loop"] = translate_loop
-  GeneTranslators["break"] = translate_break
-  GeneTranslators["continue"] = translate_continue
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["loop"] = translate_loop
+    VM.gene_translators["break"] = translate_break
+    VM.gene_translators["continue"] = translate_continue
 
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    self.app.ns["$once"] = new_gene_processor(translate_once)
+    VM.global_ns.ns["$once"] = new_gene_processor(translate_once)

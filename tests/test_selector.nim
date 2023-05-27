@@ -92,11 +92,11 @@ test_interpreter """
 
 test_interpreter """
   ({} ./ "a")
-""", Nil
+""", Value(kind: VkNil)
 
 test_interpreter """
   ({} ./ "a" 1)
-""", Nil
+""", Value(kind: VkNil)
 
 test_interpreter """
   ({^a "A"} ./a)
@@ -234,7 +234,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test x
+    (.fn test x
       ($set @x x)
     )
   )
@@ -245,7 +245,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method init []
+    (.ctor []
       (/description = "Class A")
     )
   )
@@ -279,7 +279,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -288,7 +288,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       1
     )
   )
@@ -297,7 +297,7 @@ test_interpreter """
 
 test_interpreter """
   (class A
-    (method test _
+    (.fn test _
       1
     )
   )

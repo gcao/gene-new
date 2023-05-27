@@ -1,10 +1,9 @@
 import tables
 
 import ../types
-import ../map_key
 import ../interpreter_base
 
-let LOOP_OUTPUT_KEY = add_key("z_loop_output")
+const LOOP_OUTPUT_KEY = "z_loop_output"
 
 type
   ExFor* = ref object of Expr
@@ -21,7 +20,7 @@ type
   ExEmit* = ref object of Expr
     data*: seq[Expr]
 
-proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_for(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExFor](expr)
   var old_scope = frame.scope
   try:
@@ -29,16 +28,16 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     scope.set_parent(old_scope, old_scope.max)
     frame.scope = scope
 
-    scope.def_member(expr.name.to_key, Nil)
+    scope.def_member(expr.name, Value(kind: VkNil))
     var loop_output = new_gene_vec(@[])
     scope.def_member(LOOP_OUTPUT_KEY, loop_output)
-    var data = self.eval(frame, expr.data)
+    var data = eval(frame, expr.data)
     case data.kind:
     of VkVector:
       for item in data.vec:
         try:
-          scope[expr.name.to_key] = item
-          discard self.eval(frame, expr.body)
+          scope[expr.name] = item
+          discard eval(frame, expr.body)
         except Continue:
           continue
         except Break:
@@ -46,8 +45,8 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
     of VkMap:
       for _, v in data.map:
         try:
-          scope[expr.name.to_key] = v
-          discard self.eval(frame, expr.body)
+          scope[expr.name] = v
+          discard eval(frame, expr.body)
         except Continue:
           continue
         except Break:
@@ -61,7 +60,7 @@ proc eval_for(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr)
   finally:
     frame.scope = old_scope
 
-proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_for2(frame: Frame, expr: var Expr): Value =
   var expr = cast[ExFor2](expr)
   var old_scope = frame.scope
   try:
@@ -69,27 +68,27 @@ proc eval_for2(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr
     scope.set_parent(old_scope, old_scope.max)
     frame.scope = scope
 
-    scope.def_member(expr.key_name.to_key, Nil)
-    scope.def_member(expr.val_name.to_key, Nil)
+    scope.def_member(expr.key_name, Value(kind: VkNil))
+    scope.def_member(expr.val_name, Value(kind: VkNil))
     scope.def_member(LOOP_OUTPUT_KEY, @[])
-    var data = self.eval(frame, expr.data)
+    var data = eval(frame, expr.data)
     case data.kind:
     of VkVector:
       for k, v in data.vec:
-        scope[expr.key_name.to_key] = k
-        scope[expr.val_name.to_key] = v
-        discard self.eval(frame, expr.body)
+        scope[expr.key_name] = k
+        scope[expr.val_name] = v
+        discard eval(frame, expr.body)
     of VkMap:
       for k, v in data.map:
-        scope[expr.key_name.to_key] = k.to_s
-        scope[expr.val_name.to_key] = v
-        discard self.eval(frame, expr.body)
+        scope[expr.key_name] = k.to_s
+        scope[expr.val_name] = v
+        discard eval(frame, expr.body)
     else:
       todo()
   finally:
     frame.scope = old_scope
 
-proc translate_for(value: Value): Expr =
+proc translate_for(value: Value): Expr {.gcsafe.} =
   if value.gene_children[0].kind == VkVector:
     return ExFor2(
       evaluator: eval_for2,
@@ -106,12 +105,12 @@ proc translate_for(value: Value): Expr =
       body: translate(value.gene_children[3..^1]),
     )
 
-proc eval_emit(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_emit(frame: Frame, expr: var Expr): Value =
   var loop_output = frame.scope[LOOP_OUTPUT_KEY]
   for item in cast[ExEmit](expr).data.mitems:
-    loop_output.vec.add(self.eval(frame, item))
+    loop_output.vec.add(eval(frame, item))
 
-proc translate_emit(value: Value): Expr =
+proc translate_emit(value: Value): Expr {.gcsafe.} =
   var r = ExEmit(
     evaluator: eval_emit,
   )
@@ -120,7 +119,9 @@ proc translate_emit(value: Value): Expr =
   return r
 
 proc init*() =
-  GeneTranslators["for"] = translate_for
-  VmCreatedCallbacks.add proc(self: VirtualMachine) =
-    GLOBAL_NS.ns["$emit"] = new_gene_processor(translate_emit)
-    GENE_NS.ns["$emit"] = GLOBAL_NS.ns["$emit"]
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["for"] = translate_for
+
+    let emit = new_gene_processor(translate_emit)
+    VM.global_ns.ns["$emit"] = emit
+    VM.gene_ns.ns["$emit"] = emit

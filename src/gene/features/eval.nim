@@ -7,13 +7,13 @@ type
   ExEval* = ref object of Expr
     data*: seq[Expr]
 
-proc eval_eval(self: VirtualMachine, frame: Frame, target: Value, expr: var Expr): Value =
+proc eval_eval(frame: Frame, expr: var Expr): Value =
   for e in cast[ExEval](expr).data.mitems:
-    var v = self.eval(frame, e)
+    var v = eval(frame, e)
     var e2 = translate(v)
-    result = self.eval(frame, e2)
+    result = eval(frame, e2)
 
-proc translate_eval(value: Value): Expr =
+proc translate_eval(value: Value): Expr {.gcsafe.} =
   var e = ExEval(
     evaluator: eval_eval,
   )
@@ -22,4 +22,5 @@ proc translate_eval(value: Value): Expr =
   return e
 
 proc init*() =
-  GeneTranslators["eval"] = translate_eval
+  VmCreatedCallbacks.add proc() =
+    VM.gene_translators["eval"] = translate_eval

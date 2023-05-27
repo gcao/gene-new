@@ -57,7 +57,10 @@ proc handle*(cmd: string, args: seq[string]): string =
   var options = parse_options(args)
   setup_logger(options.debugging)
 
+  let thread_id = get_free_thread()
+  init_thread(thread_id)
   init_app_and_vm()
+  VM.thread_id = thread_id
   VM.repl_on_error = options.repl_on_error
   VM.app.args = options.args
 
@@ -65,9 +68,9 @@ proc handle*(cmd: string, args: seq[string]): string =
   let start = cpu_time()
   var value: Value
   if file.ends_with(".gar"):
-    value = VM.run_archive_file(file)
+    value = run_archive_file(file)
   else:
-    value = VM.run_file(file)
+    value = run_file(file)
   if options.print_result:
     echo value.to_s
   if options.benchmark:

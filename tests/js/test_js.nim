@@ -1,5 +1,6 @@
+import unittest
+
 import gene/types
-import gene/interpreter_base
 
 import ../helpers
 
@@ -28,7 +29,10 @@ test_jsgen """
   (js
     (console.log {^a 1 ^b 2})
   )
-""", "{ a: 1, b: 2 }\n" # the extra spaces after "{" are special behavior of node.js
+""", proc(r: Value) =
+  # The order of a Gene map is not defined.
+  # "{ a: 1, b: 2 }\n" # the extra spaces after "{" are special behavior of node.js
+  check r == "{ a: 1, b: 2 }\n" or r == "{ b: 2, a: 1 }\n"
 
 test_jsgen """
   (import genex/js/*)

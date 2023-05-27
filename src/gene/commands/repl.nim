@@ -43,8 +43,8 @@ proc handle*(cmd: string, args: seq[string]): string =
 
   init_app_and_vm()
   VM.app.args = @["<repl>"].concat(args)
-  var frame = VM.eval_prepare(VM.app.pkg)
-  discard repl(VM, frame, eval, false)
+  var frame = eval_prepare(VM.app.pkg)
+  discard repl(frame, eval, false)
 
 when isMainModule:
   var cmd = DEFAULT_COMMAND
