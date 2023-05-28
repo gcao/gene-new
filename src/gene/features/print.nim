@@ -35,10 +35,10 @@ proc init*() =
   VmCreatedCallbacks.add proc() =
     let print = new_gene_processor(translate_print)
     VM.gene_ns.ns["print"] = print
-    # TODO: tell global namespace to look up print in gene namespace
-    VM.global_ns.ns["print"] = print
+    # Tell global namespace to look up print in gene namespace
+    VM.global_ns.ns.proxy("print", VM.gene_ns)
 
     let println = new_gene_processor(translate_println)
     VM.gene_ns.ns["println"] = println
-    # TODO: tell global namespace to look up println in gene namespace
-    VM.global_ns.ns["println"] = println
+    # Tell global namespace to look up println in gene namespace
+    VM.global_ns.ns.proxy("println", VM.gene_ns)
