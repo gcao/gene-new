@@ -20,17 +20,6 @@ proc object_to_s(frame: Frame, self: Value, args: Value): Value =
 proc object_to_bool(frame: Frame, self: Value, args: Value): Value =
   self.to_bool
 
-proc on_member_missing(frame: Frame, self: Value, args: Value): Value =
-  case self.kind
-  of VkNamespace:
-    self.ns.on_member_missing.add(args.gene_children[0])
-  of VkClass:
-    self.class.ns.on_member_missing.add(args.gene_children[0])
-  of VkMixin:
-    self.mixin.ns.on_member_missing.add(args.gene_children[0])
-  else:
-    todo("member_missing " & $self.kind)
-
 proc to_ctor(node: Value): Function =
   var name = "ctor"
 
@@ -506,20 +495,6 @@ proc init*() =
       self.module.name
     VM.module_class.def_native_method "set_name", proc(frame: Frame, self: Value, args: Value): Value =
       self.module.name = args.gene_children[0].str
-
-    VM.namespace_class = Value(kind: VkClass, class: new_class("Namespace"))
-    VM.namespace_class.class.parent = VM.object_class.class
-    VM.namespace_class.def_native_method "name", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_name".} =
-      self.ns.name
-    VM.namespace_class.def_native_method "members", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_members".} =
-      self.ns.get_members()
-    VM.namespace_class.def_native_method "member_names", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_member_names".} =
-      self.ns.member_names()
-    VM.namespace_class.def_native_method "has_member", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_has_member".} =
-      self.ns.members.has_key(args[0].to_s)
-    VM.namespace_class.def_native_method "on_member_missing", on_member_missing
-    VM.gene_ns.ns["Namespace"] = VM.namespace_class
-    VM.global_ns.ns["Namespace"] = VM.namespace_class
 
     VM.bool_class = Value(kind: VkClass, class: new_class("Bool"))
     VM.bool_class.class.parent = VM.object_class.class

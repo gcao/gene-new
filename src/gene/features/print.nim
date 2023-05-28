@@ -17,7 +17,15 @@ proc eval_print(frame: Frame, expr: var Expr): Value =
 proc translate_print(value: Value): Expr {.gcsafe.} =
   var r = ExPrint(
     evaluator: eval_print,
-    new_line: value.gene_type.str == "println",
+  )
+  for item in value.gene_children:
+    r.data.add translate(item)
+  return r
+
+proc translate_println(value: Value): Expr {.gcsafe.} =
+  var r = ExPrint(
+    evaluator: eval_print,
+    new_line: true,
   )
   for item in value.gene_children:
     r.data.add translate(item)
@@ -26,7 +34,11 @@ proc translate_print(value: Value): Expr {.gcsafe.} =
 proc init*() =
   VmCreatedCallbacks.add proc() =
     let print = new_gene_processor(translate_print)
-    VM.global_ns.ns["print"] = print
     VM.gene_ns.ns["print"] = print
-    VM.global_ns.ns["println"] = print
-    VM.gene_ns.ns["println"] = print
+    # TODO: tell global namespace to look up print in gene namespace
+    VM.global_ns.ns["print"] = print
+
+    let println = new_gene_processor(translate_println)
+    VM.gene_ns.ns["println"] = println
+    # TODO: tell global namespace to look up println in gene namespace
+    VM.global_ns.ns["println"] = println

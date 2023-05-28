@@ -47,3 +47,19 @@ proc translate_ns(value: Value): Expr {.gcsafe.} =
 proc init*() =
   VmCreatedCallbacks.add proc() =
     VM.gene_translators["ns"] = translate_ns
+
+    VM.namespace_class = Value(kind: VkClass, class: new_class("Namespace"))
+    VM.namespace_class.class.parent = VM.object_class.class
+    VM.namespace_class.def_native_method "name", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_name".} =
+      self.ns.name
+    VM.namespace_class.def_native_method "members", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_members".} =
+      self.ns.get_members()
+    VM.namespace_class.def_native_method "member_names", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_member_names".} =
+      self.ns.member_names()
+    VM.namespace_class.def_native_method "has_member", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_has_member".} =
+      self.ns.members.has_key(args[0].to_s)
+    VM.namespace_class.def_native_method "proxy", proc(frame: Frame, self: Value, args: Value): Value {.name:"ns_proxy".} =
+      self.ns.proxy(args.gene_children[0].to_s, args.gene_children[1])
+    VM.namespace_class.def_native_method "on_member_missing", on_member_missing
+    VM.gene_ns.ns["Namespace"] = VM.namespace_class
+    VM.global_ns.ns["Namespace"] = VM.namespace_class

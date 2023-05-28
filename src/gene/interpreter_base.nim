@@ -153,8 +153,8 @@ proc get_member*(self: Value, name: string): Value =
     else:
       todo("get_member " & $self.kind & " " & name.to_s)
 
-  if ns.members.has_key(name):
-    return ns.members[name]
+  if ns.has_key(name):
+    return ns[name]
   elif ns.on_member_missing.len > 0:
     var args = new_gene_gene()
     args.gene_children.add(name.to_s)

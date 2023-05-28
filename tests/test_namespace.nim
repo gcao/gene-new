@@ -170,3 +170,12 @@ test_interpreter """
   (a = 2)
   $ns/a
 """, 1
+
+test_interpreter """
+  (ns n)
+  (ns m
+    (var /a 1)
+  )
+  (n .proxy :a m)
+  n/a
+""", 1

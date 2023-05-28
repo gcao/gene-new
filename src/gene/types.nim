@@ -555,9 +555,10 @@ type
   Namespace* = ref object
     module*: Module
     parent*: Namespace
-    stop_inheritance*: bool  # When set to true, stop looking up for members
+    stop_inheritance*: bool  # When set to true, stop looking up for members from parent namespaces
     name*: string
     members*: Table[string, Value]
+    proxies*: Table[string, Value] # Ask the proxy to look it up instead of checking members and parent
     on_member_missing*: seq[Value]
 
   Class* = ref object
@@ -1064,11 +1065,19 @@ proc get_module*(self: Namespace): Module =
 proc package*(self: Namespace): Package =
   self.get_module().pkg
 
+proc proxy*(self: Namespace, name: string, target: Value) =
+  self.proxies[name] = target
+
 proc has_key*(self: Namespace, key: string): bool {.inline.} =
-  return self.members.has_key(key) or (self.parent != nil and self.parent.has_key(key))
+  if self.proxies.has_key(key):
+    return self.proxies[key].ns.has_key(key)
+  else:
+    return self.members.has_key(key) or (self.parent != nil and self.parent.has_key(key))
 
 proc `[]`*(self: Namespace, key: string): Value {.inline.} =
-  if self.members.has_key(key):
+  if self.proxies.has_key(key):
+    return self.proxies[key].ns[key]
+  elif self.members.has_key(key):
     return self.members[key]
   elif not self.stop_inheritance and self.parent != nil:
     return self.parent[key]
@@ -1095,6 +1104,17 @@ proc member_names*(self: Namespace): Value =
   result = new_gene_vec()
   for k, _ in self.members:
     result.vec.add(k)
+
+proc on_member_missing*(frame: Frame, self: Value, args: Value): Value =
+  case self.kind
+  of VkNamespace:
+    self.ns.on_member_missing.add(args.gene_children[0])
+  of VkClass:
+    self.class.ns.on_member_missing.add(args.gene_children[0])
+  of VkMixin:
+    self.mixin.ns.on_member_missing.add(args.gene_children[0])
+  else:
+    todo("member_missing " & $self.kind)
 
 #################### Scope #######################
 
