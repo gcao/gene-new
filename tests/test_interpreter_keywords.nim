@@ -51,6 +51,8 @@ import ./helpers
 # Use $$x for special variables, and $x for gene/x ?!
 
 # Special variables:
+# $: gene => $/sleep = gene/sleep
+# $x: genex => $x/sleep = genex/sleep
 # $vm: the current VM instance, can be used to access the VM's version, flags etc
 # $vm/.runtime
 # $app
