@@ -133,10 +133,9 @@
 
   (.fn insert _
     (var columns (/.class . /.class/columns_except_id))
-    (var sql
-      ("INSERT INTO " /.class/table "(" (columns .join ", ") ") "
-        "VALUES(" ((columns .map (col -> "?")) .join ", ") ")"
-      )
+    (var sql #"
+      INSERT INTO #{/.class/table} (#(columns .join ", "))
+      VALUES(#((columns .map (col -> "?")) .join ", "))"
     )
     (var params (columns .map (col -> (./ col))))
     (/.class/orm .exec sql params...)
@@ -144,7 +143,7 @@
 
   (.fn update _
     (var sql
-      ("UPDATE " /.class/table " SET status = ? WHERE id = ?")
+      #"UPDATE #{/.class/table} SET status = ? WHERE id = ?"
     )
     (/.class/orm .exec sql /status /id)
   )
@@ -160,7 +159,7 @@
 
   (.fn delete _
     (var sql
-      ("DELETE FROM " /.class/table " WHERE id = ?")
+      #"DELETE FROM #{/.class/table} WHERE id = ?"
     )
     (/.class/orm .exec sql /id)
   )

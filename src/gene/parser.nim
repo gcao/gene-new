@@ -261,10 +261,6 @@ proc parse_string(self: var Parser, start: char): TokenKind =
     of '#':
       if start == '#':
         break
-        # if self.buf[pos + 1] == '<':
-        #   self.skip_ws()
-        # else:
-        #   break
       else:
         add(self.str, buf[pos])
         inc(pos)
@@ -369,6 +365,7 @@ proc read_string_interpolation(self: var Parser): Value =
         self.skip_block_comment()
       of '{':
         self.bufpos.inc()
+        self.skip_ws()
         if self.buf[self.bufpos] == '^':
           let v = new_gene_map()
           v.map = self.read_map(MkMap)
