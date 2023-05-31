@@ -396,8 +396,11 @@ proc read_string_interpolation(self: var Parser): Value =
       if self.buf[self.bufpos - 1] == '"':
         break
 
-  # if all_are_strings:
-  #   todo()
+  if all_are_strings:
+    var s = ""
+    for v in result.gene_children:
+      s.add(v.str)
+    return new_gene_string_move(s)
 
 proc read_unquoted(self: var Parser): Value =
   # Special logic for %_

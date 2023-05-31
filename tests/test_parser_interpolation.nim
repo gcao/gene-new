@@ -6,13 +6,7 @@ import ./helpers
 
 test_parser """
   #"abc"
-""", proc(r: Value) =
-  check r.gene_type == new_gene_symbol("#Str")
-  check r.gene_children[0] == "abc"
-
-# test_parser """
-#   #"abc"
-# """, "abc"
+""", "abc"
 
 test_parser """
   #"a#{b}c"
@@ -56,7 +50,4 @@ test_parser """
 
 test_parser """
   #"a#<b>#c"
-""", proc(r: Value) =
-  check r.gene_type == new_gene_symbol("#Str")
-  check r.gene_children[0] == "a"
-  check r.gene_children[1] == "c"
+""", "ac"
