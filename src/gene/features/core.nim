@@ -176,6 +176,7 @@ proc init*() =
     VM.gene_translators["void"] = translate_void
     VM.gene_translators["..."] = translate_explode
     VM.gene_translators["$"] = translate_string
+    VM.gene_translators["#Str"] = translate_string
     VM.gene_translators["$with"] = translate_with
     # In IDE, a breakpoint should be set in eval_debug and when running in debug
     # mode, execution should pause and allow the developer to debug the application

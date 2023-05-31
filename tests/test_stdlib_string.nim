@@ -42,6 +42,16 @@ test_interpreter """
   ($ "a" "b" 1)
 """, "ab1"
 
+test_interpreter """
+  (var b "c")
+  (#Str "a" b)
+""", "ac"
+
+test_interpreter """
+  (var b "c")
+  #"a#{b}"
+""", "ac"
+
 # test_interpreter "(\"a\" nil true 1 :symbol)", "(\"a\" nil true 1 :symbol)"
 
 test_interpreter """
