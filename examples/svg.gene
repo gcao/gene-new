@@ -6,4 +6,4 @@
   (RECT)
 ))
 
-(println (svg .to_s))
+(println svg/.to_s)

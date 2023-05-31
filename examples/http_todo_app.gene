@@ -581,7 +581,7 @@
     (var id req/.body_params/id)
     (var todo (Todo . Todo/find id))
     (if not todo
-      (throw ("Not found: " id))
+      (throw #"Not found: #{id}")
     )
     todo/.delete
     (respond ({^status "success"}.to_json))
@@ -650,7 +650,7 @@
   )
 
   (var app ($tap (new App port)
-    ($set @handler (create_router))
+    (/handler = (create_router))
   ))
 
   (app .start)

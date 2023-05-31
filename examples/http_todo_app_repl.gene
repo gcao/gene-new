@@ -11,7 +11,7 @@
 )
 
 (var app ($tap (new App port)
-  ($set @handler (create_router))
+  (/handler = (create_router))
 ))
 
 (repl)

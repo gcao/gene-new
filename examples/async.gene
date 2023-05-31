@@ -15,15 +15,12 @@
 (f "second")
 
 (println 1)
-(noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
 (gene/sleep 1000)
 
 (println 2)
-(noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
 (gene/sleep 1000)
 
 (println 3)
-(noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop) (noop)
 
 #< Output should look like below (futures are checked at least once every 10 evaluations)
 first

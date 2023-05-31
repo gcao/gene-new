@@ -7,6 +7,6 @@
 
 (var start (gene/now))
 (gene/sleep 3000)
-(var elapsed (start .elapsed))
+(var elapsed start/.elapsed)
 
 (println "Execution time: " elapsed " seconds.")

@@ -18,5 +18,5 @@
   (exit 1)
 )
 (println "Content read:\n" content)
-(assert ((content .trim) == "line1\nline2"))
+(assert (content/.trim == "line1\nline2"))
 (println "Done.")
