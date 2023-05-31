@@ -119,6 +119,7 @@ proc `unit`*(self: ParseOptions, name: string): Value
 proc read*(self: var Parser): Value {.gcsafe.}
 proc skip_comment(self: var Parser)
 proc skip_block_comment(self: var Parser)
+proc skip_ws(self: var Parser)
 
 #################### Implementations #############
 
@@ -256,6 +257,12 @@ proc parse_string(self: var Parser, start: char): TokenKind =
       else:
         add(self.str, buf[pos])
         inc(pos)
+    of '#':
+      if start == '#':
+        break
+      else:
+        add(self.str, buf[pos])
+        inc(pos)
     of '"':
       if triple_mode:
         if buf[pos + 1] == '"' and buf[pos + 2] == '"':
@@ -265,7 +272,7 @@ proc parse_string(self: var Parser, start: char): TokenKind =
         else:
           inc(pos)
           add(self.str, '"')
-      elif buf[pos] == start:
+      elif buf[pos] == start or start == '#':
         inc(pos)
         break
       else:
@@ -343,6 +350,21 @@ proc read_string2(self: var Parser): Value =
 proc read_quoted(self: var Parser): Value =
   result = Value(kind: VkQuote)
   result.quote = self.read()
+
+proc read_string_interpolation(self: var Parser): Value =
+  result = new_gene_gene(new_gene_symbol("#Str"))
+  while true:
+    case self.buf[self.bufpos]:
+    of '#':
+      self.bufpos.inc()
+      result.gene_children.add(self.read())
+    else:
+      discard self.parse_string('#')
+      if self.error != ErrNone:
+        raise new_exception(ParseError, "read_string_interpolation failure: " & $self.error)
+      result.gene_children.add(new_gene_string_move(self.str))
+      self.str = ""
+      break
 
 proc read_unquoted(self: var Parser): Value =
   # Special logic for %_
@@ -868,6 +890,7 @@ proc init_dispatch_macro_array() =
   dispatch_macros['@'] = read_decorator
   # dispatch_macros['*'] = read_star
   dispatch_macros['&'] = read_reference
+  dispatch_macros['"'] = read_string_interpolation
 
 proc handle_file(self: var Parser, value: Value): Value =
     result = Value(kind: VkFile)
