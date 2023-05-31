@@ -364,7 +364,8 @@ proc read_string_interpolation(self: var Parser): Value =
         raise new_exception(ParseError, "read_string_interpolation failure: " & $self.error)
       result.gene_children.add(new_gene_string_move(self.str))
       self.str = ""
-      break
+      if self.buf[self.bufpos - 1] == '"':
+        break
 
 proc read_unquoted(self: var Parser): Value =
   # Special logic for %_
