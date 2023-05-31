@@ -2,6 +2,7 @@ when isMainModule:
   import times
 
   import ./gene/types
+  import ./gene/parser
   import ./gene/interpreter
 
   init_app_and_vm()
@@ -16,11 +17,13 @@ when isMainModule:
     )
     (fib 24)
   """
-  var e = translate(VM.prepare(VM.app.pkg, code))
+
+  var p = new_parser()
+  var e = translate(p.read_all(code))
   let module = new_module(VM.app.pkg)
   VM.app.main_module = module
-  var frame = Frame(ns: module.ns, scope: new_scope(), self: Nil)
+  var frame = Frame(ns: module.ns, scope: new_scope())
   let start = cpuTime()
-  let result = VM.eval(frame, e)
+  let result = eval(frame, e)
   echo "Time: " & $(cpuTime() - start)
   echo "fib(24) = " & $result
