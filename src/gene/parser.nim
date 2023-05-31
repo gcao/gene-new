@@ -261,6 +261,10 @@ proc parse_string(self: var Parser, start: char): TokenKind =
     of '#':
       if start == '#':
         break
+        # if self.buf[pos + 1] == '<':
+        #   self.skip_ws()
+        # else:
+        #   break
       else:
         add(self.str, buf[pos])
         inc(pos)
@@ -354,6 +358,7 @@ proc read_quoted(self: var Parser): Value =
 
 proc read_string_interpolation(self: var Parser): Value =
   result = new_gene_gene(new_gene_symbol("#Str"))
+  var all_are_strings = true
   while true:
     case self.buf[self.bufpos]:
     of '#':
@@ -364,12 +369,20 @@ proc read_string_interpolation(self: var Parser): Value =
           let v = new_gene_map()
           v.map = self.read_map(MkMap)
           result.gene_children.add(v)
+          all_are_strings = false
         else:
-          result.gene_children.add(self.read())
+          let v = self.read()
+          if v.kind != VkString:
+            all_are_strings = false
+          result.gene_children.add(v)
           self.skip_ws()
           self.bufpos.inc()
       else:
-        result.gene_children.add(self.read())
+        let v = self.read()
+        result.gene_children.add(v)
+        if v.kind != VkString:
+          all_are_strings = false
+
     else:
       discard self.parse_string('#')
       if self.error != ErrNone:
@@ -378,6 +391,9 @@ proc read_string_interpolation(self: var Parser): Value =
       self.str = ""
       if self.buf[self.bufpos - 1] == '"':
         break
+
+  # if all_are_strings:
+  #   todo()
 
 proc read_unquoted(self: var Parser): Value =
   # Special logic for %_
