@@ -118,7 +118,7 @@ proc unit_keys*(self: ParseOptions): HashSet[string]
 proc `unit`*(self: ParseOptions, name: string): Value
 proc read*(self: var Parser): Value {.gcsafe.}
 proc skip_comment(self: var Parser)
-proc skip_block_comment(self: var Parser)
+proc skip_block_comment(self: var Parser) {.gcsafe.}
 proc skip_ws(self: var Parser) {.gcsafe.}
 proc read_map(self: var Parser, mode: MapKind): Table[string, Value] {.gcsafe.}
 
@@ -363,7 +363,11 @@ proc read_string_interpolation(self: var Parser): Value =
     case self.buf[self.bufpos]:
     of '#':
       self.bufpos.inc()
-      if self.buf[self.bufpos] == '{':
+      case self.buf[self.bufpos]:
+      of '<':
+        self.bufpos.inc()
+        self.skip_block_comment()
+      of '{':
         self.bufpos.inc()
         if self.buf[self.bufpos] == '^':
           let v = new_gene_map()
@@ -405,7 +409,7 @@ proc read_unquoted(self: var Parser): Value =
   result.unquote = self.read()
   result.unquote_discard = unquote_discard
 
-proc skip_block_comment(self: var Parser) =
+proc skip_block_comment(self: var Parser) {.gcsafe.} =
   var pos = self.bufpos
   var buf = self.buf
   while true:
