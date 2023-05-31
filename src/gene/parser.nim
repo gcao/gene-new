@@ -120,6 +120,7 @@ proc read*(self: var Parser): Value {.gcsafe.}
 proc skip_comment(self: var Parser)
 proc skip_block_comment(self: var Parser)
 proc skip_ws(self: var Parser) {.gcsafe.}
+proc read_map(self: var Parser, mode: MapKind): Table[string, Value] {.gcsafe.}
 
 #################### Implementations #############
 
@@ -359,9 +360,14 @@ proc read_string_interpolation(self: var Parser): Value =
       self.bufpos.inc()
       if self.buf[self.bufpos] == '{':
         self.bufpos.inc()
-        result.gene_children.add(self.read())
-        self.skip_ws()
-        self.bufpos.inc()
+        if self.buf[self.bufpos] == '^':
+          let v = new_gene_map()
+          v.map = self.read_map(MkMap)
+          result.gene_children.add(v)
+        else:
+          result.gene_children.add(self.read())
+          self.skip_ws()
+          self.bufpos.inc()
       else:
         result.gene_children.add(self.read())
     else:
@@ -593,7 +599,7 @@ proc to_keys(self: string): seq[string] =
 
   result.add(key)
 
-proc read_map(self: var Parser, mode: MapKind): Table[string, Value] =
+proc read_map(self: var Parser, mode: MapKind): Table[string, Value] {.gcsafe.} =
   var ch: char
   var key: string
   var state = PropState.PropKey
