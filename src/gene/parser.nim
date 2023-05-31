@@ -119,7 +119,7 @@ proc `unit`*(self: ParseOptions, name: string): Value
 proc read*(self: var Parser): Value {.gcsafe.}
 proc skip_comment(self: var Parser)
 proc skip_block_comment(self: var Parser)
-proc skip_ws(self: var Parser)
+proc skip_ws(self: var Parser) {.gcsafe.}
 
 #################### Implementations #############
 
@@ -357,7 +357,13 @@ proc read_string_interpolation(self: var Parser): Value =
     case self.buf[self.bufpos]:
     of '#':
       self.bufpos.inc()
-      result.gene_children.add(self.read())
+      if self.buf[self.bufpos] == '{':
+        self.bufpos.inc()
+        result.gene_children.add(self.read())
+        self.skip_ws()
+        self.bufpos.inc()
+      else:
+        result.gene_children.add(self.read())
     else:
       discard self.parse_string('#')
       if self.error != ErrNone:
@@ -480,7 +486,7 @@ proc read_character(self: var Parser): Value =
       else:
         raise new_exception(ParseError, "Unknown character: " & token)
 
-proc skip_ws(self: var Parser) =
+proc skip_ws(self: var Parser) {.gcsafe.} =
   # commas are whitespace in gene collections
   var buf = self.buf
   while true:
