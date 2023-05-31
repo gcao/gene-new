@@ -2011,7 +2011,7 @@ proc `$`*(node: Value): string {.noSideEffect.} =
   of VkDate:
     result = node.date.format("yyyy-MM-dd")
   of VkDateTime:
-    result = node.date.format("yyyy-MM-dd'T'HH:mm:sszzz")
+    result = node.date.format("yyyy-MM-dd HH:mm:ss'.'fffzzz")
   of VkTime:
     result = &"{node.time.hour:02}:{node.time.minute:02}:{node.time.second:02}"
   of VkVector:
