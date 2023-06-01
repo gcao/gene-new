@@ -104,6 +104,7 @@ type
 
 var RequestClass {.threadvar.}: Value
 var ResponseClass {.threadvar.}: Value
+var WebSocketClass {.threadvar.}: Value
 
 proc new_response*(frame: Frame, args: Value): Value {.wrap_exception.} =
   var resp = Response()
@@ -157,6 +158,13 @@ proc new_gene_request(req: stdhttp.Request): Value =
     kind: VkCustom,
     custom: Request(req: req),
     custom_class: RequestClass.class,
+  )
+
+proc new_gene_websocket(ws: ws.WebSocket): Value =
+  Value(
+    kind: VkAny,
+    any: ws.unsafe_addr,
+    any_class: WebSocketClass.class,
   )
 
 # Copied from Nim 1.6 standard library code
@@ -293,13 +301,15 @@ proc start_server_internal*(frame: Frame, args: Value): Value =
     # TODO: catch and handle exceptions
     if req.url.path == websocket_path:
       var ws = await new_web_socket(req)
+      var gene_ws = new_gene_websocket(ws)
       while ws.ready_state == Open:
         echo "Waiting for WebSocket message..."
         let packet = await ws.receive_str_packet()
         echo "Received WebSocket message: " & packet
-        let json = parse_json(packet)
+        let payload = parse_json(packet)
         let args = new_gene_gene()
-        args.gene_children.add(json)
+        args.gene_children.add(gene_ws)
+        args.gene_children.add(payload)
         discard base.call(frame, websocket_handler, args)
 
       return
@@ -379,6 +389,10 @@ proc http_get_async(frame: Frame, args: Value): Value {.wrap_exception.} =
 
 {.push dynlib exportc.}
 
+proc websocket_send(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
+  var ws = cast[ptr WebSocket](self.any)
+  await ws[].send(args.gene_children[0].to_json)
+
 proc init*(module: Module): Value {.wrap_exception.} =
   result = new_namespace("http")
   result.ns.module = module
@@ -407,6 +421,7 @@ proc init*(module: Module): Value {.wrap_exception.} =
   result.ns["get_async"] = http_get_async
 
   RequestClass = new_gene_class("Request")
+  RequestClass.class.parent = VM.object_class.class
   RequestClass.def_native_method "method", method_wrap(req_method)
   RequestClass.def_native_method "url", method_wrap(req_url)
   RequestClass.def_native_method "path", method_wrap(req_path)
@@ -417,9 +432,15 @@ proc init*(module: Module): Value {.wrap_exception.} =
   result.ns["Request"] = RequestClass
 
   ResponseClass = new_gene_class("Response")
+  ResponseClass.class.parent = VM.object_class.class
   ResponseClass.def_native_constructor(fn_wrap(new_response))
   ResponseClass.def_native_method "status", method_wrap(resp_status)
   result.ns["Response"] = ResponseClass
+
+  WebSocketClass = new_gene_class("WebSocket")
+  WebSocketClass.class.parent = VM.object_class.class
+  WebSocketClass.def_native_method "send", method_wrap(websocket_send)
+  result.ns["WebSocket"] = WebSocketClass
 
   result.ns["start_server"] = start_server
 
