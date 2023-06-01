@@ -68,14 +68,14 @@ template check_channel*() =
 
 template check_async_ops_and_channel*() =
   if has_pending_operations():
-    poll()
+    poll(0)
   check_channel()
 
 template eval*(frame: Frame, expr: var Expr): Value =
   if VM.async_wait == 0:
     VM.async_wait = ASYNC_WAIT_LIMIT
     if has_pending_operations():
-      poll()
+      poll(0)
     # self.check_channel()
   else:
     VM.async_wait -= 1
