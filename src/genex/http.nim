@@ -1,10 +1,10 @@
 import strutils, tables
 import asynchttpserver as stdhttp, asyncdispatch
-import httpclient, uri
+import httpclient, uri, json as stdjson
+import ws # WebSocket library
 
 include gene/extension/boilerplate
-import gene/json
-import gene/utils
+import gene/json, gene/utils
 
 # https://dev.to/xflywind/write-a-simple-web-framework-in-nim-language-from-scratch-ma0
 # Ruby Rack: https://github.com/rack/rack/blob/master/SPEC.rdoc
@@ -281,8 +281,27 @@ proc start_server_internal*(frame: Frame, args: Value): Value =
   else:
     args.gene_children[0].int
 
+  let enable_websocket = args.gene_props.has_key("websocket") and args.gene_props["websocket"].map.has_key("path")
+  var websocket_path = ""
+  var websocket_handler: Value = nil
+  if enable_websocket:
+    websocket_path = args.gene_props["websocket"].map["path"].str
+    websocket_handler = args.gene_props["websocket"].map["handler"]
+
   proc handler(req: stdhttp.Request) {.async gcsafe.} =
     echo "HTTP REQ : " & $req.req_method & " " & $req.url
+    if req.url.path == websocket_path:
+      var ws = await new_web_socket(req)
+      while ws.ready_state == Open:
+        let packet = await ws.receive_str_packet()
+        echo "Received WebSocket message: " & packet
+        let json = parse_json(packet)
+        let args = new_gene_gene()
+        args.gene_children.add(json)
+        discard base.call(nil, websocket_handler, args)
+
+      return
+
     var my_args = new_gene_gene()
     my_args.gene_children.add(new_gene_request(req))
     var res = invoke_catch(nil, args.gene_children[1], my_args)

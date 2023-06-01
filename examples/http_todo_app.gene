@@ -102,7 +102,7 @@
     (query .where "id = ?")
     (var data (/orm .exec query id))
     (if (data/.size == 0)
-      (throw ("Not found: " id))
+      (throw #"Not found: #{id}")
     else
       (. /from_row data/0)
     )
@@ -188,7 +188,7 @@
   )
 
   (.fn to_html _
-    (LI ^class ("py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item" (if /.done " done"))
+    (LI ^class #"py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item#(if /.done " done")"
       (DIV
         (INPUT ^type "checkbox" ^id /id ^class "cbx hidden" ^checked /.done)
         (LABEL ^for /id ^class "text-xl cbx__child")
@@ -508,16 +508,16 @@
         (SCRIPT (genex/js/js
           ((($ "li label.cbx__child").click) (fnx* e
             (var id ((($ this).attr) "for"))
-            (var oldStatus (? ((($ ("input#" id)).is) ":checked") 1 0))
+            (var oldStatus (? ((($ #"input##{id}").is) ":checked") 1 0))
             (var newStatus (? (oldStatus == 1) 0 1))
             ($.ajax {^url "/todos"
               ^type "PATCH"
-              ^data ("id=" id "&status=" newStatus)
+              ^data #"id=#{id}&status=#{newStatus}"
               ^success (fnx* [result status]
                 (window.location.reload)
               )
               ^error (fnx* [xhr status error]
-                (alert ("Operation failed: " error))
+                (alert #"Operation failed: #{error}")
               )
             })
           ))
@@ -525,12 +525,12 @@
             (var id ((($ this).data) "id"))
             ($.ajax {^url "/todos"
               ^type "DELETE"
-              ^data ("id=" id)
+              ^data #"id=#{id}"
               ^success (fnx* [result status]
                 (window.location.reload)
               )
               ^error (fnx* [xhr status error]
-                (alert ("Operation failed: " error))
+                (alert #"Operation failed: #{error}")
               )
             })
           ))

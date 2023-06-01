@@ -102,7 +102,7 @@
     (query .where "id = ?")
     (var data (/orm .exec query id))
     (if (data/.size == 0)
-      (throw ("Not found: " id))
+      (throw #"Not found: #{id}")
     else
       (. /from_row data/0)
     )
@@ -230,11 +230,15 @@
     )
   )
 
+  (.fn enable_websocket [path handler]
+    (/websocket = {^path path ^handler handler})
+  )
+
   (.fn start _
     (println "Starting HTTP server at port" /port "...")
 
     (var root_handler (.construct_handler 0))
-    (start_server /port root_handler)
+    (start_server /port root_handler ^websocket /websocket)
     (gene/run_forever)
   )
 )
@@ -506,33 +510,36 @@
         #   });
         # """)
         (SCRIPT (genex/js/js
+          (var ws (new WebSocket "ws://localhost:2080/ws"))
           ((($ "li label.cbx__child").click) (fnx* e
             (var id ((($ this).attr) "for"))
             (var oldStatus (? ((($ ("input#" id)).is) ":checked") 1 0))
             (var newStatus (? (oldStatus == 1) 0 1))
-            ($.ajax {^url "/todos"
-              ^type "PATCH"
-              ^data ("id=" id "&status=" newStatus)
-              ^success (fnx* [result status]
-                (window.location.reload)
-              )
-              ^error (fnx* [xhr status error]
-                (alert ("Operation failed: " error))
-              )
-            })
+            (ws.send "'test update'")
+            # ($.ajax {^url "/todos"
+            #   ^type "PATCH"
+            #   ^data ("id=" id "&status=" newStatus)
+            #   ^success (fnx* [result status]
+            #     (window.location.reload)
+            #   )
+            #   ^error (fnx* [xhr status error]
+            #     (alert ("Operation failed: " error))
+            #   )
+            # })
           ))
           ((($ "li button.delete-button").click) (fnx* e
             (var id ((($ this).data) "id"))
-            ($.ajax {^url "/todos"
-              ^type "DELETE"
-              ^data ("id=" id)
-              ^success (fnx* [result status]
-                (window.location.reload)
-              )
-              ^error (fnx* [xhr status error]
-                (alert ("Operation failed: " error))
-              )
-            })
+            (ws.send "'test delete'")
+            # ($.ajax {^url "/todos"
+            #   ^type "DELETE"
+            #   ^data ("id=" id)
+            #   ^success (fnx* [result status]
+            #     (window.location.reload)
+            #   )
+            #   ^error (fnx* [xhr status error]
+            #     (alert ("Operation failed: " error))
+            #   )
+            # })
           ))
         ))
       )
@@ -581,7 +588,7 @@
     (var id req/.body_params/id)
     (var todo (Todo . Todo/find id))
     (if not todo
-      (throw ("Not found: " id))
+      (throw #"Not found: #{id}")
     )
     todo/.delete
     (respond ({^status "success"}.to_json))
@@ -638,6 +645,12 @@
   )
 )
 
+(class WebSocketHandler
+  (.fn call msg
+    (println "Received websocket message:" msg)
+  )
+)
+
 ($if_main
   (init_db)
 
@@ -650,7 +663,11 @@
   )
 
   (var app ($tap (new App port)
-    ($set @handler (create_router))
+    (/handler = (create_router))
+    (/websocket = {
+      ^path "/ws"
+      ^handler (new WebSocketHandler)
+    })
   ))
 
   (app .start)

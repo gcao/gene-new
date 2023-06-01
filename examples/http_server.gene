@@ -79,8 +79,7 @@
    (var params req/.params)
    (if (params .contains "name")
       # (respond "any string") will create a 200/OK respoonse with the string as body.
-      # ("string" ...) will concatenate "string" and all arguments.
-      (respond ("Hello " params/name "!"))
+      (respond #"Hello #{params/name}!")
     else
       (respond "Hello world!")
    )

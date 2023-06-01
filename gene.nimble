@@ -11,7 +11,8 @@ bin           = @["gene"]
 
 # Dependencies
 
-requires "nim >= 1.0.0"
+requires "nim >= 1.4.0"
+requires "ws >= 0.5.0" # https://github.com/treeform/ws
 
 task buildext, "Build the Nim extension":
   echo "--- Build extensions ---"

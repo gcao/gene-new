@@ -122,6 +122,14 @@ proc init*() =
             )
           )
 
+          (class New < Base
+            (.ctor [/class /args]
+            )
+            (.fn to_s _
+              #"new #{/class}(#(/args .join ", "))"
+            )
+          )
+
           (class Var < Base
             (.ctor [/name /value]
             )
@@ -297,6 +305,17 @@ proc init*() =
           (new ast/JoinableExpr children)
         )
 
+        (fn translate_new value
+          (var class value/.children/0)
+          (var args [])
+          (var i 1)
+          (while (i < value/.children/.size)
+            (args .add (translate (value ./ i)))
+            (i += 1)
+          )
+          (new ast/New class args)
+        )
+
         (fn translate_if value
           (new ast/If value/.children)
         )
@@ -401,6 +420,8 @@ proc init*() =
                   (translate value/1)
                 )
               )
+            when :new
+              (translate_new value)
             when :if
               (translate_if value)
             when :?
