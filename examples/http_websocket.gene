@@ -515,7 +515,7 @@
             (var id ((($ this).attr) "for"))
             (var oldStatus (? ((($ ("input#" id)).is) ":checked") 1 0))
             (var newStatus (? (oldStatus == 1) 0 1))
-            (ws.send "'test update'")
+            (ws.send '"test update"')
             # ($.ajax {^url "/todos"
             #   ^type "PATCH"
             #   ^data ("id=" id "&status=" newStatus)
@@ -529,7 +529,7 @@
           ))
           ((($ "li button.delete-button").click) (fnx* e
             (var id ((($ this).data) "id"))
-            (ws.send "'test delete'")
+            (ws.send '"test delete"')
             # ($.ajax {^url "/todos"
             #   ^type "DELETE"
             #   ^data ("id=" id)

@@ -290,15 +290,17 @@ proc start_server_internal*(frame: Frame, args: Value): Value =
 
   proc handler(req: stdhttp.Request) {.async gcsafe.} =
     echo "HTTP REQ : " & $req.req_method & " " & $req.url
+    # TODO: catch and handle exceptions
     if req.url.path == websocket_path:
       var ws = await new_web_socket(req)
       while ws.ready_state == Open:
+        echo "Waiting for WebSocket message..."
         let packet = await ws.receive_str_packet()
         echo "Received WebSocket message: " & packet
         let json = parse_json(packet)
         let args = new_gene_gene()
         args.gene_children.add(json)
-        discard base.call(nil, websocket_handler, args)
+        discard base.call(frame, websocket_handler, args)
 
       return
 
