@@ -1,6 +1,7 @@
 import tables, std/json
 
 import ./types
+import ./interpreter_base
 
 export parse_json
 
@@ -24,6 +25,8 @@ proc `%`*(self: Value): JsonNode =
     result = newJObject()
     for k, v in self.map:
       result[k] = %v
+  of VkInstance:
+    result = %(invoke(nil, self, "to_json", new_gene_gene()))
   else:
     todo($self.kind)
 

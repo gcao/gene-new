@@ -243,7 +243,7 @@ proc parse_string(self: var Parser, start: char): TokenKind =
   var triple_mode = false
   var pos = self.bufpos
   var buf = self.buf
-  if start == '"' and buf[pos] == '"' and buf[pos + 1] == '"':
+  if (start == '"' or start == '#') and buf[pos] == '"' and buf[pos + 1] == '"':
     triple_mode = true
     pos += 2
   while true:
@@ -268,7 +268,7 @@ proc parse_string(self: var Parser, start: char): TokenKind =
       if triple_mode:
         if buf[pos + 1] == '"' and buf[pos + 2] == '"':
           pos = pos + 3
-          self.str = self.str.replace(re"^\s*\n", "").replace(re"\n\s*$", "\n")
+          self.str = self.str.replace(re"^\s*\n", "\n").replace(re"\n\s*$", "\n")
           break
         else:
           inc(pos)

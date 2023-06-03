@@ -188,7 +188,7 @@
   )
 
   (.fn to_json _
-    ({^id /id ^description /description} .to_json)
+   ({^id /id ^description /description} .to_json)
   )
 
   (.fn to_html _
@@ -455,67 +455,72 @@
         """)
       )
       (BODY ^class "text-center text-white"
-        (DIV ^class "container mx-auto"
-          (DIV ^class "mx-auto w-full md:w-1/2 py-8 px-4"
-            (DIV ^class "flex items-center mb-6"
-              (H1 ^class "text-4xl text-white mr-6"
-                (SPAN "MINIMAL") " TO DO"
-              )
-              (IMG ^class "hidden md:block" ^src "http://minimal-todo.surge.sh/logo.f4bfa240.svg" ^width "40")
-            )
-            (FORM ^method "POST" ^action "/todos" ^onsubmit "createTodo()"
-              (DIV ^class "input-wrapper relative"
-                (INPUT ^type "text" ^name "description"
-                  ^class "p-4 mb-4 w-full bg-transparent border-grey-light text-white border rounded"
-                  ^placeholder "What needs to be done today?"
-                )
-                (SPAN ^class "text-guide text-gray-600 absolute text-xs" ^style {^display "none"}
-                  "Press Enter"
-                )
-              )
-              # Include a hidden Submit so that Enter will trigger submitting the form
-              (INPUT ^type "submit" ^style {^display "none"})
-            )
-            content
-          )
-        )
-        (DIV ^class "text-center text-sm credit-disclaimer"
-          "This is a replication of Minimal TODO created by Dronca Raul"
-        )
-        (SCRIPT ^src "https://code.jquery.com/jquery-3.6.0.min.js" ^integrity "sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" ^crossorigin "anonymous")
-        (SCRIPT (genex/js/js
-          (var ws (new WebSocket "ws://localhost:2080/ws"))
-          (fn* createTodo _
-            (var description ((($ "[name=description]").val)))
-            (var payload {
-              ^type "create"
-              ^data^description description
-            })
-            (ws.send (JSON.stringify payload))
-          )
+        (DIV ^id "app" "Loading...")
+        # (DIV ^class "container mx-auto"
+        #   (DIV ^class "mx-auto w-full md:w-1/2 py-8 px-4"
+        #     (DIV ^class "flex items-center mb-6"
+        #       (H1 ^class "text-4xl text-white mr-6"
+        #         (SPAN "MINIMAL") " TO DO"
+        #       )
+        #       (IMG ^class "hidden md:block" ^src "http://minimal-todo.surge.sh/logo.f4bfa240.svg" ^width "40")
+        #     )
+        #     (FORM ^method "POST" ^action "/todos" ^onsubmit "createTodo()"
+        #       (DIV ^class "input-wrapper relative"
+        #         (INPUT ^type "text" ^name "description"
+        #           ^class "p-4 mb-4 w-full bg-transparent border-grey-light text-white border rounded"
+        #           ^placeholder "What needs to be done today?"
+        #         )
+        #         (SPAN ^class "text-guide text-gray-600 absolute text-xs" ^style {^display "none"}
+        #           "Press Enter"
+        #         )
+        #       )
+        #       # Include a hidden Submit so that Enter will trigger submitting the form
+        #       (INPUT ^type "submit" ^style {^display "none"})
+        #     )
+        #     content
+        #   )
+        # )
+        # (DIV ^class "text-center text-sm credit-disclaimer"
+        #   "This is a replication of Minimal TODO created by Dronca Raul"
+        # )
+        # https://markus.oberlehner.net/blog/goodbye-webpack-building-vue-applications-without-webpack/
+        (LINK ^rel "modulepreload" ^href "https://unpkg.com/vue@3.0.4/dist/vue.runtime.esm-browser.js")
+        (LINK ^rel "modulepreload" ^href "https://unpkg.com/htm@3.0.4/dist/htm.module.js?modul")
+        (SCRIPT ^type "module" ^href "/todos/index.js")
 
-          ((($ "li label.cbx__child").click) (fnx* e
-            (var id ((($ this).attr) "for"))
-            (var oldStatus (? ((($ ("input#" id)).is) ":checked") 1 0))
-            (var newStatus (? (oldStatus == 1) 0 1))
-            (var payload {
-              ^type "update"
-              ^data {
-                ^id id
-                ^status newStatus
-              }
-            })
-            (ws.send (JSON.stringify payload))
-          ))
-          ((($ "li button.delete-button").click) (fnx* e
-            (var id ((($ this).data) "id"))
-            (var payload {
-              ^type "update"
-              ^data id
-            })
-            (ws.send (JSON.stringify payload))
-          ))
-        ))
+        # (SCRIPT (genex/js/js
+        #   (var ws (new WebSocket "ws://localhost:2080/ws"))
+        #   (fn* createTodo _
+        #     (var description ((($ "[name=description]").val)))
+        #     (var payload {
+        #       ^type "create"
+        #       ^data^description description
+        #     })
+        #     (ws.send (JSON.stringify payload))
+        #   )
+
+        #   ((($ "li label.cbx__child").click) (fnx* e
+        #     (var id ((($ this).attr) "for"))
+        #     (var oldStatus (? ((($ ("input#" id)).is) ":checked") 1 0))
+        #     (var newStatus (? (oldStatus == 1) 0 1))
+        #     (var payload {
+        #       ^type "update"
+        #       ^data {
+        #         ^id id
+        #         ^status newStatus
+        #       }
+        #     })
+        #     (ws.send (JSON.stringify payload))
+        #   ))
+        #   ((($ "li button.delete-button").click) (fnx* e
+        #     (var id ((($ this).data) "id"))
+        #     (var payload {
+        #       ^type "update"
+        #       ^data id
+        #     })
+        #     (ws.send (JSON.stringify payload))
+        #   ))
+        # ))
       )
     )
   )
@@ -541,6 +546,33 @@
         )))
       )
     )
+  )
+
+  (.fn index_js req
+    (var todos ((Todo . Todo/all).to_json))
+    """
+      import { h } from 'https://unpkg.com/vue@3.0.4/dist/vue.runtime.esm-browser.js'
+      import htm from 'https://unpkg.com/htm@3.0.4/dist/htm.module.js?module'
+      var html = htm.bind(h)
+
+      var todos = #{todos}
+
+      TodoComponent = {
+        props: {
+        }
+      }
+      VUE.createApp({
+        data() {
+          return {
+            todos: todos
+          }
+        }
+        render() {
+          return html`
+          `
+        }
+      }).mount('#app')
+    """
   )
 
   # (.fn create req
@@ -616,6 +648,7 @@
     # (.map ^^PATCH  "/todos" TodosController :update)
     # (.map ^^DELETE "/todos" TodosController :delete)
     (.map          "/todos" TodosController)
+    (.map          "/todos/index.js" TodosController :index_js)
   )
 )
 

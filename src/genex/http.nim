@@ -298,7 +298,7 @@ proc start_server_internal*(frame: Frame, args: Value): Value =
 
   proc handler(req: stdhttp.Request) {.async gcsafe.} =
     echo "HTTP REQ : " & $req.req_method & " " & $req.url
-    # TODO: catch and handle exceptions
+    # TODO: catch and handle exceptions, seems exceptions can not be bubbled up to the top level.
     if req.url.path == websocket_path:
       var ws = await new_web_socket(req)
       var gene_ws = new_gene_websocket(ws)
