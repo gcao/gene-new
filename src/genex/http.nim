@@ -389,7 +389,7 @@ proc http_get_async(frame: Frame, args: Value): Value {.wrap_exception.} =
 
 {.push dynlib exportc.}
 
-proc websocket_send(frame: Frame, self: Value, args: Value): Value {.wrap_exception.} =
+proc websocket_send(frame: Frame, self: Value, args: Value): Value {.nimcall, wrap_exception.} =
   var ws = cast[ptr WebSocket](self.any)
   await ws[].send(args.gene_children[0].to_json)
 

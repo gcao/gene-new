@@ -486,7 +486,7 @@
         (SCRIPT (genex/js/js
           (var ws (new WebSocket "ws://localhost:2080/ws"))
           (fn* createTodo _
-            (var description ((($ "[name=description"]).val)))
+            (var description ((($ "[name=description]").val)))
             (var payload {
               ^type "create"
               ^data^description description
