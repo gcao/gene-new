@@ -430,9 +430,14 @@ test_parse_document """
   check r.children == @[1, 2]
 
 test_parser "\"\"\"a\"\"\"", "a"
+test_parser "[\"\"\"a\"\"\"]", proc(r: Value) =
+  check r.kind == VkVector
+  check r.vec.len == 1
+  check r.vec[0] == "a"
+
 # Trim whitespaces and new line after opening """
 # E.g. """  \na""" => "a"
-test_parser "\"\"\"  \na\"\"\"", "a"
+test_parser "\"\"\"  \na\"\"\"", "\na"
 # Trim whitespaces before closing """
 # E.g. """a\n   """ => "a\n"
 test_parser "\"\"\"a\n   \"\"\"", "a\n"

@@ -237,15 +237,11 @@ proc parse_escaped_utf16(buf: cstring, pos: var int): int =
     else:
       return -1
 
-proc parse_string(self: var Parser, start: char): TokenKind =
+proc parse_string(self: var Parser, start: char, triple_mode: bool = false): TokenKind =
   result = TkString
   self.str = ""
-  var triple_mode = false
   var pos = self.bufpos
   var buf = self.buf
-  if (start == '"' or start == '#') and buf[pos] == '"' and buf[pos + 1] == '"':
-    triple_mode = true
-    pos += 2
   while true:
     case buf[pos]
     of '\0':
@@ -336,7 +332,11 @@ proc parse_string(self: var Parser, start: char): TokenKind =
   self.bufpos = pos
 
 proc read_string(self: var Parser, start: char): Value =
-  discard self.parse_string(start)
+  if start == '"' and self.buf[self.bufpos] == '"' and self.buf[self.bufpos + 1] == '"':
+    self.bufpos += 2
+    discard self.parse_string(start, true)
+  else:
+    discard self.parse_string(start)
   if self.error != ErrNone:
     raise new_exception(ParseError, "read_string failure: " & $self.error)
   result = new_gene_string_move(self.str)
@@ -354,6 +354,11 @@ proc read_quoted(self: var Parser): Value =
 
 proc read_string_interpolation(self: var Parser): Value =
   result = new_gene_gene(new_gene_symbol("#Str"))
+  var triple_mode = false
+  if self.buf[self.bufpos] == '"' and self.buf[self.bufpos + 1] == '"':
+    self.bufpos += 2
+    triple_mode = true
+
   var all_are_strings = true
   while true:
     case self.buf[self.bufpos]:
@@ -378,14 +383,16 @@ proc read_string_interpolation(self: var Parser): Value =
           result.gene_children.add(v)
           self.skip_ws()
           self.bufpos.inc()
-      else:
+      of '(', '[':
         let v = self.read()
         result.gene_children.add(v)
         if v.kind != VkString:
           all_are_strings = false
+      else:
+        not_allowed()
 
     else:
-      discard self.parse_string('#')
+      discard self.parse_string('#', triple_mode)
       if self.error != ErrNone:
         raise new_exception(ParseError, "read_string_interpolation failure: " & $self.error)
       result.gene_children.add(new_gene_string_move(self.str))

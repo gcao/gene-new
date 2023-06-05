@@ -486,6 +486,7 @@
         # https://markus.oberlehner.net/blog/goodbye-webpack-building-vue-applications-without-webpack/
         (LINK ^rel "modulepreload" ^href "https://unpkg.com/vue@3.0.4/dist/vue.runtime.esm-browser.js")
         (LINK ^rel "modulepreload" ^href "https://unpkg.com/htm@3.0.4/dist/htm.module.js?modul")
+        (SCRIPT ^src "https://unpkg.com/vue@3.0.4")
         (SCRIPT ^type "module" ^src "/todos/index.js")
 
         # (SCRIPT (genex/js/js
@@ -558,22 +559,22 @@
       var todos = #{todos}
       console.log(todos)
 
-      TodoComponent = {
+      var TodoComponent = {
         props: {
-        }
+        },
       }
-      VUE.createApp({
+      Vue.createApp({
         data() {
           return {
             todos: todos
           }
-        }
+        },
         render() {
           return html`
           `
-        }
+        },
       }).mount('\#app')
-    """, {^content-type "text/javascript"})
+    """ {^content-type "text/javascript"})
   )
 
   # (.fn create req

@@ -60,6 +60,14 @@ test_parser "#\"\"\"a#{b}c\"\"\"", proc(r: Value) =
   check r.gene_children[1] == new_gene_symbol("b")
   check r.gene_children[2] == "c"
 
+test_parser "[#\"\"\"a#{b}c\"\"\"]", proc(r: Value) =
+  check r.kind == VkVector
+  check r.vec.len == 1
+  check r.vec[0].gene_type == new_gene_symbol("#Str")
+  check r.vec[0].gene_children[0] == "a"
+  check r.vec[0].gene_children[1] == new_gene_symbol("b")
+  check r.vec[0].gene_children[2] == "c"
+
 test_parser """
   #"a\#{b}c"
 """, "a#{b}c"

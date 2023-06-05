@@ -121,13 +121,13 @@ proc new_response*(frame: Frame, args: Value): Value {.wrap_exception.} =
         resp.body = ""
       if args.gene_children.len > 2:
         for k, v in args.gene_children[2].map:
-          resp.headers[k.to_s] = v
+          resp.headers[k] = v
     of VkString:
       resp.status = 200
       resp.body = first.str
       if args.gene_children.len > 1:
         for k, v in args.gene_children[1].map:
-          resp.headers[k.to_s] = v
+          resp.headers[k] = v
     else:
       todo("new_response " & $first.kind)
   Value(
@@ -300,57 +300,61 @@ proc start_server_internal*(frame: Frame, args: Value): Value =
     websocket_handler = args.gene_props["websocket"].map["handler"]
 
   proc handler(req: stdhttp.Request) {.async, gcsafe.} =
-    echo "HTTP REQ : " & $req.req_method & " " & $req.url
-    # TODO: catch and handle exceptions, seems exceptions can not be bubbled up to the top level.
-    if req.url.path == websocket_path:
-      var ws = await new_web_socket(req)
-      var gene_ws = new_gene_websocket(ws)
-      while ws.ready_state == Open:
-        echo "Waiting for WebSocket message..."
-        let packet = await ws.receive_str_packet()
-        echo "Received WebSocket message: " & packet
-        let payload = parse_json(packet)
-        let args = new_gene_gene()
-        args.gene_children.add(gene_ws)
-        args.gene_children.add(payload)
-        discard base.call(frame, websocket_handler, args)
+    try:
+      echo "HTTP REQ : " & $req.req_method & " " & $req.url
+      # TODO: catch and handle exceptions, seems exceptions can not be bubbled up to the top level.
+      if req.url.path == websocket_path:
+        var ws = await new_web_socket(req)
+        var gene_ws = new_gene_websocket(ws)
+        while ws.ready_state == Open:
+          echo "Waiting for WebSocket message..."
+          let packet = await ws.receive_str_packet()
+          echo "Received WebSocket message: " & packet
+          let payload = parse_json(packet)
+          let args = new_gene_gene()
+          args.gene_children.add(gene_ws)
+          args.gene_children.add(payload)
+          discard base.call(frame, websocket_handler, args)
 
-      return
+        return
 
-    var my_args = new_gene_gene()
-    my_args.gene_children.add(new_gene_request(req))
-    var res = invoke_catch(nil, args.gene_children[1], my_args)
-    if res == nil or res.kind == VkNil:
-      echo "HTTP RESP: 404"
-      echo()
-      await req.respond(Http404, "", new_http_headers())
-    else:
-      case res.kind
-      of VkString:
-        await req.respond(Http200, res.str, new_http_headers())
-      of VkException:
-        echo "HTTP RESP: 500 " & res.exception.msg
-        echo res.exception.get_stack_trace()
+      var my_args = new_gene_gene()
+      my_args.gene_children.add(new_gene_request(req))
+      var res = invoke_catch(nil, args.gene_children[1], my_args)
+      if res == nil or res.kind == VkNil:
+        echo "HTTP RESP: 404"
         echo()
-        await req.respond(Http500, "Internal Server Error", new_http_headers())
-      # of VkString:
-      #   var body = res.str
-      #   echo "HTTP RESP: 200 " & body.abbrev(100)
-      #   echo()
-      #   await req.respond(Http200, body, new_http_headers())
-      of VkCustom:
-        var resp = cast[Response](res.custom)
-        var body = resp.body.str
-        echo "HTTP RESP: " & $resp.status & " " & body.abbrev(100)
-        echo()
-        var headers = new_http_headers()
-        for k, v in resp.headers:
-          headers.add(k, v.to_s)
-        await req.respond(HttpCode(resp.status), body, headers)
+        await req.respond(Http404, "", new_http_headers())
       else:
-        echo "HTTP RESP: 500 response kind is " & $res.kind
-        echo()
-        await req.respond(Http500, "TODO: $res.kind", new_http_headers())
+        case res.kind
+        of VkString:
+          await req.respond(Http200, res.str, new_http_headers())
+        of VkException:
+          echo "HTTP RESP: 500 " & res.exception.msg
+          echo res.exception.get_stack_trace()
+          echo()
+          await req.respond(Http500, "Internal Server Error", new_http_headers())
+        # of VkString:
+        #   var body = res.str
+        #   echo "HTTP RESP: 200 " & body.abbrev(100)
+        #   echo()
+        #   await req.respond(Http200, body, new_http_headers())
+        of VkCustom:
+          var resp = cast[Response](res.custom)
+          var body = resp.body.str
+          echo "HTTP RESP: " & $resp.status & " " & body.abbrev(100)
+          echo()
+          var headers = new_http_headers()
+          for k, v in resp.headers:
+            headers.add(k, v.to_s)
+          await req.respond(HttpCode(resp.status), body, headers)
+        else:
+          echo "HTTP RESP: 500 response kind is " & $res.kind
+          echo()
+          await req.respond(Http500, "TODO: $res.kind", new_http_headers())
+
+    except system.Exception as ex:
+      echo ex.msg & "\n" & ex.getStackTrace()
 
   var server = new_async_http_server()
   async_check server.serve(Port(port), handler)
