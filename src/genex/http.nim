@@ -296,7 +296,7 @@ proc start_server_internal*(frame: Frame, args: Value): Value =
     websocket_path = args.gene_props["websocket"].map["path"].str
     websocket_handler = args.gene_props["websocket"].map["handler"]
 
-  proc handler(req: stdhttp.Request) {.async gcsafe.} =
+  proc handler(req: stdhttp.Request) {.async, gcsafe.} =
     echo "HTTP REQ : " & $req.req_method & " " & $req.url
     # TODO: catch and handle exceptions, seems exceptions can not be bubbled up to the top level.
     if req.url.path == websocket_path:
@@ -323,6 +323,8 @@ proc start_server_internal*(frame: Frame, args: Value): Value =
       await req.respond(Http404, "", new_http_headers())
     else:
       case res.kind
+      of VkString:
+        await req.respond(Http200, res.str, new_http_headers())
       of VkException:
         echo "HTTP RESP: 500 " & res.exception.msg
         echo res.exception.get_stack_trace()
@@ -390,8 +392,10 @@ proc http_get_async(frame: Frame, args: Value): Value {.wrap_exception.} =
 {.push dynlib exportc.}
 
 proc websocket_send(frame: Frame, self: Value, args: Value): Value {.nimcall, wrap_exception.} =
-  var ws = cast[ptr WebSocket](self.any)
-  await ws[].send(args.gene_children[0].to_json)
+  proc internal() {.async, closure, gcsafe.} =
+    var ws = cast[ptr WebSocket](self.any)
+    await ws[].send(args.gene_children[0].to_json)
+  async_check internal()
 
 proc init*(module: Module): Value {.wrap_exception.} =
   result = new_namespace("http")
