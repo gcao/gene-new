@@ -435,6 +435,8 @@ test_parser "[\"\"\"a\"\"\"]", proc(r: Value) =
   check r.vec.len == 1
   check r.vec[0] == "a"
 
+test_parser "\"\"\"a\"b\"\"\"", "a\"b"
+
 # Trim whitespaces and new line after opening """
 # E.g. """  \na""" => "a"
 test_parser "\"\"\"  \na\"\"\"", "\na"

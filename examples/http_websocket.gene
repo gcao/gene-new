@@ -456,33 +456,6 @@
       )
       (BODY ^class "text-center text-white"
         (DIV ^id "app" "Loading...")
-        # (DIV ^class "container mx-auto"
-        #   (DIV ^class "mx-auto w-full md:w-1/2 py-8 px-4"
-        #     (DIV ^class "flex items-center mb-6"
-        #       (H1 ^class "text-4xl text-white mr-6"
-        #         (SPAN "MINIMAL") " TO DO"
-        #       )
-        #       (IMG ^class "hidden md:block" ^src "http://minimal-todo.surge.sh/logo.f4bfa240.svg" ^width "40")
-        #     )
-        #     (FORM ^method "POST" ^action "/todos" ^onsubmit "createTodo()"
-        #       (DIV ^class "input-wrapper relative"
-        #         (INPUT ^type "text" ^name "description"
-        #           ^class "p-4 mb-4 w-full bg-transparent border-grey-light text-white border rounded"
-        #           ^placeholder "What needs to be done today?"
-        #         )
-        #         (SPAN ^class "text-guide text-gray-600 absolute text-xs" ^style {^display "none"}
-        #           "Press Enter"
-        #         )
-        #       )
-        #       # Include a hidden Submit so that Enter will trigger submitting the form
-        #       (INPUT ^type "submit" ^style {^display "none"})
-        #     )
-        #     content
-        #   )
-        # )
-        # (DIV ^class "text-center text-sm credit-disclaimer"
-        #   "This is a replication of Minimal TODO created by Dronca Raul"
-        # )
         # https://markus.oberlehner.net/blog/goodbye-webpack-building-vue-applications-without-webpack/
         (LINK ^rel "modulepreload" ^href "https://unpkg.com/vue@3.0.4/dist/vue.runtime.esm-browser.js")
         (LINK ^rel "modulepreload" ^href "https://unpkg.com/htm@3.0.4/dist/htm.module.js?modul")
@@ -558,6 +531,7 @@
       var html = htm.bind(h)
 
       var todos = #{todos}
+      var ws = new WebSocket("ws://localhost:2080/ws")
 
       var TodoComponent = {
         props: [
@@ -565,19 +539,28 @@
         ],
         methods: {
           update() {
+            console.log("Updating...")
           },
           delete() {
+            console.log("Deleting...")
+            var payload = {
+              type: "update",
+              data: this.todo.id,
+            }
+            ws.send(JSON.stringify(payload))
           },
         },
         render() {
+          console.log("Rendering TodoComponent...")
+          console.log(this.todo)
           return html`
             <li class="py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item">
               <div>
                 <input type="checkbox" id="0" class="cbx hidden"/>
                 <label for="0" class="text-xl cbx__child"></label>
-                <label for="0" class="cbx__lbl text-white inline-block mt-1 completed">test</label>
+                <label for="0" class="cbx__lbl text-white inline-block mt-1 completed">${this.todo.description}</label>
               </div>
-              <button type="button" class="flex items-center delete-button absolute right-0">
+              <button type="button" class="flex items-center delete-button absolute right-0" onClick=${this.delete}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -595,6 +578,8 @@
           }
         },
         render() {
+          console.log("Rendering TodosComponent...")
+          console.log(this.todos)
           return html`
             <div class="container mx-auto">
               <div class="mx-auto w-full md:w-1/2 py-8 px-4">
@@ -609,8 +594,8 @@
                   <span class="text-guide text-gray-600 absolute text-xs" style="display: none;">Press Enter</span>
                 </div>
                 <ul class="list-reset">
-                  {
-                    this.todos.map((todo) => <${TodoComponent} todo={todo}/>)
+                  ${
+                    this.todos.map(todo => html`<${TodoComponent} todo=${todo}/>`)
                   }
                 </ul>
               </div>
