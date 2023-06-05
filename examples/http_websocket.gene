@@ -550,7 +550,7 @@
 
   (.fn index_js req
     (var todos ((Todo . Todo/all).to_json))
-    (respond """
+    (respond #"""
       import { h } from 'https://unpkg.com/vue@3.0.4/dist/vue.runtime.esm-browser.js'
       import htm from 'https://unpkg.com/htm@3.0.4/dist/htm.module.js?module'
       var html = htm.bind(h)
@@ -572,8 +572,8 @@
           return html`
           `
         }
-      }).mount('#app')
-    """, {^mime-type "application/javascript"})
+      }).mount('\#app')
+    """, {^content-type "text/javascript"})
   )
 
   # (.fn create req

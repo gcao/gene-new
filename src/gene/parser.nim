@@ -280,48 +280,48 @@ proc parse_string(self: var Parser, start: char): TokenKind =
         add(self.str, buf[pos])
         inc(pos)
     of '\\':
-      case buf[pos+1]
-      of '\\', '"', '\'', '/':
-        add(self.str, buf[pos+1])
-        inc(pos, 2)
-      of 'b':
-        add(self.str, '\b')
-        inc(pos, 2)
-      of 'f':
-        add(self.str, '\b')
-        inc(pos, 2)
-      of 'n':
-        add(self.str, '\L')
-        inc(pos, 2)
-      of 'r':
-        add(self.str, '\C')
-        inc(pos, 2)
-      of 't':
-        add(self.str, '\t')
-        inc(pos, 2)
-      of 'u':
-        inc(pos, 2)
-        var r = parse_escaped_utf16(buf, pos)
-        if r < 0:
-          self.error = ErrInvalidToken
-          break
-        # deal with surrogates
-        if (r and 0xfc00) == 0xd800:
-          if buf[pos] & buf[pos + 1] != "\\u":
-            self.error = ErrInvalidToken
-            break
-          inc(pos, 2)
-          var s = parse_escaped_utf16(buf, pos)
-          if (s and 0xfc00) == 0xdc00 and s > 0:
-            r = 0x10000 + (((r - 0xd800) shl 10) or (s - 0xdc00))
-          else:
-            self.error = ErrInvalidToken
-            break
-        add(self.str, toUTF8(Rune(r)))
-      else:
-        # don't bother with the Error
+      if start == '\'':
         add(self.str, buf[pos])
         inc(pos)
+      else:
+        case buf[pos+1]
+        of 'b':
+          add(self.str, '\b')
+          inc(pos, 2)
+        of 'f':
+          add(self.str, '\b')
+          inc(pos, 2)
+        of 'n':
+          add(self.str, '\L')
+          inc(pos, 2)
+        of 'r':
+          add(self.str, '\C')
+          inc(pos, 2)
+        of 't':
+          add(self.str, '\t')
+          inc(pos, 2)
+        of 'u':
+          inc(pos, 2)
+          var r = parse_escaped_utf16(buf, pos)
+          if r < 0:
+            self.error = ErrInvalidToken
+            break
+          # deal with surrogates
+          if (r and 0xfc00) == 0xd800:
+            if buf[pos] & buf[pos + 1] != "\\u":
+              self.error = ErrInvalidToken
+              break
+            inc(pos, 2)
+            var s = parse_escaped_utf16(buf, pos)
+            if (s and 0xfc00) == 0xdc00 and s > 0:
+              r = 0x10000 + (((r - 0xd800) shl 10) or (s - 0xdc00))
+            else:
+              self.error = ErrInvalidToken
+              break
+          add(self.str, toUTF8(Rune(r)))
+        else:
+          add(self.str, buf[pos+1])
+          inc(pos, 2)
     of '\c':
       pos = lexbase.handleCR(self, pos)
       buf = self.buf
