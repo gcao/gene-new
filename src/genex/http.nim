@@ -125,6 +125,9 @@ proc new_response*(frame: Frame, args: Value): Value {.wrap_exception.} =
     of VkString:
       resp.status = 200
       resp.body = first.str
+      if args.gene_children.len > 1:
+        for k, v in args.gene_children[1].map:
+          resp.headers[k.to_s] = v
     else:
       todo("new_response " & $first.kind)
   Value(
@@ -139,7 +142,7 @@ proc translate_respond(value: Value): Expr {.wrap_exception.} =
     new_gene_symbol("return"),
     new_gene_gene(
       new_gene_symbol("new"),
-      # # Assume Response class can be accessed thru genex/http/Response
+      # Assume Response class can be accessed thru genex/http/Response
       new_gene_complex_symbol(@["genex", "http", "Response"]),
     ),
   )
