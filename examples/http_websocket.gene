@@ -554,16 +554,41 @@
     (respond #"""
       import { h } from 'https://unpkg.com/vue@3.0.4/dist/vue.runtime.esm-browser.js'
       import htm from 'https://unpkg.com/htm@3.0.4/dist/htm.module.js?module'
+
       var html = htm.bind(h)
 
       var todos = #{todos}
-      console.log(todos)
 
       var TodoComponent = {
-        props: {
+        props: [
+          "todo",
+        ],
+        methods: {
+          update() {
+          },
+          delete() {
+          },
+        },
+        render() {
+          return html`
+            <li class="py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item">
+              <div>
+                <input type="checkbox" id="0" class="cbx hidden"/>
+                <label for="0" class="text-xl cbx__child"></label>
+                <label for="0" class="cbx__lbl text-white inline-block mt-1 completed">test</label>
+              </div>
+              <button type="button" class="flex items-center delete-button absolute right-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </li>
+          `
         },
       }
-      Vue.createApp({
+
+      var TodosComponent = {
         data() {
           return {
             todos: todos
@@ -571,9 +596,31 @@
         },
         render() {
           return html`
+            <div class="container mx-auto">
+              <div class="mx-auto w-full md:w-1/2 py-8 px-4">
+                <div class="flex items-center mb-6">
+                  <h1 class="text-4xl text-white mr-6">
+                    <span>MINIMAL</span> TO DO
+                  </h1>
+                  <img src="http://minimal-todo.surge.sh/logo.f4bfa240.svg" width="40" alt="" class="hidden md:block"/>
+                </div>
+                <div class="input-wrapper relative">
+                  <input type="text" placeholder="What needs to be done today?" class="p-4 mb-4 w-full bg-transparent border-grey-light text-white border rounded"/>
+                  <span class="text-guide text-gray-600 absolute text-xs" style="display: none;">Press Enter</span>
+                </div>
+                <ul class="list-reset">
+                  {
+                    this.todos.map((todo) => <${TodoComponent} todo={todo}/>)
+                  }
+                </ul>
+              </div>
+            </div>
           `
         },
-      }).mount('\#app')
+      }
+
+      Vue.createApp(TodosComponent).mount('\#app')
+
     """ {^content-type "text/javascript"})
   )
 
