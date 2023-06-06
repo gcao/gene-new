@@ -188,7 +188,11 @@
   )
 
   (.fn to_json _
-   ({^id /id ^description /description} .to_json)
+    {
+      ^id /id
+      ^description /description
+      ^status /status
+    }
   )
 
   (.fn to_html _
@@ -538,13 +542,23 @@
           "todo",
         ],
         methods: {
-          update() {
+          toggle() {
             console.log("Updating...")
+            if (this.todo.status == "1") {
+              this.todo.status = "0"
+            } else {
+              this.todo.status = "1"
+            }
+            var payload = {
+              type: "update",
+              data: this.todo,
+            }
+            ws.send(JSON.stringify(payload))
           },
           delete() {
             console.log("Deleting...")
             var payload = {
-              type: "update",
+              type: "delete",
               data: this.todo.id,
             }
             ws.send(JSON.stringify(payload))
@@ -556,7 +570,7 @@
           return html`
             <li class="py-6 px-2 border-b border-grey-darkest flex justify-between items-center relative todo__item">
               <div>
-                <input type="checkbox" id="0" class="cbx hidden"/>
+                <input type="checkbox" id="0" class="cbx hidden" v-model=${this.todo.status} onClick=${this.toggle}/>
                 <label for="0" class="text-xl cbx__child"></label>
                 <label for="0" class="cbx__lbl text-white inline-block mt-1 completed">${this.todo.description}</label>
               </div>
