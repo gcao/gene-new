@@ -241,46 +241,45 @@ proc parse_string(self: var Parser, start: char, triple_mode: bool = false): Tok
   result = TkString
   self.str = ""
   var pos = self.bufpos
-  var buf = self.buf
   while true:
-    case buf[pos]
+    case self.buf[pos]
     of '\0':
       self.error = ErrQuoteExpected
       break
     of '\'':
-      if buf[pos] == start:
+      if self.buf[pos] == start:
         inc(pos)
         break
       else:
-        add(self.str, buf[pos])
+        add(self.str, self.buf[pos])
         inc(pos)
     of '#':
-      if start == '#' and buf[pos + 1] in ['<', '{', '[', '(']:
+      if start == '#' and self.buf[pos + 1] in ['<', '{', '[', '(']:
         break
       else:
-        add(self.str, buf[pos])
+        add(self.str, self.buf[pos])
         inc(pos)
     of '"':
       if triple_mode:
-        if buf[pos + 1] == '"' and buf[pos + 2] == '"':
+        if self.buf[pos + 1] == '"' and self.buf[pos + 2] == '"':
           pos = pos + 3
           self.str = self.str.replace(re"^\s*\n", "\n").replace(re"\n\s*$", "\n")
           break
         else:
           inc(pos)
           add(self.str, '"')
-      elif buf[pos] == start or start == '#':
+      elif self.buf[pos] == start or start == '#':
         inc(pos)
         break
       else:
-        add(self.str, buf[pos])
+        add(self.str, self.buf[pos])
         inc(pos)
     of '\\':
       if start == '\'':
-        add(self.str, buf[pos])
+        add(self.str, self.buf[pos])
         inc(pos)
       else:
-        case buf[pos+1]
+        case self.buf[pos+1]
         of 'b':
           add(self.str, '\b')
           inc(pos, 2)
@@ -298,17 +297,17 @@ proc parse_string(self: var Parser, start: char, triple_mode: bool = false): Tok
           inc(pos, 2)
         of 'u':
           inc(pos, 2)
-          var r = parse_escaped_utf16(buf, pos)
+          var r = parse_escaped_utf16(self.buf, pos)
           if r < 0:
             self.error = ErrInvalidToken
             break
           # deal with surrogates
           if (r and 0xfc00) == 0xd800:
-            if buf[pos] & buf[pos + 1] != "\\u":
+            if self.buf[pos] & self.buf[pos + 1] != "\\u":
               self.error = ErrInvalidToken
               break
             inc(pos, 2)
-            var s = parse_escaped_utf16(buf, pos)
+            var s = parse_escaped_utf16(self.buf, pos)
             if (s and 0xfc00) == 0xdc00 and s > 0:
               r = 0x10000 + (((r - 0xd800) shl 10) or (s - 0xdc00))
             else:
@@ -316,18 +315,16 @@ proc parse_string(self: var Parser, start: char, triple_mode: bool = false): Tok
               break
           add(self.str, toUTF8(Rune(r)))
         else:
-          add(self.str, buf[pos+1])
+          add(self.str, self.buf[pos+1])
           inc(pos, 2)
     of '\c':
       pos = lexbase.handleCR(self, pos)
-      buf = self.buf
       add(self.str, '\c')
     of '\L':
       pos = lexbase.handleLF(self, pos)
-      buf = self.buf
       add(self.str, '\L')
     else:
-      add(self.str, buf[pos])
+      add(self.str, self.buf[pos])
       inc(pos)
   self.bufpos = pos
 
@@ -422,11 +419,10 @@ proc read_unquoted(self: var Parser): Value =
 
 proc skip_block_comment(self: var Parser) {.gcsafe.} =
   var pos = self.bufpos
-  var buf = self.buf
   while true:
-    case buf[pos]
+    case self.buf[pos]
     of '#':
-      if buf[pos-1] == '>' and buf[pos-2] != '>':
+      if self.buf[pos-1] == '>' and self.buf[pos-2] != '>':
         inc(pos)
         break
       else:
@@ -440,9 +436,8 @@ proc skip_block_comment(self: var Parser) {.gcsafe.} =
 
 proc skip_comment(self: var Parser) =
   var pos = self.bufpos
-  var buf = self.buf
   while true:
-    case buf[pos]
+    case self.buf[pos]
     of '\L':
       pos = lexbase.handleLF(self, pos)
       break
@@ -525,19 +520,16 @@ proc read_character(self: var Parser): Value =
 
 proc skip_ws(self: var Parser) {.gcsafe.} =
   # commas are whitespace in gene collections
-  var buf = self.buf
   while true:
-    case buf[self.bufpos]
+    case self.buf[self.bufpos]
     of ' ', '\t', ',':
       inc(self.bufpos)
     of '\c':
       self.bufpos = lexbase.handleCR(self, self.bufpos)
-      buf = self.buf
     of '\L':
       self.bufpos = lexbase.handleLF(self, self.bufpos)
-      buf = self.buf
     of '#':
-      case buf[self.bufpos + 1]:
+      case self.buf[self.bufpos + 1]:
       of ' ', '!', '#', '\r', '\n':
         self.skip_comment()
       of '<':
@@ -804,31 +796,30 @@ proc read_set(self: var Parser): Value =
 
 proc read_regex(self: var Parser): Value =
   var pos = self.bufpos
-  var buf = self.buf
   var flags: set[RegexFlag]
   while true:
-    case buf[pos]
+    case self.buf[pos]
     of '\0':
       self.error = ErrRegexEndExpected
     of '/':
       inc(pos)
-      if buf[pos] == 'i':
+      if self.buf[pos] == 'i':
         inc(pos)
         flags.incl(RfIgnoreCase)
-        if buf[pos] == 'm':
+        if self.buf[pos] == 'm':
           inc(pos)
           flags.incl(RfMultiLine)
-      elif buf[pos] == 'm':
+      elif self.buf[pos] == 'm':
         inc(pos)
         flags.incl(RfMultiLine)
-        if buf[pos] == 'i':
+        if self.buf[pos] == 'i':
           inc(pos)
           flags.incl(RfIgnoreCase)
       break
     of '\\':
-      case buf[pos+1]
+      case self.buf[pos+1]
       of '\\', '/':
-        add(self.str, buf[pos+1])
+        add(self.str, self.buf[pos+1])
         inc(pos, 2)
       of 'b':
         add(self.str, '\b')
@@ -847,17 +838,17 @@ proc read_regex(self: var Parser): Value =
         inc(pos, 2)
       of 'u':
         inc(pos, 2)
-        var r = parse_escaped_utf16(buf, pos)
+        var r = parse_escaped_utf16(self.buf, pos)
         if r < 0:
           self.error = ErrInvalidToken
           break
         # deal with surrogates
         if (r and 0xfc00) == 0xd800:
-          if buf[pos] & buf[pos + 1] != "\\u":
+          if self.buf[pos] & self.buf[pos + 1] != "\\u":
             self.error = ErrInvalidToken
             break
           inc(pos, 2)
-          var s = parse_escaped_utf16(buf, pos)
+          var s = parse_escaped_utf16(self.buf, pos)
           if (s and 0xfc00) == 0xdc00 and s > 0:
             r = 0x10000 + (((r - 0xd800) shl 10) or (s - 0xdc00))
           else:
@@ -866,18 +857,16 @@ proc read_regex(self: var Parser): Value =
         add(self.str, toUTF8(Rune(r)))
       else:
         # don't bother with the Error
-        add(self.str, buf[pos])
+        add(self.str, self.buf[pos])
         inc(pos)
     of '\c':
       pos = lexbase.handleCR(self, pos)
-      buf = self.buf
       add(self.str, '\c')
     of '\L':
       pos = lexbase.handleLF(self, pos)
-      buf = self.buf
       add(self.str, '\L')
     else:
-      add(self.str, buf[pos])
+      add(self.str, self.buf[pos])
       inc(pos)
   self.bufpos = pos
   result = new_gene_regex(self.str, flags)
@@ -1174,38 +1163,37 @@ proc parse_base64(self: var Parser): Value =
 proc parse_number(self: var Parser): TokenKind =
   result = TokenKind.TkEof
   var pos = self.bufpos
-  var buf = self.buf
-  if (buf[pos] == '-') or (buf[pos] == '+'):
-    add(self.str, buf[pos])
+  if (self.buf[pos] == '-') or (self.buf[pos] == '+'):
+    add(self.str, self.buf[pos])
     inc(pos)
-  if buf[pos] == '.':
+  if self.buf[pos] == '.':
     add(self.str, "0.")
     inc(pos)
     result = TkFloat
   else:
     result = TkInt
-    while buf[pos] in Digits:
-      add(self.str, buf[pos])
+    while self.buf[pos] in Digits:
+      add(self.str, self.buf[pos])
       inc(pos)
-    if buf[pos] == '.':
+    if self.buf[pos] == '.':
       add(self.str, '.')
       inc(pos)
       result = TkFloat
   # digits after the dot
-  while buf[pos] in Digits:
-    add(self.str, buf[pos])
+  while self.buf[pos] in Digits:
+    add(self.str, self.buf[pos])
     inc(pos)
-  if buf[pos] in {'E', 'e'}:
-    add(self.str, buf[pos])
+  if self.buf[pos] in {'E', 'e'}:
+    add(self.str, self.buf[pos])
     inc(pos)
     result = TkFloat
-    if buf[pos] in {'+', '-'}:
-      add(self.str, buf[pos])
+    if self.buf[pos] in {'+', '-'}:
+      add(self.str, self.buf[pos])
       inc(pos)
-    while buf[pos] in Digits:
-      add(self.str, buf[pos])
+    while self.buf[pos] in Digits:
+      add(self.str, self.buf[pos])
       inc(pos)
-  elif buf[pos] in {'a' .. 'z', 'A' .. 'Z'}:
+  elif self.buf[pos] in {'a' .. 'z', 'A' .. 'Z'}:
     var num = self.str
     self.str = ""
     self.bufpos = pos
@@ -1213,11 +1201,11 @@ proc parse_number(self: var Parser): TokenKind =
     while true:
       add(unit, self.buf[pos])
       inc(pos)
-      if buf[pos] notin {'a' .. 'z', 'A' .. 'Z'}:
+      if self.buf[pos] notin {'a' .. 'z', 'A' .. 'Z'}:
         break
     self.bufpos = pos
     self.num_with_units.add((result, num, unit))
-    if buf[pos] in {'.', '0' .. '9'}: # handle something like 1m30s
+    if self.buf[pos] in {'.', '0' .. '9'}: # handle something like 1m30s
       discard self.parse_number()
     result = TkNumberWithUnit
   self.bufpos = pos
