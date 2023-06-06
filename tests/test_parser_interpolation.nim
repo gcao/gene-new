@@ -71,5 +71,9 @@ test_parser "[#\"\"\"a#{b}c\"\"\"]", proc(r: Value) =
   check r.vec[0].gene_children[2] == "c"
 
 test_parser """
+  #"a#bc"
+""", "a#bc"
+
+test_parser """
   #"a\#{b}c"
 """, "a#{b}c"

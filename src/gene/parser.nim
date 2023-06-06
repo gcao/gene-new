@@ -255,7 +255,7 @@ proc parse_string(self: var Parser, start: char, triple_mode: bool = false): Tok
         add(self.str, buf[pos])
         inc(pos)
     of '#':
-      if start == '#':
+      if start == '#' and buf[pos + 1] in ['<', '{', '[', '(']:
         break
       else:
         add(self.str, buf[pos])
@@ -361,13 +361,14 @@ proc read_string_interpolation(self: var Parser): Value =
 
   var all_are_strings = true
   while true:
-    case self.buf[self.bufpos]:
-    of '#':
+    if self.buf[self.bufpos] == '#':
       self.bufpos.inc()
       case self.buf[self.bufpos]:
       of '<':
         self.bufpos.inc()
         self.skip_block_comment()
+        continue
+
       of '{':
         self.bufpos.inc()
         self.skip_ws()
@@ -383,22 +384,25 @@ proc read_string_interpolation(self: var Parser): Value =
           result.gene_children.add(v)
           self.skip_ws()
           self.bufpos.inc()
+        continue
+
       of '(', '[':
         let v = self.read()
         result.gene_children.add(v)
         if v.kind != VkString:
           all_are_strings = false
-      else:
-        not_allowed()
+        continue
 
-    else:
-      discard self.parse_string('#', triple_mode)
-      if self.error != ErrNone:
-        raise new_exception(ParseError, "read_string_interpolation failure: " & $self.error)
-      result.gene_children.add(new_gene_string_move(self.str))
-      self.str = ""
-      if self.buf[self.bufpos - 1] == '"':
-        break
+      else:
+        discard
+
+    discard self.parse_string('#', triple_mode)
+    if self.error != ErrNone:
+      raise new_exception(ParseError, "read_string_interpolation failure: " & $self.error)
+    result.gene_children.add(new_gene_string_move(self.str))
+    self.str = ""
+    if self.buf[self.bufpos - 1] == '"':
+      break
 
   if all_are_strings:
     var s = ""
