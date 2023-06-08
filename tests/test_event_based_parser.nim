@@ -1,4 +1,4 @@
-import unittest
+import unittest, options, tables, unicode, times, nre
 
 import gene/types
 import gene/event_based_parser as parser

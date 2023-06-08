@@ -33,7 +33,9 @@ type
     token_kind*: TokenKind
     error*: ParseErrorKind
     references*: References
+    done*: bool
     document_props_done*: bool  # flag to tell whether we have read document properties
+    handler*: ParseHandler
 
   TokenKind* = enum
     TkError
@@ -55,25 +57,25 @@ type
 
   ParseInfo* = tuple[line, col: int]
 
-  ParseScope* = ref object
-    parent*: ParseScope
-    mappings*: Table[string, Value]
+  # ParseScope* = ref object
+  #   parent*: ParseScope
+  #   mappings*: Table[string, Value]
 
-  ParseFunction* = proc(self: var Parser, scope: ParseScope, props: Table[string, Value], children: seq[Value]): Value
+  # ParseFunction* = proc(self: var Parser, scope: ParseScope, props: Table[string, Value], children: seq[Value]): Value
 
-  ParseHandlerType* = enum
-    PhDefault
-    PhNativeFn
+  # ParseHandlerType* = enum
+  #   PhDefault
+  #   PhNativeFn
 
-  ParseHandler* = ref object of CustomValue
-    is_macro*: bool  # if true, do not evaluate arguments before calling function
-    case `type`*: ParseHandlerType
-    of PhNativeFn:
-      native_fn: ParseFunction
-    else:
-      scope*: ParseScope
-      args*: seq[Value]
-      body*: seq[Value]
+  # ParseHandler* = ref object of CustomValue
+  #   is_macro*: bool  # if true, do not evaluate arguments before calling function
+  #   case `type`*: ParseHandlerType
+  #   of PhNativeFn:
+  #     native_fn: ParseFunction
+  #   else:
+  #     scope*: ParseScope
+  #     args*: seq[Value]
+  #     body*: seq[Value]
 
   MacroReader = proc(p: var Parser): Value {.gcsafe.}
   MacroArray = array[char, MacroReader]
@@ -94,6 +96,55 @@ type
   Handler = proc(self: var Parser, input: Value): Value {.gcsafe.}
 
   StreamHandler = proc(value: Value)
+
+  ParseEventKind* = enum
+    PeStart
+    PeEnd             # EOF
+    PeStartDocument
+    PeEndDocument
+    PeStartVector
+    PeEndVector
+    PeStartMap
+    PeEndMap
+    PeStartSet
+    PeEndSet
+    PeStartGene
+    PeEndGene
+    PeStartStream
+    PeEndStream
+    PeKey             # ^x
+    PeValue
+    PeToken           # A symbol or complex symbol that can be interpreted by the handler.
+    PeComment         # Will not be emitted unless the parser is configured to do so.
+    PeDocumentComment # Will not be emitted unless the parser is configured to do so.
+    PeError
+    # PeNewLine         # Can be useful to support different syntaxes.
+    # PeIndent          # Can be useful to support different syntaxes.
+    # PeSemicolon       # Can be useful to support different syntaxes.
+    # PeComma           # Can be useful to support different syntaxes.
+
+  ParseEvent* = ref object
+    case kind*: ParseEventKind
+    of PeValue:
+      value*: Value
+    of PeKey:
+      key*: string
+    of PeToken:
+      token*: string
+    of PeComment, PeDocumentComment:
+      comment*: string
+    else:
+      discard
+
+  # Multiple handlers can be used for the same parsing process.
+  # Each handler should keep track of its own state, e.g. whether it's expecting the gene type
+  # or not.
+  ParseHandler* = ref object of RootObj
+    parser*: Parser
+    next*: ParseHandler
+
+  DefaultHandler* = ref object of ParseHandler
+    stack*: seq[Value]
 
 const non_constituents: seq[char] = @[]
 
@@ -180,6 +231,28 @@ proc `unit`*(self: ParseOptions, name: string): Value =
   else:
     return nil
 
+#################### Event Handling ##############
+
+proc `$`*(self: ParseEvent): string =
+  result = $self.kind
+
+# The handler can consume the event and generate zero or more events to be processed
+# by next handler.
+method handle*(self: ParseHandler, event: ParseEvent) {.base.} =
+  echo $event
+
+method handle*(self: DefaultHandler, event: ParseEvent) =
+  case event.kind:
+  of PeStartGene:
+    self.stack.add(new_gene_gene())
+  of PeEndGene:
+    let value = self.stack.pop()
+    if not self.next.is_nil:
+      let event = ParseEvent(kind: PeValue, value: value)
+      self.next.handle(event)
+  else:
+    todo($event)
+
 #################### Parser ######################
 
 proc new_parser*(options: ParseOptions): Parser =
@@ -190,6 +263,7 @@ proc new_parser*(options: ParseOptions): Parser =
     document: Document(),
     options: new_options(options),
     references: References(),
+    handler: DefaultHandler(),
   )
 
 proc new_parser*(): Parser =
@@ -200,6 +274,7 @@ proc new_parser*(): Parser =
     document: Document(),
     options: default_options(),
     references: References(),
+    handler: DefaultHandler(),
   )
 
 proc non_constituent(c: char): bool =
@@ -1290,6 +1365,16 @@ proc read_number(self: var Parser): Value =
   else:
     raise new_exception(ParseError, "Error reading a number (?): " & self.str)
 
+proc read_document_properties(self: var Parser) =
+  if self.document_props_done:
+    return
+  else:
+    self.document_props_done = true
+  self.skip_ws()
+  var ch = self.buf[self.bufpos]
+  if ch == '^':
+    self.document.props = self.read_map(MkDocument)
+
 proc read*(self: var Parser): Value =
   set_len(self.str, 0)
   self.skip_ws()
@@ -1323,15 +1408,23 @@ proc read*(self: var Parser): Value =
   if result == Ignore:
     result = self.read()
 
-proc read_document_properties(self: var Parser) =
-  if self.document_props_done:
-    return
-  else:
-    self.document_props_done = true
-  self.skip_ws()
-  var ch = self.buf[self.bufpos]
-  if ch == '^':
-    self.document.props = self.read_map(MkDocument)
+proc advance*(self: var Parser) =
+  while not self.done:
+    set_len(self.str, 0)
+    self.skip_ws()
+    let ch = self.buf[self.bufpos]
+    case ch
+    of '0'..'9':
+      self.handler.handle(
+        ParseEvent(
+          kind: PeValue,
+          value: read_number(self),
+        )
+      )
+    of EndOfFile:
+      self.handler.handle(ParseEvent(kind: PeEnd))
+    else:
+      todo()
 
 proc read*(self: var Parser, s: Stream, filename: string): Value =
   self.open(s, filename)
@@ -1407,7 +1500,7 @@ proc read*(s: Stream, filename: string): Value =
 
 proc read*(buffer: string): Value =
   var parser = new_parser()
-  return parser.read(buffer)
+  parser.read(buffer)
 
 proc read_all*(buffer: string): seq[Value] =
   var parser = new_parser()
