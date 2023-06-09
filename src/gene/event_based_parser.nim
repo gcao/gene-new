@@ -154,6 +154,8 @@ type
     stack*: seq[Value]
 
   HandlerState* = enum
+    HsDefault
+
     # For Gene parsing:
     # (): Start -> End
     # (a): Start -> Type -> End
@@ -213,6 +215,7 @@ proc read*(self: var Parser): Value {.gcsafe.}
 proc skip_comment(self: var Parser)
 proc skip_block_comment(self: var Parser) {.gcsafe.}
 proc skip_ws(self: var Parser) {.gcsafe.}
+proc interpret_token(token: string): Value
 proc read_map(self: var Parser, mode: MapKind): Table[string, Value] {.gcsafe.}
 
 #################### Implementations #############
@@ -280,11 +283,17 @@ proc `$`*(self: ParseEvent): string =
 
 # The handler can consume the event and generate zero or more events to be processed
 # by next handler.
-method handle*(self: ParseHandler, event: ParseEvent) {.base.} =
+method handle*(self: ParseHandler, event: ParseEvent) {.base, locks: "unknown".} =
   echo $event
 
 method handle*(self: DefaultHandler, event: ParseEvent) =
   case event.kind:
+  of PeValue, PeEnd:
+    self.next.handle(event)
+  of PeToken:
+    let value = interpret_token(event.token)
+    let event = ParseEvent(kind: PeValue, value: value)
+    self.next.handle(event)
   of PeStartGene:
     self.stack.add(new_gene_gene())
   of PeEndGene:
@@ -295,8 +304,16 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
   else:
     todo($event)
 
-method handle*(self: FirstValueHandler, event: ParseEvent) =
+method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} =
+  echo "FirstValueHandler " & $event & " " & $self.stack.len
   case event.kind:
+  of PeValue:
+    if self.stack.len == 0:
+      self.parser.done = true
+      var context = HandlerContext(state: HsDefault, value: event.value)
+      self.stack.add(context)
+    else:
+      todo()
   of PeStartGene:
     var context = HandlerContext(state: HsGeneStart, value: new_gene_gene())
     self.stack.add(context)
@@ -315,6 +332,8 @@ method handle*(self: FirstValueHandler, event: ParseEvent) =
         last.state = HsGeneTypeChild
       else:
         not_allowed($event)
+  of PeEnd:
+    discard
   else:
     todo($event)
 
@@ -1479,28 +1498,67 @@ proc advance*(self: var Parser) =
     self.skip_ws()
     let ch = self.buf[self.bufpos]
     case ch
-    of '0'..'9':
-      self.handler.handle(
-        ParseEvent(
-          kind: PeValue,
-          value: read_number(self),
-        )
-      )
     of EndOfFile:
       self.handler.handle(ParseEvent(kind: PeEnd))
-    else:
+      break
+
+    of '0'..'9':
+      var event = ParseEvent(
+        kind: PeValue,
+        value: self.read_number(),
+      )
+      self.handler.handle(event)
+
+    of '+', '-':
+      if isDigit(self.buf[self.bufpos + 1]):
+        var event = ParseEvent(
+          kind: PeValue,
+          value: self.read_number(),
+        )
+        self.handler.handle(event)
+      else:
+        var event = ParseEvent(
+          kind: PeToken,
+          token: self.read_token(false),
+        )
+        self.handler.handle(event)
+
+    of '\'', '"':
+      inc(self.bufpos)
+      var event = ParseEvent(
+        kind: PeValue,
+        value: self.read_string(ch),
+      )
+      self.handler.handle(event)
+
+    elif is_macro(ch):
       todo()
+
+    else:
+      var event = ParseEvent(
+        kind: PeToken,
+        token: self.read_token(false),
+      )
+      self.handler.handle(event)
+
+proc read_first*(self: var Parser): Value =
+  let first_value_handler = FirstValueHandler(parser: self)
+  self.handler.next = first_value_handler
+  self.advance()
+  result = first_value_handler.stack[0].value
 
 proc read*(self: var Parser, s: Stream, filename: string): Value =
   self.open(s, filename)
   defer: self.close()
-  result = self.read()
+  # result = self.read()
+  result = self.read_first()
 
 proc read*(self: var Parser, buffer: string): Value =
   var s = new_string_stream(buffer)
   self.open(s, "<input>")
   defer: self.close()
-  result = self.read()
+  # result = self.read()
+  result = self.read_first()
 
 proc read_all*(self: var Parser, buffer: string): seq[Value] =
   var s = new_string_stream(buffer)
