@@ -122,6 +122,7 @@ type
     # PeIndent          # Can be useful to support different syntaxes.
     # PeSemicolon       # Can be useful to support different syntaxes.
     # PeComma           # Can be useful to support different syntaxes.
+    # PeCustom          # Custom events defined by custom handlers
 
   ParseEvent* = ref object
     case kind*: ParseEventKind
@@ -133,8 +134,13 @@ type
       token*: string
     of PeComment, PeDocumentComment:
       comment*: string
+    of PeError:
+      error_code*: string
+      error_message*: string
     else:
       discard
+    # event_start: uint32
+    # event_end: uint32
 
   # Multiple handlers can be used for the same parsing process.
   # Each handler should keep track of its own state, e.g. whether it's expecting the gene type
@@ -143,8 +149,44 @@ type
     parser*: Parser
     next*: ParseHandler
 
+  # Handle standard Gene parsing, raise errors if the input is not valid Gene data.
   DefaultHandler* = ref object of ParseHandler
     stack*: seq[Value]
+
+  HandlerState* = enum
+    # For Gene parsing:
+    # (): Start -> End
+    # (a): Start -> Type -> End
+    # (a ^b c ^d e f): Start -> Type -> TypePropKey -> TypePropValue -> TypePropChild -> TypePropChild -> End
+    # (a b c): Start -> Type -> TypeChild -> TypeChild -> End
+    # (a b c ^d e ^f g h): Start -> Type -> TypeChild -> TypeChild -> TypeChildPropKey -> TypeChildPropValue -> TypeChildPropKey -> TypeChildPropValue -> TypePropChild -> End
+    HsGeneStart
+    HsGeneEnd
+    HsGeneType
+    HsGeneTypePropKey
+    HsGeneTypePropValue
+    HsGeneTypeChild
+    HsGeneTypeChildPropKey
+    HsGeneTypeChildPropValue
+    HsGeneTypePropChild
+
+    HsMapStart
+    HsMapKey
+    HsMapValue
+    HsMapEnd
+
+    HsVectorStart
+    HsVectorEnd
+    HsVectorValue
+
+  HandlerContext* = ref object
+    state*: HandlerState
+    key*: string
+    value*: Value
+
+  # For retrieving the first value from the parser
+  FirstValueHandler* = ref object of ParseHandler
+    stack*: seq[HandlerContext]
 
 const non_constituents: seq[char] = @[]
 
@@ -250,6 +292,29 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
     if not self.next.is_nil:
       let event = ParseEvent(kind: PeValue, value: value)
       self.next.handle(event)
+  else:
+    todo($event)
+
+method handle*(self: FirstValueHandler, event: ParseEvent) =
+  case event.kind:
+  of PeStartGene:
+    var context = HandlerContext(state: HsGeneStart, value: new_gene_gene())
+    self.stack.add(context)
+  of PeEndGene:
+    if self.stack.len == 1:
+      self.parser.done = true
+    else:
+      let context = self.stack.pop()
+      var last = self.stack[^1]
+      case last.state:
+      of HsGeneStart:
+        last.value.gene_type = context.value
+        last.state = HsGeneType
+      of HsGeneType:
+        last.value.gene_children.add(context.value)
+        last.state = HsGeneTypeChild
+      else:
+        not_allowed($event)
   else:
     todo($event)
 
