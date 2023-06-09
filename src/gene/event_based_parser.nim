@@ -103,11 +103,10 @@ type
     PeStartDocument
     PeEndDocument
     PeStartVector
-    PeEndVector
+    PeStartSet
+    PeEndVectorOrSet
     PeStartMap
     PeEndMap
-    PeStartSet
-    PeEndSet
     PeStartGene
     PeEndGene
     PeStartStream
@@ -281,6 +280,8 @@ proc `unit`*(self: ParseOptions, name: string): Value =
 proc `$`*(self: ParseEvent): string =
   result = $self.kind
 
+# TODO: the dynamic dispatch may be slow, consider add handle as a property to ParseHandler.
+
 # The handler can consume the event and generate zero or more events to be processed
 # by next handler.
 method handle*(self: ParseHandler, event: ParseEvent) {.base, locks: "unknown".} =
@@ -294,18 +295,27 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
     let value = interpret_token(event.token)
     let event = ParseEvent(kind: PeValue, value: value)
     self.next.handle(event)
+  of PeStartVector:
+    # var context = HandlerContext(state: HsVectorStart, value: new_gene_vec())
+    # self.stack.add(context)
+    self.next.handle(event)
+  of PeEndVectorOrSet:
+    # self.stack.pop()
+    self.next.handle(event)
   of PeStartGene:
-    self.stack.add(new_gene_gene())
+    # self.stack.add(new_gene_gene())
+    self.next.handle(event)
   of PeEndGene:
-    let value = self.stack.pop()
-    if not self.next.is_nil:
-      let event = ParseEvent(kind: PeValue, value: value)
-      self.next.handle(event)
+    # let value = self.stack.pop()
+    # if not self.next.is_nil:
+    #   let event = ParseEvent(kind: PeValue, value: value)
+    #   self.next.handle(event)
+    self.next.handle(event)
   else:
     todo($event)
 
 method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} =
-  echo "FirstValueHandler " & $event & " " & $self.stack.len
+  # echo "FirstValueHandler " & $event & " " & $self.stack.len
   case event.kind:
   of PeValue:
     if self.stack.len == 0:
@@ -313,7 +323,22 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
       var context = HandlerContext(state: HsDefault, value: event.value)
       self.stack.add(context)
     else:
-      todo()
+      var last = self.stack[^1]
+      case last.state:
+      of HsVectorStart:
+        last.value.vec.add(event.value)
+      else:
+        todo($last.state)
+  of PeStartVector:
+    let value = new_gene_vec()
+    # TODO: add value to parent context
+    var context = HandlerContext(state: HsVectorStart, value: value)
+    self.stack.add(context)
+  of PeEndVectorOrSet:
+    if self.stack.len == 1:
+      self.parser.done = true
+    else:
+      discard self.stack.pop()
   of PeStartGene:
     var context = HandlerContext(state: HsGeneStart, value: new_gene_gene())
     self.stack.add(context)
@@ -637,45 +662,71 @@ proc read_token(self: var Parser, lead_constituent: bool): string =
   return self.read_token(lead_constituent, [':'])
 
 proc read_character(self: var Parser): Value =
-  var pos = self.bufpos
-  let ch = self.buf[pos]
-  case ch:
-  of EndOfFile:
-    raise new_exception(ParseError, "EOF while reading character")
-  of '\'', '"':
-    self.bufpos.inc()
-    discard self.parse_string(ch)
-    if self.error != ErrNone:
-      raise new_exception(ParseError, "read_string failure: " & $self.error)
-    return new_gene_symbol(self.str)
+  # var pos = self.bufpos
+  # let ch = self.buf[pos]
+  # case ch:
+  # of EndOfFile:
+  #   raise new_exception(ParseError, "EOF while reading character")
+  # of '\'', '"':
+  #   self.bufpos.inc()
+  #   discard self.parse_string(ch)
+  #   if self.error != ErrNone:
+  #     raise new_exception(ParseError, "read_string failure: " & $self.error)
+  #   return new_gene_symbol(self.str)
+  # else:
+  #   result = Value(kind: VkChar)
+  #   let token = self.read_token(false)
+  #   if token.len == 1:
+  #     result.char = token[0]
+  #     return
+
+  #   case token:
+  #   of "newline":
+  #     result.char = '\n'
+  #   of "space":
+  #     result.char = ' '
+  #   of "tab":
+  #     result.char = '\t'
+  #   of "backspace":
+  #     result.char = '\b'
+  #   of "formfeed":
+  #     result.char = '\f'
+  #   of "return":
+  #     result.char = '\r'
+  #   else:
+  #     if token.startsWith("\\u"):
+  #       # TODO: impl unicode char reading
+  #       raise new_exception(ParseError, "Not implemented: reading unicode chars")
+  #     elif token.runeLen == 1:
+  #       result.rune = token.runeAt(0)
+  #     else:
+  #       raise new_exception(ParseError, "Unknown character: " & token)
+  result = Value(kind: VkChar)
+  let token = self.read_token(false)
+
+  case token:
+  of "newline":
+    result.char = '\n'
+  of "space":
+    result.char = ' '
+  of "tab":
+    result.char = '\t'
+  of "backspace":
+    result.char = '\b'
+  of "formfeed":
+    result.char = '\f'
+  of "return":
+    result.char = '\r'
   else:
-    result = Value(kind: VkChar)
-    let token = self.read_token(false)
     if token.len == 1:
       result.char = token[0]
-      return
-
-    case token:
-    of "newline":
-      result.char = '\n'
-    of "space":
-      result.char = ' '
-    of "tab":
-      result.char = '\t'
-    of "backspace":
-      result.char = '\b'
-    of "formfeed":
-      result.char = '\f'
-    of "return":
-      result.char = '\r'
+    elif token.runeLen == 1:
+      result.rune = token.runeAt(0)
+    # elif token.startsWith("\\u"):
+    #   # TODO: impl unicode char reading
+    #   raise new_exception(ParseError, "Not implemented: reading unicode chars")
     else:
-      if token.startsWith("\\u"):
-        # TODO: impl unicode char reading
-        raise new_exception(ParseError, "Not implemented: reading unicode chars")
-      elif token.runeLen == 1:
-        result.rune = token.runeAt(0)
-      else:
-        raise new_exception(ParseError, "Unknown character: " & token)
+      raise new_exception(ParseError, "Unknown character: " & token)
 
 proc skip_ws(self: var Parser) {.gcsafe.} =
   # commas are whitespace in gene collections
@@ -1064,7 +1115,7 @@ proc init_macro_array() =
   macros['\''] = read_string1
   macros['"'] = read_string2
   macros[':'] = read_quoted
-  macros['\\'] = read_character
+  # macros['\\'] = read_character
   # macros['`'] = read_quasi_quoted
   macros['%'] = read_unquoted
   macros['#'] = read_dispatch
@@ -1530,6 +1581,33 @@ proc advance*(self: var Parser) =
         value: self.read_string(ch),
       )
       self.handler.handle(event)
+
+    of '\\':
+      inc(self.bufpos)
+      let ch2 = self.buf[self.bufpos]
+      var value: Value
+      case ch2:
+      of '\'', '"':
+        self.bufpos.inc()
+        discard self.parse_string(ch2)
+        if self.error != ErrNone:
+          raise new_exception(ParseError, "read_string failure: " & $self.error)
+        value = new_gene_symbol(self.str)
+      else:
+        value = self.read_character()
+      var event = ParseEvent(
+        kind: PeValue,
+        value: value,
+      )
+      self.handler.handle(event)
+
+    of '[':
+      inc(self.bufpos)
+      self.handler.handle(ParseEvent(kind: PeStartVector))
+
+    of ']':
+      inc(self.bufpos)
+      self.handler.handle(ParseEvent(kind: PeEndVectorOrSet))
 
     elif is_macro(ch):
       todo()
