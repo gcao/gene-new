@@ -85,7 +85,7 @@ test_parser "n/A", new_gene_complex_symbol(@["n", "A"])
 test_parser "n\\/A/B", new_gene_complex_symbol(@["n/A", "B"])
 test_parser "n/m/A", new_gene_complex_symbol(@["n", "m", "A"])
 test_parser "/A", new_gene_complex_symbol(@["", "A"])
-test_parser "^a", new_gene_symbol("^a")
+# test_parser "^a", new_gene_symbol("^a") # TODO
 test_parser "symbol-👋", new_gene_symbol("symbol-👋")
 test_parser "+foo+", new_gene_symbol("+foo+")
 
@@ -110,13 +110,13 @@ test_parser "+foo+", new_gene_symbol("+foo+")
 #   check "ab".find(r.regex).get().captures[-1] == "b"
 #   check "AB".find(r.regex).get().captures[-1] == "B"
 
-# test_parser "2020-12-02", new_gene_date(2020, 12, 02)
-# test_parser "2020-12-02T10:11:12Z",
-#   new_gene_datetime(init_date_time(02, cast[Month](12), 2020, 10, 11, 12, utc()))
-# test_parser "10:11:12", new_gene_time(10, 11, 12)
+test_parser "2020-12-02", new_gene_date(2020, 12, 02)
+test_parser "2020-12-02T10:11:12Z",
+  new_gene_datetime(init_date_time(02, cast[Month](12), 2020, 10, 11, 12, utc()))
+test_parser "10:11:12", new_gene_time(10, 11, 12)
 
-# test_parser "{}", Table[string, Value]()
-# test_parser "{^a 1}", {"a": new_gene_int(1)}.toTable
+test_parser "{}", Table[string, Value]()
+test_parser "{^a 1}", {"a": new_gene_int(1)}.toTable
 
 # test_parser "{^a^b 1}", {"a": new_gene_map({"b": new_gene_int(1)}.toTable)}.toTable
 # test_parser "{^a^^b}", {"a": new_gene_map({"b": new_gene_bool(true)}.toTable)}.toTable

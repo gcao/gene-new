@@ -302,6 +302,12 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
   of PeEndVectorOrSet:
     # self.stack.pop()
     self.next.handle(event)
+  of PeStartMap:
+    self.next.handle(event)
+  of PeEndMap:
+    self.next.handle(event)
+  of PeKey:
+    self.next.handle(event)
   of PeStartGene:
     # self.stack.add(new_gene_gene())
     self.next.handle(event)
@@ -327,6 +333,8 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
       case last.state:
       of HsVectorStart:
         last.value.vec.add(event.value)
+      of HsMapKey:
+        last.value.map[last.key] = event.value
       else:
         todo($last.state)
   of PeStartVector:
@@ -339,6 +347,24 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
       self.parser.done = true
     else:
       discard self.stack.pop()
+  of PeStartMap:
+    let value = new_gene_map()
+    # TODO: add value to parent context
+    var context = HandlerContext(state: HsMapStart, value: value)
+    self.stack.add(context)
+  of PeEndMap:
+    if self.stack.len == 1:
+      self.parser.done = true
+    else:
+      discard self.stack.pop()
+  of PeKey:
+    var context = self.stack[^1]
+    context.key = event.key[1..^1]
+    case context.state:
+    of HsMapStart, HsMapValue:
+      context.state = HsMapKey
+    else:
+      todo($context.state)
   of PeStartGene:
     var context = HandlerContext(state: HsGeneStart, value: new_gene_gene())
     self.stack.add(context)
@@ -1559,7 +1585,6 @@ proc advance*(self: var Parser) =
         value: self.read_number(),
       )
       self.handler.handle(event)
-
     of '+', '-':
       if isDigit(self.buf[self.bufpos + 1]):
         var event = ParseEvent(
@@ -1604,10 +1629,23 @@ proc advance*(self: var Parser) =
     of '[':
       inc(self.bufpos)
       self.handler.handle(ParseEvent(kind: PeStartVector))
-
     of ']':
       inc(self.bufpos)
       self.handler.handle(ParseEvent(kind: PeEndVectorOrSet))
+
+    of '{':
+      inc(self.bufpos)
+      self.handler.handle(ParseEvent(kind: PeStartMap))
+    of '}':
+      inc(self.bufpos)
+      self.handler.handle(ParseEvent(kind: PeEndMap))
+
+    of '^':
+      var event = ParseEvent(
+        kind: PeKey,
+        key: self.read_token(false),
+      )
+      self.handler.handle(event)
 
     elif is_macro(ch):
       todo()
