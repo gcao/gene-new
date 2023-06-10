@@ -151,6 +151,9 @@ type
   ParseHandler* = ref object of RootObj
     parser*: ptr Parser
     next*: ParseHandler
+    # The handler can consume the event and generate zero or more events to be processed
+    # by next handler.
+    handle*: proc(self: ParseHandler, event: ParseEvent) {.locks: "unknown".}
 
   HandlerState* = enum
     HsDefault
@@ -202,7 +205,7 @@ type
     stack*: seq[HandlerContext]
 
   # For retrieving the first value from the parser
-  FirstValueHandler* = ref object of ParseHandler
+  ValueHandler* = ref object of ParseHandler
     stack*: seq[HandlerContext]
 
 const non_constituents: seq[char] = @[]
@@ -340,14 +343,11 @@ proc merge_maps(first, second: Value) =
       raise newException(ValueError, "merge_map: key already exists: " & $k)
     first.map[k] = v
 
-# TODO: the dynamic dispatch may be slow, consider add handle as a property to ParseHandler.
+template do_handle(self: ParseHandler, event: ParseEvent) =
+  self.handle(self, event)
 
-# The handler can consume the event and generate zero or more events to be processed
-# by next handler.
-method handle*(self: ParseHandler, event: ParseEvent) {.base, locks: "unknown".} =
-  echo $event
-
-method handle*(self: DefaultHandler, event: ParseEvent) =
+proc handle_default(h: ParseHandler, event: ParseEvent) =
+  var self = cast[DefaultHandler](h)
   # echo "DefaultHandler " & $event
   case event.kind:
   of PeValue, PeEnd:
@@ -355,53 +355,53 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
       let context = self.stack[^1]
       context.state = HsMapValue
     else:
-      self.next.handle(event)
+      self.next.do_handle(event)
   of PeToken:
     if event.token[0] == '^':
       let parsed = parse_key(event.token)
-      self.next.handle(ParseEvent(kind: PeKey, key: parsed.keys[0]))
+      self.next.do_handle(ParseEvent(kind: PeKey, key: parsed.keys[0]))
       if parsed.keys.len > 1:
         for key in parsed.keys[1..^1]:
-          self.next.handle(ParseEvent(kind: PeMapShortcut, key: key))
+          self.next.do_handle(ParseEvent(kind: PeMapShortcut, key: key))
       if not parsed.value.is_nil:
-        self.next.handle(ParseEvent(kind: PeValue, value: parsed.value))
+        self.next.do_handle(ParseEvent(kind: PeValue, value: parsed.value))
     else:
       let value = interpret_token(event.token)
       let event = ParseEvent(kind: PeValue, value: value)
-      self.next.handle(event)
+      self.next.do_handle(event)
   of PeStartVector:
     var context = HandlerContext(state: HsVectorStart)
     self.stack.add(context)
-    self.next.handle(event)
+    self.next.do_handle(event)
   of PeEndVectorOrSet:
     discard self.stack.pop()
-    self.next.handle(event)
+    self.next.do_handle(event)
   of PeStartMap:
     var context = HandlerContext(state: HsMapStart)
     self.stack.add(context)
-    self.next.handle(event)
+    self.next.do_handle(event)
   of PeEndMap:
     discard self.stack.pop()
-    self.next.handle(event)
+    self.next.do_handle(event)
   of PeStartGene:
     var context = HandlerContext(state: HsGeneStart)
     self.stack.add(context)
-    self.next.handle(event)
+    self.next.do_handle(event)
   of PeEndGene:
     discard self.stack.pop()
-    self.next.handle(event)
+    self.next.do_handle(event)
   of PeStartSet:
     var context = HandlerContext(state: HsSetStart)
     self.stack.add(context)
-    self.next.handle(event)
+    self.next.do_handle(event)
   of PeQuote, PeUnquote:
-    self.next.handle(event)
+    self.next.do_handle(event)
   of PeStartDecorator:
-    self.next.handle(event)
+    self.next.do_handle(event)
   else:
     todo($event)
 
-proc unwrap(self: FirstValueHandler) {.inline.} =
+proc unwrap(self: ValueHandler) {.inline.} =
   case self.stack.len:
   of 0:
     raise newException(ValueError, "unwrap: no value")
@@ -497,7 +497,7 @@ proc unwrap(self: FirstValueHandler) {.inline.} =
     else:
       todo($last.state)
 
-proc post_value_callback(self: FirstValueHandler, event: ParseEvent) {.inline.} =
+proc post_value_callback(self: ValueHandler, event: ParseEvent) {.inline.} =
   if self.stack.len == 0:
     self.parser.done = true
     var context = HandlerContext(state: HsDefault, value: event.value)
@@ -586,8 +586,9 @@ proc post_value_callback(self: FirstValueHandler, event: ParseEvent) {.inline.} 
     else:
       todo($last.state)
 
-method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} =
-  # echo "FirstValueHandler " & $event & " " & $self.stack.len
+proc handle_value*(h: ParseHandler, event: ParseEvent) {.locks: "unknown".} =
+  var self = cast[ValueHandler](h)
+  # echo "handle_value " & $event & " " & $self.stack.len
   case event.kind:
   of PeValue:
     self.post_value_callback(event)
@@ -652,27 +653,39 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
 
 #################### Parser ######################
 
+proc new_default_handler*(parser: ptr Parser): DefaultHandler =
+  DefaultHandler(
+    parser: parser,
+    handle: handle_default,
+  )
+
+proc new_value_handler*(parser: ptr Parser): ValueHandler =
+  ValueHandler(
+    parser: parser,
+    handle: handle_value,
+  )
+
 proc new_parser*(options: ParseOptions): Parser =
   if not INITIALIZED:
     init()
 
-  return Parser(
+  result = Parser(
     document: Document(),
     options: new_options(options),
     references: References(),
-    handler: DefaultHandler(),
   )
+  result.handler = new_default_handler(result.addr)
 
 proc new_parser*(): Parser =
   if not INITIALIZED:
     init()
 
-  return Parser(
+  result = Parser(
     document: Document(),
     options: default_options(),
     references: References(),
-    handler: DefaultHandler(),
   )
+  result.handler = new_default_handler(result.addr)
 
 proc non_constituent(c: char): bool =
   result = non_constituents.contains(c)
@@ -1838,7 +1851,7 @@ proc advance*(self: var Parser) =
     let ch = self.buf[self.bufpos]
     case ch
     of EndOfFile:
-      self.handler.handle(ParseEvent(kind: PeEnd))
+      self.handler.do_handle(ParseEvent(kind: PeEnd))
       break
 
     of '0'..'9':
@@ -1846,20 +1859,20 @@ proc advance*(self: var Parser) =
         kind: PeValue,
         value: self.read_number(),
       )
-      self.handler.handle(event)
+      self.handler.do_handle(event)
     of '+', '-':
       if isDigit(self.buf[self.bufpos + 1]):
         var event = ParseEvent(
           kind: PeValue,
           value: self.read_number(),
         )
-        self.handler.handle(event)
+        self.handler.do_handle(event)
       else:
         var event = ParseEvent(
           kind: PeToken,
           token: self.read_token(false),
         )
-        self.handler.handle(event)
+        self.handler.do_handle(event)
 
     of '\'', '"':
       inc(self.bufpos)
@@ -1867,7 +1880,7 @@ proc advance*(self: var Parser) =
         kind: PeValue,
         value: self.read_string(ch),
       )
-      self.handler.handle(event)
+      self.handler.do_handle(event)
 
     of '\\':
       inc(self.bufpos)
@@ -1886,35 +1899,35 @@ proc advance*(self: var Parser) =
         kind: PeValue,
         value: value,
       )
-      self.handler.handle(event)
+      self.handler.do_handle(event)
 
     of '[':
       inc(self.bufpos)
-      self.handler.handle(ParseEvent(kind: PeStartVector))
+      self.handler.do_handle(ParseEvent(kind: PeStartVector))
     of ']':
       inc(self.bufpos)
-      self.handler.handle(ParseEvent(kind: PeEndVectorOrSet))
+      self.handler.do_handle(ParseEvent(kind: PeEndVectorOrSet))
 
     of '{':
       inc(self.bufpos)
-      self.handler.handle(ParseEvent(kind: PeStartMap))
+      self.handler.do_handle(ParseEvent(kind: PeStartMap))
     of '}':
       inc(self.bufpos)
-      self.handler.handle(ParseEvent(kind: PeEndMap))
+      self.handler.do_handle(ParseEvent(kind: PeEndMap))
 
     of '(':
       inc(self.bufpos)
-      self.handler.handle(ParseEvent(kind: PeStartGene))
+      self.handler.do_handle(ParseEvent(kind: PeStartGene))
     of ')':
       inc(self.bufpos)
-      self.handler.handle(ParseEvent(kind: PeEndGene))
+      self.handler.do_handle(ParseEvent(kind: PeEndGene))
 
     of '^':
       var event = ParseEvent(
         kind: PeToken,
         token: self.read_token(false),
       )
-      self.handler.handle(event)
+      self.handler.do_handle(event)
 
     of '#':
       inc(self.bufpos)
@@ -1926,23 +1939,22 @@ proc advance*(self: var Parser) =
           kind: PeValue,
           value: self.read_regex(),
         )
-        self.handler.handle(event)
+        self.handler.do_handle(event)
       of '[':
         inc(self.bufpos)
-        self.handler.handle(ParseEvent(kind: PeStartSet))
+        self.handler.do_handle(ParseEvent(kind: PeStartSet))
       of '@':
         inc(self.bufpos)
-        self.handler.handle(ParseEvent(kind: PeStartDecorator))
+        self.handler.do_handle(ParseEvent(kind: PeStartDecorator))
       else:
         todo("#" & $ch2)
 
     of ':':
       inc(self.bufpos)
-      self.handler.handle(ParseEvent(kind: PeQuote))
+      self.handler.do_handle(ParseEvent(kind: PeQuote))
     of '%':
       inc(self.bufpos)
-      self.handler.handle(ParseEvent(kind: PeUnquote))
-
+      self.handler.do_handle(ParseEvent(kind: PeUnquote))
 
     elif is_macro(ch):
       todo()
@@ -1952,13 +1964,13 @@ proc advance*(self: var Parser) =
         kind: PeToken,
         token: self.read_token(false),
       )
-      self.handler.handle(event)
+      self.handler.handle(self.handler, event)
 
 proc read_first*(self: var Parser): Value =
-  let first_value_handler = FirstValueHandler(parser: self.addr)
-  self.handler.next = first_value_handler
+  let value_handler = new_value_handler(self.addr)
+  self.handler.next = value_handler
   self.advance()
-  result = first_value_handler.stack[0].value
+  result = value_handler.stack[0].value
 
 proc read*(self: var Parser, s: Stream, filename: string): Value =
   self.open(s, filename)
