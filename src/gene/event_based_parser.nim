@@ -146,7 +146,7 @@ type
   # Each handler should keep track of its own state, e.g. whether it's expecting the gene type
   # or not.
   ParseHandler* = ref object of RootObj
-    parser*: Parser
+    parser*: ptr Parser
     next*: ParseHandler
 
   HandlerState* = enum
@@ -281,7 +281,15 @@ proc `unit`*(self: ParseOptions, name: string): Value =
 #################### Event Handling ##############
 
 proc `$`*(self: ParseEvent): string =
-  result = $self.kind
+  case self.kind:
+  of PeValue:
+    result = $self.kind & " value=" & $self.value
+  of PeToken:
+    result = $self.kind & " token=" & $self.token
+  of PeKey:
+    result = $self.kind & " key=" & $self.key
+  else:
+    result = $self.kind
 
 type
   KeyParsed* = object
@@ -319,6 +327,7 @@ method handle*(self: ParseHandler, event: ParseEvent) {.base, locks: "unknown".}
   echo $event
 
 method handle*(self: DefaultHandler, event: ParseEvent) =
+  # echo "DefaultHandler " & $event
   case event.kind:
   of PeValue, PeEnd:
     if self.stack.len > 0 and self.stack[^1].state == HsMapKey:
@@ -1704,7 +1713,7 @@ proc advance*(self: var Parser) =
       self.handler.handle(event)
 
 proc read_first*(self: var Parser): Value =
-  let first_value_handler = FirstValueHandler(parser: self)
+  let first_value_handler = FirstValueHandler(parser: self.addr)
   self.handler.next = first_value_handler
   self.advance()
   result = first_value_handler.stack[0].value
