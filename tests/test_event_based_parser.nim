@@ -317,33 +317,33 @@ test_parser """
 #   1m30
 # """, 90
 
-# # Support decorator from the parser. It can appear anywhere except property names.
-# # Pros:
-# #   Easier to write
-# # Cons:
-# #   Harder to read ?!
-# #
-# # #@f a       = (f a)
-# # (#@f a)     = ((f a))
-# # (#@f #@g a) = ((f (g a)))
-# # #@(f a) b   = (((f a) b))
-# # {^p #@f a}  = {^p (f a)}
+# Support decorator from the parser. It can appear anywhere except property names.
+# Pros:
+#   Easier to write
+# Cons:
+#   Harder to read ?!
+#
+# #@f a       = (f a)
+# (#@f a)     = ((f a))
+# (#@f #@g a) = ((f (g a)))
+# #@(f a) b   = (((f a) b))
+# {^p #@f a}  = {^p (f a)}
 
-# test_parser """
-#   #@f a
-# """, proc(r: Value) =
-#   check r.kind == VkGene
-#   check r.gene_type.str == "f"
-#   check r.gene_children[0].str == "a"
+test_parser """
+  #@f a
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type.str == "f"
+  check r.gene_children[0].str == "a"
 
-# test_parser """
-#   #@f #@g a
-# """, proc(r: Value) =
-#   check r.kind == VkGene
-#   check r.gene_type.str == "f"
-#   check r.gene_children[0].kind == VkGene
-#   check r.gene_children[0].gene_type.str == "g"
-#   check r.gene_children[0].gene_children[0].str == "a"
+test_parser """
+  #@f #@g a
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type.str == "f"
+  check r.gene_children[0].kind == VkGene
+  check r.gene_children[0].gene_type.str == "g"
+  check r.gene_children[0].gene_children[0].str == "a"
 
 # # test_parser """
 # #   #*f
@@ -378,19 +378,19 @@ test_parser """
 
 # test_read_all "1 2", @[new_gene_int(1), new_gene_int(2)]
 
-# test_parser """
-#   [
-#     1 # test
-#   ]
-# """, @[1]
+test_parser """
+  [
+    1 # test
+  ]
+""", @[1]
 
-# test_parser """
-#   #
-#   # comment
-#   #
-#   1
-#   #
-# """, 1
+test_parser """
+  #
+  # comment
+  #
+  1
+  #
+""", 1
 
 # test_parser "[a/[1 2]]", proc(r: Value) =
 #   check r.vec[0].csymbol[0] == "a"
@@ -398,34 +398,34 @@ test_parser """
 #   check r.vec[1].vec[0] == 1
 #   check r.vec[1].vec[1] == 2
 
-# test_parser """
-#   #< comment ># 1
-# """, 1
+test_parser """
+  #< comment ># 1
+""", 1
 
-# test_parser """
-#   #< #<< comment >># ># 1
-# """, 1
+test_parser """
+  #< #<< comment >># ># 1
+""", 1
 
-# test_parser """
-#   #<
-#   comment
-#   #># 1
-# """, 1
+test_parser """
+  #<
+  comment
+  #># 1
+""", 1
 
-# test_parser """
-#   #<
-#   comment
-#   #>## 1
-#   2
-# """, 2
+test_parser """
+  #<
+  comment
+  #>## 1
+  2
+""", 2
 
-# test_parser """
-#   #<
-#   #<<
-#   comment
-#   #>>#
-#   #># 1
-# """, 1
+test_parser """
+  #<
+  #<<
+  comment
+  #>>#
+  #># 1
+""", 1
 
 # test_parse_document """
 #   ^name "Test document"

@@ -117,6 +117,7 @@ type
     PeToken           # A symbol or complex symbol that can be interpreted by the handler.
     PeQuote
     PeUnquote
+    PeStartDecorator
     PeComment         # Will not be emitted unless the parser is configured to do so.
     PeDocumentComment # Will not be emitted unless the parser is configured to do so.
     PeError
@@ -187,6 +188,9 @@ type
 
     HsQuote
     HsUnquote
+
+    HsDecoratorStart
+    HsDecoratorFirst
 
   HandlerContext* = ref object
     state*: HandlerState
@@ -392,6 +396,8 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
     self.next.handle(event)
   of PeQuote, PeUnquote:
     self.next.handle(event)
+  of PeStartDecorator:
+    self.next.handle(event)
   else:
     todo($event)
 
@@ -475,6 +481,17 @@ proc post_value_callback(self: FirstValueHandler, event: ParseEvent) {.inline.} 
       else:
         discard self.stack.pop()
         last = self.stack[^1]
+    of HsDecoratorStart:
+      last.state = HsDecoratorFirst
+      last.value = new_gene_gene(event.value)
+    of HsDecoratorFirst:
+      last.value.gene_children.add(event.value)
+      case self.stack.len:
+      of 1:
+        self.parser.done = true
+      else:
+        discard self.stack.pop()
+        last = self.stack[^1]
     else:
       todo($last.state)
 
@@ -552,6 +569,9 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
     self.stack.add(context)
   of PeUnquote:
     var context = HandlerContext(state: HsUnquote)
+    self.stack.add(context)
+  of PeStartDecorator:
+    var context = HandlerContext(state: HsDecoratorStart)
     self.stack.add(context)
   of PeEnd:
     discard
@@ -1838,8 +1858,11 @@ proc advance*(self: var Parser) =
       of '[':
         inc(self.bufpos)
         self.handler.handle(ParseEvent(kind: PeStartSet))
+      of '@':
+        inc(self.bufpos)
+        self.handler.handle(ParseEvent(kind: PeStartDecorator))
       else:
-        todo("#" & $ch)
+        todo("#" & $ch2)
 
     of ':':
       inc(self.bufpos)
