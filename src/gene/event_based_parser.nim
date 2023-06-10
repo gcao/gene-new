@@ -319,6 +319,14 @@ proc parse_key(key: string): KeyParsed =
     inc i
   result.keys.add(s)
 
+proc merge_maps(first, second: Value) =
+  if first.kind != VkMap or second.kind != VkMap:
+    raise newException(ValueError, "merge_map: both values must be maps")
+  for k, v in second.map:
+    if first.map.has_key(k):
+      raise newException(ValueError, "merge_map: key already exists: " & $k)
+    first.map[k] = v
+
 # TODO: the dynamic dispatch may be slow, consider add handle as a property to ParseHandler.
 
 # The handler can consume the event and generate zero or more events to be processed
@@ -374,24 +382,52 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
   else:
     todo($event)
 
+template post_value_callback(self: FirstValueHandler) =
+  if self.stack.len == 0:
+    self.parser.done = true
+    var context = HandlerContext(state: HsDefault, value: event.value)
+    self.stack.add(context)
+  else:
+    var last = self.stack[^1]
+    case last.state:
+    of HsVectorStart:
+      last.value.vec.add(event.value)
+    of HsMapKey:
+      last.state = HsMapValue
+      if last.value.map.has_key(last.key):
+        var found = last.value.map[last.key]
+        if found.kind == VkMap and event.value.kind == VkMap:
+          merge_maps(found, event.value)
+        else:
+          not_allowed("Duplicate key: " & $last.key)
+      else:
+        last.value.map[last.key] = event.value
+    of HsMapShortcut:
+      while true:
+        var value = last.value
+        value.map[last.key] = event.value
+        discard self.stack.pop()
+        last = self.stack[^1]
+        case last.state
+        of HsMapKey:
+          last.state = HsMapValue
+          if last.value.map.has_key(last.key):
+            merge_maps(last.value.map[last.key], value)
+          else:
+            last.value.map[last.key] = value
+          break
+        of HsMapShortcut:
+          discard
+        else:
+          todo($last.state)
+    else:
+      todo($last.state)
+
 method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} =
   # echo "FirstValueHandler " & $event & " " & $self.stack.len
   case event.kind:
   of PeValue:
-    if self.stack.len == 0:
-      self.parser.done = true
-      var context = HandlerContext(state: HsDefault, value: event.value)
-      self.stack.add(context)
-    else:
-      var last = self.stack[^1]
-      case last.state:
-      of HsVectorStart:
-        last.value.vec.add(event.value)
-      of HsMapKey:
-        last.state = HsMapValue
-        last.value.map[last.key] = event.value
-      else:
-        todo($last.state)
+    self.post_value_callback()
   of PeStartVector:
     let value = new_gene_vec()
     # TODO: add value to parent context
@@ -406,6 +442,15 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
     let value = new_gene_map()
     # TODO: add value to parent context
     var context = HandlerContext(state: HsMapStart, value: value)
+    self.stack.add(context)
+  of PeMapShortcut:
+    let value = new_gene_map()
+    # TODO: add value to parent context
+    var context = HandlerContext(
+      state: HsMapShortcut,
+      value: value,
+      key: event.key,
+    )
     self.stack.add(context)
   of PeEndMap:
     if self.stack.len == 1:

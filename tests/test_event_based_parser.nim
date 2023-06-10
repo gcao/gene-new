@@ -123,15 +123,16 @@ test_parser "10:11:12", new_gene_time(10, 11, 12)
 
 test_parser "{}", Table[string, Value]()
 test_parser "{^a 1}", {"a": new_gene_int(1)}.toTable
+test_parser "{^a 1 ^b 2}", {"a": new_gene_int(1), "b": new_gene_int(2)}.toTable
 
-# test_parser "{^a^b 1}", {"a": new_gene_map({"b": new_gene_int(1)}.toTable)}.toTable
-# test_parser "{^a^^b}", {"a": new_gene_map({"b": new_gene_bool(true)}.toTable)}.toTable
-# test_parser "{^a^!b}", {"a": new_gene_map({"b": new_gene_bool(false)}.toTable)}.toTable
-# test_parser "{^a^b 1 ^a^c 2}", {"a": new_gene_map({"b": new_gene_int(1), "c": new_gene_int(2)}.toTable)}.toTable
-# test_parser "{^a^^b ^a^c 2}", {"a": new_gene_map({"b": new_gene_bool(true), "c": new_gene_int(2)}.toTable)}.toTable
-# # test_parser "{^a^b 1 ^a {^c 2}}", {"a": new_gene_map({"b": new_gene_int(1), "c": new_gene_int(2)}.toTable)}.toTable
-# test_parser_error "{^a^b 1 ^a 2}"
-# test_parser_error "{^a^b 1 ^a {^c 2}}"
+test_parser "{^a^b 1}", {"a": new_gene_map({"b": new_gene_int(1)}.toTable)}.toTable
+test_parser "{^a^^b}", {"a": new_gene_map({"b": new_gene_bool(true)}.toTable)}.toTable
+test_parser "{^a^!b}", {"a": new_gene_map({"b": Value(kind: VkNil)}.toTable)}.toTable
+test_parser "{^a^b 1 ^a^c 2}", {"a": new_gene_map({"b": new_gene_int(1), "c": new_gene_int(2)}.toTable)}.toTable
+test_parser "{^a^^b ^a^c 2}", {"a": new_gene_map({"b": new_gene_bool(true), "c": new_gene_int(2)}.toTable)}.toTable
+# test_parser "{^a^b 1 ^a {^c 2}}", {"a": new_gene_map({"b": new_gene_int(1), "c": new_gene_int(2)}.toTable)}.toTable
+test_parser_error "{^a^b 1 ^a 2}"
+test_parser_error "{^a^b 1 ^a {^c 2}}"
 
 # test_parser "(_ ^a^b 1)", proc(r: Value) =
 #   assert r.gene_props["a"].map["b"] == 1
