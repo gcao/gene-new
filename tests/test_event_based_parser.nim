@@ -345,18 +345,18 @@ test_parser """
   check r.gene_children[0].gene_type.str == "g"
   check r.gene_children[0].gene_children[0].str == "a"
 
-# # test_parser """
-# #   #*f
-# # """, proc(r: Value) =
-# #   check r.kind == VkGene
-# #   check r.gene_type.str == "f"
-
 # test_parser """
-#   {^p #@f a}
+#   #*f
 # """, proc(r: Value) =
-#   check r.map["p"].kind == VkGene
-#   check r.map["p"].gene_type.str == "f"
-#   check r.map["p"].gene_children[0].str == "a"
+#   check r.kind == VkGene
+#   check r.gene_type.str == "f"
+
+test_parser """
+  {^p #@f a}
+""", proc(r: Value) =
+  check r.map["p"].kind == VkGene
+  check r.map["p"].gene_type.str == "f"
+  check r.map["p"].gene_children[0].str == "a"
 
 # test_read_all """
 #   1 # comment

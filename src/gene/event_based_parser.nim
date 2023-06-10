@@ -401,6 +401,102 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
   else:
     todo($event)
 
+proc unwrap(self: FirstValueHandler) {.inline.} =
+  case self.stack.len:
+  of 0:
+    raise newException(ValueError, "unwrap: no value")
+  of 1:
+    self.parser.done = true
+  else:
+    let value = self.stack.pop().value
+    var last = self.stack[^1]
+    case last.state:
+    of HsVectorStart:
+      last.value.vec.add(value)
+    of HsSetStart:
+      last.value.set.incl(value)
+    of HsMapKey:
+      last.state = HsMapValue
+      if last.value.map.has_key(last.key):
+        var found = last.value.map[last.key]
+        if found.kind == VkMap and value.kind == VkMap:
+          merge_maps(found, value)
+        else:
+          not_allowed("Duplicate key: " & $last.key)
+      else:
+        last.value.map[last.key] = value
+    of HsMapShortcut:
+      while true:
+        var value = last.value
+        value.map[last.key] = value
+        discard self.stack.pop()
+        last = self.stack[^1]
+        case last.state
+        of HsMapKey:
+          last.state = HsMapValue
+          if last.value.map.has_key(last.key):
+            merge_maps(last.value.map[last.key], value)
+          else:
+            last.value.map[last.key] = value
+          break
+        of HsGeneTypePropKey:
+          last.state = HsGeneTypePropValue
+          if last.value.gene_props.has_key(last.key):
+            merge_maps(last.value.gene_props[last.key], value)
+          else:
+            last.value.gene_props[last.key] = value
+          break
+        of HsMapShortcut:
+          discard
+        else:
+          todo($last.state)
+    of HsGeneStart:
+      last.state = HsGeneType
+      last.value.gene_type = value
+    of HsGeneType, HsGeneTypeChild:
+      last.state = HsGeneTypeChild
+      last.value.gene_children.add(value)
+    of HsGeneTypePropKey:
+      last.state = HsGeneTypePropValue
+      last.value.gene_props[last.key] = value
+    of HsGeneTypeChildPropKey:
+      last.state = HsGeneTypeChildPropValue
+      last.value.gene_props[last.key] = value
+    of HsGeneTypePropValue, HsGeneTypePropChild, HsGeneTypeChildPropValue:
+      last.state = HsGeneTypePropChild
+      last.value.gene_children.add(value)
+    of HsQuote:
+      case self.stack.len:
+      of 1:
+        self.parser.done = true
+        last.state = HsDefault
+        last.value = Value(kind: VkQuote, quote: value)
+      else:
+        discard self.stack.pop()
+        last = self.stack[^1]
+    of HsUnquote:
+      case self.stack.len:
+      of 1:
+        self.parser.done = true
+        last.state = HsDefault
+        last.value = Value(kind: VkUnquote, unquote: value)
+      else:
+        discard self.stack.pop()
+        last = self.stack[^1]
+    of HsDecoratorStart:
+      last.state = HsDecoratorFirst
+      last.value = new_gene_gene(value)
+    of HsDecoratorFirst:
+      last.value.gene_children.add(value)
+      case self.stack.len:
+      of 1:
+        self.parser.done = true
+      else:
+        discard self.stack.pop()
+        last = self.stack[^1]
+    else:
+      todo($last.state)
+
 proc post_value_callback(self: FirstValueHandler, event: ParseEvent) {.inline.} =
   if self.stack.len == 0:
     self.parser.done = true
@@ -486,12 +582,7 @@ proc post_value_callback(self: FirstValueHandler, event: ParseEvent) {.inline.} 
       last.value = new_gene_gene(event.value)
     of HsDecoratorFirst:
       last.value.gene_children.add(event.value)
-      case self.stack.len:
-      of 1:
-        self.parser.done = true
-      else:
-        discard self.stack.pop()
-        last = self.stack[^1]
+      self.unwrap()
     else:
       todo($last.state)
 
