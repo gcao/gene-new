@@ -2018,6 +2018,12 @@ proc `$`*(node: Value): string {.noSideEffect.} =
     result = "["
     result &= node.vec.join(" ")
     result &= "]"
+  of VkSet:
+    result = "#["
+    for item in node.set.items:
+      result &= $item
+      result &= " "
+    result &= "]"
   of VkStream:
     result = "(#Stream "
     result &= node.stream.join(" ")

@@ -1,4 +1,4 @@
-import unittest, options, tables, unicode, times, nre
+import unittest, options, tables, sets, unicode, times, nre
 
 import gene/types
 import gene/event_based_parser as parser
@@ -134,20 +134,22 @@ test_parser "{^a^^b ^a^c 2}", {"a": new_gene_map({"b": new_gene_bool(true), "c":
 test_parser_error "{^a^b 1 ^a 2}"
 test_parser_error "{^a^b 1 ^a {^c 2}}"
 
-# test_parser "(_ ^a^b 1)", proc(r: value) =
-#   assert r.gene_props["a"].map["b"] == 1
-# test_parser "(_ ^a^^b 1)", proc(r: value) =
-#   assert r.gene_props["a"].map["b"] == new_gene_bool(true)
-#   assert r.gene_children[0] == 1
+test_parser "(_ ^a^b 1)", proc(r: Value) =
+  assert r.gene_props["a"].map["b"] == 1
+test_parser "(_ ^a^^b 1)", proc(r: Value) =
+  assert r.gene_props["a"].map["b"] == new_gene_bool(true)
+  assert r.gene_children[0] == 1
 
 test_parser "[]", new_gene_vec()
 test_parser "[,]", new_gene_vec()
 test_parser "[1 2]", new_gene_vec(new_gene_int(1), new_gene_int(2))
 test_parser "[1, 2]", new_gene_vec(new_gene_int(1), new_gene_int(2))
 
-# test_parser "#[]", new_gene_set()
+test_parser "#[]", new_gene_set()
 # # This should work
-# # test_parser "#[1 2]", new_gene_set(new_gene_int(1), new_gene_int(2))
+# test_parser "#[1 2]", proc(r: Value) =
+#   assert r.set.contains(new_gene_int(1))
+#   assert r.set.contains(new_gene_int(2))
 
 test_parser ",a", new_gene_symbol("a")
 test_parser "a,", new_gene_symbol("a")
@@ -230,90 +232,91 @@ test_parser "1/2", proc(r: Value) =
   check r.ratio_num == BiggestInt(1)
   check r.ratio_denom == BiggestInt(2)
 
-# test_parser "{^ratio -1/2}", proc(r: Value) =
-#   check r.kind == VkMap
-#   check r.map["ratio"] == new_gene_ratio(-1, 2)
+test_parser "{^ratio -1/2}", proc(r: Value) =
+  check r.kind == VkMap
+  check r.map["ratio"] == new_gene_ratio(-1, 2)
 
-# test_parser_error """
-#   # Gene properties should not be mixed with children like below
-#   (a ^b b c ^d d) # b & d are properties but are separated by c
-# """
+test_parser_error """
+  # Gene properties should not be mixed with children like below
+  (a ^b b c ^d d) # b & d are properties but are separated by c
+"""
 
-# test_parser_error "{^ratio 1/-2}"
+test_parser_error "{^ratio 1/-2}"
 
-# test_parser "0!11", proc(r: Value) =
-#   check r.kind == VkByte
-#   check r.byte_bit_size == 2
-#   check r.byte == 3
+test_parser "0!11", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 2
+  check r.byte == 3
 
-# test_parser "0!11110000", proc(r: Value) =
-#   check r.kind == VkByte
-#   check r.byte_bit_size == 8
-#   check r.byte == 240
+test_parser "0!11110000", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 240
 
-# test_parser "0!1111~ 0000", proc(r: Value) =
-#   check r.kind == VkByte
-#   check r.byte_bit_size == 8
-#   check r.byte == 240
+test_parser "0!1111~ 0000", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 240
 
-# test_parser "0!000011110000", proc(r: Value) =
-#   check r.kind == VkBin
-#   check r.bin_bit_size == 12
-#   check r.bin == @[uint8(15), uint8(0)]
+test_parser "0!000011110000", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 12
+  check r.bin == @[uint8(15), uint8(0)]
 
-# test_parser "0*a0", proc(r: Value) =
-#   check r.kind == VkByte
-#   check r.byte_bit_size == 8
-#   check r.byte == 160
+test_parser "0*a0", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 160
 
-# test_parser "0*A0", proc(r: Value) =
-#   check r.kind == VkByte
-#   check r.byte_bit_size == 8
-#   check r.byte == 160
+test_parser "0*A0", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 160
 
-# test_parser "0*a003", proc(r: Value) =
-#   check r.kind == VkBin
-#   check r.bin_bit_size == 16
-#   check r.bin == @[uint8(160), uint8(3)]
+test_parser "0*a003", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 16
+  check r.bin == @[uint8(160), uint8(3)]
 
-# test_parser "0*a0~ 03", proc(r: Value) =
-#   check r.kind == VkBin
-#   check r.bin_bit_size == 16
-#   check r.bin == @[uint8(160), uint8(3)]
+test_parser "0*a0~ 03", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 16
+  check r.bin == @[uint8(160), uint8(3)]
 
-# test_parser "0#ABCD", proc(r: Value) =
-#   check r.kind == VkBin
-#   check r.bin_bit_size == 24
-#   check r.bin == @[uint8(0), uint8(16), uint8(131)]
+test_parser "0#ABCD", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 24
+  check r.bin == @[uint8(0), uint8(16), uint8(131)]
 
-# test_parser "0#AB~ CD", proc(r: Value) =
-#   check r.kind == VkBin
-#   check r.bin_bit_size == 24
-#   check r.bin == @[uint8(0), uint8(16), uint8(131)]
+test_parser "0#AB~ CD", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 24
+  check r.bin == @[uint8(0), uint8(16), uint8(131)]
 
-# # Unit conversion
+# Unit conversion
+test_parser """
+  1m # 1m = 1 minute = 60 seconds (1 = 1s = 1 second)
+""", 60
+test_parser """
+  1s
+""", 1
+test_parser """
+  1ms
+""", 0.001
 # test_parser """
-#   1m # 1m = 1 minute = 60 seconds (1 = 1s = 1 second)
-# """, 60
-# test_parser """
-#   1s
+#   (#Unit "m" 1)  # 1m = 1 meter (meter is defined as the default unit for length)
+#   1m
 # """, 1
+test_parser """
+  1m30s
+""", 90
+test_parser """
+  1s500ms
+""", 1.5
 # test_parser """
-#   1ms
-# """, 0.001
-# # test_parser """
-# #   (#Unit "m" 1)  # 1m = 1 meter (meter is defined as the default unit for length)
-# #   1m
-# # """, 1
-# test_parser """
-#   1m30s
+#   1m30
 # """, 90
-# test_parser """
-#   1s500ms
-# """, 1.5
-# # test_parser """
-# #   1m30
-# # """, 90
+
 # # Support decorator from the parser. It can appear anywhere except property names.
 # # Pros:
 # #   Easier to write

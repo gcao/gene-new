@@ -181,6 +181,10 @@ type
     HsVectorEnd
     HsVectorValue
 
+    HsSetStart
+    HsSetEnd
+    HsSetValue
+
     HsQuote
     HsUnquote
 
@@ -382,6 +386,10 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
   of PeEndGene:
     discard self.stack.pop()
     self.next.handle(event)
+  of PeStartSet:
+    var context = HandlerContext(state: HsSetStart)
+    self.stack.add(context)
+    self.next.handle(event)
   of PeQuote, PeUnquote:
     self.next.handle(event)
   else:
@@ -397,6 +405,8 @@ proc post_value_callback(self: FirstValueHandler, event: ParseEvent) {.inline.} 
     case last.state:
     of HsVectorStart:
       last.value.vec.add(event.value)
+    of HsSetStart:
+      last.value.set.incl(event.value)
     of HsMapKey:
       last.state = HsMapValue
       if last.value.map.has_key(last.key):
@@ -420,6 +430,13 @@ proc post_value_callback(self: FirstValueHandler, event: ParseEvent) {.inline.} 
             merge_maps(last.value.map[last.key], value)
           else:
             last.value.map[last.key] = value
+          break
+        of HsGeneTypePropKey:
+          last.state = HsGeneTypePropValue
+          if last.value.gene_props.has_key(last.key):
+            merge_maps(last.value.gene_props[last.key], value)
+          else:
+            last.value.gene_props[last.key] = value
           break
         of HsMapShortcut:
           discard
@@ -470,6 +487,11 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
     let value = new_gene_vec()
     # TODO: add value to parent context
     var context = HandlerContext(state: HsVectorStart, value: value)
+    self.stack.add(context)
+  of PeStartSet:
+    let value = new_gene_set()
+    # TODO: add value to parent context
+    var context = HandlerContext(state: HsSetStart, value: value)
     self.stack.add(context)
   of PeEndVectorOrSet:
     if self.stack.len == 1:
@@ -1813,6 +1835,9 @@ proc advance*(self: var Parser) =
           value: self.read_regex(),
         )
         self.handler.handle(event)
+      of '[':
+        inc(self.bufpos)
+        self.handler.handle(ParseEvent(kind: PeStartSet))
       else:
         todo("#" & $ch)
 
