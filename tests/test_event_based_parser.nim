@@ -39,6 +39,12 @@ proc test_parser*(code: string, result: Value) =
   test "Parser / read: " & code:
     check read(code) == result
 
+proc test_parser*(code: string, callback: proc(result: Value)) =
+  var code = cleanup(code)
+  test "Parser / read: " & code:
+    var parser = new_parser()
+    callback parser.read(code)
+
 test_parser "nil", Value(kind: VkNil)
 test_parser "true", true
 test_parser "false", false
@@ -192,9 +198,9 @@ test_parser "[1, 2]", new_gene_vec(new_gene_int(1), new_gene_int(2))
 #   check r.gene_props == {"a": Value(kind: VkNil)}.toTable()
 #   check r.gene_children == @[2, 3]
 
-# test_parser "{^^x ^!y ^^z}", proc(r: Value) =
-#   check r.kind == VkMap
-#   check r.map == {"x": new_gene_bool(true), "y": Value(kind: VkNil), "z": new_gene_bool(true)}.toTable
+test_parser "{^^x ^!y ^^z}", proc(r: Value) =
+  check r.kind == VkMap
+  check r.map == {"x": new_gene_bool(true), "y": Value(kind: VkNil), "z": new_gene_bool(true)}.toTable
 
 # test_parser ":foo", proc(r: Value) =
 #   check r.kind == VkQuote

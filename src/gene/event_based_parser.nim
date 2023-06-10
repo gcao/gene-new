@@ -102,16 +102,17 @@ type
     PeEnd             # EOF
     PeStartDocument
     PeEndDocument
-    PeStartVector
-    PeStartSet
-    PeEndVectorOrSet
+    PeStartVector     # [
+    PeStartSet        # #[
+    PeEndVectorOrSet  # ]
     PeStartMap
     PeEndMap
+    PeMapShortcut
     PeStartGene
     PeEndGene
     PeStartStream
     PeEndStream
-    PeKey             # ^x
+    PeKey
     PeValue
     PeToken           # A symbol or complex symbol that can be interpreted by the handler.
     PeComment         # Will not be emitted unless the parser is configured to do so.
@@ -127,7 +128,7 @@ type
     case kind*: ParseEventKind
     of PeValue:
       value*: Value
-    of PeKey:
+    of PeKey, PeMapShortcut:
       key*: string
     of PeToken:
       token*: string
@@ -147,10 +148,6 @@ type
   ParseHandler* = ref object of RootObj
     parser*: Parser
     next*: ParseHandler
-
-  # Handle standard Gene parsing, raise errors if the input is not valid Gene data.
-  DefaultHandler* = ref object of ParseHandler
-    stack*: seq[Value]
 
   HandlerState* = enum
     HsDefault
@@ -176,6 +173,8 @@ type
     HsMapValue
     HsMapEnd
 
+    HsMapShortcut
+
     HsVectorStart
     HsVectorEnd
     HsVectorValue
@@ -184,6 +183,10 @@ type
     state*: HandlerState
     key*: string
     value*: Value
+
+  # Handle standard Gene parsing, raise errors if the input is not valid Gene data.
+  DefaultHandler* = ref object of ParseHandler
+    stack*: seq[HandlerContext]
 
   # For retrieving the first value from the parser
   FirstValueHandler* = ref object of ParseHandler
@@ -280,6 +283,34 @@ proc `unit`*(self: ParseOptions, name: string): Value =
 proc `$`*(self: ParseEvent): string =
   result = $self.kind
 
+type
+  KeyParsed* = object
+    keys*: seq[string]
+    value*: Value
+
+# TODO: handle all cases
+# @arg key: the key to be parsed, e.g. "^a", "^^a", "^!a", "^a^b", "^a^^b", "^a^!b", "^a^b^^c" etc
+proc parse_key(key: string): KeyParsed =
+  var i = 0
+  var s = ""
+  while i < key.len:
+    let ch = key[i]
+    case ch:
+    of '^':
+      if s.len > 0:
+        result.keys.add(s)
+        s = ""
+      if key[i+1] == '^':
+        result.value = true
+        inc i
+      elif key[i+1] == '!':
+        result.value = Value(kind: VkNil)
+        inc i
+    else:
+      s.add(ch)
+    inc i
+  result.keys.add(s)
+
 # TODO: the dynamic dispatch may be slow, consider add handle as a property to ParseHandler.
 
 # The handler can consume the event and generate zero or more events to be processed
@@ -290,23 +321,37 @@ method handle*(self: ParseHandler, event: ParseEvent) {.base, locks: "unknown".}
 method handle*(self: DefaultHandler, event: ParseEvent) =
   case event.kind:
   of PeValue, PeEnd:
-    self.next.handle(event)
+    if self.stack.len > 0 and self.stack[^1].state == HsMapKey:
+      let context = self.stack[^1]
+      context.state = HsMapValue
+    else:
+      self.next.handle(event)
   of PeToken:
-    let value = interpret_token(event.token)
-    let event = ParseEvent(kind: PeValue, value: value)
-    self.next.handle(event)
+    if event.token[0] == '^':
+      let parsed = parse_key(event.token)
+      self.next.handle(ParseEvent(kind: PeKey, key: parsed.keys[0]))
+      if parsed.keys.len > 1:
+        for key in parsed.keys[1..^1]:
+          self.next.handle(ParseEvent(kind: PeMapShortcut, key: key))
+      if not parsed.value.is_nil:
+        self.next.handle(ParseEvent(kind: PeValue, value: parsed.value))
+    else:
+      let value = interpret_token(event.token)
+      let event = ParseEvent(kind: PeValue, value: value)
+      self.next.handle(event)
   of PeStartVector:
-    # var context = HandlerContext(state: HsVectorStart, value: new_gene_vec())
-    # self.stack.add(context)
+    var context = HandlerContext(state: HsVectorStart)
+    self.stack.add(context)
     self.next.handle(event)
   of PeEndVectorOrSet:
-    # self.stack.pop()
+    discard self.stack.pop()
     self.next.handle(event)
   of PeStartMap:
+    var context = HandlerContext(state: HsMapStart)
+    self.stack.add(context)
     self.next.handle(event)
   of PeEndMap:
-    self.next.handle(event)
-  of PeKey:
+    discard self.stack.pop()
     self.next.handle(event)
   of PeStartGene:
     # self.stack.add(new_gene_gene())
@@ -334,6 +379,7 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
       of HsVectorStart:
         last.value.vec.add(event.value)
       of HsMapKey:
+        last.state = HsMapValue
         last.value.map[last.key] = event.value
       else:
         todo($last.state)
@@ -359,7 +405,7 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
       discard self.stack.pop()
   of PeKey:
     var context = self.stack[^1]
-    context.key = event.key[1..^1]
+    context.key = event.key
     case context.state:
     of HsMapStart, HsMapValue:
       context.state = HsMapKey
@@ -1642,8 +1688,8 @@ proc advance*(self: var Parser) =
 
     of '^':
       var event = ParseEvent(
-        kind: PeKey,
-        key: self.read_token(false),
+        kind: PeToken,
+        token: self.read_token(false),
       )
       self.handler.handle(event)
 
