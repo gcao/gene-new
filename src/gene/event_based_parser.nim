@@ -115,6 +115,8 @@ type
     PeKey
     PeValue
     PeToken           # A symbol or complex symbol that can be interpreted by the handler.
+    PeQuote
+    PeUnquote
     PeComment         # Will not be emitted unless the parser is configured to do so.
     PeDocumentComment # Will not be emitted unless the parser is configured to do so.
     PeError
@@ -178,6 +180,9 @@ type
     HsVectorStart
     HsVectorEnd
     HsVectorValue
+
+    HsQuote
+    HsUnquote
 
   HandlerContext* = ref object
     state*: HandlerState
@@ -377,10 +382,12 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
   of PeEndGene:
     discard self.stack.pop()
     self.next.handle(event)
+  of PeQuote, PeUnquote:
+    self.next.handle(event)
   else:
     todo($event)
 
-template post_value_callback(self: FirstValueHandler) =
+proc post_value_callback(self: FirstValueHandler, event: ParseEvent) {.inline.} =
   if self.stack.len == 0:
     self.parser.done = true
     var context = HandlerContext(state: HsDefault, value: event.value)
@@ -433,6 +440,24 @@ template post_value_callback(self: FirstValueHandler) =
     of HsGeneTypePropValue, HsGeneTypePropChild, HsGeneTypeChildPropValue:
       last.state = HsGeneTypePropChild
       last.value.gene_children.add(event.value)
+    of HsQuote:
+      case self.stack.len:
+      of 1:
+        self.parser.done = true
+        last.state = HsDefault
+        last.value = Value(kind: VkQuote, quote: event.value)
+      else:
+        discard self.stack.pop()
+        last = self.stack[^1]
+    of HsUnquote:
+      case self.stack.len:
+      of 1:
+        self.parser.done = true
+        last.state = HsDefault
+        last.value = Value(kind: VkUnquote, unquote: event.value)
+      else:
+        discard self.stack.pop()
+        last = self.stack[^1]
     else:
       todo($last.state)
 
@@ -440,7 +465,7 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
   # echo "FirstValueHandler " & $event & " " & $self.stack.len
   case event.kind:
   of PeValue:
-    self.post_value_callback()
+    self.post_value_callback(event)
   of PeStartVector:
     let value = new_gene_vec()
     # TODO: add value to parent context
@@ -500,6 +525,12 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
         last.state = HsGeneTypeChild
       else:
         not_allowed($event)
+  of PeQuote:
+    var context = HandlerContext(state: HsQuote)
+    self.stack.add(context)
+  of PeUnquote:
+    var context = HandlerContext(state: HsUnquote)
+    self.stack.add(context)
   of PeEnd:
     discard
   else:
@@ -1770,6 +1801,14 @@ proc advance*(self: var Parser) =
         token: self.read_token(false),
       )
       self.handler.handle(event)
+
+    of ':':
+      inc(self.bufpos)
+      self.handler.handle(ParseEvent(kind: PeQuote))
+    of '%':
+      inc(self.bufpos)
+      self.handler.handle(ParseEvent(kind: PeUnquote))
+
 
     elif is_macro(ch):
       todo()

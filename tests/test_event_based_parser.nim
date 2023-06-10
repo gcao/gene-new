@@ -189,46 +189,46 @@ test_parser "(1 2 ^a 3 4)", proc(r: Value) =
   check r.gene_props == {"a": new_gene_int(3)}.toTable
   check r.gene_children == @[2, 4]
 
-# test_parser "(1 ^^a 2 3)", proc(r: Value) =
-#   check r.gene_type == 1
-#   check r.gene_props == {"a": new_gene_bool(true)}.toTable
-#   check r.gene_children == @[2, 3]
+test_parser "(1 ^^a 2 3)", proc(r: Value) =
+  check r.gene_type == 1
+  check r.gene_props == {"a": new_gene_bool(true)}.toTable
+  check r.gene_children == @[2, 3]
 
-# test_parser "(1 ^!a 2 3)", proc(r: Value) =
-#   check r.gene_type == 1
-#   check r.gene_props == {"a": Value(kind: VkNil)}.toTable()
-#   check r.gene_children == @[2, 3]
+test_parser "(1 ^!a 2 3)", proc(r: Value) =
+  check r.gene_type == 1
+  check r.gene_props == {"a": Value(kind: VkNil)}.toTable()
+  check r.gene_children == @[2, 3]
 
 test_parser "{^^x ^!y ^^z}", proc(r: Value) =
   check r.kind == VkMap
   check r.map == {"x": new_gene_bool(true), "y": Value(kind: VkNil), "z": new_gene_bool(true)}.toTable
 
-# test_parser ":foo", proc(r: Value) =
-#   check r.kind == VkQuote
-#   check r.quote == new_gene_symbol("foo")
+test_parser ":foo", proc(r: Value) =
+  check r.kind == VkQuote
+  check r.quote == new_gene_symbol("foo")
 
-# test_parser "%foo", proc(r: Value) =
-#   check r.kind == VkUnquote
-#   check r.unquote == new_gene_symbol("foo")
-#   check r.unquote_discard == false
+test_parser "%foo", proc(r: Value) =
+  check r.kind == VkUnquote
+  check r.unquote == new_gene_symbol("foo")
+  check r.unquote_discard == false
 
 # test_parser "%_foo", proc(r: Value) =
 #   check r.kind == VkUnquote
 #   check r.unquote == new_gene_symbol("foo")
 #   check r.unquote_discard == true
 
-# # TODO: %_ is not allowed on gene type and property value
-# # (%_foo)         should throw error
-# # (a ^name %_foo) should throw error
-# # {^name %_foo}   should throw error
+# TODO: %_ is not allowed on gene type and property value
+# (%_foo)         should throw error
+# (a ^name %_foo) should throw error
+# {^name %_foo}   should throw error
 
-# # test_parser "#_ [foo bar]", proc(r: Value) =
-# #   check r == nil
+# test_parser "#_ [foo bar]", proc(r: Value) =
+#   check r == nil
 
-# test_parser "1/2", proc(r: Value) =
-#   check r.kind == VkRatio
-#   check r.ratio_num == BiggestInt(1)
-#   check r.ratio_denom == BiggestInt(2)
+test_parser "1/2", proc(r: Value) =
+  check r.kind == VkRatio
+  check r.ratio_num == BiggestInt(1)
+  check r.ratio_denom == BiggestInt(2)
 
 # test_parser "{^ratio -1/2}", proc(r: Value) =
 #   check r.kind == VkMap
