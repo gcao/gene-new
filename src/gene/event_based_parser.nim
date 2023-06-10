@@ -1183,7 +1183,7 @@ proc read_regex(self: var Parser): Value =
   var flags: set[RegexFlag]
   while true:
     case self.buf[pos]
-    of '\0':
+    of EndOfFile:
       self.error = ErrRegexEndExpected
     of '/':
       inc(pos)
@@ -1801,6 +1801,20 @@ proc advance*(self: var Parser) =
         token: self.read_token(false),
       )
       self.handler.handle(event)
+
+    of '#':
+      inc(self.bufpos)
+      let ch2 = self.buf[self.bufpos]
+      case ch2:
+      of '/':
+        inc(self.bufpos)
+        var event = ParseEvent(
+          kind: PeValue,
+          value: self.read_regex(),
+        )
+        self.handler.handle(event)
+      else:
+        todo("#" & $ch)
 
     of ':':
       inc(self.bufpos)

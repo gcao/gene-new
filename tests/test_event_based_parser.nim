@@ -95,26 +95,26 @@ test_parser "/A", new_gene_complex_symbol(@["", "A"])
 test_parser "symbol-👋", new_gene_symbol("symbol-👋")
 test_parser "+foo+", new_gene_symbol("+foo+")
 
-# test_parser "#/b/", proc(r: Value) =
-#   check r.kind == VkRegex
-#   check "ab".find(r.regex).get().captures[-1] == "b"
-#   check "AB".find(r.regex).is_none()
+test_parser "#/b/", proc(r: Value) =
+  check r.kind == VkRegex
+  check "ab".find(r.regex).get().captures[-1] == "b"
+  check "AB".find(r.regex).is_none()
 
-# test_parser "#/(a|b)/", proc(r: Value) =
-#   check r.kind == VkRegex
-#   check "ab".find(r.regex).get().captures[-1] == "a"
-#   check "AB".find(r.regex).is_none()
+test_parser "#/(a|b)/", proc(r: Value) =
+  check r.kind == VkRegex
+  check "ab".find(r.regex).get().captures[-1] == "a"
+  check "AB".find(r.regex).is_none()
 
-# test_parser "#/a\\/b/", proc(r: Value) =
-#   check r.kind == VkRegex
-#   check "a/b".find(r.regex).get().captures[-1] == "a/b"
+test_parser "#/a\\/b/", proc(r: Value) =
+  check r.kind == VkRegex
+  check "a/b".find(r.regex).get().captures[-1] == "a/b"
 
-# # i: ignore case
-# # m: multi-line mode, ^ and $ matches beginning and end of each line
-# test_parser "#/b/i", proc(r: Value) =
-#   check r.kind == VkRegex
-#   check "ab".find(r.regex).get().captures[-1] == "b"
-#   check "AB".find(r.regex).get().captures[-1] == "B"
+# i: ignore case
+# m: multi-line mode, ^ and $ matches beginning and end of each line
+test_parser "#/b/i", proc(r: Value) =
+  check r.kind == VkRegex
+  check "ab".find(r.regex).get().captures[-1] == "b"
+  check "AB".find(r.regex).get().captures[-1] == "B"
 
 test_parser "2020-12-02", new_gene_date(2020, 12, 02)
 test_parser "2020-12-02T10:11:12Z",
@@ -134,9 +134,9 @@ test_parser "{^a^^b ^a^c 2}", {"a": new_gene_map({"b": new_gene_bool(true), "c":
 test_parser_error "{^a^b 1 ^a 2}"
 test_parser_error "{^a^b 1 ^a {^c 2}}"
 
-# test_parser "(_ ^a^b 1)", proc(r: Value) =
+# test_parser "(_ ^a^b 1)", proc(r: value) =
 #   assert r.gene_props["a"].map["b"] == 1
-# test_parser "(_ ^a^^b 1)", proc(r: Value) =
+# test_parser "(_ ^a^^b 1)", proc(r: value) =
 #   assert r.gene_props["a"].map["b"] == new_gene_bool(true)
 #   assert r.gene_children[0] == 1
 
