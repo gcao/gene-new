@@ -154,40 +154,40 @@ test_parser "a,", new_gene_symbol("a")
 
 test_parser "1 2 3", 1
 
-# test_parser "()", proc(r: Value) =
-#   check r.gene_type == nil
-#   check r.gene_props.len == 0
-#   check r.gene_children.len == 0
+test_parser "()", proc(r: Value) =
+  check r.gene_type.kind == VkNil
+  check r.gene_props.len == 0
+  check r.gene_children.len == 0
 
-# test_parser "(())", proc(r: Value) =
-#   check r.kind == VkGene
-#   check r.gene_children.len == 0
-#   check r.gene_type.kind == VkGene
-#   check r.gene_type.gene_children.len == 0
+test_parser "(())", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_children.len == 0
+  check r.gene_type.kind == VkGene
+  check r.gene_type.gene_children.len == 0
 
-# test_parser "(1 2 3)", proc(r: Value) =
-#   check r.gene_type == 1
-#   check r.gene_children == @[2, 3]
+test_parser "(1 2 3)", proc(r: Value) =
+  check r.gene_type == 1
+  check r.gene_children == @[2, 3]
 
-# test_parser "(nil 2 3)", proc(r: Value) =
-#   check r.gene_type.kind == VkNil
-#   check r.gene_children == @[2, 3]
+test_parser "(nil 2 3)", proc(r: Value) =
+  check r.gene_type.kind == VkNil
+  check r.gene_children == @[2, 3]
 
-# test_parser """
-#   (_ 1 "test")
-# """, proc(r: Value) =
-#   check r.gene_children[0] == 1
-#   check r.gene_children[1] == "test"
+test_parser """
+  (_ 1 "test")
+""", proc(r: Value) =
+  check r.gene_children[0] == 1
+  check r.gene_children[1] == "test"
 
-# test_parser "(1 ^a 2 3 4)", proc(r: Value) =
-#   check r.gene_type == 1
-#   check r.gene_props == {"a": new_gene_int(2)}.toTable
-#   check r.gene_children == @[3, 4]
+test_parser "(1 ^a 2 3 4)", proc(r: Value) =
+  check r.gene_type == 1
+  check r.gene_props == {"a": new_gene_int(2)}.toTable
+  check r.gene_children == @[3, 4]
 
-# test_parser "(1 2 ^a 3 4)", proc(r: Value) =
-#   check r.gene_type == 1
-#   check r.gene_props == {"a": new_gene_int(3)}.toTable
-#   check r.gene_children == @[2, 4]
+test_parser "(1 2 ^a 3 4)", proc(r: Value) =
+  check r.gene_type == 1
+  check r.gene_props == {"a": new_gene_int(3)}.toTable
+  check r.gene_children == @[2, 4]
 
 # test_parser "(1 ^^a 2 3)", proc(r: Value) =
 #   check r.gene_type == 1

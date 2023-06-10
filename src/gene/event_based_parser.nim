@@ -371,13 +371,11 @@ method handle*(self: DefaultHandler, event: ParseEvent) =
     discard self.stack.pop()
     self.next.handle(event)
   of PeStartGene:
-    # self.stack.add(new_gene_gene())
+    var context = HandlerContext(state: HsGeneStart)
+    self.stack.add(context)
     self.next.handle(event)
   of PeEndGene:
-    # let value = self.stack.pop()
-    # if not self.next.is_nil:
-    #   let event = ParseEvent(kind: PeValue, value: value)
-    #   self.next.handle(event)
+    discard self.stack.pop()
     self.next.handle(event)
   else:
     todo($event)
@@ -420,6 +418,21 @@ template post_value_callback(self: FirstValueHandler) =
           discard
         else:
           todo($last.state)
+    of HsGeneStart:
+      last.state = HsGeneType
+      last.value.gene_type = event.value
+    of HsGeneType, HsGeneTypeChild:
+      last.state = HsGeneTypeChild
+      last.value.gene_children.add(event.value)
+    of HsGeneTypePropKey:
+      last.state = HsGeneTypePropValue
+      last.value.gene_props[last.key] = event.value
+    of HsGeneTypeChildPropKey:
+      last.state = HsGeneTypeChildPropValue
+      last.value.gene_props[last.key] = event.value
+    of HsGeneTypePropValue, HsGeneTypePropChild, HsGeneTypeChildPropValue:
+      last.state = HsGeneTypePropChild
+      last.value.gene_children.add(event.value)
     else:
       todo($last.state)
 
@@ -463,6 +476,10 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
     case context.state:
     of HsMapStart, HsMapValue:
       context.state = HsMapKey
+    of HsGeneType, HsGeneTypePropValue:
+      context.state = HsGeneTypePropKey
+    of HsGeneTypeChild:
+      context.state = HsGeneTypeChildPropKey
     else:
       todo($context.state)
   of PeStartGene:
@@ -1739,6 +1756,13 @@ proc advance*(self: var Parser) =
     of '}':
       inc(self.bufpos)
       self.handler.handle(ParseEvent(kind: PeEndMap))
+
+    of '(':
+      inc(self.bufpos)
+      self.handler.handle(ParseEvent(kind: PeStartGene))
+    of ')':
+      inc(self.bufpos)
+      self.handler.handle(ParseEvent(kind: PeEndGene))
 
     of '^':
       var event = ParseEvent(
