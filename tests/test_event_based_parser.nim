@@ -1,4 +1,4 @@
-import unittest, options, tables, sets, unicode, times, nre
+import unittest, options, tables, unicode, times, nre
 
 import gene/types
 import gene/event_based_parser as parser
@@ -392,11 +392,11 @@ test_parser """
   #
 """, 1
 
-# test_parser "[a/[1 2]]", proc(r: Value) =
-#   check r.vec[0].csymbol[0] == "a"
-#   check r.vec[0].csymbol[1] == ""
-#   check r.vec[1].vec[0] == 1
-#   check r.vec[1].vec[1] == 2
+test_parser "[a/[1 2]]", proc(r: Value) =
+  check r.vec[0].csymbol[0] == "a"
+  check r.vec[0].csymbol[1] == ""
+  check r.vec[1].vec[0] == 1
+  check r.vec[1].vec[1] == 2
 
 test_parser """
   #< comment ># 1

@@ -602,10 +602,7 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
     var context = HandlerContext(state: HsSetStart, value: value)
     self.stack.add(context)
   of PeEndVectorOrSet:
-    if self.stack.len == 1:
-      self.parser.done = true
-    else:
-      discard self.stack.pop()
+    self.unwrap()
   of PeStartMap:
     let value = new_gene_map()
     # TODO: add value to parent context
@@ -621,10 +618,7 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
     )
     self.stack.add(context)
   of PeEndMap:
-    if self.stack.len == 1:
-      self.parser.done = true
-    else:
-      discard self.stack.pop()
+    self.unwrap()
   of PeKey:
     var context = self.stack[^1]
     context.key = event.key
@@ -641,20 +635,7 @@ method handle*(self: FirstValueHandler, event: ParseEvent) {.locks: "unknown".} 
     var context = HandlerContext(state: HsGeneStart, value: new_gene_gene())
     self.stack.add(context)
   of PeEndGene:
-    if self.stack.len == 1:
-      self.parser.done = true
-    else:
-      let context = self.stack.pop()
-      var last = self.stack[^1]
-      case last.state:
-      of HsGeneStart:
-        last.value.gene_type = context.value
-        last.state = HsGeneType
-      of HsGeneType:
-        last.value.gene_children.add(context.value)
-        last.state = HsGeneTypeChild
-      else:
-        not_allowed($event)
+    self.unwrap()
   of PeQuote:
     var context = HandlerContext(state: HsQuote)
     self.stack.add(context)
