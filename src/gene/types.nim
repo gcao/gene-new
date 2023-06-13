@@ -169,9 +169,7 @@ type
       stream_index*: BiggestInt
       stream_ended*: bool
     of VkDocument:
-      document_type*: Value
-      document_props*: Table[string, Value]
-      document_children*: seq[Value]
+      document*: Document
     of VkFile:
       file_parent*: Value
       file_name*: string

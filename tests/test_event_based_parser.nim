@@ -442,20 +442,20 @@ test_parser """
   #># 1
 """, 1
 
-# test_parse_document """
-#   ^name "Test document"
-#   ^version "0.1.0"
-# """, proc(r: Document) =
-#   check r.props["name"] == "Test document"
-#   check r.props["version"] == "0.1.0"
-#   check r.children.len == 0
+test_parse_document """
+  ^name "Test document"
+  ^version "0.1.0"
+""", proc(r: Document) =
+  check r.props["name"] == "Test document"
+  check r.props["version"] == "0.1.0"
+  check r.children.len == 0
 
-# test_parse_document """
-#   ^name "Test document"
-#   1 2
-# """, proc(r: Document) =
-#   check r.props["name"] == "Test document"
-#   check r.children == @[1, 2]
+test_parse_document """
+  ^name "Test document"
+  1 2
+""", proc(r: Document) =
+  check r.props["name"] == "Test document"
+  check r.children == @[1, 2]
 
 test_parser "\"\"\"a\"\"\"", "a"
 test_parser "[\"\"\"a\"\"\"]", proc(r: Value) =

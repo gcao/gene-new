@@ -416,6 +416,13 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
   var self = cast[PreprocessingHandler](h)
   # echo "PreprocessingHandler " & $event
   case event.kind:
+  of PeStart:
+    self.next.do_handle(event)
+    if self.parser.mode == PmDocument:
+      var context = PrepHandlerContext(state: PhDocStart)
+      self.stack.add(context)
+      self.next.do_handle(event)
+      self.next.do_handle(ParseEvent(kind: PeStartDocument))
   of PeValue, PeEnd:
     if self.stack.len > 0 and self.stack[^1].state == PhMapKey:
       let context = self.stack[^1]
@@ -571,6 +578,12 @@ proc post_value_callback(self: ValueHandler, event: ParseEvent) {.inline.} =
   else:
     var last = self.stack[^1]
     case last.state:
+    of VhDocPropKey:
+      last.value.document.props[last.key] = event.value
+      last.state = VhDocPropValue
+    of VhDocStart, VhDocPropValue:
+      last.value.document.children.add(event.value)
+      last.state = VhDocPropValue
     of VhVectorStart:
       last.value.vec.add(event.value)
     of VhSetStart:
@@ -656,6 +669,13 @@ proc handle_value*(h: ParseHandler, event: ParseEvent) {.locks: "unknown".} =
   var self = cast[ValueHandler](h)
   # echo "handle_value " & $event & " " & $self.stack.len
   case event.kind:
+  of PeStart:
+    discard
+  of PeStartDocument:
+    let value = Value(kind: VkDocument, document: Document())
+    # TODO: add value to parent context
+    var context = ValueHandlerContext(state: VhDocStart, value: value)
+    self.stack.add(context)
   of PeValue:
     self.post_value_callback(event)
   of PeStartVector:
@@ -696,6 +716,8 @@ proc handle_value*(h: ParseHandler, event: ParseEvent) {.locks: "unknown".} =
       context.state = VhGeneTypePropKey
     of VhGeneTypeChild:
       context.state = VhGeneTypeChildPropKey
+    of VhDocStart, VhDocPropValue:
+      context.state = VhDocPropKey
     else:
       todo($context.state)
   of PeStartGene:
@@ -2032,11 +2054,12 @@ proc advance*(self: var Parser) =
         kind: PeToken,
         token: self.read_token(false),
       )
-      self.handler.handle(self.handler, event)
+      self.handler.do_handle(event)
 
 proc read_first*(self: var Parser): Value =
   let value_handler = new_value_handler(self.addr)
   self.handler.next = value_handler
+  self.handler.do_handle(ParseEvent(kind: PeStart))
   self.advance()
   result = value_handler.stack[0].value
 
@@ -2050,16 +2073,15 @@ proc read*(self: var Parser, buffer: string): Value =
   var s = new_string_stream(buffer)
   self.open(s, "<input>")
   defer: self.close()
-  # result = self.read()
   result = self.read_first()
 
 proc read_all*(self: var Parser, buffer: string): seq[Value] =
   var s = new_string_stream(buffer)
   self.open(s, "<input>")
   defer: self.close()
-  # self.read_document_properties()
   let value_handler = new_value_handler(self.addr)
   self.handler.next = value_handler
+  self.handler.do_handle(ParseEvent(kind: PeStart))
   while not self.done:
     self.paused = false
     self.advance()
@@ -2081,12 +2103,15 @@ proc read_stream*(self: var Parser, buffer: string, stream_handler: StreamHandle
 
 proc read_document*(self: var Parser, buffer: string): Document =
   self.mode = PmDocument
-  todo()
-  # try:
-  #   self.document.children = self.read_all(buffer)
-  # except ParseEofError:
-  #   discard
-  # return self.document
+  var s = new_string_stream(buffer)
+  self.open(s, "<input>")
+  defer: self.close()
+
+  let value_handler = new_value_handler(self.addr)
+  self.handler.next = value_handler
+  self.handler.do_handle(ParseEvent(kind: PeStart))
+  self.advance()
+  result = value_handler.stack[0].value.document
 
 proc read_archive*(self: var Parser, buffer: string): Value =
   result = Value(kind: VkArchiveFile)
