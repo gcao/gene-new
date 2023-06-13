@@ -116,10 +116,10 @@ type
     PeEndStream
     PeKey
     PeValue
-    PeToken           # A symbol or complex symbol that can be interpreted by the handler.
+    PeToken           # processed by the PreprocessingHandler before being passed down to the next handler
     PeQuote
     PeUnquote
-    PeStartDecorator
+    PeStartDecorator  # processed by the PreprocessingHandler
     PeComment         # Will not be emitted unless the parser is configured to do so.
     PeDocumentComment # Will not be emitted unless the parser is configured to do so.
     PeError
@@ -157,15 +157,15 @@ type
     # by next handler.
     handle*: proc(self: ParseHandler, event: ParseEvent) {.locks: "unknown".}
 
-  HandlerState* = enum
-    HsDefault
+  PrepHandlerState* = enum
+    PhDefault
 
-    HsDocStart
-    HsDocPropKey
-    HsDocPropValue
-    HsDocChild
-    HsDocPropChild  # For readability's sake, we require the properties to appear before children.
-    HsDocEnd
+    PhDocStart
+    PhDocPropKey
+    PhDocPropValue
+    PhDocChild
+    PhDocPropChild  # For readability's sake, we require the properties to appear before children.
+    PhDocEnd
 
     # For Gene parsing:
     # (): Start -> End
@@ -173,49 +173,106 @@ type
     # (a ^b c ^d e f): Start -> Type -> TypePropKey -> TypePropValue -> TypePropChild -> TypePropChild -> End
     # (a b c): Start -> Type -> TypeChild -> TypeChild -> End
     # (a b c ^d e ^f g h): Start -> Type -> TypeChild -> TypeChild -> TypeChildPropKey -> TypeChildPropValue -> TypeChildPropKey -> TypeChildPropValue -> TypePropChild -> End
-    HsGeneStart
-    HsGeneEnd
-    HsGeneType
-    HsGeneTypePropKey
-    HsGeneTypePropValue
-    HsGeneTypeChild
-    HsGeneTypeChildPropKey
-    HsGeneTypeChildPropValue
-    HsGeneTypePropChild
+    PhGeneStart
+    PhGeneEnd
+    PhGeneType
+    PhGeneTypePropKey
+    PhGeneTypePropValue
+    PhGeneTypeChild
+    PhGeneTypeChildPropKey
+    PhGeneTypeChildPropValue
+    PhGeneTypePropChild
 
-    HsMapStart
-    HsMapKey
-    HsMapValue
-    HsMapEnd
+    PhMapStart
+    PhMapKey
+    PhMapValue
+    PhMapEnd
 
-    HsMapShortcut
+    PhMapShortcut
 
-    HsVectorStart
-    HsVectorEnd
-    HsVectorValue
+    PhVectorStart
+    PhVectorEnd
+    PhVectorValue
 
-    HsSetStart
-    HsSetEnd
-    HsSetValue
+    PhSetStart
+    PhSetEnd
+    PhSetValue
 
-    HsQuote
-    HsUnquote
+    PhQuote
+    PhUnquote
 
-    HsDecoratorStart
-    HsDecoratorFirst
+    PhDecoratorStart
+    PhDecoratorFirst
 
-  HandlerContext* = ref object
-    state*: HandlerState
+  PrepHandlerContext* = ref object
+    state*: PrepHandlerState
+    key*: string
+    value*: Value
+    `defer`*: bool  # Whether to defer the event to the next handler.
+
+  # We would like to share as little as possible between the PreprocessingHandler and the ValueHandler.
+  # However, we would like to achieve the best performance possible. So we need to minimize the number
+  # of allocations and copies etc.
+
+  # Handle basic parsing and pre-processing (e.g. ???), raise errors if the input is not valid Gene data.
+  PreprocessingHandler* = ref object of ParseHandler
+    stack*: seq[PrepHandlerContext]
+
+  ValueHandlerState* = enum
+    VhDefault
+
+    VhDocStart
+    VhDocPropKey
+    VhDocPropValue
+    VhDocChild
+    VhDocPropChild  # For readability's sake, we require the properties to appear before children.
+    VhDocEnd
+
+    # For Gene parsing:
+    # (): Start -> End
+    # (a): Start -> Type -> End
+    # (a ^b c ^d e f): Start -> Type -> TypePropKey -> TypePropValue -> TypePropChild -> TypePropChild -> End
+    # (a b c): Start -> Type -> TypeChild -> TypeChild -> End
+    # (a b c ^d e ^f g h): Start -> Type -> TypeChild -> TypeChild -> TypeChildPropKey -> TypeChildPropValue -> TypeChildPropKey -> TypeChildPropValue -> TypePropChild -> End
+    VhGeneStart
+    VhGeneEnd
+    VhGeneType
+    VhGeneTypePropKey
+    VhGeneTypePropValue
+    VhGeneTypeChild
+    VhGeneTypeChildPropKey
+    VhGeneTypeChildPropValue
+    VhGeneTypePropChild
+
+    VhMapStart
+    VhMapKey
+    VhMapValue
+    VhMapEnd
+
+    VhMapShortcut
+
+    VhVectorStart
+    VhVectorEnd
+    VhVectorValue
+
+    VhSetStart
+    VhSetEnd
+    VhSetValue
+
+    VhQuote
+    VhUnquote
+
+    VhDecoratorStart
+    VhDecoratorFirst
+
+  ValueHandlerContext* = ref object
+    state*: ValueHandlerState
     key*: string
     value*: Value
 
-  # Handle standard Gene parsing, raise errors if the input is not valid Gene data.
-  DefaultHandler* = ref object of ParseHandler
-    stack*: seq[HandlerContext]
-
   # For retrieving the first value from the parser
   ValueHandler* = ref object of ParseHandler
-    stack*: seq[HandlerContext]
+    stack*: seq[ValueHandlerContext]
 
 const non_constituents: seq[char] = @[]
 
@@ -355,14 +412,14 @@ proc merge_maps(first, second: Value) =
 template do_handle(self: ParseHandler, event: ParseEvent) =
   self.handle(self, event)
 
-proc handle_default(h: ParseHandler, event: ParseEvent) =
-  var self = cast[DefaultHandler](h)
-  # echo "DefaultHandler " & $event
+proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
+  var self = cast[PreprocessingHandler](h)
+  # echo "PreprocessingHandler " & $event
   case event.kind:
   of PeValue, PeEnd:
-    if self.stack.len > 0 and self.stack[^1].state == HsMapKey:
+    if self.stack.len > 0 and self.stack[^1].state == PhMapKey:
       let context = self.stack[^1]
-      context.state = HsMapValue
+      context.state = PhMapValue
     else:
       self.next.do_handle(event)
   of PeToken:
@@ -379,28 +436,28 @@ proc handle_default(h: ParseHandler, event: ParseEvent) =
       let event = ParseEvent(kind: PeValue, value: value)
       self.next.do_handle(event)
   of PeStartVector:
-    var context = HandlerContext(state: HsVectorStart)
+    var context = PrepHandlerContext(state: PhVectorStart)
     self.stack.add(context)
     self.next.do_handle(event)
   of PeEndVectorOrSet:
     discard self.stack.pop()
     self.next.do_handle(event)
   of PeStartMap:
-    var context = HandlerContext(state: HsMapStart)
+    var context = PrepHandlerContext(state: PhMapStart)
     self.stack.add(context)
     self.next.do_handle(event)
   of PeEndMap:
     discard self.stack.pop()
     self.next.do_handle(event)
   of PeStartGene:
-    var context = HandlerContext(state: HsGeneStart)
+    var context = PrepHandlerContext(state: PhGeneStart)
     self.stack.add(context)
     self.next.do_handle(event)
   of PeEndGene:
     discard self.stack.pop()
     self.next.do_handle(event)
   of PeStartSet:
-    var context = HandlerContext(state: HsSetStart)
+    var context = PrepHandlerContext(state: PhSetStart)
     self.stack.add(context)
     self.next.do_handle(event)
   of PeQuote, PeUnquote:
@@ -420,12 +477,12 @@ proc unwrap(self: ValueHandler) {.inline.} =
     let value = self.stack.pop().value
     var last = self.stack[^1]
     case last.state:
-    of HsVectorStart:
+    of VhVectorStart:
       last.value.vec.add(value)
-    of HsSetStart:
+    of VhSetStart:
       last.value.set.incl(value)
-    of HsMapKey:
-      last.state = HsMapValue
+    of VhMapKey:
+      last.state = VhMapValue
       if last.value.map.has_key(last.key):
         var found = last.value.map[last.key]
         if found.kind == VkMap and value.kind == VkMap:
@@ -434,68 +491,68 @@ proc unwrap(self: ValueHandler) {.inline.} =
           not_allowed("Duplicate key: " & $last.key)
       else:
         last.value.map[last.key] = value
-    of HsMapShortcut:
+    of VhMapShortcut:
       while true:
         var value = last.value
         value.map[last.key] = value
         discard self.stack.pop()
         last = self.stack[^1]
         case last.state
-        of HsMapKey:
-          last.state = HsMapValue
+        of VhMapKey:
+          last.state = VhMapValue
           if last.value.map.has_key(last.key):
             merge_maps(last.value.map[last.key], value)
           else:
             last.value.map[last.key] = value
           break
-        of HsGeneTypePropKey:
-          last.state = HsGeneTypePropValue
+        of VhGeneTypePropKey:
+          last.state = VhGeneTypePropValue
           if last.value.gene_props.has_key(last.key):
             merge_maps(last.value.gene_props[last.key], value)
           else:
             last.value.gene_props[last.key] = value
           break
-        of HsMapShortcut:
+        of VhMapShortcut:
           discard
         else:
           todo($last.state)
-    of HsGeneStart:
-      last.state = HsGeneType
+    of VhGeneStart:
+      last.state = VhGeneType
       last.value.gene_type = value
-    of HsGeneType, HsGeneTypeChild:
-      last.state = HsGeneTypeChild
+    of VhGeneType, VhGeneTypeChild:
+      last.state = VhGeneTypeChild
       last.value.gene_children.add(value)
-    of HsGeneTypePropKey:
-      last.state = HsGeneTypePropValue
+    of VhGeneTypePropKey:
+      last.state = VhGeneTypePropValue
       last.value.gene_props[last.key] = value
-    of HsGeneTypeChildPropKey:
-      last.state = HsGeneTypeChildPropValue
+    of VhGeneTypeChildPropKey:
+      last.state = VhGeneTypeChildPropValue
       last.value.gene_props[last.key] = value
-    of HsGeneTypePropValue, HsGeneTypePropChild, HsGeneTypeChildPropValue:
-      last.state = HsGeneTypePropChild
+    of VhGeneTypePropValue, VhGeneTypePropChild, VhGeneTypeChildPropValue:
+      last.state = VhGeneTypePropChild
       last.value.gene_children.add(value)
-    of HsQuote:
+    of VhQuote:
       case self.stack.len:
       of 1:
         self.parser.paused = true
-        last.state = HsDefault
+        last.state = VhDefault
         last.value = Value(kind: VkQuote, quote: value)
       else:
         discard self.stack.pop()
         last = self.stack[^1]
-    of HsUnquote:
+    of VhUnquote:
       case self.stack.len:
       of 1:
         self.parser.paused = true
-        last.state = HsDefault
+        last.state = VhDefault
         last.value = Value(kind: VkUnquote, unquote: value)
       else:
         discard self.stack.pop()
         last = self.stack[^1]
-    of HsDecoratorStart:
-      last.state = HsDecoratorFirst
+    of VhDecoratorStart:
+      last.state = VhDecoratorFirst
       last.value = new_gene_gene(value)
-    of HsDecoratorFirst:
+    of VhDecoratorFirst:
       last.value.gene_children.add(value)
       case self.stack.len:
       of 1:
@@ -509,17 +566,17 @@ proc unwrap(self: ValueHandler) {.inline.} =
 proc post_value_callback(self: ValueHandler, event: ParseEvent) {.inline.} =
   if self.stack.len == 0:
     self.parser.paused = true
-    var context = HandlerContext(state: HsDefault, value: event.value)
+    var context = ValueHandlerContext(state: VhDefault, value: event.value)
     self.stack.add(context)
   else:
     var last = self.stack[^1]
     case last.state:
-    of HsVectorStart:
+    of VhVectorStart:
       last.value.vec.add(event.value)
-    of HsSetStart:
+    of VhSetStart:
       last.value.set.incl(event.value)
-    of HsMapKey:
-      last.state = HsMapValue
+    of VhMapKey:
+      last.state = VhMapValue
       if last.value.map.has_key(last.key):
         var found = last.value.map[last.key]
         if found.kind == VkMap and event.value.kind == VkMap:
@@ -528,68 +585,68 @@ proc post_value_callback(self: ValueHandler, event: ParseEvent) {.inline.} =
           not_allowed("Duplicate key: " & $last.key)
       else:
         last.value.map[last.key] = event.value
-    of HsMapShortcut:
+    of VhMapShortcut:
       while true:
         var value = last.value
         value.map[last.key] = event.value
         discard self.stack.pop()
         last = self.stack[^1]
         case last.state
-        of HsMapKey:
-          last.state = HsMapValue
+        of VhMapKey:
+          last.state = VhMapValue
           if last.value.map.has_key(last.key):
             merge_maps(last.value.map[last.key], value)
           else:
             last.value.map[last.key] = value
           break
-        of HsGeneTypePropKey:
-          last.state = HsGeneTypePropValue
+        of VhGeneTypePropKey:
+          last.state = VhGeneTypePropValue
           if last.value.gene_props.has_key(last.key):
             merge_maps(last.value.gene_props[last.key], value)
           else:
             last.value.gene_props[last.key] = value
           break
-        of HsMapShortcut:
+        of VhMapShortcut:
           discard
         else:
           todo($last.state)
-    of HsGeneStart:
-      last.state = HsGeneType
+    of VhGeneStart:
+      last.state = VhGeneType
       last.value.gene_type = event.value
-    of HsGeneType, HsGeneTypeChild:
-      last.state = HsGeneTypeChild
+    of VhGeneType, VhGeneTypeChild:
+      last.state = VhGeneTypeChild
       last.value.gene_children.add(event.value)
-    of HsGeneTypePropKey:
-      last.state = HsGeneTypePropValue
+    of VhGeneTypePropKey:
+      last.state = VhGeneTypePropValue
       last.value.gene_props[last.key] = event.value
-    of HsGeneTypeChildPropKey:
-      last.state = HsGeneTypeChildPropValue
+    of VhGeneTypeChildPropKey:
+      last.state = VhGeneTypeChildPropValue
       last.value.gene_props[last.key] = event.value
-    of HsGeneTypePropValue, HsGeneTypePropChild, HsGeneTypeChildPropValue:
-      last.state = HsGeneTypePropChild
+    of VhGeneTypePropValue, VhGeneTypePropChild, VhGeneTypeChildPropValue:
+      last.state = VhGeneTypePropChild
       last.value.gene_children.add(event.value)
-    of HsQuote:
+    of VhQuote:
       case self.stack.len:
       of 1:
         self.parser.paused = true
-        last.state = HsDefault
+        last.state = VhDefault
         last.value = Value(kind: VkQuote, quote: event.value)
       else:
         discard self.stack.pop()
         last = self.stack[^1]
-    of HsUnquote:
+    of VhUnquote:
       case self.stack.len:
       of 1:
         self.parser.paused = true
-        last.state = HsDefault
+        last.state = VhDefault
         last.value = Value(kind: VkUnquote, unquote: event.value)
       else:
         discard self.stack.pop()
         last = self.stack[^1]
-    of HsDecoratorStart:
-      last.state = HsDecoratorFirst
+    of VhDecoratorStart:
+      last.state = VhDecoratorFirst
       last.value = new_gene_gene(event.value)
-    of HsDecoratorFirst:
+    of VhDecoratorFirst:
       last.value.gene_children.add(event.value)
       self.unwrap()
     else:
@@ -604,25 +661,25 @@ proc handle_value*(h: ParseHandler, event: ParseEvent) {.locks: "unknown".} =
   of PeStartVector:
     let value = new_gene_vec()
     # TODO: add value to parent context
-    var context = HandlerContext(state: HsVectorStart, value: value)
+    var context = ValueHandlerContext(state: VhVectorStart, value: value)
     self.stack.add(context)
   of PeStartSet:
     let value = new_gene_set()
     # TODO: add value to parent context
-    var context = HandlerContext(state: HsSetStart, value: value)
+    var context = ValueHandlerContext(state: VhSetStart, value: value)
     self.stack.add(context)
   of PeEndVectorOrSet:
     self.unwrap()
   of PeStartMap:
     let value = new_gene_map()
     # TODO: add value to parent context
-    var context = HandlerContext(state: HsMapStart, value: value)
+    var context = ValueHandlerContext(state: VhMapStart, value: value)
     self.stack.add(context)
   of PeMapShortcut:
     let value = new_gene_map()
     # TODO: add value to parent context
-    var context = HandlerContext(
-      state: HsMapShortcut,
+    var context = ValueHandlerContext(
+      state: VhMapShortcut,
       value: value,
       key: event.key,
     )
@@ -633,27 +690,27 @@ proc handle_value*(h: ParseHandler, event: ParseEvent) {.locks: "unknown".} =
     var context = self.stack[^1]
     context.key = event.key
     case context.state:
-    of HsMapStart, HsMapValue:
-      context.state = HsMapKey
-    of HsGeneType, HsGeneTypePropValue:
-      context.state = HsGeneTypePropKey
-    of HsGeneTypeChild:
-      context.state = HsGeneTypeChildPropKey
+    of VhMapStart, VhMapValue:
+      context.state = VhMapKey
+    of VhGeneType, VhGeneTypePropValue:
+      context.state = VhGeneTypePropKey
+    of VhGeneTypeChild:
+      context.state = VhGeneTypeChildPropKey
     else:
       todo($context.state)
   of PeStartGene:
-    var context = HandlerContext(state: HsGeneStart, value: new_gene_gene())
+    var context = ValueHandlerContext(state: VhGeneStart, value: new_gene_gene())
     self.stack.add(context)
   of PeEndGene:
     self.unwrap()
   of PeQuote:
-    var context = HandlerContext(state: HsQuote)
+    var context = ValueHandlerContext(state: VhQuote)
     self.stack.add(context)
   of PeUnquote:
-    var context = HandlerContext(state: HsUnquote)
+    var context = ValueHandlerContext(state: VhUnquote)
     self.stack.add(context)
   of PeStartDecorator:
-    var context = HandlerContext(state: HsDecoratorStart)
+    var context = ValueHandlerContext(state: VhDecoratorStart)
     self.stack.add(context)
   of PeEnd:
     discard
@@ -662,10 +719,10 @@ proc handle_value*(h: ParseHandler, event: ParseEvent) {.locks: "unknown".} =
 
 #################### Parser ######################
 
-proc new_default_handler*(parser: ptr Parser): DefaultHandler =
-  DefaultHandler(
+proc new_preprocessing_handler*(parser: ptr Parser): PreprocessingHandler =
+  PreprocessingHandler(
     parser: parser,
-    handle: handle_default,
+    handle: handle_preprocess,
   )
 
 proc new_value_handler*(parser: ptr Parser): ValueHandler =
@@ -683,7 +740,7 @@ proc new_parser*(options: ParseOptions): Parser =
     options: new_options(options),
     references: References(),
   )
-  result.handler = new_default_handler(result.addr)
+  result.handler = new_preprocessing_handler(result.addr)
 
 proc new_parser*(): Parser =
   if not INITIALIZED:
@@ -694,7 +751,7 @@ proc new_parser*(): Parser =
     options: default_options(),
     references: References(),
   )
-  result.handler = new_default_handler(result.addr)
+  result.handler = new_preprocessing_handler(result.addr)
 
 proc non_constituent(c: char): bool =
   result = non_constituents.contains(c)
