@@ -1051,45 +1051,6 @@ proc read_token(self: var Parser, lead_constituent: bool): string =
   return self.read_token(lead_constituent, [':'])
 
 proc read_character(self: var Parser): Value =
-  # var pos = self.bufpos
-  # let ch = self.buf[pos]
-  # case ch:
-  # of EndOfFile:
-  #   raise new_exception(ParseError, "EOF while reading character")
-  # of '\'', '"':
-  #   self.bufpos.inc()
-  #   discard self.parse_string(ch)
-  #   if self.error != ErrNone:
-  #     raise new_exception(ParseError, "read_string failure: " & $self.error)
-  #   return new_gene_symbol(self.str)
-  # else:
-  #   result = Value(kind: VkChar)
-  #   let token = self.read_token(false)
-  #   if token.len == 1:
-  #     result.char = token[0]
-  #     return
-
-  #   case token:
-  #   of "newline":
-  #     result.char = '\n'
-  #   of "space":
-  #     result.char = ' '
-  #   of "tab":
-  #     result.char = '\t'
-  #   of "backspace":
-  #     result.char = '\b'
-  #   of "formfeed":
-  #     result.char = '\f'
-  #   of "return":
-  #     result.char = '\r'
-  #   else:
-  #     if token.startsWith("\\u"):
-  #       # TODO: impl unicode char reading
-  #       raise new_exception(ParseError, "Not implemented: reading unicode chars")
-  #     elif token.runeLen == 1:
-  #       result.rune = token.runeAt(0)
-  #     else:
-  #       raise new_exception(ParseError, "Unknown character: " & token)
   result = Value(kind: VkChar)
   let token = self.read_token(false)
 
@@ -1384,14 +1345,14 @@ proc read_vector(self: var Parser): Value {.gcsafe.} =
   let list_result = self.read_delimited_list(']', true)
   result.vec = list_result.list
 
-proc read_set(self: var Parser): Value =
-  result = Value(
-    kind: VkSet,
-    set: HashSet[Value](),
-  )
-  let list_result = self.read_delimited_list(']', true)
-  for item in list_result.list:
-    result.set.incl(item)
+# proc read_set(self: var Parser): Value =
+#   result = Value(
+#     kind: VkSet,
+#     set: HashSet[Value](),
+#   )
+#   let list_result = self.read_delimited_list(']', true)
+#   for item in list_result.list:
+#     result.set.incl(item)
 
 proc read_regex(self: var Parser): Value =
   var pos = self.bufpos
@@ -1473,22 +1434,6 @@ proc read_regex(self: var Parser): Value =
 proc read_unmatched_delimiter(self: var Parser): Value =
   raise new_exception(ParseError, "Unmatched delimiter: " & self.buf[self.bufpos])
 
-# proc read_discard(self: var Parser): Value =
-#   discard self.read()
-#   result = nil
-
-proc read_decorator(self: var Parser): Value =
-  var first  = self.read()
-  var second = self.read()
-  return new_gene_gene(first, second)
-
-# proc read_star(self: var Parser): Value =
-#   return new_gene_gene(self.read())
-
-proc read_reference(self: var Parser): Value =
-  var name  = self.read_token(false)
-  result = new_gene_reference(name, self.references)
-
 proc read_dispatch(self: var Parser): Value =
   let ch = self.buf[self.bufpos]
   let m = dispatch_macros[ch]
@@ -1515,19 +1460,10 @@ proc init_macro_array() =
   macros[']'] = read_unmatched_delimiter
   macros['}'] = read_unmatched_delimiter
 
-proc init_dispatch_macro_array() =
-  dispatch_macros['['] = read_set
-  # dispatch_macros['_'] = read_discard
-  dispatch_macros['/'] = read_regex
-  dispatch_macros['@'] = read_decorator
-  # dispatch_macros['*'] = read_star
-  dispatch_macros['&'] = read_reference
-  dispatch_macros['"'] = read_string_interpolation
-
 proc handle_file(self: var Parser, value: Value): Value =
-    result = Value(kind: VkFile)
-    result.file_name = value.gene_children[0].str
-    result.file_content = value.gene_children[1]
+  result = Value(kind: VkFile)
+  result.file_name = value.gene_children[0].str
+  result.file_content = value.gene_children[1]
 
 proc handle_dir(self: var Parser, value: Value): Value =
   result = Value(kind: VkDirectory)
@@ -1622,7 +1558,6 @@ proc init*() =
   DATETIME_FORMAT = init_time_format("yyyy-MM-dd'T'HH:mm:sszzz")
 
   init_macro_array()
-  init_dispatch_macro_array()
   init_handlers()
 
 proc open*(self: var Parser, input: Stream, filename: string) =
@@ -1889,16 +1824,6 @@ proc read_number(self: var Parser): Value =
   else:
     raise new_exception(ParseError, "Error reading a number (?): " & self.str)
 
-# proc read_document_properties(self: var Parser) =
-#   if self.document_props_done:
-#     return
-#   else:
-#     self.document_props_done = true
-#   self.skip_ws()
-#   var ch = self.buf[self.bufpos]
-#   if ch == '^':
-#     self.document.props = self.read_map(MkDocument)
-
 proc read*(self: var Parser): Value =
   set_len(self.str, 0)
   self.skip_ws()
@@ -2063,12 +1988,6 @@ proc read_first*(self: var Parser): Value =
   self.advance()
   result = value_handler.stack[0].value
 
-proc read*(self: var Parser, s: Stream, filename: string): Value =
-  self.open(s, filename)
-  defer: self.close()
-  # result = self.read()
-  result = self.read_first()
-
 proc read*(self: var Parser, buffer: string): Value =
   var s = new_string_stream(buffer)
   self.open(s, "<input>")
@@ -2088,19 +2007,6 @@ proc read_all*(self: var Parser, buffer: string): seq[Value] =
     if value_handler.stack.len > 0:
       result.add(value_handler.stack.pop().value)
 
-proc read_stream*(self: var Parser, buffer: string, stream_handler: StreamHandler) =
-  var s = new_string_stream(buffer)
-  self.open(s, "<input>")
-  defer: self.close()
-  var node = self.read()
-  while true:
-    if not node.is_nil:
-      stream_handler(node)
-    try:
-      node = self.read()
-    except ParseEofError:
-      break
-
 proc read_document*(self: var Parser, buffer: string): Document =
   self.mode = PmDocument
   var s = new_string_stream(buffer)
@@ -2112,33 +2018,6 @@ proc read_document*(self: var Parser, buffer: string): Document =
   self.handler.do_handle(ParseEvent(kind: PeStart))
   self.advance()
   result = value_handler.stack[0].value.document
-
-proc read_archive*(self: var Parser, buffer: string): Value =
-  result = Value(kind: VkArchiveFile)
-  var children = self.read_all(buffer)
-  for child in children:
-    var child_name: string
-    case child.kind:
-    of VkFile:
-      child_name = child.file_name
-      child.file_parent = result
-    of VkDirectory:
-      child_name = child.dir_name
-      child.dir_parent = result
-    of VkArchiveFile:
-      child_name = child.arc_file_name
-      child.arc_file_parent = result
-    else:
-      not_allowed("unknown child " & $child)
-    result.arc_file_members[child_name] = child
-
-proc read_archive_file*(self: var Parser, filename: string): Value =
-  result = self.read_archive(read_file(filename))
-  result.arc_file_name = extract_filename(filename)
-
-proc read*(s: Stream, filename: string): Value =
-  var parser = new_parser()
-  return parser.read(s, filename)
 
 proc read*(buffer: string): Value =
   var parser = new_parser()
