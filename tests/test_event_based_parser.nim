@@ -45,6 +45,16 @@ proc test_parser*(code: string, callback: proc(result: Value)) =
     var parser = new_parser()
     callback parser.read(code)
 
+proc test_read_all*(code: string, result: seq[Value]) =
+  var code = cleanup(code)
+  test "Parser / read_all: " & code:
+    check read_all(code) == result
+
+proc test_read_all*(code: string, callback: proc(result: seq[Value])) =
+  var code = cleanup(code)
+  test "Parser / read_all: " & code:
+    callback read_all(code)
+
 test_parser "nil", Value(kind: VkNil)
 test_parser "true", true
 test_parser "false", false
@@ -358,12 +368,12 @@ test_parser """
   check r.map["p"].gene_type.str == "f"
   check r.map["p"].gene_children[0].str == "a"
 
-# test_read_all """
-#   1 # comment
-#   2
-# """, proc(r: seq[Value]) =
-#   check r[0] == 1
-#   check r[1] == 2
+test_read_all """
+  1 # comment
+  2
+""", proc(r: seq[Value]) =
+  check r[0] == 1
+  check r[1] == 2
 
 # test_read_all """
 #   1 ##comment
@@ -372,11 +382,11 @@ test_parser """
 #   check r[0] == 1
 #   check r[1] == 2
 
-# test_read_all "a,b", proc(r: seq[Value]) =
-#   check r[0] == new_gene_symbol("a")
-#   check r[1] == new_gene_symbol("b")
+test_read_all "a,b", proc(r: seq[Value]) =
+  check r[0] == new_gene_symbol("a")
+  check r[1] == new_gene_symbol("b")
 
-# test_read_all "1 2", @[new_gene_int(1), new_gene_int(2)]
+test_read_all "1 2", @[new_gene_int(1), new_gene_int(2)]
 
 test_parser """
   [
@@ -442,20 +452,20 @@ test_parser """
 #   check r.props["name"] == "Test document"
 #   check r.children == @[1, 2]
 
-# test_parser "\"\"\"a\"\"\"", "a"
-# test_parser "[\"\"\"a\"\"\"]", proc(r: Value) =
-#   check r.kind == VkVector
-#   check r.vec.len == 1
-#   check r.vec[0] == "a"
+test_parser "\"\"\"a\"\"\"", "a"
+test_parser "[\"\"\"a\"\"\"]", proc(r: Value) =
+  check r.kind == VkVector
+  check r.vec.len == 1
+  check r.vec[0] == "a"
 
-# test_parser "\"\"\"a\"b\"\"\"", "a\"b"
+test_parser "\"\"\"a\"b\"\"\"", "a\"b"
 
-# # Trim whitespaces and new line after opening """
-# # E.g. """  \na""" => "a"
-# test_parser "\"\"\"  \na\"\"\"", "\na"
-# # Trim whitespaces before closing """
-# # E.g. """a\n   """ => "a\n"
-# test_parser "\"\"\"a\n   \"\"\"", "a\n"
+# Trim whitespaces and new line after opening """
+# E.g. """  \na""" => "a"
+test_parser "\"\"\"  \na\"\"\"", "\na"
+# Trim whitespaces before closing """
+# E.g. """a\n   """ => "a\n"
+test_parser "\"\"\"a\n   \"\"\"", "a\n"
 
 # test_parser """
 #   (#File "f" "abc")
@@ -592,27 +602,3 @@ test_parser """
 #     (#Ref "x" 2) # Should trigger parser error
 #   ]
 # """
-
-# # test_parser """
-# #   #"#a/b#" # same as ("" a/b)
-# # """, "TODO"
-
-# # test_parser """
-# #   #"#1#" # same as ("" 1)
-# # """, "TODO"
-
-# # test_parser """
-# #   #"#true#" # same as ("" true)
-# # """, "TODO"
-
-# # test_parser """
-# #   #"a#(1 + 2)" # same as ("a" (1 + 2))
-# # """, "TODO"
-
-# # test_parser """
-# #   #"a#[1 2]" # same as ("a" [1 2])
-# # """, "TODO"
-
-# # test_parser """
-# #   #"a#{^a b}" # same as ("a" {^a b})
-# # """, "TODO"

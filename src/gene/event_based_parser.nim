@@ -34,6 +34,7 @@ type
     error*: ParseErrorKind
     references*: References
     done*: bool
+    paused*: bool
     document_props_done*: bool  # flag to tell whether we have read document properties
     handler*: ParseHandler
 
@@ -406,7 +407,7 @@ proc unwrap(self: ValueHandler) {.inline.} =
   of 0:
     raise newException(ValueError, "unwrap: no value")
   of 1:
-    self.parser.done = true
+    self.parser.paused = true
   else:
     let value = self.stack.pop().value
     var last = self.stack[^1]
@@ -468,7 +469,7 @@ proc unwrap(self: ValueHandler) {.inline.} =
     of HsQuote:
       case self.stack.len:
       of 1:
-        self.parser.done = true
+        self.parser.paused = true
         last.state = HsDefault
         last.value = Value(kind: VkQuote, quote: value)
       else:
@@ -477,7 +478,7 @@ proc unwrap(self: ValueHandler) {.inline.} =
     of HsUnquote:
       case self.stack.len:
       of 1:
-        self.parser.done = true
+        self.parser.paused = true
         last.state = HsDefault
         last.value = Value(kind: VkUnquote, unquote: value)
       else:
@@ -490,7 +491,7 @@ proc unwrap(self: ValueHandler) {.inline.} =
       last.value.gene_children.add(value)
       case self.stack.len:
       of 1:
-        self.parser.done = true
+        self.parser.paused = true
       else:
         discard self.stack.pop()
         last = self.stack[^1]
@@ -499,7 +500,7 @@ proc unwrap(self: ValueHandler) {.inline.} =
 
 proc post_value_callback(self: ValueHandler, event: ParseEvent) {.inline.} =
   if self.stack.len == 0:
-    self.parser.done = true
+    self.parser.paused = true
     var context = HandlerContext(state: HsDefault, value: event.value)
     self.stack.add(context)
   else:
@@ -562,7 +563,7 @@ proc post_value_callback(self: ValueHandler, event: ParseEvent) {.inline.} =
     of HsQuote:
       case self.stack.len:
       of 1:
-        self.parser.done = true
+        self.parser.paused = true
         last.state = HsDefault
         last.value = Value(kind: VkQuote, quote: event.value)
       else:
@@ -571,7 +572,7 @@ proc post_value_callback(self: ValueHandler, event: ParseEvent) {.inline.} =
     of HsUnquote:
       case self.stack.len:
       of 1:
-        self.parser.done = true
+        self.parser.paused = true
         last.state = HsDefault
         last.value = Value(kind: VkUnquote, unquote: event.value)
       else:
@@ -1845,13 +1846,15 @@ proc read*(self: var Parser): Value =
     result = self.read()
 
 proc advance*(self: var Parser) =
-  while not self.done:
+  while not self.paused:
     set_len(self.str, 0)
     self.skip_ws()
     let ch = self.buf[self.bufpos]
     case ch
     of EndOfFile:
       self.handler.do_handle(ParseEvent(kind: PeEnd))
+      self.paused = true
+      self.done = true
       break
 
     of '0'..'9':
@@ -1989,15 +1992,14 @@ proc read_all*(self: var Parser, buffer: string): seq[Value] =
   var s = new_string_stream(buffer)
   self.open(s, "<input>")
   defer: self.close()
-  self.read_document_properties()
-  var node = self.read()
-  while node != nil:
-    result.add(node)
-    self.skip_ws()
-    if self.buf[self.bufpos] == EndOfFile:
-      break
-    else:
-      node = self.read()
+  # self.read_document_properties()
+  let value_handler = new_value_handler(self.addr)
+  self.handler.next = value_handler
+  while not self.done:
+    self.paused = false
+    self.advance()
+    if value_handler.stack.len > 0:
+      result.add(value_handler.stack.pop().value)
 
 proc read_stream*(self: var Parser, buffer: string, stream_handler: StreamHandler) =
   var s = new_string_stream(buffer)
