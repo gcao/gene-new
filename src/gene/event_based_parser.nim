@@ -16,7 +16,7 @@ type
     PmDocument
     PmStream
     PmFirst
-    PmPackage
+    # PmPackage
     PmArchive
 
   ParseOptions* {.acyclic.} = ref object
@@ -25,17 +25,18 @@ type
     units*: Table[string, Value]
 
   Parser* = object of BaseLexer
+    mode*: ParseMode
     options*: ParseOptions
     filename*: string
     str*: string
     num_with_units*: seq[(TokenKind, string, string)] # token kind + number + unit
-    document*: Document
+    # document*: Document
     token_kind*: TokenKind
     error*: ParseErrorKind
     references*: References
     done*: bool
     paused*: bool
-    document_props_done*: bool  # flag to tell whether we have read document properties
+    # document_props_done*: bool  # flag to tell whether we have read document properties
     handler*: ParseHandler
 
   TokenKind* = enum
@@ -158,6 +159,13 @@ type
 
   HandlerState* = enum
     HsDefault
+
+    HsDocStart
+    HsDocPropKey
+    HsDocPropValue
+    HsDocChild
+    HsDocPropChild  # For readability's sake, we require the properties to appear before children.
+    HsDocEnd
 
     # For Gene parsing:
     # (): Start -> End
@@ -671,7 +679,7 @@ proc new_parser*(options: ParseOptions): Parser =
     init()
 
   result = Parser(
-    document: Document(),
+    # document: Document(),
     options: new_options(options),
     references: References(),
   )
@@ -682,7 +690,7 @@ proc new_parser*(): Parser =
     init()
 
   result = Parser(
-    document: Document(),
+    # document: Document(),
     options: default_options(),
     references: References(),
   )
@@ -1802,15 +1810,15 @@ proc read_number(self: var Parser): Value =
   else:
     raise new_exception(ParseError, "Error reading a number (?): " & self.str)
 
-proc read_document_properties(self: var Parser) =
-  if self.document_props_done:
-    return
-  else:
-    self.document_props_done = true
-  self.skip_ws()
-  var ch = self.buf[self.bufpos]
-  if ch == '^':
-    self.document.props = self.read_map(MkDocument)
+# proc read_document_properties(self: var Parser) =
+#   if self.document_props_done:
+#     return
+#   else:
+#     self.document_props_done = true
+#   self.skip_ws()
+#   var ch = self.buf[self.bufpos]
+#   if ch == '^':
+#     self.document.props = self.read_map(MkDocument)
 
 proc read*(self: var Parser): Value =
   set_len(self.str, 0)
@@ -2015,11 +2023,13 @@ proc read_stream*(self: var Parser, buffer: string, stream_handler: StreamHandle
       break
 
 proc read_document*(self: var Parser, buffer: string): Document =
-  try:
-    self.document.children = self.read_all(buffer)
-  except ParseEofError:
-    discard
-  return self.document
+  self.mode = PmDocument
+  todo()
+  # try:
+  #   self.document.children = self.read_all(buffer)
+  # except ParseEofError:
+  #   discard
+  # return self.document
 
 proc read_archive*(self: var Parser, buffer: string): Value =
   result = Value(kind: VkArchiveFile)

@@ -55,6 +55,11 @@ proc test_read_all*(code: string, callback: proc(result: seq[Value])) =
   test "Parser / read_all: " & code:
     callback read_all(code)
 
+proc test_parse_document*(code: string, callback: proc(result: Document)) =
+  var code = cleanup(code)
+  test "Parse document: " & code:
+    callback read_document(code)
+
 test_parser "nil", Value(kind: VkNil)
 test_parser "true", true
 test_parser "false", false
