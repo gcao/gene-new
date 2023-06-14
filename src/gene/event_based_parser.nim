@@ -467,6 +467,16 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
         self.next.do_handle(ParseEvent(kind: PeValue, value: parsed.value))
     else:
       let value = interpret_token(event.token)
+      if self.stack.len > 0:
+        let last = self.stack[^1]
+        if last.defer:
+          case last.state:
+          of PhGeneStart:
+            last.value.gene_type = value
+          else:
+            todo($last.state)
+          return
+
       let event = ParseEvent(kind: PeValue, value: value)
       self.next.do_handle(event)
   of PeStartVector:
@@ -497,8 +507,17 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
     self.stack.add(context)
     self.next.do_handle(event)
   of PeEndGene:
-    discard self.stack.pop()
-    self.next.do_handle(event)
+    let context = self.stack.pop()
+    if context.defer:
+      let last = self.stack[^1]
+      case last.state:
+      of PhStrInterpolation:
+        last.value.gene_children.add(context.value)
+        self.parser.in_str_interpolation = true
+      else:
+        self.next.do_handle(ParseEvent(kind: PeValue, value: context.value))
+    else:
+      self.next.do_handle(event)
   of PeStartSet:
     var context = PrepHandlerContext(state: PhSetStart)
     self.stack.add(context)
@@ -518,6 +537,14 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
     var context = PrepHandlerContext(
       state: PhVectorStart,
       value: new_gene_vec(),
+      `defer`: true,
+    )
+    self.stack.add(context)
+    self.parser.in_str_interpolation = false
+  of PeStartStrGene:
+    var context = PrepHandlerContext(
+      state: PhGeneStart,
+      value: new_gene_gene(),
       `defer`: true,
     )
     self.stack.add(context)
@@ -1946,9 +1973,10 @@ proc advance*(self: var Parser) =
           inc(self.bufpos, 2)
           self.handler.do_handle(ParseEvent(kind: PeStartStrVector))
           continue
-        # of '(':
-        #   inc(self.bufpos, 2)
-        #   self.handler.do_handle(ParseEvent(kind: PeStartStrGene))
+        of '(':
+          inc(self.bufpos, 2)
+          self.handler.do_handle(ParseEvent(kind: PeStartStrGene))
+          continue
         # of '<':
         #   self.skip_block_comment()
         else:
