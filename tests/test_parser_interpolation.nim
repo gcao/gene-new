@@ -77,3 +77,7 @@ test_parser """
 test_parser """
   #"a\#{b}c"
 """, "a#{b}c"
+
+test_parser """
+  #"a#{"b"}c"
+""", "abc"

@@ -29,6 +29,7 @@ type
     options*: ParseOptions
     filename*: string
     str*: string
+    in_str_interpolation*: bool   # true if we are inside a string interpolation
     num_with_units*: seq[(TokenKind, string, string)] # token kind + number + unit
     # document*: Document
     token_kind*: TokenKind
@@ -117,6 +118,14 @@ type
     PeKey
     PeValue
     PeToken           # processed by the PreprocessingHandler before being passed down to the next handler
+    PeStartStrInterpolation   # #"
+    PeStartStrMap             # #{
+    PeStartStrVector          # #[
+    PeStartStrGene            # #(
+    PeStartStrComment         # #<
+    PeEndStrInterpolation     # "
+    PeStartStrInterpolation3  # #"""
+    PeEndStrInterpolation3    # """
     PeQuote
     PeUnquote
     PeStartDecorator  # processed by the PreprocessingHandler
@@ -197,6 +206,14 @@ type
     PhSetStart
     PhSetEnd
     PhSetValue
+
+    PhStrInterpolation
+    # PhStrInterpolationStart
+    # PhStrInterpolationString      # #"..."
+    # PhStrInterpolationMapOrValue  # #{a} or #{^a b}
+    # PhStrInterpolationVector      # #[...]
+    # PhStrInterpolationGene        # #(...)
+    # PhStrInterpolationComment     # #<...>#
 
     PhQuote
     PhUnquote
@@ -423,10 +440,20 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
       self.stack.add(context)
       self.next.do_handle(event)
       self.next.do_handle(ParseEvent(kind: PeStartDocument))
-  of PeValue, PeEnd:
-    if self.stack.len > 0 and self.stack[^1].state == PhMapKey:
-      let context = self.stack[^1]
-      context.state = PhMapValue
+  of PeEnd:
+    self.next.do_handle(event)
+  of PeValue:
+    if self.stack.len > 0:
+      var last = self.stack[^1]
+      case last.state:
+      of PhMapKey:
+        last.state = PhMapValue
+        self.next.do_handle(event)
+      of PhStrInterpolation:
+        last.value.gene_children.add(event.value)
+        self.parser.in_str_interpolation = true
+      else:
+        self.next.do_handle(event)
     else:
       self.next.do_handle(event)
   of PeToken:
@@ -471,6 +498,34 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
     self.next.do_handle(event)
   of PeStartDecorator:
     self.next.do_handle(event)
+  of PeStartStrInterpolation:
+    var context = PrepHandlerContext(
+      state: PhStrInterpolation,
+      value: new_gene_gene(new_gene_symbol("#Str")),
+    )
+    self.stack.add(context)
+    self.parser.in_str_interpolation = true
+  of PeStartStrVector:
+    var context = PrepHandlerContext(
+      state: PhStrInterpolation,
+      value: new_gene_gene(new_gene_symbol("#Str")),
+    )
+    self.stack.add(context)
+    self.parser.in_str_interpolation = true
+  of PeEndStrInterpolation:
+    let last = self.stack.pop()
+    var all_are_string = true
+    for child in last.value.gene_children:
+      if child.kind != VkString:
+        all_are_string = false
+        break
+    if all_are_string:
+      let value = new_gene_string("")
+      for child in last.value.gene_children:
+        value.str.add(child.str)
+      self.next.do_handle(ParseEvent(kind: PeValue, value: value))
+    else:
+      self.next.do_handle(ParseEvent(kind: PeValue, value: last.value))
   else:
     todo($event)
 
@@ -841,7 +896,9 @@ proc parse_string(self: var Parser, start: char, triple_mode: bool = false): Tok
         else:
           inc(pos)
           add(self.str, '"')
-      elif self.buf[pos] == start or start == '#':
+      elif start == '#':
+        break
+      elif self.buf[pos] == start:
         inc(pos)
         break
       else:
@@ -1330,10 +1387,10 @@ proc read_gene(self: var Parser): Value {.gcsafe.} =
   var result_list = self.read_delimited_list(')', true)
   result.gene_props = result_list.map
   result.gene_children = result_list.list
-  if not result.gene_type.is_nil() and result.gene_type.kind == VkSymbol:
-    if handlers.has_key(result.gene_type.str):
-      let handler = handlers[result.gene_type.str]
-      return handler(self, result)
+  # if not result.gene_type.is_nil() and result.gene_type.kind == VkSymbol:
+  #   if handlers.has_key(result.gene_type.str):
+  #     let handler = handlers[result.gene_type.str]
+  #     return handler(self, result)
 
 proc read_map(self: var Parser): Value {.gcsafe.} =
   result = Value(kind: VkMap)
@@ -1860,6 +1917,43 @@ proc read*(self: var Parser): Value =
 proc advance*(self: var Parser) =
   while not self.paused:
     set_len(self.str, 0)
+    if self.in_str_interpolation:
+      let ch = self.buf[self.bufpos]
+      case ch:
+      of '"':
+        inc(self.bufpos)
+        self.in_str_interpolation = false
+        self.handler.do_handle(ParseEvent(kind: PeEndStrInterpolation))
+        continue
+      of '#':
+        let ch2 = self.buf[self.bufpos + 1]
+        case ch2:
+        of '{':
+          inc(self.bufpos, 2)
+          self.handler.do_handle(ParseEvent(kind: PeStartStrMap))
+        of '[':
+          inc(self.bufpos, 2)
+          self.handler.do_handle(ParseEvent(kind: PeStartStrVector))
+        # of '(':
+        #   inc(self.bufpos, 2)
+        #   self.handler.do_handle(ParseEvent(kind: PeStartStrGene))
+        # of '<':
+        #   self.skip_block_comment()
+        else:
+          discard
+      else:
+        discard
+
+      discard self.parse_string('#')
+      if self.str.len > 0:
+        var event = ParseEvent(
+          kind: PeValue,
+          value: self.str,
+        )
+        self.handler.do_handle(event)
+
+      continue
+
     self.skip_ws()
     let ch = self.buf[self.bufpos]
     case ch
@@ -1948,6 +2042,17 @@ proc advance*(self: var Parser) =
       inc(self.bufpos)
       let ch2 = self.buf[self.bufpos]
       case ch2:
+      of '"':
+        inc(self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeStartStrInterpolation))
+        discard self.parse_string('#')
+        if self.str.len > 0:
+          var event = ParseEvent(
+            kind: PeValue,
+            value: self.str,
+          )
+          self.handler.do_handle(event)
+
       of '/':
         inc(self.bufpos)
         var event = ParseEvent(

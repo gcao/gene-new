@@ -608,9 +608,9 @@ test_parser "\"\"\"a\n   \"\"\"", "a\n"
 #   ]
 # """
 
-# test_parser """
-#   #"abc"
-# """, "abc"
+test_parser """
+  #"abc"
+""", "abc"
 
 # test_parser """
 #   #"a#{b}c"
