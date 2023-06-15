@@ -119,8 +119,8 @@ type
     PeValue
     PeToken           # processed by the PreprocessingHandler before being passed down to the next handler
     PeStartStrInterpolation   # #"
-    PeStartStrMap             # #{
-    PeStartStrVector          # #[
+    PeStartStrValue           # #{
+    # PeStartStrVector          # #[
     PeStartStrGene            # #(
     PeStartStrComment         # #<
     PeEndStrInterpolation     # "
@@ -208,10 +208,9 @@ type
     PhSetValue
 
     PhStrInterpolation
-    # PhStrInterpolationStart
+    PhStrValueStart
     # PhStrInterpolationString      # #"..."
-    # PhStrInterpolationMapOrValue  # #{a} or #{^a b}
-    # PhStrInterpolationVector      # #[...]
+    # PhStrInterpolationMapOrValue  # #{a}
     # PhStrInterpolationGene        # #(...)
     # PhStrInterpolationComment     # #<...>#
 
@@ -443,10 +442,18 @@ proc preprocess_unwrap(self: PreprocessingHandler, event: ParseEvent, value: Val
     case last.state:
     of PhMapKey:
       last.state = PhMapValue
-      self.send(event, value)
+      if last.defer:
+        last.value.map[last.key] = value
+      else:
+        self.send(event, value)
     of PhStrInterpolation:
       last.value.gene_children.add(value)
       self.parser.in_str_interpolation = true
+    of PhStrValueStart:
+      if last.value.is_nil:
+        last.value = value
+      else:
+        not_allowed()
     of PhGeneStart:
       last.state = PhGeneType
       if last.defer:
@@ -480,12 +487,24 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
   of PeToken:
     if event.token[0] == '^':
       let parsed = parse_key(event.token)
-      self.next.do_handle(ParseEvent(kind: PeKey, key: parsed.keys[0]))
-      if parsed.keys.len > 1:
-        for key in parsed.keys[1..^1]:
-          self.next.do_handle(ParseEvent(kind: PeMapShortcut, key: key))
-      if not parsed.value.is_nil:
-        self.next.do_handle(ParseEvent(kind: PeValue, value: parsed.value))
+      let last = self.stack[^1]
+      if last.defer:
+        if parsed.keys.len > 1:
+          todo()
+        else:
+          if parsed.value.is_nil:
+            last.state = PhMapValue
+            last.key = parsed.keys[0]
+          else:
+            last.state = PhMapKey
+            last.value.map[parsed.keys[0]] = parsed.value
+      else:
+        self.next.do_handle(ParseEvent(kind: PeKey, key: parsed.keys[0]))
+        if parsed.keys.len > 1:
+          for key in parsed.keys[1..^1]:
+            self.next.do_handle(ParseEvent(kind: PeMapShortcut, key: key))
+        if not parsed.value.is_nil:
+          self.next.do_handle(ParseEvent(kind: PeValue, value: parsed.value))
     else:
       let value = interpret_token(event.token)
       preprocess_unwrap(self, value)
@@ -496,22 +515,26 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
   of PeEndVectorOrSet:
     let context = self.stack.pop()
     if context.defer:
-      let last = self.stack[^1]
-      case last.state:
-      of PhStrInterpolation:
-        last.value.gene_children.add(context.value)
-        self.parser.in_str_interpolation = true
-      else:
-        preprocess_unwrap(self, context.value)
+      preprocess_unwrap(self, context.value)
     else:
       self.next.do_handle(event)
   of PeStartMap:
-    var context = PrepHandlerContext(state: PhMapStart)
+    let `defer` = (self.stack.len > 0 and self.stack[^1].defer)
+    var context = PrepHandlerContext(state: PhMapStart, `defer`: `defer`)
     self.stack.add(context)
-    self.next.do_handle(event)
+    if `defer`:
+      context.value = new_gene_map()
+    else:
+      self.next.do_handle(event)
   of PeEndMap:
-    discard self.stack.pop()
-    self.next.do_handle(event)
+    let context = self.stack.pop()
+    if context.state == PhStrValueStart:
+      self.stack[^1].value.gene_children.add(context.value)
+      self.parser.in_str_interpolation = true
+    elif context.defer:
+      preprocess_unwrap(self, context.value)
+    else:
+      self.next.do_handle(event)
   of PeStartGene:
     var context = PrepHandlerContext(state: PhGeneStart)
     self.stack.add(context)
@@ -543,10 +566,9 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
     )
     self.stack.add(context)
     self.parser.in_str_interpolation = true
-  of PeStartStrVector:
+  of PeStartStrValue:
     var context = PrepHandlerContext(
-      state: PhVectorStart,
-      value: new_gene_vec(),
+      state: PhStrValueStart,
       `defer`: true,
     )
     self.stack.add(context)
@@ -1977,11 +1999,7 @@ proc advance*(self: var Parser) =
         case ch2:
         of '{':
           inc(self.bufpos, 2)
-          self.handler.do_handle(ParseEvent(kind: PeStartStrMap))
-          continue
-        of '[':
-          inc(self.bufpos, 2)
-          self.handler.do_handle(ParseEvent(kind: PeStartStrVector))
+          self.handler.do_handle(ParseEvent(kind: PeStartStrValue))
           continue
         of '(':
           inc(self.bufpos, 2)
