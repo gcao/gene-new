@@ -608,7 +608,7 @@ test_parser "\"\"\"a\n   \"\"\"", "a\n"
 #   ]
 # """
 
-# TODO: there a ton of tests to write here
+# TODO: there are a ton of tests to write here
 test_parser """
   #"abc"
 """, "abc"
