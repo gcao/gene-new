@@ -120,7 +120,6 @@ type
     PeToken           # processed by the PreprocessingHandler before being passed down to the next handler
     PeStartStrInterpolation   # #"
     PeStartStrValue           # #{
-    # PeStartStrVector          # #[
     PeStartStrGene            # #(
     PeStartStrComment         # #<
     PeEndStrInterpolation     # "
@@ -2005,8 +2004,8 @@ proc advance*(self: var Parser) =
           inc(self.bufpos, 2)
           self.handler.do_handle(ParseEvent(kind: PeStartStrGene))
           continue
-        # of '<':
-        #   self.skip_block_comment()
+        of '<':
+          self.skip_block_comment()
         else:
           discard
       else:
