@@ -3,7 +3,7 @@
 # created by Roland Sadowski.
 # 1. https://github.com/rosado/edn.nim
 
-import lexbase, streams, strutils, unicode, tables, sets, times, nre, base64, os
+import lexbase, streams, strutils, unicode, tables, sets, times, nre, base64
 
 import ../types
 
@@ -24,10 +24,26 @@ type
     data*: Table[string, Value]
     units*: Table[string, Value]
 
+  # Symbols with special characters:
+  #   Use \ to escape them (including the first character)
+  #   E.g. \(abc\) = a symbol with name "(abc)"
+  ParseState* = enum
+    Default
+    InSymbol                # After the first character of a symbol
+    InString                # "..."
+    InString3               # """..."""
+    InStringInterpolation   # #"..."
+    InStringInterpolation3  # #"""..."""
+    InCharacter             # '...': 'n', '\n'
+    # InHereDoc               # #-XYZ...XYZ, #=XYZ...XYZ
+    # InLineComment           # # ..., #!...
+    # InComment               # #<...>#
+
   Parser* = object of BaseLexer
     mode*: ParseMode
     options*: ParseOptions
     filename*: string
+    state*: ParseState
     str*: string
     in_str_interpolation*: bool   # true if we are inside a string interpolation
     num_with_units*: seq[(TokenKind, string, string)] # token kind + number + unit
@@ -397,83 +413,25 @@ proc read_string(self: var Parser, start: char): Value =
   result = new_gene_string_move(self.str)
   self.str = ""
 
-proc read_string1(self: var Parser): Value =
-  self.read_string('\'')
+# proc read_string1(self: var Parser): Value =
+#   self.read_string('\'')
 
-proc read_string2(self: var Parser): Value =
-  self.read_string('"')
+# proc read_string2(self: var Parser): Value =
+#   self.read_string('"')
 
-proc read_quoted(self: var Parser): Value =
-  result = Value(kind: VkQuote)
-  result.quote = self.read()
+# proc read_quoted(self: var Parser): Value =
+#   result = Value(kind: VkQuote)
+#   result.quote = self.read()
 
-proc read_string_interpolation(self: var Parser): Value =
-  result = new_gene_gene(new_gene_symbol("#Str"))
-  var triple_mode = false
-  if self.buf[self.bufpos] == '"' and self.buf[self.bufpos + 1] == '"':
-    self.bufpos += 2
-    triple_mode = true
-
-  var all_are_strings = true
-  while true:
-    if self.buf[self.bufpos] == '#':
-      self.bufpos.inc()
-      case self.buf[self.bufpos]:
-      of '<':
-        self.bufpos.inc()
-        self.skip_block_comment()
-        continue
-
-      of '{':
-        self.bufpos.inc()
-        self.skip_ws()
-        if self.buf[self.bufpos] == '^':
-          let v = new_gene_map()
-          v.map = self.read_map(MkMap)
-          result.gene_children.add(v)
-          all_are_strings = false
-        else:
-          let v = self.read()
-          if v.kind != VkString:
-            all_are_strings = false
-          result.gene_children.add(v)
-          self.skip_ws()
-          self.bufpos.inc()
-        continue
-
-      of '(', '[':
-        let v = self.read()
-        result.gene_children.add(v)
-        if v.kind != VkString:
-          all_are_strings = false
-        continue
-
-      else:
-        discard
-
-    discard self.parse_string('#', triple_mode)
-    if self.error != ErrNone:
-      raise new_exception(ParseError, "read_string_interpolation failure: " & $self.error)
-    result.gene_children.add(new_gene_string_move(self.str))
-    self.str = ""
-    if self.buf[self.bufpos - 1] == '"':
-      break
-
-  if all_are_strings:
-    var s = ""
-    for v in result.gene_children:
-      s.add(v.str)
-    return new_gene_string_move(s)
-
-proc read_unquoted(self: var Parser): Value =
-  # Special logic for %_
-  var unquote_discard = false
-  if self.buf[self.bufpos] == '_':
-    self.bufpos.inc()
-    unquote_discard = true
-  result = Value(kind: VkUnquote)
-  result.unquote = self.read()
-  result.unquote_discard = unquote_discard
+# proc read_unquoted(self: var Parser): Value =
+#   # Special logic for %_
+#   var unquote_discard = false
+#   if self.buf[self.bufpos] == '_':
+#     self.bufpos.inc()
+#     unquote_discard = true
+#   result = Value(kind: VkUnquote)
+#   result.unquote = self.read()
+#   result.unquote_discard = unquote_discard
 
 proc skip_block_comment(self: var Parser) {.gcsafe.} =
   var pos = self.bufpos
@@ -922,12 +880,12 @@ proc read_dispatch(self: var Parser): Value =
     result = m(self)
 
 proc init_macro_array() =
-  macros['\''] = read_string1
-  macros['"'] = read_string2
-  macros[':'] = read_quoted
+  # macros['\''] = read_string1
+  # macros['"'] = read_string2
+  # macros[':'] = read_quoted
   # macros['\\'] = read_character
   # macros['`'] = read_quasi_quoted
-  macros['%'] = read_unquoted
+  # macros['%'] = read_unquoted
   macros['#'] = read_dispatch
   macros['('] = read_gene
   macros['{'] = read_map
