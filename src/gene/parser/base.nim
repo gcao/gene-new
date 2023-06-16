@@ -90,8 +90,6 @@ type
     list: seq[Value]
     map: Table[string, Value]
 
-  Handler = proc(self: var Parser, input: Value): Value {.gcsafe.}
-
   ParseEventKind* = enum
     PeStart
     PeEnd             # EOF
@@ -164,12 +162,8 @@ var DEFAULT_UNITS {.threadvar.}: Table[string, Value]
 var HEX {.threadvar.}: Table[char, uint8]
 var DATE_FORMAT {.threadvar.}: TimeFormat
 var DATETIME_FORMAT {.threadvar.}: TimeFormat
-var Ignore {.threadvar.}: Value
 
 var macros {.threadvar.}: MacroArray
-var dispatch_macros {.threadvar.}: MacroArray
-
-var handlers {.threadvar.}: Table[string, Handler]
 
 #################### Interfaces ##################
 
@@ -868,104 +862,13 @@ proc read_regex(self: var Parser): Value =
 proc read_unmatched_delimiter(self: var Parser): Value =
   raise new_exception(ParseError, "Unmatched delimiter: " & self.buf[self.bufpos])
 
-proc read_dispatch(self: var Parser): Value =
-  let ch = self.buf[self.bufpos]
-  let m = dispatch_macros[ch]
-  if m == nil:
-    self.bufpos -= 1
-    var token = self.read_token(false)
-    result = interpret_token(token)
-  else:
-    self.bufpos += 1
-    result = m(self)
-
 proc init_macro_array() =
-  # macros['\''] = read_string1
-  # macros['"'] = read_string2
-  # macros[':'] = read_quoted
-  # macros['\\'] = read_character
-  # macros['`'] = read_quasi_quoted
-  # macros['%'] = read_unquoted
-  macros['#'] = read_dispatch
   macros['('] = read_gene
   macros['{'] = read_map
   macros['['] = read_vector
   macros[')'] = read_unmatched_delimiter
   macros[']'] = read_unmatched_delimiter
   macros['}'] = read_unmatched_delimiter
-
-proc handle_file(self: var Parser, value: Value): Value =
-  result = Value(kind: VkFile)
-  result.file_name = value.gene_children[0].str
-  result.file_content = value.gene_children[1]
-
-proc handle_dir(self: var Parser, value: Value): Value =
-  result = Value(kind: VkDirectory)
-  result.dir_name = value.gene_children[0].str
-  for child in value.gene_children[1..^1]:
-    var child_name: string
-    case child.kind:
-    of VkFile:
-      child_name = child.file_name
-      child.file_parent = result
-    of VkDirectory:
-      child_name = child.dir_name
-      child.dir_parent = result
-    of VkArchiveFile:
-      child_name = child.arc_file_name
-      child.arc_file_parent = result
-    else:
-      not_allowed("unknown child " & $child)
-    result.dir_members[child_name] = child
-
-proc handle_arc(self: var Parser, value: Value): Value =
-  result = Value(kind: VkArchiveFile)
-  result.arc_file_name = value.gene_children[0].str
-  for child in value.gene_children[1..^1]:
-    var child_name: string
-    case child.kind:
-    of VkFile:
-      child_name = child.file_name
-      child.file_parent = result
-    of VkDirectory:
-      child_name = child.dir_name
-      child.dir_parent = result
-    of VkArchiveFile:
-      child_name = child.arc_file_name
-      child.arc_file_parent = result
-    else:
-      not_allowed("unknown child " & $child)
-    result.arc_file_members[child_name] = child
-
-proc handle_set(self: var Parser, value: Value): Value =
-  if value.gene_children[0].is_symbol("debug"):
-    self.options["debug"] = value.gene_children[1].bool
-  else:
-    todo("#Set " & $value.gene_children[0])
-
-proc handle_ignore(self: var Parser, value: Value): Value =
-  Ignore
-
-proc handle_reference(self: var Parser, value: Value): Value =
-  let name = value.gene_children[0].str
-  if self.references.has_key(name):
-    raise new_exception(ParseError, "Duplicate reference: " & name)
-  else:
-    let target = RefTarget(
-      name: name,
-      value: value.gene_children[1],
-      registry: self.references,
-    )
-    result = Value(kind: VkRefTarget, ref_target: target)
-    self.references[name] = result
-
-proc init_handlers() =
-  handlers["#Ref"] = handle_reference
-  handlers["#File"] = handle_file
-  handlers["#Dir"] = handle_dir
-  handlers["#Gar"] = handle_arc
-  handlers["#Set"] = handle_set
-  handlers["#Ignore"] = handle_ignore
 
 proc init*() =
   if INITIALIZED:
@@ -986,13 +889,10 @@ proc init*() =
     'A': 10u8, 'B': 11u8, 'C': 12u8, 'D': 13u8, 'E': 14u8, 'F': 15u8,
   }.to_table()
 
-  Ignore = Value(kind: VkCustom, custom: CustomValue())
-
   DATE_FORMAT = init_time_format("yyyy-MM-dd")
   DATETIME_FORMAT = init_time_format("yyyy-MM-dd'T'HH:mm:sszzz")
 
   init_macro_array()
-  init_handlers()
 
 proc open*(self: var Parser, input: Stream, filename: string) =
   lexbase.open(self, input)
@@ -1273,8 +1173,6 @@ proc read*(self: var Parser): Value =
     let m = macros[ch] # save line:col metadata here?
     inc(self.bufpos)
     result = m(self)
-    if result == Ignore:
-      result = self.read()
     return result
   elif ch in ['+', '-']:
     if isDigit(self.buf[self.bufpos + 1]):
@@ -1282,14 +1180,10 @@ proc read*(self: var Parser): Value =
     else:
       token = self.read_token(false)
       result = interpret_token(token)
-      if result == Ignore:
-        result = self.read()
       return result
 
   token = self.read_token(true)
   result = interpret_token(token)
-  if result == Ignore:
-    result = self.read()
 
 proc advance*(self: var Parser) =
   while not self.paused:
