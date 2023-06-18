@@ -16,8 +16,6 @@ type
     PmDocument
     PmStream
     PmFirst
-    # PmPackage
-    PmArchive
 
   ParseOptions* {.acyclic.} = ref object
     parent*: ParseOptions
@@ -45,7 +43,6 @@ type
     filename*: string
     state*: ParseState
     str*: string
-    # in_str_interpolation*: bool   # true if we are inside a string interpolation
     num_with_units*: seq[(TokenKind, string, string)] # token kind + number + unit
     token_kind*: TokenKind
     error*: ParseErrorKind
@@ -73,22 +70,6 @@ type
     ErrRegexEndExpected
 
   ParseInfo* = tuple[line, col: int]
-
-  MacroReader = proc(p: var Parser): Value {.gcsafe.}
-  MacroArray = array[char, MacroReader]
-
-  MapKind = enum
-    MkMap
-    MkGene
-    MkDocument
-
-  PropState = enum
-    PropKey
-    PropValue
-
-  DelimitedListResult = object
-    list: seq[Value]
-    map: Table[string, Value]
 
   ParseEventKind* = enum
     PeStart
@@ -163,8 +144,6 @@ var HEX {.threadvar.}: Table[char, uint8]
 var DATE_FORMAT {.threadvar.}: TimeFormat
 var DATETIME_FORMAT {.threadvar.}: TimeFormat
 
-var macros {.threadvar.}: MacroArray
-
 #################### Interfaces ##################
 
 proc init*() {.gcsafe.}
@@ -172,12 +151,9 @@ proc keys*(self: ParseOptions): HashSet[string]
 proc `[]`*(self: ParseOptions, name: string): Value
 proc unit_keys*(self: ParseOptions): HashSet[string]
 proc `unit`*(self: ParseOptions, name: string): Value
-proc read*(self: var Parser): Value {.gcsafe.}
 proc skip_comment(self: var Parser)
 proc skip_block_comment(self: var Parser) {.gcsafe.}
 proc skip_ws(self: var Parser) {.gcsafe.}
-proc interpret_token*(token: string): Value
-proc read_map(self: var Parser, mode: MapKind): Table[string, Value] {.gcsafe.}
 
 #################### Implementations #############
 
@@ -271,21 +247,11 @@ template do_handle*(self: ParseHandler, event: ParseEvent) =
 proc non_constituent(c: char): bool =
   result = non_constituents.contains(c)
 
-proc is_macro(c: char): bool =
-  result = c.to_int < macros.len and macros[c] != nil
-
 proc is_terminating_macro(c: char): bool =
-  result = c != '#' and c != '\'' and is_macro(c)
-
-proc get_macro(ch: char): MacroReader =
-  result = macros[ch]
-
-### === ERROR HANDLING UTILS ===
+  result = c != '#' and c != '\'' and c in ['#', '\'', '(', ')', '{', '}', '[', ']']
 
 proc err_info(self: Parser): ParseInfo =
   result = (self.line_number, self.get_col_number(self.bufpos))
-
-### === MACRO READERS ===
 
 proc handle_hex_char(c: char, x: var int): bool =
   result = true
@@ -406,26 +372,6 @@ proc read_string(self: var Parser, start: char): Value =
     raise new_exception(ParseError, "read_string failure: " & $self.error)
   result = new_gene_string_move(self.str)
   self.str = ""
-
-# proc read_string1(self: var Parser): Value =
-#   self.read_string('\'')
-
-# proc read_string2(self: var Parser): Value =
-#   self.read_string('"')
-
-# proc read_quoted(self: var Parser): Value =
-#   result = Value(kind: VkQuote)
-#   result.quote = self.read()
-
-# proc read_unquoted(self: var Parser): Value =
-#   # Special logic for %_
-#   var unquote_discard = false
-#   if self.buf[self.bufpos] == '_':
-#     self.bufpos.inc()
-#     unquote_discard = true
-#   result = Value(kind: VkUnquote)
-#   result.unquote = self.read()
-#   result.unquote_discard = unquote_discard
 
 proc skip_block_comment(self: var Parser) {.gcsafe.} =
   var pos = self.bufpos
@@ -560,228 +506,6 @@ proc match_symbol(s: string): Value =
   else:
     return new_gene_symbol(parts[0])
 
-proc interpret_token*(token: string): Value =
-  case token
-  of "nil":
-    return Value(kind: VkNil)
-  of "true":
-    return new_gene_bool(token)
-  of "false":
-    return new_gene_bool(token)
-  else:
-    return match_symbol(token)
-
-proc read_gene_type(self: var Parser): Value =
-  var delimiter = ')'
-  # the bufpos should be already be past the opening paren etc.
-  while true:
-    self.skip_ws()
-    var pos = self.bufpos
-    let ch = self.buf[pos]
-    if ch == EndOfFile:
-      let msg = "EOF while reading list $# $# $#"
-      raise new_exception(ParseError, format(msg, delimiter, self.filename, self.line_number))
-
-    if ch == delimiter:
-      # Do not increase position because we need to read other components in
-      # inc(pos)
-      # p.bufpos = pos
-      break
-
-    if is_macro(ch):
-      let m = get_macro(ch)
-      inc(pos)
-      self.bufpos = pos
-      result = m(self)
-      # if result != nil:
-      #   break
-    else:
-      result = self.read()
-      # if result != nil:
-      #   break
-    break
-
-proc to_keys(self: string): seq[string] =
-  # let parts = self.split("^")
-  # return parts
-  var pos = 0
-  var key = ""
-  var last: char = EndOfFile
-  while pos < self.len:
-    var ch = self[pos]
-    if ch == '^' and last != '^':
-      result.add(key)
-      key = ""
-    else:
-      key.add(ch)
-    last = ch
-    pos.inc
-
-  result.add(key)
-
-proc read_map(self: var Parser, mode: MapKind): Table[string, Value] {.gcsafe.} =
-  var ch: char
-  var key: string
-  var state = PropState.PropKey
-
-  result = init_table[string, Value]()
-  var map = result.addr
-
-  while true:
-    self.skip_ws()
-    ch = self.buf[self.bufpos]
-    if ch == EndOfFile:
-      if mode == MkDocument:
-        return result
-      else:
-        raise new_exception(ParseError, "EOF while reading ")
-    elif ch == ']' or (mode == MkGene and ch == '}') or (mode == MkMap and ch == ')'):
-      raise new_exception(ParseError, "Unmatched delimiter: " & self.buf[self.bufpos])
-
-    case state:
-    of PropKey:
-      if ch == '^':
-        self.bufPos.inc()
-        if self.buf[self.bufPos] == '^':
-          self.bufPos.inc()
-          key = self.read_token(false)
-          result[key] = new_gene_bool(true)
-        elif self.buf[self.bufPos] == '!':
-          self.bufPos.inc()
-          key = self.read_token(false)
-          result[key] = Value(kind: VkNil)
-        else:
-          key = self.read_token(false)
-          if key.contains('^'):
-            let parts = key.to_keys()
-            map = result.addr
-            for part in parts[0..^2]:
-              if map[].has_key(part):
-                map = map[][part].map.addr
-              else:
-                var new_map = new_gene_map()
-                map[][part] = new_map
-                map = new_map.map.addr
-            key = parts[^1]
-            case key[0]:
-            of '^':
-              map[][key[1..^1]] = true
-              continue
-            of '!':
-              map[][key[1..^1]] = false
-              continue
-            else:
-              discard
-          state = PropState.PropValue
-      elif mode == MkGene or mode == MkDocument:
-        # Do not consume ')'
-        # if ch == ')':
-        #   self.bufPos.inc()
-        return
-      elif ch == '}':
-        self.bufPos.inc()
-        return
-      else:
-        raise new_exception(ParseError, "Expect key at " & $self.bufpos & " but found " & self.buf[self.bufpos])
-
-    of PropState.PropValue:
-      if ch == EndOfFile or ch == '^':
-        raise new_exception(ParseError, "Expect value for " & key)
-      elif mode == MkGene:
-        if ch == ')':
-          raise new_exception(ParseError, "Expect value for " & key)
-      elif ch == '}':
-        raise new_exception(ParseError, "Expect value for " & key)
-      state = PropState.PropKey
-
-      var value = self.read()
-      if map[].has_key(key):
-        raise new_exception(ParseError, "Bad input at " & $self.bufpos & " (conflict with property shortcut found earlier.)")
-        # if value.kind == VkMap:
-        #   for k, v in value.map:
-        #     map[][key].map[k] = v
-        # else:
-        #   raise new_exception(ParseError, "Bad input: mixing map with non-map")
-      else:
-        map[][key] = value
-
-      map = result.addr
-
-proc read_delimited_list(self: var Parser, delimiter: char, is_recursive: bool): DelimitedListResult {.gcsafe.} =
-  # the bufpos should be already be past the opening paren etc.
-  var list: seq[Value] = @[]
-  var in_gene = delimiter == ')'
-  var map_found = false
-  var count = 0
-  while true:
-    self.skip_ws()
-    var pos = self.bufpos
-    let ch = self.buf[pos]
-    if ch == EndOfFile:
-      let msg = "EOF while reading list $# $# $#"
-      raise new_exception(ParseError, format(msg, delimiter, self.filename, self.line_number))
-
-    if in_gene and ch == '^':
-      if map_found:
-        let msg = "properties found in wrong place while reading list $# $# $#"
-        raise new_exception(ParseError, format(msg, delimiter, self.filename, self.line_number))
-      else:
-        map_found = true
-        result.map = self.read_map(MkGene)
-        continue
-
-    if ch == delimiter:
-      inc(pos)
-      self.bufpos = pos
-      break
-
-    if is_macro(ch):
-      let m = get_macro(ch)
-      inc(pos)
-      self.bufpos = pos
-      let node = m(self)
-      if node != nil:
-        inc(count)
-        if self.options["debug"]: echo $node, "\n"
-        list.add(node)
-    else:
-      let node = self.read()
-      if node != nil:
-        inc(count)
-        if self.options["debug"]: echo $node, "\n"
-        list.add(node)
-
-  result.list = list
-
-proc add_line_col(self: var Parser, node: var Value) =
-  discard
-  # node.line = self.line_number
-  # node.column = self.getColNumber(self.bufpos)
-
-proc read_gene(self: var Parser): Value {.gcsafe.} =
-  result = new_gene_gene()
-  #echo "line ", getCurrentLine(p), "lineno: ", p.line_number, " col: ", getColNumber(p, p.bufpos)
-  #echo $get_current_line(p) & " LINENO(" & $p.line_number & ")"
-  self.add_line_col(result)
-  result.gene_type = self.read_gene_type()
-  var result_list = self.read_delimited_list(')', true)
-  result.gene_props = result_list.map
-  result.gene_children = result_list.list
-  # if not result.gene_type.is_nil() and result.gene_type.kind == VkSymbol:
-  #   if handlers.has_key(result.gene_type.str):
-  #     let handler = handlers[result.gene_type.str]
-  #     return handler(self, result)
-
-proc read_map(self: var Parser): Value {.gcsafe.} =
-  result = Value(kind: VkMap)
-  let map = self.read_map(MkMap)
-  result.map = map
-
-proc read_vector(self: var Parser): Value {.gcsafe.} =
-  result = Value(kind: VkVector)
-  let list_result = self.read_delimited_list(']', true)
-  result.vec = list_result.list
-
 proc read_regex(self: var Parser): Value =
   var pos = self.bufpos
   var flags: set[RegexFlag]
@@ -859,17 +583,6 @@ proc read_regex(self: var Parser): Value =
   self.bufpos = pos
   result = new_gene_regex(self.str, flags)
 
-proc read_unmatched_delimiter(self: var Parser): Value =
-  raise new_exception(ParseError, "Unmatched delimiter: " & self.buf[self.bufpos])
-
-proc init_macro_array() =
-  macros['('] = read_gene
-  macros['{'] = read_map
-  macros['['] = read_vector
-  macros[')'] = read_unmatched_delimiter
-  macros[']'] = read_unmatched_delimiter
-  macros['}'] = read_unmatched_delimiter
-
 proc init*() =
   if INITIALIZED:
     return
@@ -892,7 +605,7 @@ proc init*() =
   DATE_FORMAT = init_time_format("yyyy-MM-dd")
   DATETIME_FORMAT = init_time_format("yyyy-MM-dd'T'HH:mm:sszzz")
 
-  init_macro_array()
+  # init_macro_array()
 
 proc open*(self: var Parser, input: Stream, filename: string) =
   lexbase.open(self, input)
@@ -1158,33 +871,6 @@ proc read_number(self: var Parser): Value =
   else:
     raise new_exception(ParseError, "Error reading a number (?): " & self.str)
 
-proc read*(self: var Parser): Value =
-  set_len(self.str, 0)
-  self.skip_ws()
-  let ch = self.buf[self.bufpos]
-  var token: string
-  case ch
-  of EndOfFile:
-    let position = (self.line_number, self.get_col_number(self.bufpos))
-    raise new_exception(ParseEofError, "EOF while reading " & $position)
-  of '0'..'9':
-    return read_number(self)
-  elif is_macro(ch):
-    let m = macros[ch] # save line:col metadata here?
-    inc(self.bufpos)
-    result = m(self)
-    return result
-  elif ch in ['+', '-']:
-    if isDigit(self.buf[self.bufpos + 1]):
-      return self.read_number()
-    else:
-      token = self.read_token(false)
-      result = interpret_token(token)
-      return result
-
-  token = self.read_token(true)
-  result = interpret_token(token)
-
 proc advance*(self: var Parser) =
   while not self.paused:
     set_len(self.str, 0)
@@ -1345,9 +1031,6 @@ proc advance*(self: var Parser) =
     of '%':
       inc(self.bufpos)
       self.handler.do_handle(ParseEvent(kind: PeUnquote))
-
-    elif is_macro(ch):
-      todo()
 
     else:
       var event = ParseEvent(

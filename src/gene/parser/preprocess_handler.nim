@@ -72,6 +72,41 @@ type
   PreprocessingHandler* = ref object of ParseHandler
     stack*: seq[PrepHandlerContext]
 
+proc match_symbol(s: string): Value =
+  var parts: seq[string] = @[]
+  var i = 0
+  var part = ""
+  while i < s.len:
+    var ch = s[i]
+    i += 1
+    case ch:
+    of '\\':
+      ch = s[i]
+      part &= ch
+      i += 1
+    of '/':
+      parts.add(part)
+      part = ""
+    else:
+      part &= ch
+  parts.add(part)
+
+  if parts.len > 1:
+    return new_gene_complex_symbol(parts)
+  else:
+    return new_gene_symbol(parts[0])
+
+proc interpret_token(token: string): Value =
+  case token
+  of "nil":
+    return Value(kind: VkNil)
+  of "true":
+    return new_gene_bool(token)
+  of "false":
+    return new_gene_bool(token)
+  else:
+    return match_symbol(token)
+
 # TODO: handle all cases
 # @arg key: the key to be parsed, e.g. "^a", "^^a", "^!a", "^a^b", "^a^^b", "^a^!b", "^a^b^^c" etc
 proc parse_key(key: string): KeyParsed =
