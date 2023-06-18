@@ -28,16 +28,16 @@ type
   #   Use \ to escape them (including the first character)
   #   E.g. \(abc\) = a symbol with name "(abc)"
   ParseState* = enum
-    Default
-    InSymbol                # After the first character of a symbol
-    InString                # "..."
-    InString3               # """..."""
-    InStringInterpolation   # #"..."
-    InStringInterpolation3  # #"""..."""
-    InCharacter             # '...': 'n', '\n'
-    # InHereDoc               # #-XYZ...XYZ, #=XYZ...XYZ
-    # InLineComment           # # ..., #!...
-    # InComment               # #<...>#
+    PsDefault
+    PsSymbol                # After the first character of a symbol
+    PsString                # "..."
+    PsString3               # """..."""
+    PsStrInterpolation   # #"..."
+    PsStrInterpolation3  # #"""..."""
+    PsCharacter             # '...': 'n', '\n'
+    # PsHereDoc               # #-XYZ...XYZ, #=XYZ...XYZ
+    # PsLineComment           # # ..., #!...
+    # PsComment               # #<...>#
 
   Parser* = object of BaseLexer
     mode*: ParseMode
@@ -45,7 +45,7 @@ type
     filename*: string
     state*: ParseState
     str*: string
-    in_str_interpolation*: bool   # true if we are inside a string interpolation
+    # in_str_interpolation*: bool   # true if we are inside a string interpolation
     num_with_units*: seq[(TokenKind, string, string)] # token kind + number + unit
     token_kind*: TokenKind
     error*: ParseErrorKind
@@ -1188,12 +1188,12 @@ proc read*(self: var Parser): Value =
 proc advance*(self: var Parser) =
   while not self.paused:
     set_len(self.str, 0)
-    if self.in_str_interpolation:
+    if self.state == PsStrInterpolation:
       let ch = self.buf[self.bufpos]
       case ch:
       of '"':
         inc(self.bufpos)
-        self.in_str_interpolation = false
+        self.state = PsDefault
         self.handler.do_handle(ParseEvent(kind: PeEndStrInterpolation))
         continue
       of '#':

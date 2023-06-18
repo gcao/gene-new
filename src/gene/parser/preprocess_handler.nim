@@ -115,7 +115,7 @@ proc preprocess_unwrap(self: PreprocessingHandler, event: ParseEvent, value: Val
         self.send(event, value)
     of PhStrInterpolation:
       last.value.gene_children.add(value)
-      self.parser.in_str_interpolation = true
+      self.parser.state = PsStrInterpolation
     of PhStrValueStart:
       if last.value.is_nil:
         last.value = value
@@ -197,7 +197,7 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
     let context = self.stack.pop()
     if context.state == PhStrValueStart:
       self.stack[^1].value.gene_children.add(context.value)
-      self.parser.in_str_interpolation = true
+      self.parser.state = PsStrInterpolation
     elif context.defer:
       preprocess_unwrap(self, context.value)
     else:
@@ -213,7 +213,7 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
       case last.state:
       of PhStrInterpolation:
         last.value.gene_children.add(context.value)
-        self.parser.in_str_interpolation = true
+        self.parser.state = PsStrInterpolation
       else:
         preprocess_unwrap(self, context.value)
     else:
@@ -232,14 +232,14 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
       value: new_gene_gene(new_gene_symbol("#Str")),
     )
     self.stack.add(context)
-    self.parser.in_str_interpolation = true
+    self.parser.state = PsStrInterpolation
   of PeStartStrValue:
     var context = PrepHandlerContext(
       state: PhStrValueStart,
       `defer`: true,
     )
     self.stack.add(context)
-    self.parser.in_str_interpolation = false
+    self.parser.state = PsDefault
   of PeStartStrGene:
     var context = PrepHandlerContext(
       state: PhGeneStart,
@@ -247,7 +247,7 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
       `defer`: true,
     )
     self.stack.add(context)
-    self.parser.in_str_interpolation = false
+    self.parser.state = PsDefault
   of PeEndStrInterpolation:
     let last = self.stack.pop()
     var all_are_string = true
