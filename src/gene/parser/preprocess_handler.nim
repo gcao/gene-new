@@ -136,7 +136,7 @@ template send(self: PreprocessingHandler, event: ParseEvent, value: Value) =
   else:
     self.next.do_handle(event)
 
-proc preprocess_unwrap(self: PreprocessingHandler, event: ParseEvent, value: Value) =
+proc unwrap(self: PreprocessingHandler, event: ParseEvent, value: Value) =
   if self.stack.len == 0:
     self.send(event, value)
   else:
@@ -165,13 +165,13 @@ proc preprocess_unwrap(self: PreprocessingHandler, event: ParseEvent, value: Val
     else:
       self.send(event, value)
 
-template preprocess_unwrap(self: PreprocessingHandler, event: ParseEvent) =
-  preprocess_unwrap(self, event, event.value)
+template unwrap(self: PreprocessingHandler, event: ParseEvent) =
+  unwrap(self, event, event.value)
 
-template preprocess_unwrap(self: PreprocessingHandler, value: Value) =
-  preprocess_unwrap(self, nil, value)
+template unwrap(self: PreprocessingHandler, value: Value) =
+  unwrap(self, nil, value)
 
-proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
+proc handle(h: ParseHandler, event: ParseEvent) =
   var self = cast[PreprocessingHandler](h)
   # echo "PreprocessingHandler " & $event
   case event.kind:
@@ -185,7 +185,7 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
   of PeEnd:
     self.next.do_handle(event)
   of PeValue:
-    self.preprocess_unwrap(event)
+    self.unwrap(event)
   of PeToken:
     if event.token[0] == '^':
       let parsed = parse_key(event.token)
@@ -209,7 +209,7 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
           self.next.do_handle(ParseEvent(kind: PeValue, value: parsed.value))
     else:
       let value = interpret_token(event.token)
-      preprocess_unwrap(self, value)
+      unwrap(self, value)
   of PeStartVector:
     var context = PrepHandlerContext(state: PhVectorStart)
     self.stack.add(context)
@@ -217,7 +217,7 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
   of PeEndVectorOrSet:
     let context = self.stack.pop()
     if context.defer:
-      preprocess_unwrap(self, context.value)
+      unwrap(self, context.value)
     else:
       self.next.do_handle(event)
   of PeStartMap:
@@ -234,7 +234,7 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
       self.stack[^1].value.gene_children.add(context.value)
       self.parser.state = PsStrInterpolation
     elif context.defer:
-      preprocess_unwrap(self, context.value)
+      unwrap(self, context.value)
     else:
       self.next.do_handle(event)
   of PeStartGene:
@@ -250,7 +250,7 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
         last.value.gene_children.add(context.value)
         self.parser.state = PsStrInterpolation
       else:
-        preprocess_unwrap(self, context.value)
+        unwrap(self, context.value)
     else:
       self.next.do_handle(event)
   of PeStartSet:
@@ -303,5 +303,5 @@ proc handle_preprocess(h: ParseHandler, event: ParseEvent) =
 proc new_preprocessing_handler*(parser: ptr Parser): PreprocessingHandler =
   PreprocessingHandler(
     parser: parser,
-    handle: handle_preprocess,
+    handle: handle,
   )

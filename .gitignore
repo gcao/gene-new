@@ -15,7 +15,7 @@ tmp/
 bin/
 build/
 *.dylib
-wip_test.nim
+test_wip.nim
 profile_results.txt
 callgrind.out*
 scratch*

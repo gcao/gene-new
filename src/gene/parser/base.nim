@@ -89,6 +89,11 @@ type
     PeKey
     PeValue
     PeToken           # processed by the PreprocessingHandler before being passed down to the next handler
+    PeStartNumber     # start of data that starts with '0'-'9', or '+' and '-' that is followed with '0'-'9'.
+    PeNumber          # [0-9]+, the lexer may choose to send multiple PeNumber events for a single number.
+    PeNumberToken     # [a-zA-Z\-\_\:\.\/]+ that is immediately after a number.
+                      # Please note that not all characters accepted by PeToken are accepted by PeNumberToken.
+    PeEndNumber       # sent when a whitespace, a non-token character etc is encountered
     PeStartStrInterpolation   # #"
     PeStartStrValue           # #{
     PeStartStrGene            # #(
@@ -114,13 +119,17 @@ type
       value*: Value
     of PeKey, PeMapShortcut:
       key*: string
-    of PeToken:
+    of PeToken, PeNumberToken:
       token*: string
     of PeComment, PeDocumentComment:
       comment*: string
     of PeError:
       error_code*: string
       error_message*: string
+    of PeStartNumber:
+      sign*: string # "+" or "-" or ""
+    of PeNumber:
+      number*: string
     else:
       discard
     # event_start: uint32
@@ -873,9 +882,85 @@ proc read_number(self: var Parser): Value =
 
 proc advance*(self: var Parser) =
   while not self.paused:
+    # echo $self.state
     set_len(self.str, 0)
-    if self.state == PsStrInterpolation:
-      let ch = self.buf[self.bufpos]
+    var ch = self.buf[self.bufpos]
+    case self.state:
+    of PsString, PsString3:
+      var pos = self.bufpos
+      while true:
+        case self.buf[pos]
+        of EndOfFile:
+          self.done = true
+          self.handler.do_handle(ParseEvent(kind: PeError, error_message: "EOF while reading string"))
+          break
+        of '"':
+          if self.state == PsString3:
+            if self.buf[pos + 1] == '"' and self.buf[pos + 2] == '"':
+              inc(pos, 3)
+              self.state = PsDefault
+              self.str = self.str.replace(re"^\s*\n", "\n").replace(re"\n\s*$", "\n")
+              self.handler.do_handle(ParseEvent(kind: PeValue, value: new_gene_string(self.str)))
+              break
+            else:
+              inc(pos)
+              add(self.str, '"')
+          else:
+            inc(pos)
+            self.state = PsDefault
+            self.handler.do_handle(ParseEvent(kind: PeValue, value: new_gene_string(self.str)))
+            break
+        of '\\':
+          case self.buf[pos+1]
+          of 'b':
+            add(self.str, '\b')
+            inc(pos, 2)
+          of 'f':
+            add(self.str, '\f')
+            inc(pos, 2)
+          of 'n':
+            add(self.str, '\L')
+            inc(pos, 2)
+          of 'r':
+            add(self.str, '\C')
+            inc(pos, 2)
+          of 't':
+            add(self.str, '\t')
+            inc(pos, 2)
+          of 'u':
+            inc(pos, 2)
+            var r = parse_escaped_utf16(self.buf, pos)
+            if r < 0:
+              self.error = ErrInvalidToken
+              break
+            # deal with surrogates
+            if (r and 0xfc00) == 0xd800:
+              if self.buf[pos] & self.buf[pos + 1] != "\\u":
+                self.error = ErrInvalidToken
+                break
+              inc(pos, 2)
+              var s = parse_escaped_utf16(self.buf, pos)
+              if (s and 0xfc00) == 0xdc00 and s > 0:
+                r = 0x10000 + (((r - 0xd800) shl 10) or (s - 0xdc00))
+              else:
+                self.error = ErrInvalidToken
+                break
+            add(self.str, toUTF8(Rune(r)))
+          else:
+            add(self.str, self.buf[pos+1])
+            inc(pos, 2)
+        of '\c':
+          pos = lexbase.handleCR(self, pos)
+          add(self.str, '\c')
+        of '\L':
+          pos = lexbase.handleLF(self, pos)
+          add(self.str, '\L')
+        else:
+          add(self.str, self.buf[pos])
+          inc(pos)
+      self.bufpos = pos
+
+    of PsStrInterpolation:
       case ch:
       of '"':
         inc(self.bufpos)
@@ -908,133 +993,132 @@ proc advance*(self: var Parser) =
         )
         self.handler.do_handle(event)
 
-      continue
+    else:
+      self.skip_ws()
+      ch = self.buf[self.bufpos]
+      case ch
+      of EndOfFile:
+        self.handler.do_handle(ParseEvent(kind: PeEnd))
+        self.paused = true
+        self.done = true
+        break
 
-    self.skip_ws()
-    let ch = self.buf[self.bufpos]
-    case ch
-    of EndOfFile:
-      self.handler.do_handle(ParseEvent(kind: PeEnd))
-      self.paused = true
-      self.done = true
-      break
-
-    of '0'..'9':
-      var event = ParseEvent(
-        kind: PeValue,
-        value: self.read_number(),
-      )
-      self.handler.do_handle(event)
-    of '+', '-':
-      if isDigit(self.buf[self.bufpos + 1]):
+      of '0'..'9':
         var event = ParseEvent(
           kind: PeValue,
           value: self.read_number(),
         )
         self.handler.do_handle(event)
-      else:
+      of '+', '-':
+        if isDigit(self.buf[self.bufpos + 1]):
+          var event = ParseEvent(
+            kind: PeValue,
+            value: self.read_number(),
+          )
+          self.handler.do_handle(event)
+        else:
+          var event = ParseEvent(
+            kind: PeToken,
+            token: self.read_token(false),
+          )
+          self.handler.do_handle(event)
+
+      of '"':
+        if self.buf[self.bufpos + 1] == '"' and self.buf[self.bufpos + 2] == '"':
+          self.state = PsString3
+          inc(self.bufpos, 3)
+        else:
+          self.state = PsString
+          inc(self.bufpos)
+
+      of '\\':
+        inc(self.bufpos)
+        let ch2 = self.buf[self.bufpos]
+        var value: Value
+        case ch2:
+        of '\'', '"':
+          self.bufpos.inc()
+          discard self.parse_string(ch2)
+          if self.error != ErrNone:
+            raise new_exception(ParseError, "read_string failure: " & $self.error)
+          value = new_gene_symbol(self.str)
+        else:
+          value = self.read_character()
+        var event = ParseEvent(
+          kind: PeValue,
+          value: value,
+        )
+        self.handler.do_handle(event)
+
+      of '[':
+        inc(self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeStartVector))
+      of ']':
+        inc(self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeEndVectorOrSet))
+
+      of '{':
+        inc(self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeStartMap))
+      of '}':
+        inc(self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeEndMap))
+
+      of '(':
+        inc(self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeStartGene))
+      of ')':
+        inc(self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeEndGene))
+
+      of '^':
         var event = ParseEvent(
           kind: PeToken,
           token: self.read_token(false),
         )
         self.handler.do_handle(event)
 
-    of '\'', '"':
-      inc(self.bufpos)
-      var event = ParseEvent(
-        kind: PeValue,
-        value: self.read_string(ch),
-      )
-      self.handler.do_handle(event)
-
-    of '\\':
-      inc(self.bufpos)
-      let ch2 = self.buf[self.bufpos]
-      var value: Value
-      case ch2:
-      of '\'', '"':
-        self.bufpos.inc()
-        discard self.parse_string(ch2)
-        if self.error != ErrNone:
-          raise new_exception(ParseError, "read_string failure: " & $self.error)
-        value = new_gene_symbol(self.str)
-      else:
-        value = self.read_character()
-      var event = ParseEvent(
-        kind: PeValue,
-        value: value,
-      )
-      self.handler.do_handle(event)
-
-    of '[':
-      inc(self.bufpos)
-      self.handler.do_handle(ParseEvent(kind: PeStartVector))
-    of ']':
-      inc(self.bufpos)
-      self.handler.do_handle(ParseEvent(kind: PeEndVectorOrSet))
-
-    of '{':
-      inc(self.bufpos)
-      self.handler.do_handle(ParseEvent(kind: PeStartMap))
-    of '}':
-      inc(self.bufpos)
-      self.handler.do_handle(ParseEvent(kind: PeEndMap))
-
-    of '(':
-      inc(self.bufpos)
-      self.handler.do_handle(ParseEvent(kind: PeStartGene))
-    of ')':
-      inc(self.bufpos)
-      self.handler.do_handle(ParseEvent(kind: PeEndGene))
-
-    of '^':
-      var event = ParseEvent(
-        kind: PeToken,
-        token: self.read_token(false),
-      )
-      self.handler.do_handle(event)
-
-    of '#':
-      inc(self.bufpos)
-      let ch2 = self.buf[self.bufpos]
-      case ch2:
-      of '"':
+      of '#':
         inc(self.bufpos)
-        self.handler.do_handle(ParseEvent(kind: PeStartStrInterpolation))
-        discard self.parse_string('#')
-        if self.str.len > 0:
+        let ch2 = self.buf[self.bufpos]
+        case ch2:
+        of '"':
+          inc(self.bufpos)
+          self.handler.do_handle(ParseEvent(kind: PeStartStrInterpolation))
+          discard self.parse_string('#')
+          if self.str.len > 0:
+            var event = ParseEvent(
+              kind: PeValue,
+              value: self.str,
+            )
+            self.handler.do_handle(event)
+
+        of '/':
+          inc(self.bufpos)
           var event = ParseEvent(
             kind: PeValue,
-            value: self.str,
+            value: self.read_regex(),
           )
           self.handler.do_handle(event)
+        of '[':
+          inc(self.bufpos)
+          self.handler.do_handle(ParseEvent(kind: PeStartSet))
+        of '@':
+          inc(self.bufpos)
+          self.handler.do_handle(ParseEvent(kind: PeStartDecorator))
+        else:
+          todo("#" & $ch2)
 
-      of '/':
+      of ':':
         inc(self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeQuote))
+      of '%':
+        inc(self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeUnquote))
+
+      else:
         var event = ParseEvent(
-          kind: PeValue,
-          value: self.read_regex(),
+          kind: PeToken,
+          token: self.read_token(false),
         )
         self.handler.do_handle(event)
-      of '[':
-        inc(self.bufpos)
-        self.handler.do_handle(ParseEvent(kind: PeStartSet))
-      of '@':
-        inc(self.bufpos)
-        self.handler.do_handle(ParseEvent(kind: PeStartDecorator))
-      else:
-        todo("#" & $ch2)
-
-    of ':':
-      inc(self.bufpos)
-      self.handler.do_handle(ParseEvent(kind: PeQuote))
-    of '%':
-      inc(self.bufpos)
-      self.handler.do_handle(ParseEvent(kind: PeUnquote))
-
-    else:
-      var event = ParseEvent(
-        kind: PeToken,
-        token: self.read_token(false),
-      )
-      self.handler.do_handle(event)

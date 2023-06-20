@@ -5,6 +5,8 @@ import ./parser/base
 import ./parser/preprocess_handler
 import ./parser/value_handler
 
+export ParseError
+
 proc new_parser*(options: ParseOptions): Parser =
   if not INITIALIZED:
     init()
