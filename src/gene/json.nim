@@ -7,6 +7,8 @@ export parse_json
 
 proc `%`*(self: Value): JsonNode =
   case self.kind:
+  of VkJson:
+    return self.json
   of VkNil:
     return newJNull()
   of VkBool:

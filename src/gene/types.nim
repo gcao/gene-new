@@ -1,5 +1,6 @@
 import os, random, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm
 import nre
+import std/json
 import asyncdispatch
 import dynlib
 import macros
@@ -94,6 +95,7 @@ type
     VkFuture
     VkThread
     VkThreadMessage
+    VkJson
     VkNativeFile
 
   Value* {.acyclic.} = ref object
@@ -253,6 +255,8 @@ type
     of VkThreadMessage:
       # TODO: ThreadMessage is an object that is bigger than size of other variants
       thread_message*: ThreadMessage
+    of VkJson:
+      json*: JsonNode
     of VkNativeFile:
       native_file*: File
     else:
