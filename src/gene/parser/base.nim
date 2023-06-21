@@ -17,6 +17,13 @@ type
     PmStream
     PmFirst
 
+  # Each format may have multiple versions and take additional options
+  InputFormat* = enum
+    IfGene        # Default
+    IfGeni        # Gene with indentation
+    # IfJson      # Gene data in JSON format, Gene type is encoded as a special JSON object.
+    # IfBinary
+
   ParseOptions* {.acyclic.} = ref object
     parent*: ParseOptions
     data*: Table[string, Value]
@@ -39,6 +46,7 @@ type
 
   Parser* = object of BaseLexer
     mode*: ParseMode
+    format*: InputFormat
     options*: ParseOptions
     filename*: string
     state*: ParseState
