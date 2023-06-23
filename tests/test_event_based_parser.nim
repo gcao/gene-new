@@ -245,55 +245,55 @@ test_parser "{^ratio -1/2}", proc(r: Value) =
 
 test_parser_error "{^ratio 1/-2}"
 
-# test_parser "0!11", proc(r: Value) =
-#   check r.kind == VkByte
-#   check r.byte_bit_size == 2
-#   check r.byte == 3
+test_parser "0!11", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 2
+  check r.byte == 3
 
-# test_parser "0!11110000", proc(r: Value) =
-#   check r.kind == VkByte
-#   check r.byte_bit_size == 8
-#   check r.byte == 240
+test_parser "0!11110000", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 240
 
-# test_parser "0!1111~ 0000", proc(r: Value) =
-#   check r.kind == VkByte
-#   check r.byte_bit_size == 8
-#   check r.byte == 240
+test_parser "0!1111~ 0000", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 240
 
-# test_parser "0!000011110000", proc(r: Value) =
-#   check r.kind == VkBin
-#   check r.bin_bit_size == 12
-#   check r.bin == @[uint8(15), uint8(0)]
+test_parser "0!000011110000", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 12
+  check r.bin == @[uint8(15), uint8(0)]
 
-# test_parser "0*a0", proc(r: Value) =
-#   check r.kind == VkByte
-#   check r.byte_bit_size == 8
-#   check r.byte == 160
+test_parser "0*a0", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 160
 
-# test_parser "0*A0", proc(r: Value) =
-#   check r.kind == VkByte
-#   check r.byte_bit_size == 8
-#   check r.byte == 160
+test_parser "0*A0", proc(r: Value) =
+  check r.kind == VkByte
+  check r.byte_bit_size == 8
+  check r.byte == 160
 
-# test_parser "0*a003", proc(r: Value) =
-#   check r.kind == VkBin
-#   check r.bin_bit_size == 16
-#   check r.bin == @[uint8(160), uint8(3)]
+test_parser "0*a003", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 16
+  check r.bin == @[uint8(160), uint8(3)]
 
-# test_parser "0*a0~ 03", proc(r: Value) =
-#   check r.kind == VkBin
-#   check r.bin_bit_size == 16
-#   check r.bin == @[uint8(160), uint8(3)]
+test_parser "0*a0~ 03", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 16
+  check r.bin == @[uint8(160), uint8(3)]
 
-# test_parser "0#ABCD", proc(r: Value) =
-#   check r.kind == VkBin
-#   check r.bin_bit_size == 24
-#   check r.bin == @[uint8(0), uint8(16), uint8(131)]
+test_parser "0#ABCD", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 24
+  check r.bin == @[uint8(0), uint8(16), uint8(131)]
 
-# test_parser "0#AB~ CD", proc(r: Value) =
-#   check r.kind == VkBin
-#   check r.bin_bit_size == 24
-#   check r.bin == @[uint8(0), uint8(16), uint8(131)]
+test_parser "0#AB~ CD", proc(r: Value) =
+  check r.kind == VkBin
+  check r.bin_bit_size == 24
+  check r.bin == @[uint8(0), uint8(16), uint8(131)]
 
 # # Unit conversion
 # test_parser """
@@ -636,15 +636,15 @@ test_parser """
   #"a#<b>#c"
 """, "ac"
 
-# test_parser "#\"\"\"abc\"\"\"", "abc"
+test_parser "#\"\"\"abc\"\"\"", "abc"
 
-# test_parser "#\"\"\"a\"bc\"\"\"", "a\"bc"
+test_parser "#\"\"\"a\"bc\"\"\"", "a\"bc"
 
-# test_parser "#\"\"\"a#{b}c\"\"\"", proc(r: Value) =
-#   check r.gene_type == new_gene_symbol("#Str")
-#   check r.gene_children[0] == "a"
-#   check r.gene_children[1] == new_gene_symbol("b")
-#   check r.gene_children[2] == "c"
+test_parser "#\"\"\"a#{b}c\"\"\"", proc(r: Value) =
+  check r.gene_type == new_gene_symbol("#Str")
+  check r.gene_children[0] == "a"
+  check r.gene_children[1] == new_gene_symbol("b")
+  check r.gene_children[2] == "c"
 
 # test_parser "[#\"\"\"a#{b}c\"\"\"]", proc(r: Value) =
 #   check r.kind == VkVector
