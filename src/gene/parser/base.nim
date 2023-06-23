@@ -102,13 +102,11 @@ type
     PeNumberToken     # [a-zA-Z\-\_\:\.\/]+ that is immediately after a number.
                       # Please note that not all characters accepted by PeToken are accepted by PeNumberToken.
     PeEndNumber       # sent when a whitespace, a non-token character etc is encountered
-    PeStartStrInterpolation   # #"
+    PeStartStrInterpolation   # #", #"""
     PeStartStrValue           # #{
     PeStartStrGene            # #(
     PeStartStrComment         # #<
-    PeEndStrInterpolation     # "
-    PeStartStrInterpolation3  # #"""
-    PeEndStrInterpolation3    # """
+    PeEndStrInterpolation     # ", """
     PeQuote
     PeUnquote
     PeStartDecorator  # processed by the PreprocessingHandler
@@ -891,10 +889,10 @@ proc read_number(self: var Parser): Value =
 proc advance*(self: var Parser) =
   while not self.paused:
     # echo $self.state
-    set_len(self.str, 0)
     var ch = self.buf[self.bufpos]
     case self.state:
     of PsString, PsString3:
+      self.str = ""
       var pos = self.bufpos
       while true:
         case self.buf[pos]
@@ -968,38 +966,82 @@ proc advance*(self: var Parser) =
           inc(pos)
       self.bufpos = pos
 
-    of PsStrInterpolation:
+    of PsStrInterpolation, PsStrInterpolation3:
       case ch:
       of '"':
-        inc(self.bufpos)
-        self.state = PsDefault
-        self.handler.do_handle(ParseEvent(kind: PeEndStrInterpolation))
-        continue
+        if self.state == PsStrInterpolation:
+          inc(self.bufpos)
+          self.state = PsDefault
+          if self.str.len > 0:
+            var event = ParseEvent(
+              kind: PeValue,
+              value: self.str,
+            )
+            self.handler.do_handle(event)
+            self.str = ""
+
+          self.handler.do_handle(ParseEvent(kind: PeEndStrInterpolation))
+          continue
+        elif self.buf[self.bufpos + 1] == '"' and self.buf[self.bufpos + 2] == '"':
+          inc(self.bufpos, 3)
+          self.state = PsDefault
+          if self.str.len > 0:
+            var event = ParseEvent(
+              kind: PeValue,
+              value: self.str,
+            )
+            self.handler.do_handle(event)
+            self.str = ""
+
+          self.handler.do_handle(ParseEvent(kind: PeEndStrInterpolation))
+          continue
+
       of '#':
         let ch2 = self.buf[self.bufpos + 1]
         case ch2:
         of '{':
           inc(self.bufpos, 2)
+          if self.str.len > 0:
+            var event = ParseEvent(
+              kind: PeValue,
+              value: self.str,
+            )
+            self.handler.do_handle(event)
+            self.str = ""
+
           self.handler.do_handle(ParseEvent(kind: PeStartStrValue))
           continue
         of '(':
           inc(self.bufpos, 2)
+          if self.str.len > 0:
+            var event = ParseEvent(
+              kind: PeValue,
+              value: self.str,
+            )
+            self.handler.do_handle(event)
+            self.str = ""
+
           self.handler.do_handle(ParseEvent(kind: PeStartStrGene))
           continue
         of '<':
+          if self.str.len > 0:
+            var event = ParseEvent(
+              kind: PeValue,
+              value: self.str,
+            )
+            self.handler.do_handle(event)
+            self.str = ""
+
           self.skip_block_comment()
+          continue
         else:
           discard
+
       else:
         discard
 
-      discard self.parse_string('#')
-      if self.str.len > 0:
-        var event = ParseEvent(
-          kind: PeValue,
-          value: self.str,
-        )
-        self.handler.do_handle(event)
+      inc(self.bufpos)
+      add(self.str, ch)
 
     else:
       self.skip_ws()
@@ -1012,6 +1054,7 @@ proc advance*(self: var Parser) =
         break
 
       of '0'..'9':
+        self.str = ""
         var event = ParseEvent(
           kind: PeValue,
           value: self.read_number(),
@@ -1019,12 +1062,14 @@ proc advance*(self: var Parser) =
         self.handler.do_handle(event)
       of '+', '-':
         if isDigit(self.buf[self.bufpos + 1]):
+          self.str = ""
           var event = ParseEvent(
             kind: PeValue,
             value: self.read_number(),
           )
           self.handler.do_handle(event)
         else:
+          self.str = ""
           var event = ParseEvent(
             kind: PeToken,
             token: self.read_token(false),
@@ -1080,6 +1125,7 @@ proc advance*(self: var Parser) =
         self.handler.do_handle(ParseEvent(kind: PeEndGene))
 
       of '^':
+        self.str = ""
         var event = ParseEvent(
           kind: PeToken,
           token: self.read_token(false),
@@ -1091,16 +1137,15 @@ proc advance*(self: var Parser) =
         let ch2 = self.buf[self.bufpos]
         case ch2:
         of '"':
-          inc(self.bufpos)
           self.handler.do_handle(ParseEvent(kind: PeStartStrInterpolation))
-          discard self.parse_string('#')
-          if self.str.len > 0:
-            var event = ParseEvent(
-              kind: PeValue,
-              value: self.str,
-            )
-            self.handler.do_handle(event)
-
+          if self.buf[self.bufpos + 1] == '"' and self.buf[self.bufpos + 2] == '"':
+            self.state = PsStrInterpolation3
+            self.str = ""
+            inc(self.bufpos, 3)
+          else:
+            self.state = PsStrInterpolation
+            self.str = ""
+            inc(self.bufpos)
         of '/':
           inc(self.bufpos)
           var event = ParseEvent(
