@@ -284,110 +284,6 @@ proc parse_escaped_utf16(buf: cstring, pos: var int): int =
     else:
       return -1
 
-proc parse_string(self: var Parser, start: char, triple_mode: bool = false): TokenKind =
-  result = TkString
-  self.str = ""
-  var pos = self.bufpos
-  while true:
-    case self.buf[pos]
-    of '\0':
-      self.error = ErrQuoteExpected
-      break
-    of '\'':
-      if self.buf[pos] == start:
-        inc(pos)
-        break
-      else:
-        add(self.str, self.buf[pos])
-        inc(pos)
-    of '#':
-      if start == '#' and self.buf[pos + 1] in ['<', '{', '[', '(']:
-        break
-      else:
-        add(self.str, self.buf[pos])
-        inc(pos)
-    of '"':
-      if triple_mode:
-        if self.buf[pos + 1] == '"' and self.buf[pos + 2] == '"':
-          pos = pos + 3
-          self.str = self.str.replace(re"^\s*\n", "\n").replace(re"\n\s*$", "\n")
-          break
-        else:
-          inc(pos)
-          add(self.str, '"')
-      elif start == '#':
-        break
-      elif self.buf[pos] == start:
-        inc(pos)
-        break
-      else:
-        add(self.str, self.buf[pos])
-        inc(pos)
-    of '\\':
-      if start == '\'':
-        add(self.str, self.buf[pos])
-        inc(pos)
-      else:
-        case self.buf[pos+1]
-        of 'b':
-          add(self.str, '\b')
-          inc(pos, 2)
-        of 'f':
-          add(self.str, '\b')
-          inc(pos, 2)
-        of 'n':
-          add(self.str, '\L')
-          inc(pos, 2)
-        of 'r':
-          add(self.str, '\C')
-          inc(pos, 2)
-        of 't':
-          add(self.str, '\t')
-          inc(pos, 2)
-        of 'u':
-          inc(pos, 2)
-          var r = parse_escaped_utf16(self.buf, pos)
-          if r < 0:
-            self.error = ErrInvalidToken
-            break
-          # deal with surrogates
-          if (r and 0xfc00) == 0xd800:
-            if self.buf[pos] & self.buf[pos + 1] != "\\u":
-              self.error = ErrInvalidToken
-              break
-            inc(pos, 2)
-            var s = parse_escaped_utf16(self.buf, pos)
-            if (s and 0xfc00) == 0xdc00 and s > 0:
-              r = 0x10000 + (((r - 0xd800) shl 10) or (s - 0xdc00))
-            else:
-              self.error = ErrInvalidToken
-              break
-          add(self.str, toUTF8(Rune(r)))
-        else:
-          add(self.str, self.buf[pos+1])
-          inc(pos, 2)
-    of '\c':
-      pos = lexbase.handleCR(self, pos)
-      add(self.str, '\c')
-    of '\L':
-      pos = lexbase.handleLF(self, pos)
-      add(self.str, '\L')
-    else:
-      add(self.str, self.buf[pos])
-      inc(pos)
-  self.bufpos = pos
-
-proc read_string(self: var Parser, start: char): Value =
-  if start == '"' and self.buf[self.bufpos] == '"' and self.buf[self.bufpos + 1] == '"':
-    self.bufpos += 2
-    discard self.parse_string(start, true)
-  else:
-    discard self.parse_string(start)
-  if self.error != ErrNone:
-    raise new_exception(ParseError, "read_string failure: " & $self.error)
-  result = new_gene_string_move(self.str)
-  self.str = ""
-
 proc skip_block_comment(self: var Parser) {.gcsafe.} =
   var pos = self.bufpos
   while true:
@@ -448,34 +344,6 @@ proc read_token(self: var Parser, lead_constituent: bool, chars_allowed: openarr
 proc read_token(self: var Parser, lead_constituent: bool): string =
   return self.read_token(lead_constituent, [':'])
 
-proc read_character(self: var Parser): Value =
-  result = Value(kind: VkChar)
-  let token = self.read_token(false)
-
-  case token:
-  of "newline":
-    result.char = '\n'
-  of "space":
-    result.char = ' '
-  of "tab":
-    result.char = '\t'
-  of "backspace":
-    result.char = '\b'
-  of "formfeed":
-    result.char = '\f'
-  of "return":
-    result.char = '\r'
-  else:
-    if token.len == 1:
-      result.char = token[0]
-    elif token.runeLen == 1:
-      result.rune = token.runeAt(0)
-    # elif token.startsWith("\\u"):
-    #   # TODO: impl unicode char reading
-    #   raise new_exception(ParseError, "Not implemented: reading unicode chars")
-    else:
-      raise new_exception(ParseError, "Unknown character: " & token)
-
 proc skip_ws(self: var Parser) {.gcsafe.} =
   # commas are whitespace in gene collections
   while true:
@@ -496,30 +364,6 @@ proc skip_ws(self: var Parser) {.gcsafe.} =
         break
     else:
       break
-
-proc match_symbol(s: string): Value =
-  var parts: seq[string] = @[]
-  var i = 0
-  var part = ""
-  while i < s.len:
-    var ch = s[i]
-    i += 1
-    case ch:
-    of '\\':
-      ch = s[i]
-      part &= ch
-      i += 1
-    of '/':
-      parts.add(part)
-      part = ""
-    else:
-      part &= ch
-  parts.add(part)
-
-  if parts.len > 1:
-    return new_gene_complex_symbol(parts)
-  else:
-    return new_gene_symbol(parts[0])
 
 proc read_regex(self: var Parser): Value =
   var pos = self.bufpos
@@ -1083,25 +927,6 @@ proc advance*(self: var Parser) =
         else:
           self.state = PsString
           inc(self.bufpos)
-
-      of '\\':
-        inc(self.bufpos)
-        let ch2 = self.buf[self.bufpos]
-        var value: Value
-        case ch2:
-        of '\'', '"':
-          self.bufpos.inc()
-          discard self.parse_string(ch2)
-          if self.error != ErrNone:
-            raise new_exception(ParseError, "read_string failure: " & $self.error)
-          value = new_gene_symbol(self.str)
-        else:
-          value = self.read_character()
-        var event = ParseEvent(
-          kind: PeValue,
-          value: value,
-        )
-        self.handler.do_handle(event)
 
       of '[':
         inc(self.bufpos)

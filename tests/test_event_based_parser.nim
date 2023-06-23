@@ -78,30 +78,8 @@ test_parser "-1", -1
 test_parser "10e10", 10e10
 test_parser "+5.0E5", +5.0E5
 
-test_parser "\\\\", '\\'
-test_parser "\\s", 's'
-test_parser "\\space", ' '
-test_parser "\\t", 't'
-test_parser "\\tab", '\t'
-test_parser "\\n", 'n'
-test_parser "\\newline", '\n'
-test_parser "\\r", 'r'
-test_parser "\\return", '\r'
-test_parser "\\f", 'f'
-test_parser "\\formfeed", '\f'
-test_parser "\\b", 'b'
-test_parser "\\backspace", '\b'
-test_parser "\\中", "中".runeAt(0)
-
-test_parser "\\\"nil\"", new_gene_symbol("nil")
-test_parser "\\\"true\"", new_gene_symbol("true")
-test_parser "\\\"false\"", new_gene_symbol("false")
-test_parser "\\'nil'", new_gene_symbol("nil")
-
 test_parser "\"test\"", "test"
 test_parser ",\"test\",", "test"
-# test_parser "'test'", "test"
-# test_parser ",'test',", "test"
 
 test_parser "a", new_gene_symbol("a")
 test_parser "A", new_gene_symbol("A")
