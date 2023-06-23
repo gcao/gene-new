@@ -5,3 +5,6 @@ proc abbrev*(s: string, len: int): string =
     return s
   else:
     s[0..int((len+1)/2)] & "..." & s[s.len - int(len/2)..^1]
+
+# template dbg*(args: untyped) =
+#   echo instantiation_info() & $args

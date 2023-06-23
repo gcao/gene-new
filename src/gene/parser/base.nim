@@ -299,7 +299,6 @@ proc skip_block_comment(self: var Parser) {.gcsafe.} =
     else:
       inc(pos)
   self.bufpos = pos
-  self.str = ""
 
 proc skip_comment(self: var Parser) =
   var pos = self.bufpos
@@ -367,6 +366,7 @@ proc skip_ws(self: var Parser) {.gcsafe.} =
 
 proc read_regex(self: var Parser): Value =
   var pos = self.bufpos
+  var str = ""
   var flags: set[RegexFlag]
   while true:
     case self.buf[pos]
@@ -390,22 +390,22 @@ proc read_regex(self: var Parser): Value =
     of '\\':
       case self.buf[pos+1]
       of '\\', '/':
-        add(self.str, self.buf[pos+1])
+        str.add(self.buf[pos+1])
         inc(pos, 2)
       of 'b':
-        add(self.str, '\b')
+        str.add('\b')
         inc(pos, 2)
       of 'f':
-        add(self.str, '\b')
+        str.add('\b')
         inc(pos, 2)
       of 'n':
-        add(self.str, '\L')
+        str.add('\L')
         inc(pos, 2)
       of 'r':
-        add(self.str, '\C')
+        str.add('\C')
         inc(pos, 2)
       of 't':
-        add(self.str, '\t')
+        str.add('\t')
         inc(pos, 2)
       of 'u':
         inc(pos, 2)
@@ -425,22 +425,22 @@ proc read_regex(self: var Parser): Value =
           else:
             self.error = ErrInvalidToken
             break
-        add(self.str, toUTF8(Rune(r)))
+        str.add(toUTF8(Rune(r)))
       else:
         # don't bother with the Error
-        add(self.str, self.buf[pos])
+        str.add(self.buf[pos])
         inc(pos)
     of '\c':
       pos = lexbase.handleCR(self, pos)
-      add(self.str, '\c')
+      str.add('\c')
     of '\L':
       pos = lexbase.handleLF(self, pos)
-      add(self.str, '\L')
+      str.add('\L')
     else:
-      add(self.str, self.buf[pos])
+      str.add(self.buf[pos])
       inc(pos)
   self.bufpos = pos
-  result = new_gene_regex(self.str, flags)
+  result = new_gene_regex(str, flags)
 
 proc init*() =
   if INITIALIZED:
@@ -469,7 +469,6 @@ proc init*() =
 proc open*(self: var Parser, input: Stream, filename: string) =
   lexbase.open(self, input)
   self.filename = filename
-  self.str = ""
 
 proc open*(self: var Parser, input: Stream) =
   self.open(input, "<input>")
@@ -651,6 +650,7 @@ proc parse_number(self: var Parser): TokenKind =
   self.bufpos = pos
 
 proc read_number(self: var Parser): Value =
+  self.str = ""
   if self.buf[self.bufpos] == '0':
     let ch = self.buf[self.bufpos + 1]
     case ch:
@@ -731,12 +731,13 @@ proc read_number(self: var Parser): Value =
     raise new_exception(ParseError, "Error reading a number (?): " & self.str)
 
 proc advance*(self: var Parser) =
+  var str = ""
   while not self.paused:
-    # echo $self.state
+    # echo "advance " & $self.state
     var ch = self.buf[self.bufpos]
     case self.state:
     of PsString, PsString3:
-      self.str = ""
+      str = ""
       var pos = self.bufpos
       while true:
         case self.buf[pos]
@@ -749,33 +750,33 @@ proc advance*(self: var Parser) =
             if self.buf[pos + 1] == '"' and self.buf[pos + 2] == '"':
               inc(pos, 3)
               self.state = PsDefault
-              self.str = self.str.replace(re"^\s*\n", "\n").replace(re"\n\s*$", "\n")
-              self.handler.do_handle(ParseEvent(kind: PeValue, value: new_gene_string(self.str)))
+              str = str.replace(re"^\s*\n", "\n").replace(re"\n\s*$", "\n")
+              self.handler.do_handle(ParseEvent(kind: PeValue, value: new_gene_string(str)))
               break
             else:
               inc(pos)
-              add(self.str, '"')
+              str.add('"')
           else:
             inc(pos)
             self.state = PsDefault
-            self.handler.do_handle(ParseEvent(kind: PeValue, value: new_gene_string(self.str)))
+            self.handler.do_handle(ParseEvent(kind: PeValue, value: new_gene_string(str)))
             break
         of '\\':
           case self.buf[pos+1]
           of 'b':
-            add(self.str, '\b')
+            str.add('\b')
             inc(pos, 2)
           of 'f':
-            add(self.str, '\f')
+            str.add('\f')
             inc(pos, 2)
           of 'n':
-            add(self.str, '\L')
+            str.add('\L')
             inc(pos, 2)
           of 'r':
-            add(self.str, '\C')
+            str.add('\C')
             inc(pos, 2)
           of 't':
-            add(self.str, '\t')
+            str.add('\t')
             inc(pos, 2)
           of 'u':
             inc(pos, 2)
@@ -795,18 +796,18 @@ proc advance*(self: var Parser) =
               else:
                 self.error = ErrInvalidToken
                 break
-            add(self.str, toUTF8(Rune(r)))
+            str.add(toUTF8(Rune(r)))
           else:
-            add(self.str, self.buf[pos+1])
+            str.add(self.buf[pos+1])
             inc(pos, 2)
         of '\c':
           pos = lexbase.handleCR(self, pos)
-          add(self.str, '\c')
+          str.add('\c')
         of '\L':
           pos = lexbase.handleLF(self, pos)
-          add(self.str, '\L')
+          str.add('\L')
         else:
-          add(self.str, self.buf[pos])
+          str.add(self.buf[pos])
           inc(pos)
       self.bufpos = pos
 
@@ -816,26 +817,26 @@ proc advance*(self: var Parser) =
         if self.state == PsStrInterpolation:
           inc(self.bufpos)
           self.state = PsDefault
-          if self.str.len > 0:
+          if str.len > 0:
             var event = ParseEvent(
               kind: PeValue,
-              value: self.str,
+              value: str,
             )
             self.handler.do_handle(event)
-            self.str = ""
+            str = ""
 
           self.handler.do_handle(ParseEvent(kind: PeEndStrInterpolation))
           continue
         elif self.buf[self.bufpos + 1] == '"' and self.buf[self.bufpos + 2] == '"':
           inc(self.bufpos, 3)
           self.state = PsDefault
-          if self.str.len > 0:
+          if str.len > 0:
             var event = ParseEvent(
               kind: PeValue,
-              value: self.str,
+              value: str,
             )
             self.handler.do_handle(event)
-            self.str = ""
+            str = ""
 
           self.handler.do_handle(ParseEvent(kind: PeEndStrInterpolation))
           continue
@@ -845,36 +846,36 @@ proc advance*(self: var Parser) =
         case ch2:
         of '{':
           inc(self.bufpos, 2)
-          if self.str.len > 0:
+          if str.len > 0:
             var event = ParseEvent(
               kind: PeValue,
-              value: self.str,
+              value: str,
             )
             self.handler.do_handle(event)
-            self.str = ""
+            str = ""
 
           self.handler.do_handle(ParseEvent(kind: PeStartStrValue))
           continue
         of '(':
           inc(self.bufpos, 2)
-          if self.str.len > 0:
+          if str.len > 0:
             var event = ParseEvent(
               kind: PeValue,
-              value: self.str,
+              value: str,
             )
             self.handler.do_handle(event)
-            self.str = ""
+            str = ""
 
           self.handler.do_handle(ParseEvent(kind: PeStartStrGene))
           continue
         of '<':
-          if self.str.len > 0:
+          if str.len > 0:
             var event = ParseEvent(
               kind: PeValue,
-              value: self.str,
+              value: str,
             )
             self.handler.do_handle(event)
-            self.str = ""
+            str = ""
 
           self.skip_block_comment()
           continue
@@ -885,7 +886,7 @@ proc advance*(self: var Parser) =
         discard
 
       inc(self.bufpos)
-      add(self.str, ch)
+      str.add(ch)
 
     else:
       self.skip_ws()
@@ -898,7 +899,6 @@ proc advance*(self: var Parser) =
         break
 
       of '0'..'9':
-        self.str = ""
         var event = ParseEvent(
           kind: PeValue,
           value: self.read_number(),
@@ -906,14 +906,12 @@ proc advance*(self: var Parser) =
         self.handler.do_handle(event)
       of '+', '-':
         if isDigit(self.buf[self.bufpos + 1]):
-          self.str = ""
           var event = ParseEvent(
             kind: PeValue,
             value: self.read_number(),
           )
           self.handler.do_handle(event)
         else:
-          self.str = ""
           var event = ParseEvent(
             kind: PeToken,
             token: self.read_token(false),
@@ -950,7 +948,6 @@ proc advance*(self: var Parser) =
         self.handler.do_handle(ParseEvent(kind: PeEndGene))
 
       of '^':
-        self.str = ""
         var event = ParseEvent(
           kind: PeToken,
           token: self.read_token(false),
@@ -965,11 +962,9 @@ proc advance*(self: var Parser) =
           self.handler.do_handle(ParseEvent(kind: PeStartStrInterpolation))
           if self.buf[self.bufpos + 1] == '"' and self.buf[self.bufpos + 2] == '"':
             self.state = PsStrInterpolation3
-            self.str = ""
             inc(self.bufpos, 3)
           else:
             self.state = PsStrInterpolation
-            self.str = ""
             inc(self.bufpos)
         of '/':
           inc(self.bufpos)
