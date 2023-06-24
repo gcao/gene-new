@@ -37,9 +37,19 @@ type
     PsSymbol                # After the first character of a symbol
     PsString                # "..."
     PsString3               # """..."""
-    PsStrInterpolation   # #"..."
-    PsStrInterpolation3  # #"""..."""
+    PsStrInterpolation      # #"..."
+    PsStrInterpolation3     # #"""..."""
     PsCharacter             # '...': 'n', '\n'
+    PsNumber                # 123, 123.456, 123.456e+10, 123.456e-10, +123, -123, -1/5, 1_000_000
+                            # 10min, 10m20s
+    PsBinary                # #=010101, #=010101~ 010101
+                            # #=[BINARY DATA] (white spaces are allowed inside the brackets)
+                            # #+1234567890abcdef, #+1234567890ABCDEF, #+1234~ 5678
+                            # #+[HEX DATA]
+                            # #*[BASE64 DATA]
+    PsDate                  # 2019-01-01
+    PsTime                  # 10:00(hour:minute) 10:20:30(hour:minute:second) 10:20:30EDT 10:20:30-5:00
+    PsDateTime              # 2019-01-01T10:20:30.123+08:00
     # PsHereDoc               # #-XYZ...XYZ, #=XYZ...XYZ
     # PsLineComment           # # ..., #!...
     # PsComment               # #<...>#
@@ -98,7 +108,7 @@ type
     PeValue
     PeToken           # processed by the PreprocessingHandler before being passed down to the next handler
     PeStartNumber     # start of data that starts with '0'-'9', or '+' and '-' that is followed with '0'-'9'.
-    PeNumber          # [0-9]+, the lexer may choose to send multiple PeNumber events for a single number.
+    PeNumber          # [0-9\.]+, the lexer may choose to send multiple PeNumber events for a single number.
     PeNumberToken     # [a-zA-Z\-\_\:\.\/]+ that is immediately after a number.
                       # Please note that not all characters accepted by PeToken are accepted by PeNumberToken.
     PeEndNumber       # sent when a whitespace, a non-token character etc is encountered
