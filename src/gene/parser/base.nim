@@ -17,12 +17,12 @@ type
     PmStream
     PmFirst
 
-  # Each format may have multiple versions and take additional options
-  InputFormat* = enum
-    IfGene        # Default
-    IfGeni        # Gene with indentation
-    # IfJson      # Gene data in JSON format, Gene type is encoded as a special JSON object.
-    # IfBinary
+  # # Each format may have multiple versions and take additional options
+  # InputFormat* = enum
+  #   IfGene        # Default
+  #   IfGeni        # Gene with indentation
+  #   # IfJson      # Gene data in JSON format, Gene type is encoded as a special JSON object.
+  #   # IfBinary
 
   ParseOptions* {.acyclic.} = ref object
     parent*: ParseOptions
@@ -56,7 +56,7 @@ type
 
   Parser* = object of BaseLexer
     mode*: ParseMode
-    format*: InputFormat
+    # format*: InputFormat
     options*: ParseOptions
     filename*: string
     state*: ParseState
@@ -359,14 +359,8 @@ proc skip_ws(self: var Parser) {.gcsafe.} =
         inc(self.bufpos)
       of '\c': # \r
         self.bufpos = lexbase.handleCR(self, self.bufpos)
-        if self.format == IfGeni:
-          self.handler.do_handle(ParseEvent(kind: PeNewLine))
-          break
       of '\L': # \n
         self.bufpos = lexbase.handleLF(self, self.bufpos)
-        if self.format == IfGeni:
-          self.handler.do_handle(ParseEvent(kind: PeNewLine))
-          break
       of '#':
         case self.buf[self.bufpos + 1]:
         of ' ':
@@ -485,8 +479,6 @@ proc init*() =
 
   DATE_FORMAT = init_time_format("yyyy-MM-dd")
   DATETIME_FORMAT = init_time_format("yyyy-MM-dd'T'HH:mm:sszzz")
-
-  # init_macro_array()
 
 proc open*(self: var Parser, input: Stream, filename: string) =
   lexbase.open(self, input)
