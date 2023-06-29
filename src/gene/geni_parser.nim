@@ -12,6 +12,7 @@ proc new_parser*(options: ParseOptions): Parser =
     init()
 
   result = Parser(
+    format: IfGeni,
     options: new_options(options),
     references: References(),
   )
@@ -22,6 +23,7 @@ proc new_parser*(): Parser =
     init()
 
   result = Parser(
+    format: IfGeni,
     options: default_options(),
     references: References(),
   )

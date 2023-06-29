@@ -52,6 +52,11 @@ type
     # PhStrInterpolationGene        # #(...)
     # PhStrInterpolationComment     # #<...>#
 
+    # PhNumberStart
+    # PhNumber
+    # PhNumberToken
+    # PhNumberEnd
+
     PhQuote
     PhUnquote
 

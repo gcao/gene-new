@@ -120,6 +120,7 @@ type
     PeQuote
     PeUnquote
     PeStartDecorator  # processed by the PreprocessingHandler
+    PeNewLine
     PeComment         # Will not be emitted unless the parser is configured to do so.
     PeDocumentComment # Will not be emitted unless the parser is configured to do so.
     PeError
@@ -176,8 +177,6 @@ proc keys*(self: ParseOptions): HashSet[string]
 proc `[]`*(self: ParseOptions, name: string): Value
 proc unit_keys*(self: ParseOptions): HashSet[string]
 proc `unit`*(self: ParseOptions, name: string): Value
-proc skip_comment(self: var Parser)
-proc skip_block_comment(self: var Parser) {.gcsafe.}
 proc skip_ws(self: var Parser) {.gcsafe.}
 
 #################### Implementations #############
@@ -314,11 +313,9 @@ proc skip_comment(self: var Parser) =
   var pos = self.bufpos
   while true:
     case self.buf[pos]
-    of '\L':
-      pos = lexbase.handleLF(self, pos)
+    of '\c': # \r
       break
-    of '\c':
-      pos = lexbase.handleCR(self, pos)
+    of '\L': # \n
       break
     of EndOfFile:
       break
@@ -355,24 +352,39 @@ proc read_token(self: var Parser, lead_constituent: bool): string =
 
 proc skip_ws(self: var Parser) {.gcsafe.} =
   # commas are whitespace in gene collections
-  while true:
-    case self.buf[self.bufpos]
-    of ' ', '\t', ',':
-      inc(self.bufpos)
-    of '\c':
-      self.bufpos = lexbase.handleCR(self, self.bufpos)
-    of '\L':
-      self.bufpos = lexbase.handleLF(self, self.bufpos)
-    of '#':
-      case self.buf[self.bufpos + 1]:
-      of ' ', '!', '#', '\r', '\n':
-        self.skip_comment()
-      of '<':
-        self.skip_block_comment()
+  {.cast(gcsafe).}:
+    while true:
+      case self.buf[self.bufpos]
+      of ' ', '\t', ',':
+        inc(self.bufpos)
+      of '\c': # \r
+        self.bufpos = lexbase.handleCR(self, self.bufpos)
+        if self.format == IfGeni:
+          self.handler.do_handle(ParseEvent(kind: PeNewLine))
+          break
+      of '\L': # \n
+        self.bufpos = lexbase.handleLF(self, self.bufpos)
+        if self.format == IfGeni:
+          self.handler.do_handle(ParseEvent(kind: PeNewLine))
+          break
+      of '#':
+        case self.buf[self.bufpos + 1]:
+        of ' ':
+          self.skip_comment()
+        of '!': # Treat #!shebang line as a comment for now.
+          self.skip_comment()
+        of '\c': # \r
+          inc(self.bufpos)
+          continue
+        of '\L': # \n
+          inc(self.bufpos)
+          continue
+        of '<':
+          self.skip_block_comment()
+        else:
+          break
       else:
         break
-    else:
-      break
 
 proc read_regex(self: var Parser): Value =
   var pos = self.bufpos
