@@ -1,9 +1,9 @@
 import streams
 
 import ./types
-import ./parser/base
-import ./parser/geni_handler
-import ./parser/value_handler
+import ./geni_parser/base
+import ./geni_parser/preprocess_handler
+import ./geni_parser/value_handler
 
 export ParseError
 
@@ -12,22 +12,20 @@ proc new_parser*(options: ParseOptions): Parser =
     init()
 
   result = Parser(
-    format: IfGeni,
     options: new_options(options),
     references: References(),
   )
-  result.handler = new_geni_handler(result.addr)
+  result.handler = new_preprocessing_handler(result.addr)
 
 proc new_parser*(): Parser =
   if not INITIALIZED:
     init()
 
   result = Parser(
-    format: IfGeni,
     options: default_options(),
     references: References(),
   )
-  result.handler = new_geni_handler(result.addr)
+  result.handler = new_preprocessing_handler(result.addr)
 
 proc read_first*(self: var Parser): Value =
   let value_handler = new_value_handler(self.addr)

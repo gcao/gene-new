@@ -4,15 +4,15 @@ import ../types
 import ./base
 
 type
-  GeniState* = enum
-    GsDefault
+  PrepHandlerState* = enum
+    PhDefault
 
-    GsDocStart
-    GsDocPropKey
-    GsDocPropValue
-    GsDocChild
-    GsDocPropChild  # For readability's sake, we require the properties to appear before children.
-    GsDocEnd
+    PhDocStart
+    PhDocPropKey
+    PhDocPropValue
+    PhDocChild
+    PhDocPropChild  # For readability's sake, we require the properties to appear before children.
+    PhDocEnd
 
     # For Gene parsing:
     # (): Start -> End
@@ -20,56 +20,61 @@ type
     # (a ^b c ^d e f): Start -> Type -> TypePropKey -> TypePropValue -> TypePropChild -> TypePropChild -> End
     # (a b c): Start -> Type -> TypeChild -> TypeChild -> End
     # (a b c ^d e ^f g h): Start -> Type -> TypeChild -> TypeChild -> TypeChildPropKey -> TypeChildPropValue -> TypeChildPropKey -> TypeChildPropValue -> TypePropChild -> End
-    GsGeneStart
-    GsGeneEnd
-    GsGeneType
-    GsGeneTypePropKey
-    GsGeneTypePropValue
-    GsGeneTypeChild
-    GsGeneTypeChildPropKey
-    GsGeneTypeChildPropValue
-    GsGeneTypePropChild
+    PhGeneStart
+    PhGeneEnd
+    PhGeneType
+    PhGeneTypePropKey
+    PhGeneTypePropValue
+    PhGeneTypeChild
+    PhGeneTypeChildPropKey
+    PhGeneTypeChildPropValue
+    PhGeneTypePropChild
 
-    GsMapStart
-    GsMapKey
-    GsMapValue
-    GsMapEnd
+    PhMapStart
+    PhMapKey
+    PhMapValue
+    PhMapEnd
 
-    GsMapShortcut
+    PhMapShortcut
 
-    GsVectorStart
-    GsVectorEnd
-    GsVectorValue
+    PhVectorStart
+    PhVectorEnd
+    PhVectorValue
 
-    GsSetStart
-    GsSetEnd
-    GsSetValue
+    PhSetStart
+    PhSetEnd
+    PhSetValue
 
-    GsStrInterpolation
-    GsStrValueStart
-    # GsStrInterpolationString      # #"..."
-    # GsStrInterpolationMapOrValue  # #{a}
-    # GsStrInterpolationGene        # #(...)
-    # GsStrInterpolationComment     # #<...>#
+    PhStrInterpolation
+    PhStrValueStart
+    # PhStrInterpolationString      # #"..."
+    # PhStrInterpolationMapOrValue  # #{a}
+    # PhStrInterpolationGene        # #(...)
+    # PhStrInterpolationComment     # #<...>#
 
-    GsQuote
-    GsUnquote
+    # PhNumberStart
+    # PhNumber
+    # PhNumberToken
+    # PhNumberEnd
 
-    GsDecoratorStart
-    GsDecoratorFirst
+    PhQuote
+    PhUnquote
+
+    PhDecoratorStart
+    PhDecoratorFirst
 
   PrepHandlerContext* = ref object
-    state*: GeniState
+    state*: PrepHandlerState
     key*: string
     value*: Value
     `defer`*: bool  # Whether to defer the event to the next handler.
 
-  # We would like to share as little as possible between the geniHandler and the ValueHandler.
+  # We would like to share as little as possible between the PreprocessingHandler and the ValueHandler.
   # However, we would like to achieve the best performance possible. So we need to minimize the number
   # of allocations and copies etc.
 
   # Handle basic parsing and pre-processing (e.g. ???), raise errors if the input is not valid Gene data.
-  geniHandler* = ref object of ParseHandler
+  PreprocessingHandler* = ref object of ParseHandler
     stack*: seq[PrepHandlerContext]
 
 proc match_symbol(s: string): Value =
@@ -130,34 +135,34 @@ proc parse_key(key: string): KeyParsed =
     inc i
   result.keys.add(s)
 
-template send(self: geniHandler, event: ParseEvent, value: Value) =
+template send(self: PreprocessingHandler, event: ParseEvent, value: Value) =
   if event.is_nil:
     self.next.do_handle(ParseEvent(kind: PeValue, value: value))
   else:
     self.next.do_handle(event)
 
-proc unwrap(self: geniHandler, event: ParseEvent, value: Value) =
+proc unwrap(self: PreprocessingHandler, event: ParseEvent, value: Value) =
   if self.stack.len == 0:
     self.send(event, value)
   else:
     var last = self.stack[^1]
     case last.state:
-    of GsMapKey:
-      last.state = GsMapValue
+    of PhMapKey:
+      last.state = PhMapValue
       if last.defer:
         last.value.map[last.key] = value
       else:
         self.send(event, value)
-    of GsStrInterpolation:
+    of PhStrInterpolation:
       last.value.gene_children.add(value)
       self.parser.state = PsStrInterpolation
-    of GsStrValueStart:
+    of PhStrValueStart:
       if last.value.is_nil:
         last.value = value
       else:
         not_allowed()
-    of GsGeneStart:
-      last.state = GsGeneType
+    of PhGeneStart:
+      last.state = PhGeneType
       if last.defer:
         last.value.gene_type = value
       else:
@@ -165,20 +170,20 @@ proc unwrap(self: geniHandler, event: ParseEvent, value: Value) =
     else:
       self.send(event, value)
 
-template unwrap(self: geniHandler, event: ParseEvent) =
+template unwrap(self: PreprocessingHandler, event: ParseEvent) =
   unwrap(self, event, event.value)
 
-template unwrap(self: geniHandler, value: Value) =
+template unwrap(self: PreprocessingHandler, value: Value) =
   unwrap(self, nil, value)
 
 proc handle(h: ParseHandler, event: ParseEvent) =
-  var self = cast[geniHandler](h)
-  # echo "geniHandler " & $event
+  var self = cast[PreprocessingHandler](h)
+  # echo "PreprocessingHandler " & $event
   case event.kind:
   of PeStart:
     self.next.do_handle(event)
     if self.parser.mode == PmDocument:
-      var context = PrepHandlerContext(state: GsDocStart)
+      var context = PrepHandlerContext(state: PhDocStart)
       self.stack.add(context)
       self.next.do_handle(event)
       self.next.do_handle(ParseEvent(kind: PeStartDocument))
@@ -195,10 +200,10 @@ proc handle(h: ParseHandler, event: ParseEvent) =
           todo()
         else:
           if parsed.value.is_nil:
-            last.state = GsMapValue
+            last.state = PhMapValue
             last.key = parsed.keys[0]
           else:
-            last.state = GsMapKey
+            last.state = PhMapKey
             last.value.map[parsed.keys[0]] = parsed.value
       else:
         self.next.do_handle(ParseEvent(kind: PeKey, key: parsed.keys[0]))
@@ -211,7 +216,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
       let value = interpret_token(event.token)
       unwrap(self, value)
   of PeStartVector:
-    var context = PrepHandlerContext(state: GsVectorStart)
+    var context = PrepHandlerContext(state: PhVectorStart)
     self.stack.add(context)
     self.next.do_handle(event)
   of PeEndVectorOrSet:
@@ -222,7 +227,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
       self.next.do_handle(event)
   of PeStartMap:
     let `defer` = (self.stack.len > 0 and self.stack[^1].defer)
-    var context = PrepHandlerContext(state: GsMapStart, `defer`: `defer`)
+    var context = PrepHandlerContext(state: PhMapStart, `defer`: `defer`)
     self.stack.add(context)
     if `defer`:
       context.value = new_gene_map()
@@ -230,7 +235,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
       self.next.do_handle(event)
   of PeEndMap:
     let context = self.stack.pop()
-    if context.state == GsStrValueStart:
+    if context.state == PhStrValueStart:
       self.stack[^1].value.gene_children.add(context.value)
       self.parser.state = PsStrInterpolation
     elif context.defer:
@@ -238,7 +243,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
     else:
       self.next.do_handle(event)
   of PeStartGene:
-    var context = PrepHandlerContext(state: GsGeneStart)
+    var context = PrepHandlerContext(state: PhGeneStart)
     self.stack.add(context)
     self.next.do_handle(event)
   of PeEndGene:
@@ -246,7 +251,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
     if context.defer:
       let last = self.stack[^1]
       case last.state:
-      of GsStrInterpolation:
+      of PhStrInterpolation:
         last.value.gene_children.add(context.value)
         self.parser.state = PsStrInterpolation
       else:
@@ -254,7 +259,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
     else:
       self.next.do_handle(event)
   of PeStartSet:
-    var context = PrepHandlerContext(state: GsSetStart)
+    var context = PrepHandlerContext(state: PhSetStart)
     self.stack.add(context)
     self.next.do_handle(event)
   of PeQuote, PeUnquote:
@@ -263,21 +268,21 @@ proc handle(h: ParseHandler, event: ParseEvent) =
     self.next.do_handle(event)
   of PeStartStrInterpolation:
     var context = PrepHandlerContext(
-      state: GsStrInterpolation,
+      state: PhStrInterpolation,
       value: new_gene_gene(new_gene_symbol("#Str")),
     )
     self.stack.add(context)
     self.parser.state = PsStrInterpolation
   of PeStartStrValue:
     var context = PrepHandlerContext(
-      state: GsStrValueStart,
+      state: PhStrValueStart,
       `defer`: true,
     )
     self.stack.add(context)
     self.parser.state = PsDefault
   of PeStartStrGene:
     var context = PrepHandlerContext(
-      state: GsGeneStart,
+      state: PhGeneStart,
       value: new_gene_gene(),
       `defer`: true,
     )
@@ -300,8 +305,8 @@ proc handle(h: ParseHandler, event: ParseEvent) =
   else:
     todo($event)
 
-proc new_geni_handler*(parser: ptr Parser): geniHandler =
-  geniHandler(
+proc new_preprocessing_handler*(parser: ptr Parser): PreprocessingHandler =
+  PreprocessingHandler(
     parser: parser,
     handle: handle,
   )
