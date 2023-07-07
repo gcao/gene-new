@@ -7,6 +7,9 @@ type
   PrepHandlerState* = enum
     PhDefault
 
+    PhLine
+    PhLineItem
+
     PhDocStart
     PhDocPropKey
     PhDocPropValue
@@ -64,9 +67,13 @@ type
     PhDecoratorFirst
 
   PrepHandlerContext* = ref object
-    state*: PrepHandlerState
-    key*: string
-    value*: Value
+    case state*: PrepHandlerState
+    of PhLine:
+      indent*: int
+      items*: seq[PrepHandlerContext]
+    else:
+      key*: string
+      value*: Value
     `defer`*: bool  # Whether to defer the event to the next handler.
 
   # We would like to share as little as possible between the PreprocessingHandler and the ValueHandler.
@@ -167,6 +174,9 @@ proc unwrap(self: PreprocessingHandler, event: ParseEvent, value: Value) =
         last.value.gene_type = value
       else:
         self.send(event, value)
+    of PhLine:
+      var context = PrepHandlerContext(state: PhLineItem, value: value)
+      last.items.add(context)
     else:
       self.send(event, value)
 
@@ -175,6 +185,41 @@ template unwrap(self: PreprocessingHandler, event: ParseEvent) =
 
 template unwrap(self: PreprocessingHandler, value: Value) =
   unwrap(self, nil, value)
+
+proc process_end(self: PreprocessingHandler) =
+  while self.stack.len > 0:
+    var context = self.stack.pop()
+    case context.state:
+    of PhLine:
+      if context.items.len > 0:
+        var value = new_gene_gene()
+        if context.items.len > 0:
+          value.gene_type = context.items[0].value
+          for item in context.items[1..^1]:
+            value.gene_children.add(item.value)
+        self.unwrap(value)
+    else:
+      todo($context.state)
+
+proc process_indentation(self: PreprocessingHandler) =
+  if self.stack.len == 0:
+    return
+  var c0 = self.stack[^1]
+  if c0.state != PhLine:
+    todo($c0.state)
+  if self.stack.len < 2:
+    return
+  var c1 = self.stack[^2]
+  if c1.state != PhLine:
+    todo($c1.state)
+  if c0.indent <= c1.indent:
+    return
+  var value = new_gene_gene()
+  if c1.items.len > 0:
+    value.gene_type = c1.items[0].value
+    for item in c1.items[1..^1]:
+      value.gene_children.add(item.value)
+  self.next.do_handle(ParseEvent(kind: PeValue, value: value))
 
 proc handle(h: ParseHandler, event: ParseEvent) =
   var self = cast[PreprocessingHandler](h)
@@ -188,7 +233,19 @@ proc handle(h: ParseHandler, event: ParseEvent) =
       self.next.do_handle(event)
       self.next.do_handle(ParseEvent(kind: PeStartDocument))
   of PeEnd:
+    self.process_end()
     self.next.do_handle(event)
+  of PeNewLine:
+    if self.stack.len > 0:
+      var last = self.stack[^1]
+      if last.state == PhLine and last.items.len == 0:
+        discard self.stack.pop()
+    self.process_indentation()
+    var context = PrepHandlerContext(state: PhLine)
+    self.stack.add(context)
+  of PeIndent:
+    let context = self.stack[^1]
+    context.indent = event.indent
   of PeValue:
     self.unwrap(event)
   of PeToken:

@@ -120,7 +120,6 @@ type
     PeQuote
     PeUnquote
     PeStartDecorator  # processed by the PreprocessingHandler
-    PeNewLine
     PeComment         # Will not be emitted unless the parser is configured to do so.
     PeDocumentComment # Will not be emitted unless the parser is configured to do so.
     PeError
@@ -177,7 +176,6 @@ proc keys*(self: ParseOptions): HashSet[string]
 proc `[]`*(self: ParseOptions, name: string): Value
 proc unit_keys*(self: ParseOptions): HashSet[string]
 proc `unit`*(self: ParseOptions, name: string): Value
-proc skip_ws(self: var Parser) {.gcsafe.}
 
 #################### Implementations #############
 

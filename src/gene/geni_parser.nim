@@ -30,7 +30,6 @@ proc new_parser*(): Parser =
 proc read_first*(self: var Parser): Value =
   let value_handler = new_value_handler(self.addr)
   self.handler.next = value_handler
-  self.handler.do_handle(ParseEvent(kind: PeStart))
   self.advance()
   result = value_handler.stack[0].value
 
@@ -46,7 +45,6 @@ proc read_all*(self: var Parser, buffer: string): seq[Value] =
   defer: self.close()
   let value_handler = new_value_handler(self.addr)
   self.handler.next = value_handler
-  self.handler.do_handle(ParseEvent(kind: PeStart))
   while not self.done:
     self.paused = false
     self.advance()
@@ -61,7 +59,6 @@ proc read_document*(self: var Parser, buffer: string): Document =
 
   let value_handler = new_value_handler(self.addr)
   self.handler.next = value_handler
-  self.handler.do_handle(ParseEvent(kind: PeStart))
   self.advance()
   result = value_handler.stack[0].value.document
 

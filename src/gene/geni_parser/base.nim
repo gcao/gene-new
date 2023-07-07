@@ -26,6 +26,7 @@ type
   #   Use \ to escape them (including the first character)
   #   E.g. \(abc\) = a symbol with name "(abc)"
   ParseState* = enum
+    PsStart
     PsDefault
     PsSymbol                # After the first character of a symbol
     PsString                # "..."
@@ -112,12 +113,11 @@ type
     PeQuote
     PeUnquote
     PeStartDecorator  # processed by the PreprocessingHandler
-    PeNewLine
     PeComment         # Will not be emitted unless the parser is configured to do so.
     PeDocumentComment # Will not be emitted unless the parser is configured to do so.
     PeError
-    # PeNewLine         # Can be useful to support different syntaxes.
-    # PeIndent          # Can be useful to support different syntaxes.
+    PeNewLine         # Can be useful to support different syntaxes.
+    PeIndent          # Can be useful to support different syntaxes.
     # PeSemicolon       # Can be useful to support different syntaxes.
     # PeComma           # Can be useful to support different syntaxes.
     # PeCustom          # Custom events defined by custom handlers
@@ -139,6 +139,8 @@ type
       sign*: string # "+" or "-" or ""
     of PeNumber:
       number*: string
+    of PeIndent:
+      indent*: int
     else:
       discard
     # event_start: uint32
@@ -169,7 +171,6 @@ proc keys*(self: ParseOptions): HashSet[string]
 proc `[]`*(self: ParseOptions, name: string): Value
 proc unit_keys*(self: ParseOptions): HashSet[string]
 proc `unit`*(self: ParseOptions, name: string): Value
-proc skip_ws(self: var Parser) {.gcsafe.}
 
 #################### Implementations #############
 
@@ -341,6 +342,17 @@ proc read_token(self: var Parser, lead_constituent: bool, chars_allowed: openarr
 
 proc read_token(self: var Parser, lead_constituent: bool): string =
   return self.read_token(lead_constituent, [':'])
+
+proc read_indent(self: var Parser): int {.gcsafe.} =
+  result = 0
+  while true:
+    case self.buf[self.bufpos]
+    of ' ':
+      result.inc()
+    of '\t':
+      raise new_exception(ParseError, "Tab is not allowed for indentation")
+    else:
+      break
 
 proc skip_ws(self: var Parser) {.gcsafe.} =
   # commas are whitespace in gene collections
@@ -746,6 +758,13 @@ proc advance*(self: var Parser) =
     # echo "advance " & $self.state
     var ch = self.buf[self.bufpos]
     case self.state:
+    of PsStart:
+      self.state = PsDefault
+      self.handler.do_handle(ParseEvent(kind: PeStart))
+      self.handler.do_handle(ParseEvent(kind: PeNewLine))
+      var indent = self.read_indent()
+      if indent > 0:
+        self.handler.do_handle(ParseEvent(kind: PeIndent, indent: indent))
     of PsString, PsString3:
       str = ""
       var pos = self.bufpos
@@ -907,7 +926,18 @@ proc advance*(self: var Parser) =
         self.paused = true
         self.done = true
         break
-
+      of '\c': # \r
+        self.bufpos = lexbase.handleCR(self, self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeNewLine))
+        var indent = self.read_indent()
+        if indent > 0:
+          self.handler.do_handle(ParseEvent(kind: PeIndent, indent: indent))
+      of '\L': # \n
+        self.bufpos = lexbase.handleLF(self, self.bufpos)
+        self.handler.do_handle(ParseEvent(kind: PeNewLine))
+        var indent = self.read_indent()
+        if indent > 0:
+          self.handler.do_handle(ParseEvent(kind: PeIndent, indent: indent))
       of '0'..'9':
         var event = ParseEvent(
           kind: PeValue,
