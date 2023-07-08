@@ -212,7 +212,7 @@ proc process_indentation(self: PreprocessingHandler) =
   var c1 = self.stack[^2]
   if c1.state != PhLine:
     todo($c1.state)
-  if c0.indent <= c1.indent:
+  if c0.indent > c1.indent:
     return
   var value = new_gene_gene()
   if c1.items.len > 0:

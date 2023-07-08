@@ -348,6 +348,7 @@ proc read_indent(self: var Parser): int {.gcsafe.} =
   while true:
     case self.buf[self.bufpos]
     of ' ':
+      self.bufpos.inc()
       result.inc()
     of '\t':
       raise new_exception(ParseError, "Tab is not allowed for indentation")
@@ -362,12 +363,8 @@ proc skip_ws(self: var Parser) {.gcsafe.} =
       of ' ', '\t', ',':
         inc(self.bufpos)
       of '\c': # \r
-        self.bufpos = lexbase.handleCR(self, self.bufpos)
-        self.handler.do_handle(ParseEvent(kind: PeNewLine))
         break
       of '\L': # \n
-        self.bufpos = lexbase.handleLF(self, self.bufpos)
-        self.handler.do_handle(ParseEvent(kind: PeNewLine))
         break
       of '#':
         case self.buf[self.bufpos + 1]:

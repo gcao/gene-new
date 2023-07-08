@@ -41,9 +41,9 @@ proc test_parse_document*(code: string, callback: proc(result: Document)) =
     callback read_document(code)
 
 test_parser "1", new_gene_gene(1)
-# test_parser """
-#   1
-# """, new_gene_gene(1)
+test_parser """
+  1
+""", new_gene_gene(1)
 
 # test_parser """
 #   [
