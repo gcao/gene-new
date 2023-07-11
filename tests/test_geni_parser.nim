@@ -45,6 +45,15 @@ test_parser """
   1
 """, new_gene_gene(1)
 
+test_parser """
+  if cond
+    = 1
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type == new_gene_symbol("if")
+  check r.gene_children[0] == new_gene_symbol("cond")
+  check r.gene_children[1] == 1
+
 # test_parser """
 #   if cond
 #     = 1

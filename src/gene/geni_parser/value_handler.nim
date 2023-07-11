@@ -253,7 +253,7 @@ proc post_value_callback(self: ValueHandler, event: ParseEvent) {.inline.} =
 
 proc handle_value*(h: ParseHandler, event: ParseEvent) {.locks: "unknown".} =
   var self = cast[ValueHandler](h)
-  # echo "handle_value " & $event & " " & $self.stack.len
+  # echo "handle_value " & $self.stack.len & " " & $event
   case event.kind:
   of PeStart:
     discard

@@ -26,14 +26,14 @@
       ],
     },
     {
-      "label": "nimbuild - wip_test",
+      "label": "nimbuild - test_wip",
       "dependsOn": ["nimbuild - http"],
       "type": "shell",
       "command": "~/.nimble/bin/nim",
       "args": [
         "c",
         "--debugger:native",
-        "tests/wip_test.nim"
+        "tests/test_wip.nim"
       ],
     },
   ]

@@ -193,13 +193,13 @@ proc process_end(self: PreprocessingHandler) =
     case context.state:
     of PhLine:
       if context.items.len > 0:
-        var value = new_gene_gene()
         var first = context.items[0]
         if first.value.kind == VkSymbol and first.value.str == "=":
           for item in context.items[1..^1]:
-            self.next.do_handle(ParseEvent(kind: PeValue, value: item.value))
+            self.unwrap(item.value)
+            # self.next.do_handle(ParseEvent(kind: PeValue, value: item.value))
         else:
-          value.gene_type = first.value
+          var value = new_gene_gene(first.value)
           for item in context.items[1..^1]:
             value.gene_children.add(item.value)
           self.unwrap(value)
