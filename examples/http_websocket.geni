@@ -653,9 +653,18 @@ $if_main
 
   var port
     if ($cmd_args/.size > 1)
-      $cmd_args/1/.to_i
-    else
-      2080
+      = $cmd_args/1/.to_i
+    else # elif/else/when/catch/finally/... are treated as a special word that is part of if/case/try statement that has same indentation
+      = 2080
+
+  # Alternative
+  var port
+    if
+      $cmd_args/.size > 1
+    then
+      = $cmd_args/1/.to_i
+    else # elif/else/when/catch/finally/... are treated as a special word that is part of if/case/try statement that has same indentation
+      = 2080
 
   var app ($tap (new App port)
     /handler = (create_router)
@@ -665,5 +674,41 @@ $if_main
     }
   )
 
+  # Alternative
+  var app
+    $tap (new App port)
+      /handler = (create_router)
+      /websocket =
+        #Map
+          ^path "/ws"
+          ^handler (new WebSocketHandler)
+
   app .start
 
+# More examples
+
+# Example 1
+# .gene
+((fnx [a b]
+  (a + b)
+) 1 2)
+
+# .geni
+(fnx [a b]
+  a + b
+) 1 2
+
+fnx [a b]
+  a + b
+; 1 2
+
+# Example 2
+# .gene
+((fnx a a) 1)
+
+# .geni
+(fnx a a) 1
+
+fnx a a; 1
+fnx a a;
+  = 1

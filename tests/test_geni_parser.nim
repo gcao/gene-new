@@ -46,6 +46,19 @@ test_parser """
 """, new_gene_gene(1)
 
 # test_parser """
+#   if cond
+#     = 1
+#   else
+#     = 2
+# """, proc(r: Value) =
+#   check r.kind == VkGene
+#   check r.gene_type == new_gene_symbol("if")
+#   check r.gene_children[0] == new_gene_symbol("cond")
+#   check r.gene_children[1] == 1
+#   check r.gene_children[2] == new_gene_symbol("else")
+#   check r.gene_children[3] == 2
+
+# test_parser """
 #   [
 #     = 1
 #   ]
@@ -67,5 +80,5 @@ test_parser """
 #     ^a 1
 # """, {"a": new_gene_int(1)}.toTable
 
-# test_parser "= 1", 1
-# test_parser "\\= 1", new_gene_symbol("=")
+test_parser "= 1", 1
+test_parser "= =", new_gene_symbol("=")

@@ -1,4 +1,4 @@
-import tables
+import tables, sets
 
 import ../types
 import ./base
@@ -69,11 +69,11 @@ type
   PrepHandlerContext* = ref object
     case state*: PrepHandlerState
     of PhLine:
-      indent*: int
       items*: seq[PrepHandlerContext]
     else:
       key*: string
       value*: Value
+    indent*: int
     `defer`*: bool  # Whether to defer the event to the next handler.
 
   # We would like to share as little as possible between the PreprocessingHandler and the ValueHandler.
@@ -82,6 +82,7 @@ type
 
   # Handle basic parsing and pre-processing (e.g. ???), raise errors if the input is not valid Gene data.
   PreprocessingHandler* = ref object of ParseHandler
+    continue_map*: Table[string, HashSet[string]]
     stack*: seq[PrepHandlerContext]
 
 proc match_symbol(s: string): Value =
@@ -193,11 +194,15 @@ proc process_end(self: PreprocessingHandler) =
     of PhLine:
       if context.items.len > 0:
         var value = new_gene_gene()
-        if context.items.len > 0:
-          value.gene_type = context.items[0].value
+        var first = context.items[0]
+        if first.value.kind == VkSymbol and first.value.str == "=":
+          for item in context.items[1..^1]:
+            self.next.do_handle(ParseEvent(kind: PeValue, value: item.value))
+        else:
+          value.gene_type = first.value
           for item in context.items[1..^1]:
             value.gene_children.add(item.value)
-        self.unwrap(value)
+          self.unwrap(value)
     else:
       todo($context.state)
 
@@ -214,12 +219,17 @@ proc process_indentation(self: PreprocessingHandler) =
     todo($c1.state)
   if c0.indent > c1.indent:
     return
-  var value = new_gene_gene()
-  if c1.items.len > 0:
-    value.gene_type = c1.items[0].value
+
+  let first = c1.items[0]
+  if first.value.kind == VkSymbol and first.value.str == "=":
+    for item in c1.items[1..^1]:
+      self.next.do_handle(ParseEvent(kind: PeValue, value: item.value))
+  else:
+    var value = new_gene_gene()
+    value.gene_type = first.value
     for item in c1.items[1..^1]:
       value.gene_children.add(item.value)
-  self.next.do_handle(ParseEvent(kind: PeValue, value: value))
+    self.next.do_handle(ParseEvent(kind: PeValue, value: value))
 
 proc handle(h: ParseHandler, event: ParseEvent) =
   var self = cast[PreprocessingHandler](h)
