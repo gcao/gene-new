@@ -44,6 +44,17 @@ test_parser "1", new_gene_gene(1)
 test_parser """
   1
 """, new_gene_gene(1)
+test_parser "= 1", 1
+test_parser "= =", new_gene_symbol("=")
+# test_read_all """
+#   =
+#     1
+#     2
+# """, @[new_gene_int(1), new_gene_int(2)]
+
+test_parser """
+  = []
+""", new_gene_vec()
 
 test_parser """
   if cond
@@ -67,11 +78,11 @@ test_parser """
 #   check r.gene_children[2] == new_gene_symbol("else")
 #   check r.gene_children[3] == 2
 
-# test_parser """
-#   [
-#     = 1
-#   ]
-# """, new_gene_vec(new_gene_gene(1))
+test_parser """
+  = [
+    = 1
+  ]
+""", new_gene_vec(1)
 
 # test_parser """
 #   #Array
@@ -79,7 +90,7 @@ test_parser """
 # """, new_gene_vec(new_gene_gene(1))
 
 # test_parser """
-#   {
+#   = {
 #     ^a 1
 #   }
 # """, {"a": new_gene_int(1)}.toTable
@@ -88,6 +99,3 @@ test_parser """
 #   #Map
 #     ^a 1
 # """, {"a": new_gene_int(1)}.toTable
-
-test_parser "= 1", 1
-test_parser "= =", new_gene_symbol("=")

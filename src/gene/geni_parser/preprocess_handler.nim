@@ -7,6 +7,8 @@ type
   PrepHandlerState* = enum
     PhDefault
 
+    PhRoot
+
     PhLine
     PhLineItem
 
@@ -40,13 +42,9 @@ type
 
     PhMapShortcut
 
-    PhVectorStart
-    PhVectorEnd
-    PhVectorValue
+    PhVector
 
-    PhSetStart
-    PhSetEnd
-    PhSetValue
+    PhSet
 
     PhStrInterpolation
     PhStrValueStart
@@ -60,10 +58,10 @@ type
     # PhNumberToken
     # PhNumberEnd
 
-    PhQuote
-    PhUnquote
+    PhQuote           # :
+    PhUnquote         # %
 
-    PhDecoratorStart
+    PhDecoratorStart  # #@
     PhDecoratorFirst
 
   PrepHandlerContext* = ref object
@@ -74,7 +72,7 @@ type
       key*: string
       value*: Value
     indent*: int
-    `defer`*: bool  # Whether to defer the event to the next handler.
+    `defer`*: bool  # Whether to defer forwarding the event to the next handler.
 
   # We would like to share as little as possible between the PreprocessingHandler and the ValueHandler.
   # However, we would like to achieve the best performance possible. So we need to minimize the number
@@ -84,6 +82,12 @@ type
   PreprocessingHandler* = ref object of ParseHandler
     continue_map*: Table[string, HashSet[string]]
     stack*: seq[PrepHandlerContext]
+
+proc get_indent(self: PreprocessingHandler): int =
+  if self.stack.len == 0:
+    return 0
+  else:
+    return self.stack[^1].indent
 
 proc match_symbol(s: string): Value =
   var parts: seq[string] = @[]
@@ -187,70 +191,73 @@ template unwrap(self: PreprocessingHandler, event: ParseEvent) =
 template unwrap(self: PreprocessingHandler, value: Value) =
   unwrap(self, nil, value)
 
-proc process_end(self: PreprocessingHandler) =
-  while self.stack.len > 0:
-    var context = self.stack.pop()
-    case context.state:
-    of PhLine:
-      if context.items.len > 0:
-        var first = context.items[0]
-        if first.value.kind == VkSymbol and first.value.str == "=":
-          for item in context.items[1..^1]:
-            self.unwrap(item.value)
-            # self.next.do_handle(ParseEvent(kind: PeValue, value: item.value))
-        else:
-          var value = new_gene_gene(first.value)
-          for item in context.items[1..^1]:
-            value.gene_children.add(item.value)
-          self.unwrap(value)
-    else:
-      todo($context.state)
+# proc process_end(self: PreprocessingHandler) =
+#   while self.stack.len > 0:
+#     var context = self.stack.pop()
+#     case context.state:
+#     of PhLine:
+#       if context.items.len > 0:
+#         var first = context.items[0]
+#         if first.value.kind == VkSymbol and first.value.str == "=":
+#           for item in context.items[1..^1]:
+#             self.unwrap(item.value)
+#             # self.next.do_handle(ParseEvent(kind: PeValue, value: item.value))
+#         else:
+#           var value = new_gene_gene(first.value)
+#           for item in context.items[1..^1]:
+#             value.gene_children.add(item.value)
+#           self.unwrap(value)
+#     else:
+#       todo($context.state)
 
-proc process_indentation(self: PreprocessingHandler) =
-  if self.stack.len == 0:
-    return
-  var c0 = self.stack[^1]
-  if c0.state != PhLine:
-    todo($c0.state)
-  if self.stack.len < 2:
-    return
-  var c1 = self.stack[^2]
-  if c1.state != PhLine:
-    todo($c1.state)
-  if c0.indent > c1.indent:
-    return
+# proc process_indentation(self: PreprocessingHandler) =
+#   if self.stack.len == 0:
+#     return
+#   var c0 = self.stack[^1]
+#   if c0.state != PhLine:
+#     return
+#   if self.stack.len < 2:
+#     return
+#   var c1 = self.stack[^2]
+#   if c1.state != PhLine:
+#     return
+#   if c0.indent > c1.indent:
+#     return
 
-  let first = c1.items[0]
-  if first.value.kind == VkSymbol and first.value.str == "=":
-    for item in c1.items[1..^1]:
-      self.next.do_handle(ParseEvent(kind: PeValue, value: item.value))
-  else:
-    var value = new_gene_gene()
-    value.gene_type = first.value
-    for item in c1.items[1..^1]:
-      value.gene_children.add(item.value)
-    self.next.do_handle(ParseEvent(kind: PeValue, value: value))
+#   let first = c1.items[0]
+#   if first.value.kind == VkSymbol and first.value.str == "=":
+#     for item in c1.items[1..^1]:
+#       self.next.do_handle(ParseEvent(kind: PeValue, value: item.value))
+#   else:
+#     var value = new_gene_gene()
+#     value.gene_type = first.value
+#     for item in c1.items[1..^1]:
+#       value.gene_children.add(item.value)
+#     self.next.do_handle(ParseEvent(kind: PeValue, value: value))
 
 proc handle(h: ParseHandler, event: ParseEvent) =
   var self = cast[PreprocessingHandler](h)
-  # echo "PreprocessingHandler " & $event
+  echo "PreprocessingHandler " & $event
   case event.kind:
   of PeStart:
     self.next.do_handle(event)
-    if self.parser.mode == PmDocument:
-      var context = PrepHandlerContext(state: PhDocStart)
-      self.stack.add(context)
-      self.next.do_handle(event)
-      self.next.do_handle(ParseEvent(kind: PeStartDocument))
+    # if self.parser.mode == PmDocument:
+    #   var context = PrepHandlerContext(state: PhDocStart)
+    #   self.stack.add(context)
+    #   self.next.do_handle(event)
+    #   self.next.do_handle(ParseEvent(kind: PeStartDocument))
   of PeEnd:
-    self.process_end()
+    # self.process_end()
     self.next.do_handle(event)
   of PeNewLine:
     if self.stack.len > 0:
       var last = self.stack[^1]
-      if last.state == PhLine and last.items.len == 0:
-        discard self.stack.pop()
-    self.process_indentation()
+      if last.state == PhLine:
+        if last.items.len == 0:
+          discard self.stack.pop()
+        else:
+          not_allowed()
+    # self.process_indentation()
     var context = PrepHandlerContext(state: PhLine)
     self.stack.add(context)
   of PeIndent:
@@ -283,7 +290,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
       let value = interpret_token(event.token)
       unwrap(self, value)
   of PeStartVector:
-    var context = PrepHandlerContext(state: PhVectorStart)
+    var context = PrepHandlerContext(state: PhVector, indent: self.get_indent())
     self.stack.add(context)
     self.next.do_handle(event)
   of PeEndVectorOrSet:
@@ -294,7 +301,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
       self.next.do_handle(event)
   of PeStartMap:
     let `defer` = (self.stack.len > 0 and self.stack[^1].defer)
-    var context = PrepHandlerContext(state: PhMapStart, `defer`: `defer`)
+    var context = PrepHandlerContext(state: PhMapStart, `defer`: `defer`, indent: self.get_indent())
     self.stack.add(context)
     if `defer`:
       context.value = new_gene_map()
@@ -310,7 +317,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
     else:
       self.next.do_handle(event)
   of PeStartGene:
-    var context = PrepHandlerContext(state: PhGeneStart)
+    var context = PrepHandlerContext(state: PhGeneStart, indent: self.get_indent())
     self.stack.add(context)
     self.next.do_handle(event)
   of PeEndGene:
@@ -326,7 +333,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
     else:
       self.next.do_handle(event)
   of PeStartSet:
-    var context = PrepHandlerContext(state: PhSetStart)
+    var context = PrepHandlerContext(state: PhSet, indent: self.get_indent())
     self.stack.add(context)
     self.next.do_handle(event)
   of PeQuote, PeUnquote:
@@ -337,6 +344,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
     var context = PrepHandlerContext(
       state: PhStrInterpolation,
       value: new_gene_gene(new_gene_symbol("#Str")),
+      indent: self.get_indent(),
     )
     self.stack.add(context)
     self.parser.state = PsStrInterpolation
@@ -344,6 +352,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
     var context = PrepHandlerContext(
       state: PhStrValueStart,
       `defer`: true,
+      indent: self.get_indent(),
     )
     self.stack.add(context)
     self.parser.state = PsDefault
@@ -352,6 +361,7 @@ proc handle(h: ParseHandler, event: ParseEvent) =
       state: PhGeneStart,
       value: new_gene_gene(),
       `defer`: true,
+      indent: self.get_indent(),
     )
     self.stack.add(context)
     self.parser.state = PsDefault
