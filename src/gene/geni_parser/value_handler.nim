@@ -53,8 +53,8 @@ type
 
   ValueHandlerContext* = ref object
     state*: ValueHandlerState
-    key*: string
-    value*: Value
+    value*: Value # The current value being built
+    key*: string  # The key for the next key:value pair to be added to the current value
 
   # For retrieving the first value from the parser
   ValueHandler* = ref object of ParseHandler
@@ -253,7 +253,7 @@ proc post_value_callback(self: ValueHandler, event: ParseEvent) {.inline.} =
 
 proc handle_value*(h: ParseHandler, event: ParseEvent) {.locks: "unknown".} =
   var self = cast[ValueHandler](h)
-  echo "handle_value " & $self.stack.len & " " & $event
+  # echo "handle_value " & $self.stack.len & " " & $event
   case event.kind:
   of PeStart:
     discard

@@ -53,8 +53,8 @@ type
 
   ValueHandlerContext* = ref object
     state*: ValueHandlerState
-    key*: string
-    value*: Value
+    value*: Value # The current value being built
+    key*: string  # The key for the next key:value pair to be added to the current value
 
   # For retrieving the first value from the parser
   ValueHandler* = ref object of ParseHandler

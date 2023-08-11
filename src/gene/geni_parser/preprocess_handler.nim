@@ -180,8 +180,14 @@ proc unwrap(self: PreprocessingHandler, event: ParseEvent, value: Value) =
       else:
         self.send(event, value)
     of PhLine:
-      var context = PrepHandlerContext(state: PhLineItem, value: value)
-      last.items.add(context)
+      self.stack.add(PrepHandlerContext(state: PhGeneType, indent: last.indent))
+      self.next.do_handle(ParseEvent(kind: PeStartGene))
+      if event.is_nil:
+        self.next.do_handle(ParseEvent(kind: PeValue, value: value))
+      else:
+        self.next.do_handle(event)
+      # var context = PrepHandlerContext(state: PhLineItem, value: value)
+      # last.items.add(context)
     else:
       self.send(event, value)
 
@@ -237,9 +243,10 @@ template unwrap(self: PreprocessingHandler, value: Value) =
 
 proc handle(h: ParseHandler, event: ParseEvent) =
   var self = cast[PreprocessingHandler](h)
-  echo "PreprocessingHandler " & $event
+  # echo "PreprocessingHandler " & $event
   case event.kind:
   of PeStart:
+    self.stack.add(PrepHandlerContext(state: PhRoot))
     self.next.do_handle(event)
     # if self.parser.mode == PmDocument:
     #   var context = PrepHandlerContext(state: PhDocStart)
@@ -266,7 +273,13 @@ proc handle(h: ParseHandler, event: ParseEvent) =
   of PeValue:
     self.unwrap(event)
   of PeToken:
-    if event.token[0] == '^':
+    if event.token == "=":
+      let last = self.stack[^1]
+      if last.state == PhLine:
+        discard self.stack.pop()
+      else:
+        self.unwrap(nil, new_gene_symbol("="))
+    elif event.token[0] == '^':
       let parsed = parse_key(event.token)
       let last = self.stack[^1]
       if last.defer:

@@ -8,6 +8,7 @@
 !LICENSE
 !Vagrantfile
 
+.DS_Store
 *.out
 .vagrant
 *.dSYM/
