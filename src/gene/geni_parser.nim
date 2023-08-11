@@ -1,4 +1,4 @@
-import streams
+import tables, sets, streams
 
 import ./types
 import ./geni_parser/base
@@ -6,6 +6,11 @@ import ./geni_parser/preprocess_handler
 import ./geni_parser/value_handler
 
 export ParseError
+
+proc create_continue_map(): Table[string, HashSet[string]] =
+  result = {
+    "if": to_hash_set(["elif", "else"]),
+  }.to_table()
 
 proc new_parser*(options: ParseOptions): Parser =
   if not INITIALIZED:
@@ -15,7 +20,7 @@ proc new_parser*(options: ParseOptions): Parser =
     options: new_options(options),
     references: References(),
   )
-  result.handler = new_preprocessing_handler(result.addr)
+  result.handler = new_preprocessing_handler(result.addr, create_continue_map())
 
 proc new_parser*(): Parser =
   if not INITIALIZED:
@@ -25,7 +30,7 @@ proc new_parser*(): Parser =
     options: default_options(),
     references: References(),
   )
-  result.handler = new_preprocessing_handler(result.addr)
+  result.handler = new_preprocessing_handler(result.addr, create_continue_map())
 
 proc read_first*(self: var Parser): Value =
   let value_handler = new_value_handler(self.addr)

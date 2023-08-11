@@ -59,24 +59,40 @@ test_parser """
 test_parser """
   if cond
     = 1
+    = 2
 """, proc(r: Value) =
   check r.kind == VkGene
   check r.gene_type == new_gene_symbol("if")
   check r.gene_children[0] == new_gene_symbol("cond")
   check r.gene_children[1] == 1
+  check r.gene_children[2] == 2
 
-# test_parser """
-#   if cond
-#     = 1
-#   else
-#     = 2
-# """, proc(r: Value) =
-#   check r.kind == VkGene
-#   check r.gene_type == new_gene_symbol("if")
-#   check r.gene_children[0] == new_gene_symbol("cond")
-#   check r.gene_children[1] == 1
-#   check r.gene_children[2] == new_gene_symbol("else")
-#   check r.gene_children[3] == 2
+# () should be on the same line because this looks bad ?!
+# a (if cond
+#   do_this
+# else
+#   do_that
+# )
+# What about #"...#(...)..."?
+# It might be hard to put #(...) on the same line.
+# test_parser_error """
+#   a (b
+#     c
+#   )
+# """
+
+test_parser """
+  if cond
+    = 1
+  else
+    = 2
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type == new_gene_symbol("if")
+  check r.gene_children[0] == new_gene_symbol("cond")
+  check r.gene_children[1] == 1
+  check r.gene_children[2] == new_gene_symbol("else")
+  check r.gene_children[3] == 2
 
 test_parser """
   = [
