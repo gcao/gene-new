@@ -46,11 +46,15 @@ test_parser """
 """, new_gene_gene(1)
 test_parser "= 1", 1
 test_parser "= =", new_gene_symbol("=")
-# test_read_all """
-#   =
-#     1
-#     2
-# """, @[new_gene_int(1), new_gene_int(2)]
+test_parser """
+  a
+    = 1
+    = 2
+""", proc(r: Value) =
+  check r.kind == VkGene
+  check r.gene_type == new_gene_symbol("a")
+  check r.gene_children[0] == 1
+  check r.gene_children[1] == 2
 
 test_parser """
   = []
@@ -94,16 +98,24 @@ test_parser """
   check r.gene_children[2] == new_gene_symbol("else")
   check r.gene_children[3] == 2
 
+# test_parser """
+#   [
+#     = 1
+#   ]
+# """, proc(r: Value) =
+#   check r.kind == VkGene
+#   check r.gene_type == @[new_gene_int(1)]
+
 test_parser """
   = [
     = 1
   ]
-""", new_gene_vec(1)
+""", @[new_gene_int(1)]
 
 # test_parser """
 #   #Array
 #     = 1
-# """, new_gene_vec(new_gene_gene(1))
+# """, @[new_gene_int(1)]
 
 # test_parser """
 #   = {
@@ -115,3 +127,9 @@ test_parser """
 #   #Map
 #     ^a 1
 # """, {"a": new_gene_int(1)}.toTable
+
+# test_read_all "= 1 2", @[new_gene_int(1), new_gene_int(2)]
+# test_read_all """
+#   = 1
+#   = 2
+# """, @[new_gene_int(1), new_gene_int(2)]

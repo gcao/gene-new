@@ -9,7 +9,7 @@ export ParseError
 
 proc create_continue_map(): Table[string, HashSet[string]] =
   result = {
-    "if": to_hash_set(["elif", "else"]),
+    "if": to_hash_set(["then", "elif", "else"]),
   }.to_table()
 
 proc new_parser*(options: ParseOptions): Parser =

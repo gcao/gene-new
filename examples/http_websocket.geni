@@ -69,12 +69,12 @@ class Query
     = sql
 
 class Record
-  .on_extended (fnx child
-    child .on_member_missing (fnx name
-      if (Record/.members .contains name)
-        /.parent ./ name
-    )
-  )
+  .on_extended
+    fnx child
+      child .on_member_missing
+        fnx name
+          if (Record/.members .contains name)
+            /.parent ./ name
 
   fn /from_row row
     var props {}
@@ -95,12 +95,12 @@ class Record
   fn /all _
     var query (new Query /table)
     var data (/orm .exec query)
-    data .map (row ->
-      var props {}
-      for [i v] in row
-        $set props (@ (/columns ./ i)) v
-      new self props
-    )
+    data .map
+      row ->
+        var props {}
+        for [i v] in row
+          $set props (@ (/columns ./ i)) v
+        new self props
 
   fn /columns_except_id _
     var columns []
@@ -118,8 +118,7 @@ class Record
     /.class/orm .exec sql params...
 
   .fn update _
-    var sql
-      #"UPDATE #{/.class/table} SET status = ? WHERE id = ?"
+    var sql #"UPDATE #{/.class/table} SET status = ? WHERE id = ?"
     /.class/orm .exec sql /status /id
 
   # If no id, insert into the table, else update existing row.
@@ -130,8 +129,7 @@ class Record
       .update
 
   .fn delete _
-    var sql
-      #"DELETE FROM #{/.class/table} WHERE id = ?"
+    var sql #"DELETE FROM #{/.class/table} WHERE id = ?"
     /.class/orm .exec sql /id
 
 class Todo < Record
@@ -666,13 +664,13 @@ $if_main
     else # elif/else/when/catch/finally/... are treated as a special word that is part of if/case/try statement that has same indentation
       = 2080
 
-  var app ($tap (new App port)
-    /handler = (create_router)
-    /websocket = {
-      ^path "/ws"
-      ^handler (new WebSocketHandler)
-    }
-  )
+  var app
+    $tap (new App port)
+      /handler = (create_router)
+      /websocket = {
+        ^path "/ws"
+        ^handler (new WebSocketHandler)
+      }
 
   # Alternative
   var app
