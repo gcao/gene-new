@@ -841,11 +841,54 @@ type
 
   VmCallback* = proc() {.gcsafe.}
 
+  # This can be a thread, a green thread, an actor or a coroutine etc.
+  ComputationUnit* = ref object # A computation unit that can process a computable unit
+    computable*: ComputableUnit
+
+  ComputableState* = enum
+    CsDefault
+    CsRunning
+    CsIdle
+    CsFinished
+    CsError
+
+  ComputableUnit* = ref object  # A computable unit that can be assigned to a computation unit
+    state*: ComputableState
+    is_main*: bool              # If true, this is the main computable unit
+    chunks*: Table[int, Chunk]
+    chunk*: Chunk               # current chunk
+    pos*: int
+    stack*: Stack
+
+  Chunk* = ref object
+    id*: int
+    data*: seq[Instruction]
+
+  InstructionKind* = enum
+    InLoad
+    InTodo                      # To be implemented
+
+  Instruction* = ref object
+    case kind*: InstructionKind
+    of InLoad:
+      load*: Value
+    else:
+      discard
+
+  NewFrame* = ref object
+    data*: array[0..32, Value]
+    pos*: int
+
+  Stack* = object
+    frames*: seq[NewFrame]
+
 var VM* {.threadvar.}: VirtualMachine  # The current virtual machine
 # TODO: guard access to Threads with lock
 var Threads*: array[1..64, ThreadMetadata]
 var VmCreatedCallbacks*: seq[VmCallback] = @[]
 var VmCreatedCallbacksAddr* = VmCreatedCallbacks.addr
+
+var MainComputation* {.threadvar.}: ComputationUnit   # The main thread
 
 #################### Definitions #################
 
