@@ -4,6 +4,7 @@ import gene/types
 import gene/parser
 import gene/interpreter
 import gene/serdes
+import gene/virtual_machine
 
 # Uncomment below lines to see logs
 # import logging
@@ -217,3 +218,21 @@ proc test_serdes*(code: string, callback: proc(result: Value)) =
     var s = serialize(value).to_s
     var value2 = deserialize(s)
     callback(value2)
+
+proc test_vm*(code: string) =
+  var code = cleanup(code)
+  test "Compilation & VM: " & code:
+    init_all()
+    discard exec(code, "test_code")
+
+proc test_vm*(code: string, result: Value) =
+  var code = cleanup(code)
+  test "Compilation & VM: " & code:
+    init_all()
+    check exec(code, "test_code") == result
+
+proc test_vm*(code: string, callback: proc(result: Value)) =
+  var code = cleanup(code)
+  test "Compilation & VM: " & code:
+    init_all()
+    callback exec(code, "test_code")
