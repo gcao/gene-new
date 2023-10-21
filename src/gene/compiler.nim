@@ -123,6 +123,13 @@ proc compile(self: var Compiler, input: seq[Value]) =
 proc compile_literal(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkPushValue, arg0: input))
 
+proc compile_array(self: var Compiler, input: Value) =
+  self.output.instructions.add(Instruction(kind: IkArrayStart))
+  for child in input.vec:
+    self.compile(child)
+    self.output.instructions.add(Instruction(kind: IkArrayAddChild))
+  self.output.instructions.add(Instruction(kind: IkArrayEnd))
+
 proc compile_do(self: var Compiler, input: Value) =
   self.compile(input.gene_children)
 
@@ -168,10 +175,12 @@ proc compile_gene(self: var Compiler, input: Value) =
 
 proc compile(self: var Compiler, input: Value) =
   case input.kind:
-    of VkInt, VkBool:
+    of VkInt, VkBool, VkNil, VkString:
       self.compile_literal(input)
     of VkStream:
       self.compile(input.stream)
+    of VkVector:
+      self.compile_array(input)
     of VkGene:
       self.compile_gene(input)
     else:

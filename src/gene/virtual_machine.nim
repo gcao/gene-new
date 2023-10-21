@@ -41,6 +41,9 @@ proc new_registers(caller: Caller): Registers =
     next_slot: REG_DEFAULT,
   )
 
+proc current(self: var Registers): Value =
+  self.data[self.next_slot - 1]
+
 proc push(self: var Registers, value: Value) =
   self.data[self.next_slot] = value
   self.next_slot.inc()
@@ -95,6 +98,14 @@ proc exec*(self: var GeneVirtualMachine): Value =
 
       of IkPop:
         discard self.data.registers.pop()
+
+      of IkArrayStart:
+        self.data.registers.push(new_gene_vec())
+      of IkArrayAddChild:
+        let child = self.data.registers.pop()
+        self.data.registers.current().vec.add(child)
+      of IkArrayEnd:
+        discard
 
       of IkAdd:
         self.data.registers.push(self.data.registers.pop().int + self.data.registers.pop().int)
