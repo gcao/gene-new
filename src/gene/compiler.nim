@@ -130,6 +130,13 @@ proc compile_array(self: var Compiler, input: Value) =
     self.output.instructions.add(Instruction(kind: IkArrayAddChild))
   self.output.instructions.add(Instruction(kind: IkArrayEnd))
 
+proc compile_map(self: var Compiler, input: Value) =
+  self.output.instructions.add(Instruction(kind: IkMapStart))
+  for k, v in input.map:
+    self.compile(v)
+    self.output.instructions.add(Instruction(kind: IkMapSetProp, arg0: k))
+  self.output.instructions.add(Instruction(kind: IkMapEnd))
+
 proc compile_do(self: var Compiler, input: Value) =
   self.compile(input.gene_children)
 
@@ -175,12 +182,16 @@ proc compile_gene(self: var Compiler, input: Value) =
 
 proc compile(self: var Compiler, input: Value) =
   case input.kind:
-    of VkInt, VkBool, VkNil, VkString:
+    of VkInt, VkBool, VkNil:
       self.compile_literal(input)
+    of VkString:
+      self.compile_literal(input) # TODO
     of VkStream:
       self.compile(input.stream)
     of VkVector:
       self.compile_array(input)
+    of VkMap:
+      self.compile_map(input)
     of VkGene:
       self.compile_gene(input)
     else:

@@ -87,7 +87,6 @@ proc exec*(self: var GeneVirtualMachine): Value =
       of IkJump:
         self.data.pc = self.data.cur_block.find_label(inst.label) + 1
         continue
-
       of IkJumpIfFalse:
         if not self.data.registers.pop().bool:
           self.data.pc = self.data.cur_block.find_label(inst.label) + 1
@@ -95,7 +94,6 @@ proc exec*(self: var GeneVirtualMachine): Value =
 
       of IkPushValue:
         self.data.registers.push(inst.arg0)
-
       of IkPop:
         discard self.data.registers.pop()
 
@@ -105,6 +103,15 @@ proc exec*(self: var GeneVirtualMachine): Value =
         let child = self.data.registers.pop()
         self.data.registers.current().vec.add(child)
       of IkArrayEnd:
+        discard
+
+      of IkMapStart:
+        self.data.registers.push(new_gene_map())
+      of IkMapSetProp:
+        let key = inst.arg0.str
+        let val = self.data.registers.pop()
+        self.data.registers.current().map[key] = val
+      of IkMapEnd:
         discard
 
       of IkAdd:

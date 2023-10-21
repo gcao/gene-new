@@ -1,3 +1,5 @@
+import tables
+
 import gene/types
 
 import ./helpers
@@ -9,6 +11,8 @@ test_vm "false", false
 test_vm "\"string\"", "string"
 
 test_vm "[1 2]", new_gene_vec(1, 2)
+
+test_vm "{^a 1}", {"a": new_gene_int(1)}.toTable
 
 # test_vm "1 2 3", 3
 
