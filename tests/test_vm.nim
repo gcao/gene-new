@@ -17,3 +17,19 @@ test_vm """
 test_vm """
   (do 1 2 3)
 """, 3
+
+test_vm """
+  (if true
+    1
+  else
+    2
+  )
+""", 1
+
+test_vm """
+  (if false
+    1
+  else
+    2
+  )
+""", 2

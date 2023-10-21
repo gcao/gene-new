@@ -1,9 +1,11 @@
 import tables, oids
 
 import ./types
+import "./compiler/if"
 
 type
   CuId* = Oid
+  Label* = Oid
 
   Compiler* = ref object
     output*: CompilationUnit
@@ -20,11 +22,12 @@ type
     IkPushValue   # push value to the next slot
     IkPop
 
-    IkJump
+    IkLabel
+    IkJump        # unconditional jump
     IkJumpIfFalse
 
     IkAdd
-    IkAddValue  # args: literal value
+    IkAddValue    # args: literal value
     IkSub
     IkMul
     IkDiv
@@ -87,11 +90,12 @@ type
     arg0*: Value
     arg1*: Value
     arg2*: Value
+    label*: Label
 
   CompilationUnit* = ref object
     id*: CuId
     instructions: seq[Instruction]
-    labels*: Table[string, int]
+    labels*: Table[Label, int]
 
   Address* = object
     id*: CuId
@@ -103,16 +107,36 @@ proc `len`*(self: CompilationUnit): int =
 proc `[]`*(self: CompilationUnit, i: int): Instruction =
   self.instructions[i]
 
+proc find_label*(self: CompilationUnit, label: Label): int =
+  for i, inst in self.instructions:
+    if inst.kind == IkLabel and inst.label == label:
+      return i
+
 proc compile(self: var Compiler, input: Value)
+
+proc compile(self: var Compiler, input: seq[Value]) =
+  for i, v in input:
+    self.compile(v)
+    if i < input.len - 1:
+      self.output.instructions.add(Instruction(kind: IkPop))
 
 proc compile_literal(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkPushValue, arg0: input))
 
 proc compile_do(self: var Compiler, input: Value) =
-  for i, child in input.gene_children:
-    self.compile(child)
-    if i < input.gene_children.len - 1:
-      self.output.instructions.add(Instruction(kind: IkPop))
+  self.compile(input.gene_children)
+
+proc compile_if(self: var Compiler, input: Value) =
+  normalize_if(input)
+  self.compile(input.gene_props[COND_KEY])
+  var elseLabel = gen_oid()
+  var endLabel = gen_oid()
+  self.output.instructions.add(Instruction(kind: IkJumpIfFalse, label: elseLabel))
+  self.compile(input.gene_props[THEN_KEY])
+  self.output.instructions.add(Instruction(kind: IkJump, label: endLabel))
+  self.output.instructions.add(Instruction(kind: IkLabel, label: elseLabel))
+  self.compile(input.gene_props[ELSE_KEY])
+  self.output.instructions.add(Instruction(kind: IkLabel, label: endLabel))
 
 proc compile_gene(self: var Compiler, input: Value) =
   var `type` = input.gene_type
@@ -134,6 +158,9 @@ proc compile_gene(self: var Compiler, input: Value) =
       of "do":
         self.compile_do(input)
         return
+      of "if":
+        self.compile_if(input)
+        return
       else:
         discard
 
@@ -141,8 +168,10 @@ proc compile_gene(self: var Compiler, input: Value) =
 
 proc compile(self: var Compiler, input: Value) =
   case input.kind:
-    of VkInt:
+    of VkInt, VkBool:
       self.compile_literal(input)
+    of VkStream:
+      self.compile(input.stream)
     of VkGene:
       self.compile_gene(input)
     else:

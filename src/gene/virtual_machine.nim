@@ -78,6 +78,18 @@ proc exec*(self: var GeneVirtualMachine): Value =
         else:
           todo()
 
+      of IkLabel:
+        discard
+
+      of IkJump:
+        self.data.pc = self.data.cur_block.find_label(inst.label) + 1
+        continue
+
+      of IkJumpIfFalse:
+        if not self.data.registers.pop().bool:
+          self.data.pc = self.data.cur_block.find_label(inst.label) + 1
+          continue
+
       of IkPushValue:
         self.data.registers.push(inst.arg0)
 
@@ -88,7 +100,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
         self.data.registers.push(self.data.registers.pop().int + self.data.registers.pop().int)
 
       else:
-        todo()
+        todo($inst.kind)
 
     self.data.pc.inc
     if self.data.pc >= self.data.cur_block.len:
