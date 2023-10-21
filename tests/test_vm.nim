@@ -14,6 +14,6 @@ test_vm """
 # `catch` and `ensure` can be used inside `do`.
 # `ensure` will run after `catch` if both are present? but the exception thrown in `ensure` will be ignored?
 
-# test_vm """
-#   (do 1 2 3)
-# """, 3
+test_vm """
+  (do 1 2 3)
+""", 3

@@ -81,6 +81,9 @@ proc exec*(self: var GeneVirtualMachine): Value =
       of IkPushValue:
         self.data.registers.push(inst.arg0)
 
+      of IkPop:
+        discard self.data.registers.pop()
+
       of IkAdd:
         self.data.registers.push(self.data.registers.pop().int + self.data.registers.pop().int)
 

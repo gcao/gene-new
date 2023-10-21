@@ -18,6 +18,7 @@ type
     IkScopeEnd
 
     IkPushValue   # push value to the next slot
+    IkPop
 
     IkJump
     IkJumpIfFalse
@@ -107,6 +108,12 @@ proc compile(self: var Compiler, input: Value)
 proc compile_literal(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkPushValue, arg0: input))
 
+proc compile_do(self: var Compiler, input: Value) =
+  for i, child in input.gene_children:
+    self.compile(child)
+    if i < input.gene_children.len - 1:
+      self.output.instructions.add(Instruction(kind: IkPop))
+
 proc compile_gene(self: var Compiler, input: Value) =
   var `type` = input.gene_type
   var first: Value
@@ -118,6 +125,14 @@ proc compile_gene(self: var Compiler, input: Value) =
         self.compile(`type`)
         self.compile(input.gene_children[1])
         self.output.instructions.add(Instruction(kind: IkAdd))
+        return
+      else:
+        discard
+
+  if `type`.kind == VkSymbol:
+    case `type`.str:
+      of "do":
+        self.compile_do(input)
         return
       else:
         discard
