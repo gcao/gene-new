@@ -45,6 +45,10 @@ proc push(self: var Registers, value: Value) =
   self.data[self.next_slot] = value
   self.next_slot.inc()
 
+proc pop(self: var Registers): Value =
+  self.next_slot.dec()
+  self.data[self.next_slot]
+
 proc default(self: Registers): Value =
   self.data[REG_DEFAULT]
 
@@ -76,6 +80,9 @@ proc exec*(self: var GeneVirtualMachine): Value =
 
       of IkPushValue:
         self.data.registers.push(inst.arg0)
+
+      of IkAdd:
+        self.data.registers.push(self.data.registers.pop().int + self.data.registers.pop().int)
 
       else:
         todo()

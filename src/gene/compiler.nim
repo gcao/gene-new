@@ -102,13 +102,34 @@ proc `len`*(self: CompilationUnit): int =
 proc `[]`*(self: CompilationUnit, i: int): Instruction =
   self.instructions[i]
 
+proc compile(self: var Compiler, input: Value)
+
 proc compile_literal(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkPushValue, arg0: input))
+
+proc compile_gene(self: var Compiler, input: Value) =
+  var `type` = input.gene_type
+  var first: Value
+  if input.gene_children.len > 0:
+    first = input.gene_children[0]
+  if first.kind == VkSymbol:
+    case first.str:
+      of "+":
+        self.compile(`type`)
+        self.compile(input.gene_children[1])
+        self.output.instructions.add(Instruction(kind: IkAdd))
+        return
+      else:
+        discard
+
+  todo("Compile " & $input)
 
 proc compile(self: var Compiler, input: Value) =
   case input.kind:
     of VkInt:
       self.compile_literal(input)
+    of VkGene:
+      self.compile_gene(input)
     else:
       todo($input.kind)
 
