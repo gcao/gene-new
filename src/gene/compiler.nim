@@ -101,6 +101,61 @@ type
     id*: CuId
     pc*: int
 
+proc `$`*(self: Instruction): string =
+  case self.kind
+    of IkNoop: "Noop"
+    of IkStart: "Start"
+    of IkEnd: "End"
+    of IkScopeStart: "ScopeStart"
+    of IkScopeEnd: "ScopeEnd"
+    of IkPushValue: "Push " & $self.arg0
+    of IkPop: "Pop"
+    of IkLabel: "Label " & $self.label
+    of IkJump: "Jump " & $self.label
+    of IkJumpIfFalse: "JumpIfFalse " & $self.label
+    of IkAdd: "Add"
+    of IkAddValue: "Add " & $self.arg0
+    of IkSub: "Sub"
+    of IkMul: "Mul"
+    of IkDiv: "Div"
+    of IkPow: "Pow"
+    of IkLt: "Lt"
+    of IkLtValue: "Lt " & $self.arg0
+    of IkLe: "Le"
+    of IkGt: "Gt"
+    of IkGe: "Ge"
+    of IkEq: "Eq"
+    of IkAnd: "And"
+    of IkOr: "Or"
+    of IkNamespace: "Namespace"
+    of IkFunction: "Function"
+    of IkCallFunction: "CallFunction"
+    of IkCallFunctionNoArgs: "CallFunctionNoArgs"
+    of IkMacro: "Macro"
+    of IkCallMacro: "CallMacro"
+    of IkClass: "Class"
+    of IkCallMethod: "CallMethod"
+    of IkCallMethodNoArgs: "CallMethodNoArgs"
+    of IkMapStart: "MapStart"
+    of IkMapSetProp: "MapSetProp " & $self.arg0
+    of IkMapSetPropValue: "MapSetPropValue " & $self.arg0 & " " & $self.arg1
+    of IkMapEnd: "MapEnd"
+    of IkArrayStart: "ArrayStart"
+    of IkArrayAddChild: "ArrayAddChild"
+    of IkArrayAddChildValue: "ArrayAddChildValue " & $self.arg0
+    of IkArrayEnd: "ArrayEnd"
+    of IkGeneStart: "GeneStart"
+    of IkGeneStartWithType: "GeneStartWithType"
+    of IkGeneStartWithTypeValue: "GeneStartWithTypeValue " & $self.arg0
+    else: $self.kind
+
+proc `$`*(self: seq[Instruction]): string =
+  for i, instr in self:
+    result &= $i & " " & $instr & "\n"
+
+proc `$`*(self: CompilationUnit): string =
+  "CompilationUnit " & $self.id & "\n" & $self.instructions
+
 proc `len`*(self: CompilationUnit): int =
   self.instructions.len
 
@@ -163,6 +218,11 @@ proc compile_gene(self: var Compiler, input: Value) =
         self.compile(`type`)
         self.compile(input.gene_children[1])
         self.output.instructions.add(Instruction(kind: IkAdd))
+        return
+      of "<":
+        self.compile(`type`)
+        self.compile(input.gene_children[1])
+        self.output.instructions.add(Instruction(kind: IkLt))
         return
       else:
         discard

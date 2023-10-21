@@ -18,6 +18,8 @@ test_vm "{^a 1}", {"a": new_gene_int(1)}.toTable
 
 test_vm "(1 + 2)", 3
 
+test_vm "(1 < 2)", true
+
 # (do ...) will create a scope if needed, execute all statements and return the result of the last statement.
 # `catch` and `ensure` can be used inside `do`.
 # `ensure` will run after `catch` if both are present? but the exception thrown in `ensure` will be ignored?

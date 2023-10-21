@@ -72,6 +72,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
     let inst = self.data.cur_block[self.data.pc]
     case inst.kind:
       of IkStart:
+        # echo $self.data.cur_block
         discard
 
       of IkEnd:
@@ -116,6 +117,11 @@ proc exec*(self: var GeneVirtualMachine): Value =
 
       of IkAdd:
         self.data.registers.push(self.data.registers.pop().int + self.data.registers.pop().int)
+
+      of IkLt:
+        let first = self.data.registers.pop().int
+        let second = self.data.registers.pop().int
+        self.data.registers.push(first > second)
 
       else:
         todo($inst.kind)
