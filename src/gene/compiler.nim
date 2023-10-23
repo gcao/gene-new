@@ -1,4 +1,4 @@
-import tables, oids
+import tables, oids, strutils
 
 import ./types
 import "./compiler/if"
@@ -20,6 +20,7 @@ type
     IkScopeEnd
 
     IkPushValue   # push value to the next slot
+    IkPushNil
     IkPop
 
     IkVar
@@ -93,6 +94,8 @@ type
     IkYield
     IkResume
 
+    IkInternal
+
   Instruction* = object
     kind*: InstructionKind
     arg0*: Value
@@ -111,51 +114,19 @@ type
 
 proc `$`*(self: Instruction): string =
   case self.kind
-    of IkNoop: "Noop"
-    of IkStart: "Start"
-    of IkEnd: "End"
-    of IkScopeStart: "ScopeStart"
-    of IkScopeEnd: "ScopeEnd"
     of IkPushValue: "Push " & $self.arg0
-    of IkPop: "Pop"
     of IkLabel: "Label " & $self.label
     of IkJump: "Jump " & $self.label
     of IkJumpIfFalse: "JumpIfFalse " & $self.label
-    of IkAdd: "Add"
-    of IkAddValue: "Add " & $self.arg0
-    of IkSub: "Sub"
-    of IkMul: "Mul"
-    of IkDiv: "Div"
-    of IkPow: "Pow"
-    of IkLt: "Lt"
-    of IkLtValue: "Lt " & $self.arg0
-    of IkLe: "Le"
-    of IkGt: "Gt"
-    of IkGe: "Ge"
-    of IkEq: "Eq"
-    of IkAnd: "And"
-    of IkOr: "Or"
-    of IkNamespace: "Namespace"
-    of IkFunction: "Function"
-    of IkCallFunction: "CallFunction"
-    of IkCallFunctionNoArgs: "CallFunctionNoArgs"
-    of IkMacro: "Macro"
-    of IkCallMacro: "CallMacro"
-    of IkClass: "Class"
-    of IkCallMethod: "CallMethod"
-    of IkCallMethodNoArgs: "CallMethodNoArgs"
-    of IkMapStart: "MapStart"
+    of IkAddValue: "AddValue " & $self.arg0
+    of IkLtValue: "LtValue " & $self.arg0
     of IkMapSetProp: "MapSetProp " & $self.arg0
     of IkMapSetPropValue: "MapSetPropValue " & $self.arg0 & " " & $self.arg1
-    of IkMapEnd: "MapEnd"
-    of IkArrayStart: "ArrayStart"
-    of IkArrayAddChild: "ArrayAddChild"
     of IkArrayAddChildValue: "ArrayAddChildValue " & $self.arg0
-    of IkArrayEnd: "ArrayEnd"
-    of IkGeneStart: "GeneStart"
     of IkGeneStartWithType: "GeneStartWithType"
     of IkGeneStartWithTypeValue: "GeneStartWithTypeValue " & $self.arg0
-    else: $self.kind
+    of IkInternal: "Internal " & $self.arg0
+    else: ($self.kind)[2..^1]
 
 proc `$`*(self: seq[Instruction]): string =
   for i, instr in self:
@@ -252,6 +223,8 @@ proc compile_loop(self: var Compiler, input: Value) =
 proc compile_break(self: var Compiler, input: Value) =
   if input.gene_children.len > 0:
     self.compile(input.gene_children[0])
+  else:
+    self.output.instructions.add(Instruction(kind: IkPushNil))
   self.output.instructions.add(Instruction(kind: IkBreak))
 
 proc compile_gene(self: var Compiler, input: Value) =
@@ -321,7 +294,15 @@ proc compile_gene(self: var Compiler, input: Value) =
         self.compile_break(input)
         return
       else:
-        discard
+        if `type`.str.starts_with("$_"):
+          if input.gene_children.len > 1:
+            not_allowed($input)
+          elif input.gene_children.len == 1:
+            self.compile(input.gene_children[0])
+            self.output.instructions.add(Instruction(kind: IkInternal, arg0: `type`, arg1: true))
+          else:
+            self.output.instructions.add(Instruction(kind: IkInternal, arg0: `type`))
+          return
 
   todo("Compile " & $input)
 
@@ -348,8 +329,10 @@ proc compile*(input: seq[Value]): CompilationUnit =
   var self = Compiler(output: CompilationUnit(id: gen_oid()))
   self.output.instructions.add(Instruction(kind: IkStart))
 
-  for v in input:
+  for i, v in input:
     self.compile(v)
+    if i < input.len - 1:
+      self.output.instructions.add(Instruction(kind: IkPop))
 
   self.output.instructions.add(Instruction(kind: IkEnd))
   result = self.output

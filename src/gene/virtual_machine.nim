@@ -74,7 +74,6 @@ proc exec*(self: var GeneVirtualMachine): Value =
     let inst = self.data.cur_block[self.data.pc]
     case inst.kind:
       of IkStart:
-        # echo $self.data.cur_block
         discard
 
       of IkEnd:
@@ -85,7 +84,9 @@ proc exec*(self: var GeneVirtualMachine): Value =
           todo()
 
       of IkVar:
-        self.data.registers.scope.def_member(inst.arg0.str, self.data.registers.pop())
+        let value = self.data.registers.pop()
+        self.data.registers.scope.def_member(inst.arg0.str, value)
+        self.data.registers.push(value)
 
       of IkResolveSymbol:
         self.data.registers.push(self.data.registers.scope[inst.arg0.str])
@@ -114,6 +115,8 @@ proc exec*(self: var GeneVirtualMachine): Value =
 
       of IkPushValue:
         self.data.registers.push(inst.arg0)
+      of IkPushNil:
+        self.data.registers.push(Value(kind: VkNil))
       of IkPop:
         discard self.data.registers.pop()
 
@@ -167,6 +170,31 @@ proc exec*(self: var GeneVirtualMachine): Value =
         let second = self.data.registers.pop()
         let first = self.data.registers.pop()
         self.data.registers.push(first or second)
+
+      of IkInternal:
+        case inst.arg0.str:
+          of "$_debug":
+            if inst.arg1:
+              echo "$_debug ", self.data.registers.pop()
+          of "$_print_instructions":
+            echo self.data.cur_block
+            if inst.arg1:
+              discard self.data.registers.pop()
+            self.data.registers.push(Value(kind: VkNil))
+          of "$_print_registers":
+            var s = "Registers "
+            for i, reg in self.data.registers.data:
+              if i > 0:
+                s &= ", "
+              if i == self.data.registers.next_slot:
+                s &= "=> "
+              s &= $self.data.registers.data[i]
+            echo s
+            if inst.arg1:
+              discard self.data.registers.pop()
+              self.data.registers.push(Value(kind: VkNil))
+          else:
+            todo(inst.arg0.str)
 
       else:
         todo($inst.kind)

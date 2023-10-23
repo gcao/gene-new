@@ -10,11 +10,13 @@ test_vm "true", true
 test_vm "false", false
 test_vm "\"string\"", "string"
 
+# test_vm ":a", new_gene_symbol("a")
+
 test_vm "[1 2]", new_gene_vec(1, 2)
 
 test_vm "{^a 1}", {"a": new_gene_int(1)}.toTable
 
-# test_vm "1 2 3", 3
+test_vm "1 2 3", 3
 
 test_vm "(1 + 2)", 3
 test_vm "(3 - 2)", 1
@@ -77,10 +79,12 @@ test_vm """
 """, 1
 
 test_vm """
+  # ($_print_instructions)
   (loop
     1
     (break)
   )
+  # ($_print_registers)
   2
 """, 2
 
