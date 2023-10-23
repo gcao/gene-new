@@ -29,6 +29,11 @@ type
     IkJump        # unconditional jump
     IkJumpIfFalse
 
+    IkLoopStart
+    IkLoopEnd
+    IkContinue    # is added automatically before the loop end
+    IkBreak
+
     IkAdd
     IkAddValue    # args: literal value
     IkSub
@@ -170,6 +175,22 @@ proc find_label*(self: CompilationUnit, label: Label): int =
     if inst.kind == IkLabel and inst.label == label:
       return i
 
+proc find_loop_start*(self: CompilationUnit, pos: int): int =
+  var pos = pos
+  while pos > 0:
+    pos.dec()
+    if self.instructions[pos].kind == IkLoopStart:
+      return pos
+  not_allowed("Loop start not found")
+
+proc find_loop_end*(self: CompilationUnit, pos: int): int =
+  var pos = pos
+  while pos < self.instructions.len - 1:
+    pos.inc()
+    if self.instructions[pos].kind == IkLoopEnd:
+      return pos
+  not_allowed("Loop end not found")
+
 proc compile(self: var Compiler, input: Value)
 
 proc compile(self: var Compiler, input: seq[Value]) =
@@ -221,25 +242,34 @@ proc compile_var(self: var Compiler, input: Value) =
   else:
     self.output.instructions.add(Instruction(kind: IkVarValue, arg0: name, arg1: Value(kind: VkNil)))
 
+proc compile_loop(self: var Compiler, input: Value) =
+  var label = gen_oid()
+  self.output.instructions.add(Instruction(kind: IkLoopStart, label: label))
+  self.compile(input.gene_children)
+  self.output.instructions.add(Instruction(kind: IkContinue, label: label))
+  self.output.instructions.add(Instruction(kind: IkLoopEnd, label: label))
+
+proc compile_break(self: var Compiler, input: Value) =
+  self.output.instructions.add(Instruction(kind: IkBreak))
+
 proc compile_gene(self: var Compiler, input: Value) =
   var `type` = input.gene_type
-  var first: Value
   if input.gene_children.len > 0:
-    first = input.gene_children[0]
-  if first.kind == VkSymbol:
-    case first.str:
-      of "+":
-        self.compile(`type`)
-        self.compile(input.gene_children[1])
-        self.output.instructions.add(Instruction(kind: IkAdd))
-        return
-      of "<":
-        self.compile(`type`)
-        self.compile(input.gene_children[1])
-        self.output.instructions.add(Instruction(kind: IkLt))
-        return
-      else:
-        discard
+    var first = input.gene_children[0]
+    if first.kind == VkSymbol:
+      case first.str:
+        of "+":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkAdd))
+          return
+        of "<":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkLt))
+          return
+        else:
+          discard
 
   if `type`.kind == VkSymbol:
     case `type`.str:
@@ -251,6 +281,12 @@ proc compile_gene(self: var Compiler, input: Value) =
         return
       of "var":
         self.compile_var(input)
+        return
+      of "loop":
+        self.compile_loop(input)
+        return
+      of "break":
+        self.compile_break(input)
         return
       else:
         discard

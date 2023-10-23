@@ -60,3 +60,11 @@ test_vm """
     i
   )
 """, 1
+
+test_vm """
+  (loop
+    1
+    (break)
+  )
+  2
+""", 2

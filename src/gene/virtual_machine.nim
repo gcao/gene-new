@@ -101,6 +101,17 @@ proc exec*(self: var GeneVirtualMachine): Value =
           self.data.pc = self.data.cur_block.find_label(inst.label) + 1
           continue
 
+      of IkLoopStart, IkLoopEnd:
+        discard
+
+      of IkContinue:
+        self.data.pc = self.data.cur_block.find_loop_start(self.data.pc)
+        continue
+
+      of IkBreak:
+        self.data.pc = self.data.cur_block.find_loop_end(self.data.pc)
+        continue
+
       of IkPushValue:
         self.data.registers.push(inst.arg0)
       of IkPop:
