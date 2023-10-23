@@ -22,6 +22,9 @@ type
     IkPushValue   # push value to the next slot
     IkPop
 
+    IkVar
+    IkVarValue
+
     IkLabel
     IkJump        # unconditional jump
     IkJumpIfFalse
@@ -178,6 +181,9 @@ proc compile(self: var Compiler, input: seq[Value]) =
 proc compile_literal(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkPushValue, arg0: input))
 
+proc compile_symbol(self: var Compiler, input: Value) =
+  self.output.instructions.add(Instruction(kind: IkResolveSymbol, arg0: input))
+
 proc compile_array(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkArrayStart))
   for child in input.vec:
@@ -207,6 +213,14 @@ proc compile_if(self: var Compiler, input: Value) =
   self.compile(input.gene_props[ELSE_KEY])
   self.output.instructions.add(Instruction(kind: IkLabel, label: endLabel))
 
+proc compile_var(self: var Compiler, input: Value) =
+  let name = input.gene_children[0]
+  if input.gene_children.len > 1:
+    self.compile(input.gene_children[1])
+    self.output.instructions.add(Instruction(kind: IkVar, arg0: name))
+  else:
+    self.output.instructions.add(Instruction(kind: IkVarValue, arg0: name, arg1: Value(kind: VkNil)))
+
 proc compile_gene(self: var Compiler, input: Value) =
   var `type` = input.gene_type
   var first: Value
@@ -235,6 +249,9 @@ proc compile_gene(self: var Compiler, input: Value) =
       of "if":
         self.compile_if(input)
         return
+      of "var":
+        self.compile_var(input)
+        return
       else:
         discard
 
@@ -246,6 +263,8 @@ proc compile(self: var Compiler, input: Value) =
       self.compile_literal(input)
     of VkString:
       self.compile_literal(input) # TODO
+    of VkSymbol:
+      self.compile_symbol(input)
     of VkStream:
       self.compile(input.stream)
     of VkVector:

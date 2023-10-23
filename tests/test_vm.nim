@@ -43,3 +43,20 @@ test_vm """
     2
   )
 """, 2
+
+test_vm """
+  (var i 1)
+  i
+""", 1
+
+test_vm """
+  (var i 1)
+  (i + 2)
+""", 3
+
+test_vm """
+  (do
+    (var i 1)
+    i
+  )
+""", 1

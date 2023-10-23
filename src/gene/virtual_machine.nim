@@ -25,6 +25,7 @@ type
 
   Registers* = ref object
     caller*: Caller
+    scope*: Scope
     data*: array[32, Value]
     next_slot*: int
 
@@ -38,6 +39,7 @@ type
 proc new_registers(caller: Caller): Registers =
   Registers(
     caller: caller,
+    scope: new_scope(),
     next_slot: REG_DEFAULT,
   )
 
@@ -81,6 +83,12 @@ proc exec*(self: var GeneVirtualMachine): Value =
           return v
         else:
           todo()
+
+      of IkVar:
+        self.data.registers.scope.def_member(inst.arg0.str, self.data.registers.pop())
+
+      of IkResolveSymbol:
+        self.data.registers.push(self.data.registers.scope[inst.arg0.str])
 
       of IkLabel:
         discard
