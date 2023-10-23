@@ -17,8 +17,23 @@ test_vm "{^a 1}", {"a": new_gene_int(1)}.toTable
 # test_vm "1 2 3", 3
 
 test_vm "(1 + 2)", 3
+test_vm "(3 - 2)", 1
+test_vm "(2 * 3)", 6
+test_vm "(6 / 2)", 3.0
 
 test_vm "(1 < 2)", true
+test_vm "(2 <= 2)", true
+
+test_vm "(true  && true)",  true
+test_vm "(true  && false)", false
+test_vm "(false && false)", false
+test_vm "(true  || true)",  true
+test_vm "(true  || false)", true
+test_vm "(false || false)", false
+
+# && and || are short-circuiting
+# test_vm "(false && error)", false
+# test_vm "(true  || error)", true
 
 # (do ...) will create a scope if needed, execute all statements and return the result of the last statement.
 # `catch` and `ensure` can be used inside `do`.

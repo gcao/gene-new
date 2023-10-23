@@ -265,10 +265,40 @@ proc compile_gene(self: var Compiler, input: Value) =
           self.compile(input.gene_children[1])
           self.output.instructions.add(Instruction(kind: IkAdd))
           return
+        of "-":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkSub))
+          return
+        of "*":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkMul))
+          return
+        of "/":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkDiv))
+          return
         of "<":
           self.compile(`type`)
           self.compile(input.gene_children[1])
           self.output.instructions.add(Instruction(kind: IkLt))
+          return
+        of "<=":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkLe))
+          return
+        of "&&":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkAnd))
+          return
+        of "||":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkOr))
           return
         else:
           discard

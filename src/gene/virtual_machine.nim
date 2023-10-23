@@ -137,10 +137,36 @@ proc exec*(self: var GeneVirtualMachine): Value =
       of IkAdd:
         self.data.registers.push(self.data.registers.pop().int + self.data.registers.pop().int)
 
-      of IkLt:
-        let first = self.data.registers.pop().int
+      of IkSub:
+        self.data.registers.push(-self.data.registers.pop().int + self.data.registers.pop().int)
+
+      of IkMul:
+        self.data.registers.push(self.data.registers.pop().int * self.data.registers.pop().int)
+
+      of IkDiv:
         let second = self.data.registers.pop().int
-        self.data.registers.push(first > second)
+        let first = self.data.registers.pop().int
+        self.data.registers.push(first / second)
+
+      of IkLt:
+        let second = self.data.registers.pop().int
+        let first = self.data.registers.pop().int
+        self.data.registers.push(first < second)
+
+      of IkLe:
+        let second = self.data.registers.pop().int
+        let first = self.data.registers.pop().int
+        self.data.registers.push(first <= second)
+
+      of IkAnd:
+        let second = self.data.registers.pop()
+        let first = self.data.registers.pop()
+        self.data.registers.push(first and second)
+
+      of IkOr:
+        let second = self.data.registers.pop()
+        let first = self.data.registers.pop()
+        self.data.registers.push(first or second)
 
       else:
         todo($inst.kind)
