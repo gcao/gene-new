@@ -68,3 +68,9 @@ test_vm """
   )
   2
 """, 2
+
+test_vm """
+  (loop
+    (break 1)
+  )
+""", 1

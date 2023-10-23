@@ -250,6 +250,8 @@ proc compile_loop(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkLoopEnd, label: label))
 
 proc compile_break(self: var Compiler, input: Value) =
+  if input.gene_children.len > 0:
+    self.compile(input.gene_children[0])
   self.output.instructions.add(Instruction(kind: IkBreak))
 
 proc compile_gene(self: var Compiler, input: Value) =
