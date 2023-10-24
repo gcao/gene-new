@@ -231,7 +231,7 @@ proc compile_break(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkBreak))
 
 proc compile_gene(self: var Compiler, input: Value) =
-  if self.quote_level > 0:
+  if self.quote_level > 0 or input.gene_type.is_symbol("_") or input.gene_type.kind == VkQuote:
     self.output.instructions.add(Instruction(kind: IkGeneStart))
     self.compile(input.gene_type)
     self.output.instructions.add(Instruction(kind: IkGeneSetType))

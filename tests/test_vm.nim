@@ -152,3 +152,12 @@ test_vm ":(1 + 2)",proc(r: Value) =
   check r.gene_type == 1
   check r.gene_children[0] == new_gene_symbol("+")
   check r.gene_children[1] == 2
+
+test_vm "(_ 1 2)",proc(r: Value) =
+  check r.gene_children[0] == 1
+  check r.gene_children[1] == 2
+
+test_vm "(:a 1 2)",proc(r: Value) =
+  check r.gene_type == new_gene_symbol("a")
+  check r.gene_children[0] == 1
+  check r.gene_children[1] == 2
