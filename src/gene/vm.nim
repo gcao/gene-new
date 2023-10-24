@@ -1,4 +1,4 @@
-import tables, oids
+import tables, oids, strutils
 
 import ./types
 import ./parser
@@ -68,6 +68,167 @@ proc new_vm_data(caller: Caller): GeneVirtualMachineData =
 
 proc new_vm_data(): GeneVirtualMachineData =
   new_vm_data(nil)
+
+proc parse*(self: var RootMatcher, v: Value)
+
+proc calc_next*(self: var Matcher) =
+  var last: Matcher = nil
+  for m in self.children.mitems:
+    m.calc_next()
+    if m.kind in @[MatchData, MatchLiteral]:
+      if last != nil:
+        last.next = m
+      last = m
+
+proc calc_next*(self: var RootMatcher) =
+  var last: Matcher = nil
+  for m in self.children.mitems:
+    m.calc_next()
+    if m.kind in @[MatchData, MatchLiteral]:
+      if last != nil:
+        last.next = m
+      last = m
+
+proc calc_min_left*(self: var Matcher) =
+  var min_left = 0
+  var i = self.children.len
+  while i > 0:
+    i -= 1
+    var m = self.children[i]
+    m.calc_min_left()
+    m.min_left = min_left
+    if m.required:
+      min_left += 1
+
+proc calc_min_left*(self: var RootMatcher) =
+  var min_left = 0
+  var i = self.children.len
+  while i > 0:
+    i -= 1
+    var m = self.children[i]
+    m.calc_min_left()
+    m.min_left = min_left
+    if m.required:
+      min_left += 1
+
+proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
+  case v.kind:
+  of VkSymbol:
+    if v.str[0] == '^':
+      var m = new_matcher(self, MatchProp)
+      if v.str.ends_with("..."):
+        m.is_splat = true
+        if v.str[1] == '^':
+          m.name = v.str[2..^4]
+          m.is_prop = true
+        else:
+          m.name = v.str[1..^4]
+      else:
+        if v.str[1] == '^':
+          m.name = v.str[2..^1]
+          m.is_prop = true
+        else:
+          m.name = v.str[1..^1]
+      group.add(m)
+    else:
+      var m = new_matcher(self, MatchData)
+      group.add(m)
+      if v.str != "_":
+        if v.str.ends_with("..."):
+          m.is_splat = true
+          if v.str[0] == '^':
+            m.name = v.str[1..^4]
+            m.is_prop = true
+          else:
+            m.name = v.str[0..^4]
+        else:
+          if v.str[0] == '^':
+            m.name = v.str[1..^1]
+            m.is_prop = true
+          else:
+            m.name = v.str
+  of VkComplexSymbol:
+    if v.csymbol[0] == '^':
+      todo("parse " & $v)
+    else:
+      var m = new_matcher(self, MatchData)
+      group.add(m)
+      m.is_prop = true
+      var name = v.csymbol[1]
+      if name.ends_with("..."):
+        m.is_splat = true
+        m.name = name[0..^4]
+      else:
+        m.name = name
+  of VkVector:
+    var i = 0
+    while i < v.vec.len:
+      var item = v.vec[i]
+      i += 1
+      if item.kind == VkVector:
+        var m = new_matcher(self, MatchData)
+        group.add(m)
+        self.parse(m.children, item)
+      else:
+        self.parse(group, item)
+        if i < v.vec.len and v.vec[i].is_symbol("="):
+          todo("Support default values")
+          # i += 1
+          # var last_matcher = group[^1]
+          # var value = v.vec[i]
+          # i += 1
+          # last_matcher.default_value_expr = translate(value)
+  of VkQuote:
+    var m = new_matcher(self, MatchLiteral)
+    m.literal = v.quote
+    m.name = "<literal>"
+    group.add(m)
+  else:
+    todo("parse " & $v.kind)
+
+proc parse*(self: var RootMatcher, v: Value) =
+  if v == nil or v == new_gene_symbol("_"):
+    return
+  self.parse(self.children, v)
+  self.calc_min_left()
+  self.calc_next()
+
+proc new_arg_matcher*(value: Value): RootMatcher =
+  result = new_arg_matcher()
+  result.parse(value)
+
+proc to_function*(node: Value): Function {.gcsafe.} =
+  var name: string
+  var matcher = new_arg_matcher()
+  var body_start: int
+  case node.gene_type.str:
+  of "fnx":
+    matcher.parse(node.gene_children[0])
+    name = "<unnamed>"
+    body_start = 1
+  of "fnxx":
+    name = "<unnamed>"
+    body_start = 0
+  else:
+    var first = node.gene_children[0]
+    case first.kind:
+    of VkSymbol, VkString:
+      name = first.str
+    of VkComplexSymbol:
+      name = first.csymbol[^1]
+    else:
+      todo($first.kind)
+
+    matcher.parse(node.gene_children[1])
+    body_start = 2
+
+  var body: seq[Value] = @[]
+  for i in body_start..<node.gene_children.len:
+    body.add node.gene_children[i]
+
+  body = wrap_with_try(body)
+  result = new_fn(name, matcher, body)
+  result.async = node.gene_props.get_or_default("async", false)
 
 proc exec*(self: var GeneVirtualMachine): Value =
   while true:
@@ -213,6 +374,13 @@ proc exec*(self: var GeneVirtualMachine): Value =
         let second = self.data.registers.pop()
         let first = self.data.registers.pop()
         self.data.registers.push(first or second)
+
+      of IkFunction:
+        var f = to_function(inst.arg0)
+        # f.ns = frame.ns
+        # f.parent_scope = frame.scope
+        # f.parent_scope_max = frame.scope.max
+        self.data.registers.push(Value(kind: VkFunction, fn: f))
 
       of IkInternal:
         case inst.arg0.str:

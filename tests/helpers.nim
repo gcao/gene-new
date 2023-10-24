@@ -4,7 +4,7 @@ import gene/types
 import gene/parser
 import gene/interpreter
 import gene/serdes
-import gene/virtual_machine
+import gene/vm
 
 # Uncomment below lines to see logs
 # import logging

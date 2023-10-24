@@ -230,6 +230,9 @@ proc compile_break(self: var Compiler, input: Value) =
     self.output.instructions.add(Instruction(kind: IkPushNil))
   self.output.instructions.add(Instruction(kind: IkBreak))
 
+proc compile_fn(self: var Compiler, input: Value) =
+  self.output.instructions.add(Instruction(kind: IkFunction, arg0: input))
+
 proc compile_gene(self: var Compiler, input: Value) =
   if self.quote_level > 0 or input.gene_type.is_symbol("_") or input.gene_type.kind == VkQuote:
     self.output.instructions.add(Instruction(kind: IkGeneStart))
@@ -332,6 +335,9 @@ proc compile_gene(self: var Compiler, input: Value) =
         return
       of "break":
         self.compile_break(input)
+        return
+      of "fn":
+        self.compile_fn(input)
         return
       else:
         if `type`.str.starts_with("$_"):

@@ -50,6 +50,9 @@ test_vm "(false || false)", false
 # test_vm "(false && error)", false
 # test_vm "(true  || error)", true
 
+# test_vm "(1 || 2)", 1
+# test_vm "(false || 1)", 1
+
 # (do ...) will create a scope if needed, execute all statements and return the result of the last statement.
 # `catch` and `ensure` can be used inside `do`.
 # `ensure` will run after `catch` if both are present? but the exception thrown in `ensure` will be ignored?
@@ -148,16 +151,16 @@ test_vm """
   )
 """, 1
 
-test_vm ":(1 + 2)",proc(r: Value) =
+test_vm ":(1 + 2)", proc(r: Value) =
   check r.gene_type == 1
   check r.gene_children[0] == new_gene_symbol("+")
   check r.gene_children[1] == 2
 
-test_vm "(_ 1 2)",proc(r: Value) =
+test_vm "(_ 1 2)", proc(r: Value) =
   check r.gene_children[0] == 1
   check r.gene_children[1] == 2
 
-test_vm "(:a 1 2)",proc(r: Value) =
+test_vm "(:a 1 2)", proc(r: Value) =
   check r.gene_type == new_gene_symbol("a")
   check r.gene_children[0] == 1
   check r.gene_children[1] == 2
