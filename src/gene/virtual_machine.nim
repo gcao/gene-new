@@ -184,6 +184,26 @@ proc exec*(self: var GeneVirtualMachine): Value =
         let first = self.data.registers.pop().int
         self.data.registers.push(first <= second)
 
+      of IkGt:
+        let second = self.data.registers.pop().int
+        let first = self.data.registers.pop().int
+        self.data.registers.push(first > second)
+
+      of IkGe:
+        let second = self.data.registers.pop().int
+        let first = self.data.registers.pop().int
+        self.data.registers.push(first >= second)
+
+      of IkEq:
+        let second = self.data.registers.pop().int
+        let first = self.data.registers.pop().int
+        self.data.registers.push(first == second)
+
+      of IkNe:
+        let second = self.data.registers.pop().int
+        let first = self.data.registers.pop().int
+        self.data.registers.push(first != second)
+
       of IkAnd:
         let second = self.data.registers.pop()
         let first = self.data.registers.pop()

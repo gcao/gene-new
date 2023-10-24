@@ -26,8 +26,18 @@ test_vm "(3 - 2)", 1
 test_vm "(2 * 3)", 6
 test_vm "(6 / 2)", 3.0
 
-test_vm "(1 < 2)", true
+test_vm "(2 < 3)", true
+test_vm "(2 < 2)", false
 test_vm "(2 <= 2)", true
+test_vm "(2 <= 1)", false
+test_vm "(2 > 1)", true
+test_vm "(2 > 2)", false
+test_vm "(2 >= 2)", true
+test_vm "(2 >= 3)", false
+test_vm "(2 == 2)", true
+test_vm "(2 == 3)", false
+test_vm "(2 != 3)", true
+test_vm "(2 != 2)", false
 
 test_vm "(true  && true)",  true
 test_vm "(true  && false)", false

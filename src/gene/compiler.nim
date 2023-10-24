@@ -50,6 +50,7 @@ type
     IkGt
     IkGe
     IkEq
+    IkNe
 
     IkAnd
     IkOr
@@ -281,6 +282,26 @@ proc compile_gene(self: var Compiler, input: Value) =
           self.compile(`type`)
           self.compile(input.gene_children[1])
           self.output.instructions.add(Instruction(kind: IkLe))
+          return
+        of ">":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkGt))
+          return
+        of ">=":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkGe))
+          return
+        of "==":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkEq))
+          return
+        of "!=":
+          self.compile(`type`)
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkNe))
           return
         of "&&":
           self.compile(`type`)
