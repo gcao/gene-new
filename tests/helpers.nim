@@ -4,7 +4,7 @@ import gene/types
 import gene/parser
 import gene/interpreter
 import gene/serdes
-import gene/virtual_machine
+import gene/vm
 
 # Uncomment below lines to see logs
 # import logging
@@ -26,6 +26,8 @@ proc init_all*() =
   VM.thread_id = thread_id
   VM.gene_ns.ns["test1"] = new_gene_native_method(test)
   VM.gene_ns.ns["test2"] = new_gene_native_method(test2)
+
+  init_app()
 
 converter seq_to_gene*(self: seq[int]): Value =
   result = new_gene_vec()
@@ -223,16 +225,16 @@ proc test_vm*(code: string) =
   var code = cleanup(code)
   test "Compilation & VM: " & code:
     init_all()
-    discard exec(code, "test_code")
+    discard GeneVM.exec(code, "test_code")
 
 proc test_vm*(code: string, result: Value) =
   var code = cleanup(code)
   test "Compilation & VM: " & code:
     init_all()
-    check exec(code, "test_code") == result
+    check GeneVM.exec(code, "test_code") == result
 
 proc test_vm*(code: string, callback: proc(result: Value)) =
   var code = cleanup(code)
   test "Compilation & VM: " & code:
     init_all()
-    callback exec(code, "test_code")
+    callback GeneVM.exec(code, "test_code")

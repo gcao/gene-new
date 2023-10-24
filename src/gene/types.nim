@@ -1,4 +1,4 @@
-import os, random, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm
+import os, random, strutils, tables, unicode, hashes, sets, times, oids, strformat, pathnorm
 import nre
 import std/json
 import asyncdispatch
@@ -595,6 +595,7 @@ type
     matching_hint*: MatchingHint
     body*: seq[Value]
     body_compiled*: Expr
+    compiled*: CompilationUnit
     ret*: Expr
 
   BoundFunction* = ref object of GeneProcessor
@@ -841,46 +842,186 @@ type
 
   VmCallback* = proc() {.gcsafe.}
 
-  # This can be a thread, a green thread, an actor or a coroutine etc.
-  ComputationUnit* = ref object # A computation unit that can process a computable unit
-    computable*: ComputableUnit
+  # # This can be a thread, a green thread, an actor or a coroutine etc.
+  # ComputationUnit* = ref object # A computation unit that can process a computable unit
+  #   computable*: ComputableUnit
 
-  ComputableState* = enum
-    CsDefault
-    CsRunning
-    CsIdle
-    CsFinished
-    CsError
+  # ComputableState* = enum
+  #   CsDefault
+  #   CsRunning
+  #   CsIdle
+  #   CsFinished
+  #   CsError
 
-  ComputableUnit* = ref object  # A computable unit that can be assigned to a computation unit
-    state*: ComputableState
-    is_main*: bool              # If true, this is the main computable unit
-    chunks*: Table[int, Chunk]
-    chunk*: Chunk               # current chunk
-    pos*: int
-    stack*: Stack
+  # ComputableUnit* = ref object  # A computable unit that can be assigned to a computation unit
+  #   state*: ComputableState
+  #   is_main*: bool              # If true, this is the main computable unit
+  #   chunks*: Table[int, Chunk]
+  #   chunk*: Chunk               # current chunk
+  #   pos*: int
+  #   stack*: Stack
 
-  Chunk* = ref object
-    id*: int
-    data*: seq[Instruction]
+  # Chunk* = ref object
+  #   id*: int
+  #   data*: seq[Instruction]
+
+  # InstructionKind* = enum
+  #   InLoad
+  #   InTodo                      # To be implemented
+
+  # Instruction* = ref object
+  #   case kind*: InstructionKind
+  #   of InLoad:
+  #     load*: Value
+  #   else:
+  #     discard
+
+  # NewFrame* = ref object
+  #   data*: array[0..32, Value]
+  #   pos*: int
+
+  # Stack* = object
+  #   frames*: seq[NewFrame]
+
+  CuId* = Oid
+  Label* = Oid
+
+  Compiler* = ref object
+    output*: CompilationUnit
+    quote_level*: int
 
   InstructionKind* = enum
-    InLoad
-    InTodo                      # To be implemented
+    IkNoop
 
-  Instruction* = ref object
-    case kind*: InstructionKind
-    of InLoad:
-      load*: Value
-    else:
-      discard
+    IkStart   # start a compilation unit
+    IkEnd     # end a compilation unit
 
-  NewFrame* = ref object
-    data*: array[0..32, Value]
-    pos*: int
+    IkScopeStart
+    IkScopeEnd
 
-  Stack* = object
-    frames*: seq[NewFrame]
+    IkPushValue   # push value to the next slot
+    IkPushNil
+    IkPop
+
+    IkVar
+    IkVarValue
+    IkAssign
+
+    IkLabel
+    IkJump        # unconditional jump
+    IkJumpIfFalse
+
+    IkLoopStart
+    IkLoopEnd
+    IkContinue    # is added automatically before the loop end
+    IkBreak
+
+    IkAdd
+    IkAddValue    # args: literal value
+    IkSub
+    IkMul
+    IkDiv
+    IkPow
+
+    IkLt
+    IkLtValue
+    IkLe
+    IkGt
+    IkGe
+    IkEq
+    IkNe
+
+    IkAnd
+    IkOr
+
+    # IkApplication
+    # IkPackage
+    # IkModule
+
+    IkNamespace
+
+    IkFunction
+    IkCallFunction
+    IkCallFunctionNoArgs
+
+    IkMacro
+    IkCallMacro
+
+    IkClass
+    IkCallMethod
+    IkCallMethodNoArgs
+
+    IkMapStart
+    IkMapSetProp        # args: key
+    IkMapSetPropValue   # args: key, literal value
+    IkMapEnd
+
+    IkArrayStart
+    IkArrayAddChild
+    IkArrayAddChildValue # args: literal value
+    IkArrayEnd
+
+    IkGeneStart
+    IkGeneSetType
+    IkGeneSetProp
+    IkGeneSetPropValue        # args: key, literal value
+    IkGeneAddChild
+    IkGeneAddChildValue       # args: literal value
+    IkGeneEnd
+
+    IkResolveSymbol
+    IkResolveComplexSymbol
+
+    IkYield
+    IkResume
+
+    IkInternal
+
+  Instruction* = object
+    kind*: InstructionKind
+    arg0*: Value
+    arg1*: Value
+    arg2*: Value
+    label*: Label
+
+  CompilationUnit* = ref object
+    id*: CuId
+    instructions*: seq[Instruction]
+    labels*: Table[Label, int]
+
+  Address* = object
+    id*: CuId
+    pc*: int
+
+  GeneVirtualMachineState* = enum
+    VmWaiting   # waiting for task
+    VmRunning
+    VmPaused
+
+  GeneVirtualMachine* = ref object
+    state*: GeneVirtualMachineState
+    data*: GeneVirtualMachineData
+
+  GeneVirtualMachineData* = ref object
+    is_main*: bool
+    cur_block*: CompilationUnit
+    pc*: int
+    registers*: Registers
+    code_mgr*: CodeManager
+
+  Registers* = ref object
+    caller*: Caller
+    ns*: Namespace
+    scope*: Scope
+    data*: array[32, Value]
+    next_slot*: int
+
+  Caller* = ref object
+    address*: Address
+    registers*: Registers
+
+  CodeManager* = ref object
+    data*: Table[CuId, CompilationUnit]
 
 var VM* {.threadvar.}: VirtualMachine  # The current virtual machine
 # TODO: guard access to Threads with lock
@@ -888,7 +1029,7 @@ var Threads*: array[1..64, ThreadMetadata]
 var VmCreatedCallbacks*: seq[VmCallback] = @[]
 var VmCreatedCallbacksAddr* = VmCreatedCallbacks.addr
 
-var MainComputation* {.threadvar.}: ComputationUnit   # The main thread
+# var MainComputation* {.threadvar.}: ComputationUnit   # The main thread
 
 #################### Definitions #################
 

@@ -3,117 +3,6 @@ import tables, oids, strutils
 import ./types
 import "./compiler/if"
 
-type
-  CuId* = Oid
-  Label* = Oid
-
-  Compiler* = ref object
-    output*: CompilationUnit
-    quote_level*: int
-
-  InstructionKind* = enum
-    IkNoop
-
-    IkStart   # start a compilation unit
-    IkEnd     # end a compilation unit
-
-    IkScopeStart
-    IkScopeEnd
-
-    IkPushValue   # push value to the next slot
-    IkPushNil
-    IkPop
-
-    IkVar
-    IkVarValue
-    IkAssign
-
-    IkLabel
-    IkJump        # unconditional jump
-    IkJumpIfFalse
-
-    IkLoopStart
-    IkLoopEnd
-    IkContinue    # is added automatically before the loop end
-    IkBreak
-
-    IkAdd
-    IkAddValue    # args: literal value
-    IkSub
-    IkMul
-    IkDiv
-    IkPow
-
-    IkLt
-    IkLtValue
-    IkLe
-    IkGt
-    IkGe
-    IkEq
-    IkNe
-
-    IkAnd
-    IkOr
-
-    # IkApplication
-    # IkPackage
-    # IkModule
-
-    IkNamespace
-
-    IkFunction
-    IkCallFunction
-    IkCallFunctionNoArgs
-
-    IkMacro
-    IkCallMacro
-
-    IkClass
-    IkCallMethod
-    IkCallMethodNoArgs
-
-    IkMapStart
-    IkMapSetProp        # args: key
-    IkMapSetPropValue   # args: key, literal value
-    IkMapEnd
-
-    IkArrayStart
-    IkArrayAddChild
-    IkArrayAddChildValue # args: literal value
-    IkArrayEnd
-
-    IkGeneStart
-    IkGeneSetType
-    IkGeneSetProp
-    IkGeneSetPropValue        # args: key, literal value
-    IkGeneAddChild
-    IkGeneAddChildValue       # args: literal value
-    IkGeneEnd
-
-    IkResolveSymbol
-    IkResolveComplexSymbol
-
-    IkYield
-    IkResume
-
-    IkInternal
-
-  Instruction* = object
-    kind*: InstructionKind
-    arg0*: Value
-    arg1*: Value
-    arg2*: Value
-    label*: Label
-
-  CompilationUnit* = ref object
-    id*: CuId
-    instructions: seq[Instruction]
-    labels*: Table[Label, int]
-
-  Address* = object
-    id*: CuId
-    pc*: int
-
 proc `$`*(self: Instruction): string =
   case self.kind
     of IkPushValue: "Push " & $self.arg0
@@ -230,18 +119,24 @@ proc compile_break(self: var Compiler, input: Value) =
     self.output.instructions.add(Instruction(kind: IkPushNil))
   self.output.instructions.add(Instruction(kind: IkBreak))
 
+proc compile_fn(self: var Compiler, input: Value) =
+  self.output.instructions.add(Instruction(kind: IkFunction, arg0: input))
+
+proc compile_gene_default(self: var Compiler, input: Value) {.inline.} =
+  self.output.instructions.add(Instruction(kind: IkGeneStart))
+  self.compile(input.gene_type)
+  self.output.instructions.add(Instruction(kind: IkGeneSetType))
+  for k, v in input.gene_props:
+    self.compile(v)
+    self.output.instructions.add(Instruction(kind: IkGeneSetProp, arg0: k))
+  for child in input.gene_children:
+    self.compile(child)
+    self.output.instructions.add(Instruction(kind: IkGeneAddChild))
+  self.output.instructions.add(Instruction(kind: IkGeneEnd))
+
 proc compile_gene(self: var Compiler, input: Value) =
   if self.quote_level > 0 or input.gene_type.is_symbol("_") or input.gene_type.kind == VkQuote:
-    self.output.instructions.add(Instruction(kind: IkGeneStart))
-    self.compile(input.gene_type)
-    self.output.instructions.add(Instruction(kind: IkGeneSetType))
-    for k, v in input.gene_props:
-      self.compile(v)
-      self.output.instructions.add(Instruction(kind: IkGeneSetProp, arg0: k))
-    for child in input.gene_children:
-      self.compile(child)
-      self.output.instructions.add(Instruction(kind: IkGeneAddChild))
-    self.output.instructions.add(Instruction(kind: IkGeneEnd))
+    self.compile_gene_default(input)
     return
 
   let `type` = input.gene_type
@@ -333,6 +228,9 @@ proc compile_gene(self: var Compiler, input: Value) =
       of "break":
         self.compile_break(input)
         return
+      of "fn":
+        self.compile_fn(input)
+        return
       else:
         if `type`.str.starts_with("$_"):
           if input.gene_children.len > 1:
@@ -344,7 +242,7 @@ proc compile_gene(self: var Compiler, input: Value) =
             self.output.instructions.add(Instruction(kind: IkInternal, arg0: `type`))
           return
 
-  todo("Compile " & $input)
+  self.compile_gene_default(input)
 
 proc compile(self: var Compiler, input: Value) =
   case input.kind:
@@ -380,3 +278,9 @@ proc compile*(input: seq[Value]): CompilationUnit =
 
   self.output.instructions.add(Instruction(kind: IkEnd))
   result = self.output
+
+proc compile*(f: var Function) =
+  if f.compiled != nil:
+    return
+
+  f.compiled = compile(f.body)
