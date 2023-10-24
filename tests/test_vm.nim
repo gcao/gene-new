@@ -49,6 +49,20 @@ test_vm """
 """, 3
 
 test_vm """
+  (if false
+    1
+  )
+""", Value(kind: VkNil)
+
+test_vm """
+  (if true
+    # do nothing
+  else
+    1
+  )
+""", Value(kind: VkNil)
+
+test_vm """
   (if true
     1
   else
@@ -74,6 +88,18 @@ test_vm """
 """, 1
 
 test_vm """
+  (var a 1)
+  (var b 2)
+  [a b]
+""", new_gene_vec(1, 2)
+
+test_vm """
+  (var a 1)
+  (var b 2)
+  {^a a ^b b}
+""", {"a": new_gene_int(1), "b": new_gene_int(2)}.toTable
+
+test_vm """
   (var i 1)
   (i = 2)
   i
@@ -83,6 +109,11 @@ test_vm """
   (var i 1)
   (i + 2)
 """, 3
+
+test_vm """
+  (var a (if false 1))
+  a
+""", Value(kind: VkNil)
 
 test_vm """
   (do

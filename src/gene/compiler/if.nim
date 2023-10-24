@@ -43,6 +43,9 @@ proc normalize_if*(self: Value) =
         logic = @[]
         if input == nil:
           not_allowed()
+        elif input.is_symbol("else"):
+          state = IsElse
+          logic = @[]
         elif not input.is_symbol("then"):
           logic.add(input)
       of IsIfLogic:
@@ -105,5 +108,10 @@ proc normalize_if*(self: Value) =
       self.gene_props["then"] = new_gene_stream(@[])
     if not self.gene_props.has_key("else"):
       self.gene_props["else"] = new_gene_stream(@[])
+
+    if self.gene_props["then"].stream.len == 0:
+      self.gene_props["then"].stream.add(Value(kind: VkNil))
+    if self.gene_props["else"].stream.len == 0:
+      self.gene_props["else"].stream.add(Value(kind: VkNil))
 
     self.gene_children.reset  # Clear our gene_children as it's not needed any more
