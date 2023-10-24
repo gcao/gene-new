@@ -145,6 +145,21 @@ proc exec*(self: var GeneVirtualMachine): Value =
       of IkMapEnd:
         discard
 
+      of IkGeneStart:
+        self.data.registers.push(new_gene_gene())
+      of IkGeneSetType:
+        let val = self.data.registers.pop()
+        self.data.registers.current().gene_type = val
+      of IkGeneSetProp:
+        let key = inst.arg0.str
+        let val = self.data.registers.pop()
+        self.data.registers.current().gene_props[key] = val
+      of IkGeneAddChild:
+        let child = self.data.registers.pop()
+        self.data.registers.current().gene_children.add(child)
+      of IkGeneEnd:
+        discard
+
       of IkAdd:
         self.data.registers.push(self.data.registers.pop().int + self.data.registers.pop().int)
 

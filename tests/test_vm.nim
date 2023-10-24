@@ -1,4 +1,4 @@
-import tables
+import unittest, tables
 
 import gene/types
 
@@ -11,7 +11,7 @@ test_vm "false", false
 test_vm "_", Value(kind: VkPlaceholder)
 test_vm "\"string\"", "string"
 
-# test_vm ":a", new_gene_symbol("a")
+test_vm ":a", new_gene_symbol("a")
 
 test_vm "[]", new_gene_vec()
 test_vm "[1 2]", new_gene_vec(1, 2)
@@ -137,3 +137,8 @@ test_vm """
     (break 1)
   )
 """, 1
+
+test_vm ":(1 + 2)",proc(r: Value) =
+  check r.gene_type == 1
+  check r.gene_children[0] == new_gene_symbol("+")
+  check r.gene_children[1] == 2

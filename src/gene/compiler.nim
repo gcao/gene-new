@@ -9,6 +9,7 @@ type
 
   Compiler* = ref object
     output*: CompilationUnit
+    quote_level*: int
 
   InstructionKind* = enum
     IkNoop
@@ -81,8 +82,7 @@ type
     IkArrayEnd
 
     IkGeneStart
-    IkGeneStartWithType
-    IkGeneStartWithTypeValue  # args: literal value
+    IkGeneSetType
     IkGeneSetProp
     IkGeneSetPropValue        # args: key, literal value
     IkGeneAddChild
@@ -124,8 +124,6 @@ proc `$`*(self: Instruction): string =
     of IkMapSetProp: "MapSetProp " & $self.arg0
     of IkMapSetPropValue: "MapSetPropValue " & $self.arg0 & " " & $self.arg1
     of IkArrayAddChildValue: "ArrayAddChildValue " & $self.arg0
-    of IkGeneStartWithType: "GeneStartWithType"
-    of IkGeneStartWithTypeValue: "GeneStartWithTypeValue " & $self.arg0
     of IkInternal: "Internal " & $self.arg0
     else: ($self.kind)[2..^1]
 
@@ -175,7 +173,10 @@ proc compile_literal(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkPushValue, arg0: input))
 
 proc compile_symbol(self: var Compiler, input: Value) =
-  self.output.instructions.add(Instruction(kind: IkResolveSymbol, arg0: input))
+  if self.quote_level > 0:
+    self.output.instructions.add(Instruction(kind: IkPushValue, arg0: input))
+  else:
+    self.output.instructions.add(Instruction(kind: IkResolveSymbol, arg0: input))
 
 proc compile_array(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkArrayStart))
@@ -229,7 +230,20 @@ proc compile_break(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkBreak))
 
 proc compile_gene(self: var Compiler, input: Value) =
-  var `type` = input.gene_type
+  if self.quote_level > 0:
+    self.output.instructions.add(Instruction(kind: IkGeneStart))
+    self.compile(input.gene_type)
+    self.output.instructions.add(Instruction(kind: IkGeneSetType))
+    for k, v in input.gene_props:
+      self.compile(v)
+      self.output.instructions.add(Instruction(kind: IkGeneSetProp, arg0: k))
+    for child in input.gene_children:
+      self.compile(child)
+      self.output.instructions.add(Instruction(kind: IkGeneAddChild))
+    self.output.instructions.add(Instruction(kind: IkGeneEnd))
+    return
+
+  let `type` = input.gene_type
   if input.gene_children.len > 0:
     var first = input.gene_children[0]
     if first.kind == VkSymbol:
@@ -319,6 +333,10 @@ proc compile(self: var Compiler, input: Value) =
       self.compile_literal(input) # TODO
     of VkSymbol:
       self.compile_symbol(input)
+    of VkQuote:
+      self.quote_level.inc()
+      self.compile(input.quote)
+      self.quote_level.dec()
     of VkStream:
       self.compile(input.stream)
     of VkVector:
