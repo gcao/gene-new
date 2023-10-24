@@ -8,12 +8,15 @@ test_vm "nil", Value(kind: VkNil)
 test_vm "1", 1
 test_vm "true", true
 test_vm "false", false
+test_vm "_", Value(kind: VkPlaceholder)
 test_vm "\"string\"", "string"
 
 # test_vm ":a", new_gene_symbol("a")
 
+test_vm "[]", new_gene_vec()
 test_vm "[1 2]", new_gene_vec(1, 2)
 
+test_vm "{}", Table[string, Value]()
 test_vm "{^a 1}", {"a": new_gene_int(1)}.toTable
 
 test_vm "1 2 3", 3
@@ -63,8 +66,18 @@ test_vm """
 
 test_vm """
   (var i 1)
+""", 1
+
+test_vm """
+  (var i 1)
   i
 """, 1
+
+test_vm """
+  (var i 1)
+  (i = 2)
+  i
+""", 2
 
 test_vm """
   (var i 1)

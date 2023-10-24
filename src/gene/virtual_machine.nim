@@ -88,8 +88,16 @@ proc exec*(self: var GeneVirtualMachine): Value =
         self.data.registers.scope.def_member(inst.arg0.str, value)
         self.data.registers.push(value)
 
+      of IkAssign:
+        let value = self.data.registers.current()
+        self.data.registers.scope[inst.arg0.str] = value
+
       of IkResolveSymbol:
-        self.data.registers.push(self.data.registers.scope[inst.arg0.str])
+        case inst.arg0.str:
+          of "_":
+            self.data.registers.push(Value(kind: VkPlaceholder))
+          else:
+            self.data.registers.push(self.data.registers.scope[inst.arg0.str])
 
       of IkLabel:
         discard
@@ -175,7 +183,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
         case inst.arg0.str:
           of "$_debug":
             if inst.arg1:
-              echo "$_debug ", self.data.registers.pop()
+              echo "$_debug ", self.data.registers.current()
           of "$_print_instructions":
             echo self.data.cur_block
             if inst.arg1:

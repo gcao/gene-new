@@ -25,6 +25,7 @@ type
 
     IkVar
     IkVarValue
+    IkAssign
 
     IkLabel
     IkJump        # unconditional jump
@@ -233,6 +234,10 @@ proc compile_gene(self: var Compiler, input: Value) =
     var first = input.gene_children[0]
     if first.kind == VkSymbol:
       case first.str:
+        of "=":
+          self.compile(input.gene_children[1])
+          self.output.instructions.add(Instruction(kind: IkAssign, arg0: `type`))
+          return
         of "+":
           self.compile(`type`)
           self.compile(input.gene_children[1])
