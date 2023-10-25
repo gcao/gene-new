@@ -220,6 +220,7 @@ proc to_function*(node: Value): Function {.gcsafe.} =
 proc exec*(self: var GeneVirtualMachine): Value =
   while true:
     let inst = self.data.cur_block[self.data.pc]
+    # echo self.data.pc, " ", inst
     case inst.kind:
       of IkStart:
         discard
@@ -251,11 +252,13 @@ proc exec*(self: var GeneVirtualMachine): Value =
             self.data.registers.push(Value(kind: VkPlaceholder))
           else:
             let scope = self.data.registers.scope
-            if scope.has_key(inst.arg0.str):
-              self.data.registers.push(scope[inst.arg0.str])
+            let name = inst.arg0.str
+            if scope.has_key(name):
+              self.data.registers.push(scope[name])
+            elif self.data.registers.ns.has_key(name):
+              self.data.registers.push(self.data.registers.ns[name])
             else:
-              self.data.registers.push(self.data.registers.ns[inst.arg0.str])
-
+              not_allowed("Unknown symbol " & name)
       of IkLabel:
         discard
 
@@ -330,6 +333,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
             registers: self.data.registers,
           )
           self.data.registers = new_registers(caller)
+          self.data.registers.ns = gene_type.fn.ns
           self.data.cur_block = gene_type.fn.compiled
           self.data.pc = 0
           continue
