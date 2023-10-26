@@ -346,6 +346,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
             registers: self.data.registers,
           )
           self.data.registers = new_registers(caller)
+          self.data.registers.scope.set_parent(gene_type.fn.parent_scope, gene_type.fn.parent_scope_max)
           self.data.registers.ns = gene_type.fn.ns
           self.data.registers.args = v
           self.data.cur_block = gene_type.fn.compiled

@@ -19,10 +19,17 @@ test_vm """
 
 test_vm """
   (fn f [a]
-    (a + 1)
+    (a + 2)
   )
   (f 1)
-""", 2
+""", 3
+
+test_vm """
+  (fn f a
+    (a + 2)
+  )
+  (f 1)
+""", 3
 
 test_vm """
   (fn f [a b]
@@ -38,3 +45,32 @@ test_vm """
   )
   (f)
 """, 1
+
+test_vm """
+  (fn f []
+    (g)
+  )
+  (fn g []
+    1
+  )
+  (f)
+""", 1
+
+test_vm """
+  (var a 1)
+  (fn f b
+    (a + b)
+  )
+  (f 2)
+""", 3
+
+test_vm """
+  (var a 1)
+  (fn f []
+    (var b 2)
+    (fn g []
+      (a + b)
+    )
+  )
+  ((f))
+""", 3
