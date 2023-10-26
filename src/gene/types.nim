@@ -986,6 +986,7 @@ type
 
   CompilationUnit* = ref object
     id*: CuId
+    matcher*: RootMatcher
     instructions*: seq[Instruction]
     labels*: Table[Label, int]
 
@@ -1013,6 +1014,7 @@ type
     caller*: Caller
     ns*: Namespace
     scope*: Scope
+    args*: Value
     data*: array[32, Value]
     next_slot*: int
 

@@ -217,13 +217,26 @@ proc to_function*(node: Value): Function {.gcsafe.} =
   result = new_fn(name, matcher, body)
   result.async = node.gene_props.get_or_default("async", false)
 
+proc handle_args*(self: var GeneVirtualMachine, matcher: RootMatcher, args: Value) {.inline.} =
+  case matcher.hint.mode:
+  of MhNone:
+    discard
+  of MhSimpleData:
+    for i, value in args.gene_children:
+      let field = matcher.children[i]
+      self.data.registers.scope.def_member(field.name, value)
+  else:
+    todo($matcher.hint.mode)
+
 proc exec*(self: var GeneVirtualMachine): Value =
   while true:
     let inst = self.data.cur_block[self.data.pc]
     # echo self.data.pc, " ", inst
     case inst.kind:
       of IkStart:
-        discard
+        let matcher = self.data.cur_block.matcher
+        if matcher != nil:
+          self.handle_args(matcher, self.data.registers.args)
 
       of IkEnd:
         let v = self.data.registers.default
@@ -334,6 +347,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
           )
           self.data.registers = new_registers(caller)
           self.data.registers.ns = gene_type.fn.ns
+          self.data.registers.args = v
           self.data.cur_block = gene_type.fn.compiled
           self.data.pc = 0
           continue

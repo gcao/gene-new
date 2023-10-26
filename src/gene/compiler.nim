@@ -284,3 +284,4 @@ proc compile*(f: var Function) =
     return
 
   f.compiled = compile(f.body)
+  f.compiled.matcher = f.matcher
