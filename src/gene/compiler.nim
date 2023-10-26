@@ -129,6 +129,9 @@ proc compile_return(self: var Compiler, input: Value) =
     self.output.instructions.add(Instruction(kind: IkPushNil))
   self.output.instructions.add(Instruction(kind: IkReturn))
 
+proc compile_ns(self: var Compiler, input: Value) =
+  self.output.instructions.add(Instruction(kind: IkNamespace, arg0: input.gene_children[0]))
+
 proc compile_gene_default(self: var Compiler, input: Value) {.inline.} =
   self.output.instructions.add(Instruction(kind: IkGeneStart))
   self.compile(input.gene_type)
@@ -235,11 +238,14 @@ proc compile_gene(self: var Compiler, input: Value) =
       of "break":
         self.compile_break(input)
         return
-      of "fn":
+      of "fn", "fnx":
         self.compile_fn(input)
         return
       of "return":
         self.compile_return(input)
+        return
+      of "ns":
+        self.compile_ns(input)
         return
       else:
         if `type`.str.starts_with("$_"):

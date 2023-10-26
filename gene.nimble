@@ -78,3 +78,7 @@ task test, "Runs the test suite":
   exec "nim c -r tests/test_stdlib_json.nim"
 
   exec "nim c -r tests/js/test_js.nim"
+
+task test2, "Runs VM test suite":
+  exec "nim c -r tests/test_vm.nim"
+  exec "nim c -r tests/test_vm_fp.nim"

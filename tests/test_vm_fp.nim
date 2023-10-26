@@ -74,3 +74,24 @@ test_vm """
   )
   ((f))
 """, 3
+
+test_vm """
+  ((fnx _
+    1
+  ))
+""", 1
+
+test_vm """
+  (var a (fnx _
+    1
+  ))
+  (a)
+""", 1
+
+# TODO
+# test_vm """
+#   # Creates a named function but does not add it to the namespace automatically
+#   (fn "f" []
+#   )
+# """, proc(r: Value) =
+#   check r.fn.name == "f"

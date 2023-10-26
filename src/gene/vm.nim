@@ -427,6 +427,14 @@ proc exec*(self: var GeneVirtualMachine): Value =
           self.data.registers.push(v)
           continue
 
+      of IkNamespace:
+        var name = inst.arg0.str
+        var ns = new_namespace(name)
+        var v = Value(kind: VkNamespace, ns: ns)
+        self.data.registers.ns[name] = v
+        self.data.registers.push(v)
+        # TODO: invoke block
+
       of IkInternal:
         case inst.arg0.str:
           of "$_debug":
