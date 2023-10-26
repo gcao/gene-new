@@ -122,6 +122,13 @@ proc compile_break(self: var Compiler, input: Value) =
 proc compile_fn(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkFunction, arg0: input))
 
+proc compile_return(self: var Compiler, input: Value) =
+  if input.gene_children.len > 0:
+    self.compile(input.gene_children[0])
+  else:
+    self.output.instructions.add(Instruction(kind: IkPushNil))
+  self.output.instructions.add(Instruction(kind: IkReturn))
+
 proc compile_gene_default(self: var Compiler, input: Value) {.inline.} =
   self.output.instructions.add(Instruction(kind: IkGeneStart))
   self.compile(input.gene_type)
@@ -230,6 +237,9 @@ proc compile_gene(self: var Compiler, input: Value) =
         return
       of "fn":
         self.compile_fn(input)
+        return
+      of "return":
+        self.compile_return(input)
         return
       else:
         if `type`.str.starts_with("$_"):

@@ -941,6 +941,7 @@ type
     IkNamespace
 
     IkFunction
+    IkReturn
     IkCallFunction
     IkCallFunctionNoArgs
 

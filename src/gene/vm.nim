@@ -414,6 +414,18 @@ proc exec*(self: var GeneVirtualMachine): Value =
         f.parent_scope_max = self.data.registers.scope.max
         self.data.registers.push(Value(kind: VkFunction, fn: f))
 
+      of IkReturn:
+        let caller = self.data.registers.caller
+        if caller == nil:
+          not_allowed("Return from top level")
+        else:
+          let v = self.data.registers.pop()
+          self.data.registers = caller.registers
+          self.data.cur_block = self.data.code_mgr.data[caller.address.id]
+          self.data.pc = caller.address.pc
+          self.data.registers.push(v)
+          continue
+
       of IkInternal:
         case inst.arg0.str:
           of "$_debug":

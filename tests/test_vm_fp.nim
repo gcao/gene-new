@@ -23,3 +23,18 @@ test_vm """
   )
   (f 1)
 """, 2
+
+test_vm """
+  (fn f [a b]
+    (a + b)
+  )
+  (f 1 2)
+""", 3
+
+test_vm """
+  (fn f []
+    (return 1)
+    2
+  )
+  (f)
+""", 1
