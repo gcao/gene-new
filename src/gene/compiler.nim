@@ -151,6 +151,21 @@ proc compile_ns(self: var Compiler, input: Value) =
     self.output.instructions.add(Instruction(kind: IkCompileInit))
     self.output.instructions.add(Instruction(kind: IkCallInit))
 
+proc compile_class(self: var Compiler, input: Value) =
+  var body_start = 1
+  if input.gene_children.len >= 3 and input.gene_children[1].is_symbol("<"):
+    body_start = 3
+    self.compile(input.gene_children[2])
+    self.output.instructions.add(Instruction(kind: IkSubClass, arg0: input.gene_children[0]))
+  else:
+    self.output.instructions.add(Instruction(kind: IkClass, arg0: input.gene_children[0]))
+
+  if input.gene_children.len > body_start:
+    let body = new_gene_stream(input.gene_children[body_start..^1])
+    self.output.instructions.add(Instruction(kind: IkPushValue, arg0: body))
+    self.output.instructions.add(Instruction(kind: IkCompileInit))
+    self.output.instructions.add(Instruction(kind: IkCallInit))
+
 proc compile_gene_default(self: var Compiler, input: Value) {.inline.} =
   self.output.instructions.add(Instruction(kind: IkGeneStart))
   self.compile(input.gene_type)
@@ -265,6 +280,9 @@ proc compile_gene(self: var Compiler, input: Value) =
         return
       of "ns":
         self.compile_ns(input)
+        return
+      of "class":
+        self.compile_class(input)
         return
       else:
         if `type`.str.starts_with("$_"):

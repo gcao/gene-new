@@ -284,6 +284,8 @@ proc exec*(self: var GeneVirtualMachine): Value =
             self.data.registers.push(value.gene_props[name])
           of VkNamespace:
             self.data.registers.push(value.ns[name])
+          of VkClass:
+            self.data.registers.push(value.class.ns[name])
           else:
             todo($value.kind)
 
@@ -490,7 +492,21 @@ proc exec*(self: var GeneVirtualMachine): Value =
         var v = Value(kind: VkNamespace, ns: ns)
         self.data.registers.ns[name] = v
         self.data.registers.push(v)
-        # TODO: invoke block
+
+      of IkClass:
+        var name = inst.arg0.str
+        var class = new_class(name)
+        var v = Value(kind: VkClass, class: class)
+        self.data.registers.ns[name] = v
+        self.data.registers.push(v)
+
+      of IkSubClass:
+        var name = inst.arg0.str
+        var class = new_class(name)
+        class.parent = self.data.registers.pop().class
+        var v = Value(kind: VkClass, class: class)
+        self.data.registers.ns[name] = v
+        self.data.registers.push(v)
 
       of IkInternal:
         case inst.arg0.str:

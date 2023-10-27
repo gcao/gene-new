@@ -958,6 +958,7 @@ type
     IkCallMacro
 
     IkClass
+    IkSubClass
     IkCallMethod
     IkCallMethodNoArgs
     IkCallInit

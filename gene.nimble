@@ -82,3 +82,4 @@ task test, "Runs the test suite":
 task test2, "Runs VM test suite":
   exec "nim c -r tests/test_vm.nim"
   exec "nim c -r tests/test_vm_fp.nim"
+  exec "nim c -r tests/test_vm_namespace.nim"
