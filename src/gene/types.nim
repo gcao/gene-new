@@ -981,7 +981,9 @@ type
     IkGeneEnd
 
     IkResolveSymbol
-    IkResolveComplexSymbol
+    # IkResolveComplexSymbol
+    IkGetMember
+    IkGetChild
 
     IkYield
     IkResume

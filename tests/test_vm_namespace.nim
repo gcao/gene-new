@@ -21,3 +21,11 @@ test_vm """
 """, proc(r: Value) =
   check r.ns.name == "n"
   check r.ns["m"].ns.name == "m"
+
+test_vm """
+  (ns n
+    (ns m)
+  )
+  n/m
+""", proc(r: Value) =
+  check r.ns.name == "m"

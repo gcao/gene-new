@@ -68,6 +68,15 @@ proc compile_symbol(self: var Compiler, input: Value) =
   else:
     self.output.instructions.add(Instruction(kind: IkResolveSymbol, arg0: input))
 
+proc compile_complex_symbol(self: var Compiler, input: Value) =
+  if self.quote_level > 0:
+    self.output.instructions.add(Instruction(kind: IkPushValue, arg0: input))
+  else:
+    let first = input.csymbol[0]
+    self.output.instructions.add(Instruction(kind: IkResolveSymbol, arg0: first))
+    for s in input.csymbol[1..^1]:
+      self.output.instructions.add(Instruction(kind: IkGetMember, arg0: s))
+
 proc compile_array(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkArrayStart))
   for child in input.vec:
@@ -273,6 +282,8 @@ proc compile(self: var Compiler, input: Value) =
       self.compile_literal(input) # TODO
     of VkSymbol:
       self.compile_symbol(input)
+    of VkComplexSymbol:
+      self.compile_complex_symbol(input)
     of VkQuote:
       self.quote_level.inc()
       self.compile(input.quote)
