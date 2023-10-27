@@ -275,10 +275,26 @@ proc exec*(self: var GeneVirtualMachine): Value =
               not_allowed("Unknown symbol " & name)
 
       of IkGetMember:
+        let name = inst.arg0.str
         let value = self.data.registers.pop()
         case value.kind:
+          of VkMap:
+            self.data.registers.push(value.map[name])
+          of VkGene:
+            self.data.registers.push(value.gene_props[name])
           of VkNamespace:
-            self.data.registers.push(value.ns[inst.arg0.str])
+            self.data.registers.push(value.ns[name])
+          else:
+            todo($value.kind)
+
+      of IkGetChild:
+        let i = inst.arg0.int
+        let value = self.data.registers.pop()
+        case value.kind:
+          of VkVector:
+            self.data.registers.push(value.vec[i])
+          of VkGene:
+            self.data.registers.push(value.gene_children[i])
           else:
             todo($value.kind)
 

@@ -1,6 +1,7 @@
 import tables, oids, strutils
 
 import ./types
+import ./utils
 import "./compiler/if"
 
 proc `$`*(self: Instruction): string =
@@ -75,7 +76,11 @@ proc compile_complex_symbol(self: var Compiler, input: Value) =
     let first = input.csymbol[0]
     self.output.instructions.add(Instruction(kind: IkResolveSymbol, arg0: first))
     for s in input.csymbol[1..^1]:
-      self.output.instructions.add(Instruction(kind: IkGetMember, arg0: s))
+      let (is_int, i) = to_int(s)
+      if is_int:
+        self.output.instructions.add(Instruction(kind: IkGetChild, arg0: i))
+      else:
+        self.output.instructions.add(Instruction(kind: IkGetMember, arg0: s))
 
 proc compile_array(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkArrayStart))

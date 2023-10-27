@@ -164,3 +164,28 @@ test_vm "(:a 1 2)", proc(r: Value) =
   check r.gene_type == new_gene_symbol("a")
   check r.gene_children[0] == 1
   check r.gene_children[1] == 2
+
+test_vm """
+  (var x {^a 1})
+  x/a
+""", 1
+
+test_vm """
+  (var x (_ ^a 1))
+  x/a
+""", 1
+
+test_vm """
+  (var x [1 2])
+  x/0
+""", 1
+
+test_vm """
+  (var x (_ 1 2))
+  x/0
+""", 1
+
+test_vm """
+  (var x {^a [1 2]})
+  x/a/1
+""", 2
