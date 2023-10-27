@@ -245,9 +245,10 @@ proc exec*(self: var GeneVirtualMachine): Value =
           return v
         else:
           self.data.registers = caller.registers
+          if self.data.cur_block.kind != CkInit:
+            self.data.registers.push(v)
           self.data.cur_block = self.data.code_mgr.data[caller.address.id]
           self.data.pc = caller.address.pc
-          self.data.registers.push(v)
           continue
 
       of IkVar:
@@ -406,6 +407,37 @@ proc exec*(self: var GeneVirtualMachine): Value =
         let second = self.data.registers.pop()
         let first = self.data.registers.pop()
         self.data.registers.push(first or second)
+
+      of IkCompileInit:
+        let input = self.data.registers.pop()
+        let compiled = compile_init(input)
+        self.data.code_mgr.data[compiled.id] = compiled
+        self.data.registers.push(Value(kind: VkCuId, cu_id: compiled.id))
+
+      of IkCallInit:
+        let cu_id = self.data.registers.pop().cu_id
+        let compiled = self.data.code_mgr.data[cu_id]
+        let obj = self.data.registers.current()
+        var ns: Namespace
+        case obj.kind:
+          of VkNamespace:
+            ns = obj.ns
+          of VkClass:
+            ns = obj.class.ns
+          else:
+            todo($obj.kind)
+
+        self.data.pc.inc()
+        var caller = Caller(
+          address: Address(id: self.data.cur_block.id, pc: self.data.pc),
+          registers: self.data.registers,
+        )
+        self.data.registers = new_registers(caller)
+        self.data.registers.self = obj
+        self.data.registers.ns = ns
+        self.data.cur_block = compiled
+        self.data.pc = 0
+        continue
 
       of IkFunction:
         var f = to_function(inst.arg0)

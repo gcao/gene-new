@@ -97,6 +97,8 @@ type
     VkThreadMessage
     VkJson
     VkNativeFile
+    VkCuId
+    VkCompilationUnit
 
   Value* {.acyclic.} = ref object
     case kind*: ValueKind
@@ -259,6 +261,10 @@ type
       json*: JsonNode
     of VkNativeFile:
       native_file*: File
+    of VkCuId:
+      cu_id*: CuId
+    of VkCompilationUnit:
+      compilation_unit: CompilationUnit
     else:
       discard
 
@@ -934,6 +940,8 @@ type
     IkAnd
     IkOr
 
+    IkCompileInit
+
     # IkApplication
     # IkPackage
     # IkModule
@@ -944,6 +952,7 @@ type
     IkReturn
     IkCallFunction
     IkCallFunctionNoArgs
+    IkCallSimple  # call class or namespace body
 
     IkMacro
     IkCallMacro
@@ -951,6 +960,7 @@ type
     IkClass
     IkCallMethod
     IkCallMethodNoArgs
+    IkCallInit
 
     IkMapStart
     IkMapSetProp        # args: key
@@ -985,8 +995,18 @@ type
     arg2*: Value
     label*: Label
 
+  CompilationUnitKind* = enum
+    CkDefault
+    CkFunction
+    CkMacro
+    CkBlock
+    CkModule
+    CkInit      # namespace / class / object initialization
+    CkInline    # evaluation during execution
+
   CompilationUnit* = ref object
     id*: CuId
+    kind*: CompilationUnitKind
     matcher*: RootMatcher
     instructions*: seq[Instruction]
     labels*: Table[Label, int]
@@ -1015,6 +1035,7 @@ type
     caller*: Caller
     ns*: Namespace
     scope*: Scope
+    self*: Value
     args*: Value
     data*: array[32, Value]
     next_slot*: int

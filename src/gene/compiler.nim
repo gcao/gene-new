@@ -131,6 +131,11 @@ proc compile_return(self: var Compiler, input: Value) =
 
 proc compile_ns(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkNamespace, arg0: input.gene_children[0]))
+  if input.gene_children.len > 1:
+    let body = new_gene_stream(input.gene_children[1..^1])
+    self.output.instructions.add(Instruction(kind: IkPushValue, arg0: body))
+    self.output.instructions.add(Instruction(kind: IkCompileInit))
+    self.output.instructions.add(Instruction(kind: IkCallInit))
 
 proc compile_gene_default(self: var Compiler, input: Value) {.inline.} =
   self.output.instructions.add(Instruction(kind: IkGeneStart))
@@ -301,3 +306,13 @@ proc compile*(f: var Function) =
 
   f.compiled = compile(f.body)
   f.compiled.matcher = f.matcher
+
+proc compile_init*(input: Value): CompilationUnit =
+  var self = Compiler(output: CompilationUnit(id: gen_oid()))
+  self.output.kind = CkInit
+  self.output.instructions.add(Instruction(kind: IkStart))
+
+  self.compile(input)
+
+  self.output.instructions.add(Instruction(kind: IkEnd))
+  result = self.output
