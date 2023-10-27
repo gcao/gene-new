@@ -166,6 +166,16 @@ proc compile_class(self: var Compiler, input: Value) =
     self.output.instructions.add(Instruction(kind: IkCompileInit))
     self.output.instructions.add(Instruction(kind: IkCallInit))
 
+# Construct a Gene object whose type is the class
+# The Gene object will be used as the arguments to the constructor
+proc compile_new(self: var Compiler, input: Value) =
+  self.output.instructions.add(Instruction(kind: IkGeneStart))
+  self.compile(input.gene_children[0])
+  self.output.instructions.add(Instruction(kind: IkGeneSetType))
+  # TODO: compile the arguments
+  self.output.instructions.add(Instruction(kind: IkGeneEnd))
+  self.output.instructions.add(Instruction(kind: IkNew))
+
 proc compile_gene_default(self: var Compiler, input: Value) {.inline.} =
   self.output.instructions.add(Instruction(kind: IkGeneStart))
   self.compile(input.gene_type)
@@ -283,6 +293,9 @@ proc compile_gene(self: var Compiler, input: Value) =
         return
       of "class":
         self.compile_class(input)
+        return
+      of "new":
+        self.compile_new(input)
         return
       else:
         if `type`.str.starts_with("$_"):

@@ -500,6 +500,14 @@ proc exec*(self: var GeneVirtualMachine): Value =
         self.data.registers.ns[name] = v
         self.data.registers.push(v)
 
+      of IkNew:
+        var v = self.data.registers.pop()
+        var instance = Value(
+          kind: VkInstance,
+          instance_class: v.gene_type.class,
+        )
+        self.data.registers.push(instance)
+
       of IkSubClass:
         var name = inst.arg0.str
         var class = new_class(name)

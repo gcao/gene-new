@@ -23,3 +23,9 @@ test_vm """
   A/B
 """, proc(r: Value) =
   check r.class.name == "B"
+
+test_vm """
+  (class A)
+  (new A)
+""", proc(r: Value) =
+  check r.instance_class.name == "A"

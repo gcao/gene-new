@@ -959,6 +959,7 @@ type
 
     IkClass
     IkSubClass
+    IkNew
     IkCallMethod
     IkCallMethodNoArgs
     IkCallInit
