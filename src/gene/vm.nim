@@ -247,9 +247,11 @@ proc handle_args*(self: var GeneVirtualMachine, matcher: RootMatcher, args: Valu
     todo($matcher.hint.mode)
 
 proc exec*(self: var GeneVirtualMachine): Value =
+  var trace = false
   while true:
     let inst = self.data.cur_block[self.data.pc]
-    # echo self.data.pc, " ", inst
+    if trace:
+      echo self.data.pc, " ", inst
     case inst.kind:
       of IkNoop:
         discard
@@ -322,7 +324,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
             todo($value.kind)
 
       of IkJump:
-        self.data.pc = self.data.cur_block.find_label(inst.arg0.cu_id) + 1
+        self.data.pc = self.data.cur_block.find_label(inst.arg0.cu_id)
         continue
       of IkJumpIfFalse:
         if not self.data.registers.pop().bool:
@@ -368,6 +370,13 @@ proc exec*(self: var GeneVirtualMachine): Value =
         self.data.registers.push(new_gene_gene())
       of IkGeneStartDefault:
         let v = self.data.registers.pop()
+        if v.kind == VkMacro:
+          not_allowed("Macro not allowed here")
+        self.data.registers.push(new_gene_gene(v))
+      of IkGeneStartMacro:
+        let v = self.data.registers.pop()
+        if v.kind != VkMacro:
+          not_allowed("Macro expected")
         self.data.registers.push(new_gene_gene(v))
       of IkGeneCheckType:
         let v = self.data.registers.current()
@@ -375,6 +384,8 @@ proc exec*(self: var GeneVirtualMachine): Value =
           of VkFunction:
             self.data.pc = self.data.cur_block.find_label(inst.arg0.cu_id)
             continue
+          of VkMacro:
+            discard
           else:
             todo($v.kind)
 
@@ -392,24 +403,48 @@ proc exec*(self: var GeneVirtualMachine): Value =
       of IkGeneEnd:
         let v = self.data.registers.current()
         let gene_type = v.gene_type
-        if gene_type != nil and gene_type.kind == VkFunction:
-          self.data.pc.inc()
-          discard self.data.registers.pop()
+        if gene_type != nil:
+          case gene_type.kind:
+            of VkFunction:
+              self.data.pc.inc()
+              discard self.data.registers.pop()
 
-          gene_type.fn.compile()
-          self.data.code_mgr.data[gene_type.fn.compiled.id] = gene_type.fn.compiled
+              gene_type.fn.compile()
+              self.data.code_mgr.data[gene_type.fn.compiled.id] = gene_type.fn.compiled
 
-          var caller = Caller(
-            address: Address(id: self.data.cur_block.id, pc: self.data.pc),
-            registers: self.data.registers,
-          )
-          self.data.registers = new_registers(caller)
-          self.data.registers.scope.set_parent(gene_type.fn.parent_scope, gene_type.fn.parent_scope_max)
-          self.data.registers.ns = gene_type.fn.ns
-          self.data.registers.args = v
-          self.data.cur_block = gene_type.fn.compiled
-          self.data.pc = 0
-          continue
+              var caller = Caller(
+                address: Address(id: self.data.cur_block.id, pc: self.data.pc),
+                registers: self.data.registers,
+              )
+              self.data.registers = new_registers(caller)
+              self.data.registers.scope.set_parent(gene_type.fn.parent_scope, gene_type.fn.parent_scope_max)
+              self.data.registers.ns = gene_type.fn.ns
+              self.data.registers.args = v
+              self.data.cur_block = gene_type.fn.compiled
+              self.data.pc = 0
+              continue
+
+            of VkMacro:
+              self.data.pc.inc()
+              discard self.data.registers.pop()
+
+              gene_type.macro.compile()
+              self.data.code_mgr.data[gene_type.macro.compiled.id] = gene_type.macro.compiled
+
+              var caller = Caller(
+                address: Address(id: self.data.cur_block.id, pc: self.data.pc),
+                registers: self.data.registers,
+              )
+              self.data.registers = new_registers(caller)
+              self.data.registers.scope.set_parent(gene_type.macro.parent_scope, gene_type.macro.parent_scope_max)
+              self.data.registers.ns = gene_type.macro.ns
+              self.data.registers.args = v
+              self.data.cur_block = gene_type.macro.compiled
+              self.data.pc = 0
+              continue
+
+            else:
+              discard
 
       of IkAdd:
         self.data.registers.push(self.data.registers.pop().int + self.data.registers.pop().int)
@@ -556,6 +591,10 @@ proc exec*(self: var GeneVirtualMachine): Value =
 
       of IkInternal:
         case inst.arg0.str:
+          of "$_trace_start":
+            trace = true
+          of "$_trace_end":
+            trace = false
           of "$_debug":
             if inst.arg1:
               echo "$_debug ", self.data.registers.current()

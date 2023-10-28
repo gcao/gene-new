@@ -220,6 +220,7 @@ proc compile_gene_unknown(self: var Compiler, input: Value) {.inline.} =
   for child in input.gene_children:
     self.compile(child)
     self.output.instructions.add(Instruction(kind: IkGeneAddChild))
+  self.output.instructions.add(Instruction(kind: IkJump, arg0: end_label))
   self.quote_level.dec()
 
   self.output.instructions.add(Instruction(kind: IkGeneStartDefault, label: fn_label))
@@ -400,6 +401,13 @@ proc compile*(f: var Function) =
 
   f.compiled = compile(f.body)
   f.compiled.matcher = f.matcher
+
+proc compile*(m: var Macro) =
+  if m.compiled != nil:
+    return
+
+  m.compiled = compile(m.body)
+  m.compiled.matcher = m.matcher
 
 proc compile_init*(input: Value): CompilationUnit =
   var self = Compiler(output: CompilationUnit(id: gen_oid()))

@@ -617,6 +617,7 @@ type
     matching_hint*: MatchingHint
     body*: seq[Value]
     body_compiled*: Expr
+    compiled*: CompilationUnit
 
   Block* = ref object of GeneProcessor
     frame*: Frame
