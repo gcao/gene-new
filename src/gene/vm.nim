@@ -217,6 +217,24 @@ proc to_function*(node: Value): Function {.gcsafe.} =
   result = new_fn(name, matcher, body)
   result.async = node.gene_props.get_or_default("async", false)
 
+proc to_macro(node: Value): Macro =
+  var first = node.gene_children[0]
+  var name: string
+  if first.kind == VkSymbol:
+    name = first.str
+  elif first.kind == VkComplexSymbol:
+    name = first.csymbol[^1]
+
+  var matcher = new_arg_matcher()
+  matcher.parse(node.gene_children[1])
+
+  var body: seq[Value] = @[]
+  for i in 2..<node.gene_children.len:
+    body.add node.gene_children[i]
+
+  body = wrap_with_try(body)
+  result = new_macro(name, matcher, body)
+
 proc handle_args*(self: var GeneVirtualMachine, matcher: RootMatcher, args: Value) {.inline.} =
   case matcher.hint.mode:
   of MhNone:
@@ -469,10 +487,18 @@ proc exec*(self: var GeneVirtualMachine): Value =
       of IkFunction:
         var f = to_function(inst.arg0)
         f.ns = self.data.registers.ns
-        f.ns[f.name] = Value(kind: VkFunction, fn: f)
+        let v = Value(kind: VkFunction, fn: f)
+        f.ns[f.name] = v
         f.parent_scope = self.data.registers.scope
         f.parent_scope_max = self.data.registers.scope.max
-        self.data.registers.push(Value(kind: VkFunction, fn: f))
+        self.data.registers.push(v)
+
+      of IkMacro:
+        var m = to_macro(inst.arg0)
+        m.ns = self.data.registers.ns
+        var v = Value(kind: VkMacro, `macro`: m)
+        m.ns[m.name] = v
+        self.data.registers.push(v)
 
       of IkReturn:
         let caller = self.data.registers.caller

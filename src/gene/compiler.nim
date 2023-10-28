@@ -143,6 +143,9 @@ proc compile_return(self: var Compiler, input: Value) =
     self.output.instructions.add(Instruction(kind: IkPushNil))
   self.output.instructions.add(Instruction(kind: IkReturn))
 
+proc compile_macro(self: var Compiler, input: Value) =
+  self.output.instructions.add(Instruction(kind: IkMacro, arg0: input))
+
 proc compile_ns(self: var Compiler, input: Value) =
   self.output.instructions.add(Instruction(kind: IkNamespace, arg0: input.gene_children[0]))
   if input.gene_children.len > 1:
@@ -284,6 +287,9 @@ proc compile_gene(self: var Compiler, input: Value) =
         return
       of "fn", "fnx":
         self.compile_fn(input)
+        return
+      of "macro":
+        self.compile_macro(input)
         return
       of "return":
         self.compile_return(input)
