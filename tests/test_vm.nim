@@ -62,6 +62,7 @@ test_vm """
 """, 3
 
 test_vm """
+  ($_print_instructions)
   (if false
     1
   )

@@ -7,7 +7,6 @@ import "./compiler/if"
 proc `$`*(self: Instruction): string =
   case self.kind
     of IkPushValue: "Push " & $self.arg0
-    of IkLabel: "Label " & $self.label
     of IkJump: "Jump " & $self.label
     of IkJumpIfFalse: "JumpIfFalse " & $self.label
     of IkAddValue: "AddValue " & $self.arg0
@@ -33,7 +32,7 @@ proc `[]`*(self: CompilationUnit, i: int): Instruction =
 
 proc find_label*(self: CompilationUnit, label: Label): int =
   for i, inst in self.instructions:
-    if inst.kind == IkLabel and inst.label == label:
+    if inst.label == label:
       return i
 
 proc find_loop_start*(self: CompilationUnit, pos: int): int =
@@ -104,12 +103,12 @@ proc compile_if(self: var Compiler, input: Value) =
   self.compile(input.gene_props[COND_KEY])
   var elseLabel = gen_oid()
   var endLabel = gen_oid()
-  self.output.instructions.add(Instruction(kind: IkJumpIfFalse, label: elseLabel))
+  self.output.instructions.add(Instruction(kind: IkJumpIfFalse, arg0: elseLabel))
   self.compile(input.gene_props[THEN_KEY])
-  self.output.instructions.add(Instruction(kind: IkJump, label: endLabel))
-  self.output.instructions.add(Instruction(kind: IkLabel, label: elseLabel))
+  self.output.instructions.add(Instruction(kind: IkJump, arg0: endLabel))
+  self.output.instructions.add(Instruction(kind: IkNoop, label: elseLabel))
   self.compile(input.gene_props[ELSE_KEY])
-  self.output.instructions.add(Instruction(kind: IkLabel, label: endLabel))
+  self.output.instructions.add(Instruction(kind: IkNoop, label: endLabel))
 
 proc compile_var(self: var Compiler, input: Value) =
   let name = input.gene_children[0]
@@ -123,7 +122,7 @@ proc compile_loop(self: var Compiler, input: Value) =
   var label = gen_oid()
   self.output.instructions.add(Instruction(kind: IkLoopStart, label: label))
   self.compile(input.gene_children)
-  self.output.instructions.add(Instruction(kind: IkContinue, label: label))
+  self.output.instructions.add(Instruction(kind: IkContinue, arg0: label))
   self.output.instructions.add(Instruction(kind: IkLoopEnd, label: label))
 
 proc compile_break(self: var Compiler, input: Value) =
@@ -190,6 +189,48 @@ proc compile_gene_default(self: var Compiler, input: Value) {.inline.} =
     self.compile(child)
     self.output.instructions.add(Instruction(kind: IkGeneAddChild))
   self.output.instructions.add(Instruction(kind: IkGeneEnd))
+
+# For a call that is unsure whether it is a function call or a macro call,
+# we need to handle both cases and decide at runtime:
+# * Compile type (use two labels to mark boundaries of two branches)
+# * GeneCheckType Update code in place, remove incompatible branch
+# * GeneStartMacro(fail if the type is not a macro)
+# * Compile arguments assuming it is a macro call
+# * FnLabel: GeneStart(fail if the type is not a function)
+# * Compile arguments assuming it is a function call
+# * GeneLabel: GeneEnd
+# Similar logic is used for regular method calls and macro-method calls
+proc compile_gene_unknown(self: var Compiler, input: Value) {.inline.} =
+  self.compile(input.gene_type)
+  let fn_label = gen_oid()
+  let end_label = gen_oid()
+  self.output.instructions.add(
+    Instruction(
+      kind: IkGeneCheckType,
+      arg0: Value(kind: VkCuId, cu_id: fn_label),
+      arg1: Value(kind: VkCuId, cu_id: end_label),
+    )
+  )
+
+  self.output.instructions.add(Instruction(kind: IkGeneStartMacro))
+  self.quote_level.inc()
+  for k, v in input.gene_props:
+    self.compile(v)
+    self.output.instructions.add(Instruction(kind: IkGeneSetProp, arg0: k))
+  for child in input.gene_children:
+    self.compile(child)
+    self.output.instructions.add(Instruction(kind: IkGeneAddChild))
+  self.quote_level.dec()
+
+  self.output.instructions.add(Instruction(kind: IkGeneStartDefault, label: fn_label))
+  for k, v in input.gene_props:
+    self.compile(v)
+    self.output.instructions.add(Instruction(kind: IkGeneSetProp, arg0: k))
+  for child in input.gene_children:
+    self.compile(child)
+    self.output.instructions.add(Instruction(kind: IkGeneAddChild))
+
+  self.output.instructions.add(Instruction(kind: IkGeneEnd, label: end_label))
 
 proc compile_gene(self: var Compiler, input: Value) =
   if self.quote_level > 0 or input.gene_type.is_symbol("_") or input.gene_type.kind == VkQuote:
@@ -314,7 +355,7 @@ proc compile_gene(self: var Compiler, input: Value) =
             self.output.instructions.add(Instruction(kind: IkInternal, arg0: `type`))
           return
 
-  self.compile_gene_default(input)
+  self.compile_gene_unknown(input)
 
 proc compile(self: var Compiler, input: Value) =
   case input.kind:

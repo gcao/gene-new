@@ -11,6 +11,7 @@ test_vm """
   check r.fn.name == "f"
 
 test_vm """
+  ($_print_instructions)
   (fn f []
     1
   )

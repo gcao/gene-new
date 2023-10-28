@@ -913,7 +913,6 @@ type
     IkVarValue
     IkAssign
 
-    IkLabel
     IkJump        # unconditional jump
     IkJumpIfFalse
 
@@ -975,6 +974,9 @@ type
     IkArrayEnd
 
     IkGeneStart
+    IkGeneStartDefault
+    IkGeneStartMacro
+    IkGeneCheckType
     IkGeneSetType
     IkGeneSetProp
     IkGeneSetPropValue        # args: key, literal value
@@ -996,7 +998,6 @@ type
     kind*: InstructionKind
     arg0*: Value
     arg1*: Value
-    arg2*: Value
     label*: Label
 
   CompilationUnitKind* = enum
@@ -1124,6 +1125,7 @@ converter to_gene*(v: string): Value                  {.gcsafe.} = new_gene_stri
 converter to_gene*(v: char): Value                    {.gcsafe.} = new_gene_char(v)
 converter to_gene*(v: Rune): Value                    {.gcsafe.} = new_gene_char(v)
 converter to_gene*(v: Table[string, Value]): Value    {.gcsafe.} = new_gene_map(v)
+converter to_gene*(label: Oid): Value                 {.gcsafe.} = Value(kind: VkCuId, cu_id: label)
 
 # Below converter causes problem with the hash function
 # converter to_gene*(v: seq[Value]): Value           = new_gene_vec(v)

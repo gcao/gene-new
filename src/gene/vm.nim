@@ -251,6 +251,9 @@ proc exec*(self: var GeneVirtualMachine): Value =
     let inst = self.data.cur_block[self.data.pc]
     # echo self.data.pc, " ", inst
     case inst.kind:
+      of IkNoop:
+        discard
+
       of IkStart:
         let matcher = self.data.cur_block.matcher
         if matcher != nil:
@@ -318,15 +321,12 @@ proc exec*(self: var GeneVirtualMachine): Value =
           else:
             todo($value.kind)
 
-      of IkLabel:
-        discard
-
       of IkJump:
-        self.data.pc = self.data.cur_block.find_label(inst.label) + 1
+        self.data.pc = self.data.cur_block.find_label(inst.arg0.cu_id) + 1
         continue
       of IkJumpIfFalse:
         if not self.data.registers.pop().bool:
-          self.data.pc = self.data.cur_block.find_label(inst.label) + 1
+          self.data.pc = self.data.cur_block.find_label(inst.arg0.cu_id) + 1
           continue
 
       of IkLoopStart, IkLoopEnd:
@@ -366,6 +366,18 @@ proc exec*(self: var GeneVirtualMachine): Value =
 
       of IkGeneStart:
         self.data.registers.push(new_gene_gene())
+      of IkGeneStartDefault:
+        let v = self.data.registers.pop()
+        self.data.registers.push(new_gene_gene(v))
+      of IkGeneCheckType:
+        let v = self.data.registers.current()
+        case v.kind:
+          of VkFunction:
+            self.data.pc = self.data.cur_block.find_label(inst.arg0.cu_id)
+            continue
+          else:
+            todo($v.kind)
+
       of IkGeneSetType:
         let val = self.data.registers.pop()
         self.data.registers.current().gene_type = val
