@@ -438,18 +438,18 @@ proc compile*(input: seq[Value]): CompilationUnit =
   result = self.output
 
 proc compile*(f: var Function) =
-  if f.compiled != nil:
+  if f.body_compiled != nil:
     return
 
-  f.compiled = compile(f.body)
-  f.compiled.matcher = f.matcher
+  f.body_compiled = compile(f.body)
+  f.body_compiled.matcher = f.matcher
 
 proc compile*(m: var Macro) =
-  if m.compiled != nil:
+  if m.body_compiled != nil:
     return
 
-  m.compiled = compile(m.body)
-  m.compiled.matcher = m.matcher
+  m.body_compiled = compile(m.body)
+  m.body_compiled.matcher = m.matcher
 
 proc compile_init*(input: Value): CompilationUnit =
   var self = Compiler(output: CompilationUnit(id: gen_oid()))

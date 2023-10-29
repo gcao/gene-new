@@ -6,14 +6,11 @@ import ./compiler
 
 const REG_DEFAULT = 6
 
-var GeneVM* {.threadvar.}: GeneVirtualMachine # Default VM for the thread
-var GeneApp* {.threadvar.}: Value
-
-proc init_app*() =
-  GeneVM = GeneVirtualMachine(
+proc init_app_and_vm*() =
+  VM = VirtualMachine(
     state: VmWaiting,
   )
-  GeneApp = Value(kind: VkApplication, app: new_app())
+  App = Value(kind: VkApplication, app: new_app())
 
 proc new_registers(): Registers =
   Registers(
@@ -44,14 +41,14 @@ proc pop(self: var Registers): Value =
 proc default(self: Registers): Value =
   self.data[REG_DEFAULT]
 
-# proc new_vm_data(caller: Caller): GeneVirtualMachineData =
-#   result = GeneVirtualMachineData(
+# proc new_vm_data(caller: Caller): VirtualMachineData =
+#   result = VirtualMachineData(
 #     registers: new_registers(caller),
 #     code_mgr: CodeManager(),
 #   )
 
-proc new_vm_data(ns: Namespace): GeneVirtualMachineData =
-  result = GeneVirtualMachineData(
+proc new_vm_data(ns: Namespace): VirtualMachineData =
+  result = VirtualMachineData(
     registers: new_registers(ns),
     code_mgr: CodeManager(),
   )
@@ -235,7 +232,7 @@ proc to_macro(node: Value): Macro =
   body = wrap_with_try(body)
   result = new_macro(name, matcher, body)
 
-proc handle_args*(self: var GeneVirtualMachine, matcher: RootMatcher, args: Value) {.inline.} =
+proc handle_args*(self: var VirtualMachine, matcher: RootMatcher, args: Value) {.inline.} =
   case matcher.hint.mode:
   of MhNone:
     discard
@@ -246,7 +243,7 @@ proc handle_args*(self: var GeneVirtualMachine, matcher: RootMatcher, args: Valu
   else:
     todo($matcher.hint.mode)
 
-proc exec*(self: var GeneVirtualMachine): Value =
+proc exec*(self: var VirtualMachine): Value =
   var trace = false
   while true:
     let inst = self.data.cur_block[self.data.pc]
@@ -430,7 +427,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
               discard self.data.registers.pop()
 
               gene_type.fn.compile()
-              self.data.code_mgr.data[gene_type.fn.compiled.id] = gene_type.fn.compiled
+              self.data.code_mgr.data[gene_type.fn.body_compiled.id] = gene_type.fn.body_compiled
 
               var caller = Caller(
                 address: Address(id: self.data.cur_block.id, pc: self.data.pc),
@@ -440,7 +437,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
               self.data.registers.scope.set_parent(gene_type.fn.parent_scope, gene_type.fn.parent_scope_max)
               self.data.registers.ns = gene_type.fn.ns
               self.data.registers.args = v
-              self.data.cur_block = gene_type.fn.compiled
+              self.data.cur_block = gene_type.fn.body_compiled
               self.data.pc = 0
               continue
 
@@ -449,7 +446,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
               discard self.data.registers.pop()
 
               gene_type.macro.compile()
-              self.data.code_mgr.data[gene_type.macro.compiled.id] = gene_type.macro.compiled
+              self.data.code_mgr.data[gene_type.macro.body_compiled.id] = gene_type.macro.body_compiled
 
               var caller = Caller(
                 address: Address(id: self.data.cur_block.id, pc: self.data.pc),
@@ -459,7 +456,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
               self.data.registers.scope.set_parent(gene_type.macro.parent_scope, gene_type.macro.parent_scope_max)
               self.data.registers.ns = gene_type.macro.ns
               self.data.registers.args = v
-              self.data.cur_block = gene_type.macro.compiled
+              self.data.cur_block = gene_type.macro.body_compiled
               self.data.pc = 0
               continue
 
@@ -667,7 +664,7 @@ proc exec*(self: var GeneVirtualMachine): Value =
     if self.data.pc >= self.data.cur_block.len:
       break
 
-proc exec*(self: var GeneVirtualMachine, code: string, module_name: string): Value =
+proc exec*(self: var VirtualMachine, code: string, module_name: string): Value =
   let compiled = compile(read_all(code))
 
   var ns = new_namespace(module_name)
