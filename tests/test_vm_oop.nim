@@ -30,11 +30,11 @@ test_vm """
 """, proc(r: Value) =
   check r.instance_class.name == "A"
 
-# test_vm """
-#   (class A
-#     (.fn test _
-#       1
-#     )
-#   )
-#   ((new A).test)
-# """, 1
+test_vm """
+  (class A
+    (.fn test _
+      1
+    )
+  )
+  ((new A).test)
+""", 1

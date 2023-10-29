@@ -233,6 +233,44 @@ proc compile_gene_unknown(self: var Compiler, input: Value) {.inline.} =
 
   self.output.instructions.add(Instruction(kind: IkGeneEnd, label: end_label))
 
+# self, method_name, arguments
+# self + method_name => bounded_method_object (is composed of self, class, method_object(is composed of name, logic))
+# (bounded_method_object ...arguments)
+proc compile_method_call(self: var Compiler, input: Value) {.inline.} =
+  self.output.instructions.add(Instruction(kind: IkSelf))
+  self.output.instructions.add(Instruction(kind: IkResolveMethod, arg0: input.gene_type.str[1..^1]))
+
+  let fn_label = gen_oid()
+  let end_label = gen_oid()
+  self.output.instructions.add(
+    Instruction(
+      kind: IkGeneCheckType,
+      arg0: Value(kind: VkCuId, cu_id: fn_label),
+      arg1: Value(kind: VkCuId, cu_id: end_label),
+    )
+  )
+
+  self.output.instructions.add(Instruction(kind: IkGeneStartMacroMethod))
+  self.quote_level.inc()
+  for k, v in input.gene_props:
+    self.compile(v)
+    self.output.instructions.add(Instruction(kind: IkGeneSetProp, arg0: k))
+  for child in input.gene_children:
+    self.compile(child)
+    self.output.instructions.add(Instruction(kind: IkGeneAddChild))
+  self.output.instructions.add(Instruction(kind: IkJump, arg0: end_label))
+  self.quote_level.dec()
+
+  self.output.instructions.add(Instruction(kind: IkGeneStartMethod, label: fn_label))
+  for k, v in input.gene_props:
+    self.compile(v)
+    self.output.instructions.add(Instruction(kind: IkGeneSetProp, arg0: k))
+  for child in input.gene_children:
+    self.compile(child)
+    self.output.instructions.add(Instruction(kind: IkGeneAddChild))
+
+  self.output.instructions.add(Instruction(kind: IkGeneEnd, label: end_label))
+
 proc compile_gene(self: var Compiler, input: Value) =
   if self.quote_level > 0 or input.gene_type.is_symbol("_") or input.gene_type.kind == VkQuote:
     self.compile_gene_default(input)
@@ -346,7 +384,11 @@ proc compile_gene(self: var Compiler, input: Value) =
         self.compile_new(input)
         return
       else:
-        if `type`.str.starts_with("$_"):
+        let s = `type`.str
+        if s.starts_with("."):
+          self.compile_method_call(input)
+          return
+        elif s.starts_with("$_"):
           if input.gene_children.len > 1:
             not_allowed($input)
           elif input.gene_children.len == 1:

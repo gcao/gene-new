@@ -81,6 +81,7 @@ type
     VkClass
     VkMixin
     VkMethod
+    VkBoundMethod
     VkNativeFn
     VkNativeFn2
     VkNativeMethod
@@ -232,6 +233,8 @@ type
       `mixin`*: Mixin
     of VkMethod:
       `method`*: Method
+    of VkBoundMethod:
+      `bound_method`*: BoundMethod
     of VkNativeFn:
       native_fn*: NativeFn
     of VkNativeFn2:
@@ -591,6 +594,11 @@ type
     callable*: Value
     # public*: bool
     is_macro*: bool
+
+  BoundMethod* = object
+    self*: Value
+    class*: Class       # Note that class may be different from method.class
+    `method`*: Method
 
   Function* = ref object of GeneProcessor
     async*: bool
@@ -960,6 +968,7 @@ type
     IkClass
     IkSubClass
     IkNew
+    IkResolveMethod
     IkCallMethod
     IkCallMethodNoArgs
     IkCallInit
@@ -977,6 +986,8 @@ type
     IkGeneStart
     IkGeneStartDefault
     IkGeneStartMacro
+    IkGeneStartMethod
+    IkGeneStartMacroMethod
     IkGeneCheckType
     IkGeneSetType
     IkGeneSetProp
@@ -989,6 +1000,8 @@ type
     # IkResolveComplexSymbol
     IkGetMember
     IkGetChild
+
+    IkSelf
 
     IkYield
     IkResume

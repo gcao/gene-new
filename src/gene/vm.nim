@@ -297,6 +297,9 @@ proc exec*(self: var GeneVirtualMachine): Value =
             else:
               not_allowed("Unknown symbol " & name)
 
+      of IkSelf:
+        self.data.registers.push(self.data.registers.self)
+
       of IkGetMember:
         let name = inst.arg0.str
         let value = self.data.registers.pop()
@@ -378,14 +381,31 @@ proc exec*(self: var GeneVirtualMachine): Value =
         if v.kind != VkMacro:
           not_allowed("Macro expected")
         self.data.registers.push(new_gene_gene(v))
+      of IkGeneStartMethod:
+        let v = self.data.registers.pop()
+        if v.kind != VkBoundMethod or v.bound_method.method.is_macro:
+          not_allowed("Macro method not allowed here")
+        self.data.registers.push(new_gene_gene(v))
+      of IkGeneStartMacroMethod:
+        let v = self.data.registers.pop()
+        if v.kind != VkBoundMethod or not v.bound_method.method.is_macro:
+          not_allowed("Macro method expected")
+        self.data.registers.push(new_gene_gene(v))
       of IkGeneCheckType:
         let v = self.data.registers.current()
         case v.kind:
           of VkFunction:
             self.data.pc = self.data.cur_block.find_label(inst.arg0.cu_id)
+            # TODO: delete macro-related instructions
             continue
           of VkMacro:
+            # TODO: delete non-macro-related instructions
             discard
+          of VkBoundMethod:
+            if not v.bound_method.method.is_macro:
+              self.data.pc = self.data.cur_block.find_label(inst.arg0.cu_id)
+              # TODO: delete non-macro-related instructions
+              continue
           else:
             todo($v.kind)
 
@@ -441,6 +461,15 @@ proc exec*(self: var GeneVirtualMachine): Value =
               self.data.registers.args = v
               self.data.cur_block = gene_type.macro.compiled
               self.data.pc = 0
+              continue
+
+            of VkBoundMethod:
+              self.data.pc.inc()
+              discard self.data.registers.pop()
+
+              let meth = gene_type.bound_method.method
+              todo("Bound method")
+
               continue
 
             else:
@@ -588,6 +617,19 @@ proc exec*(self: var GeneVirtualMachine): Value =
         var v = Value(kind: VkClass, class: class)
         self.data.registers.ns[name] = v
         self.data.registers.push(v)
+
+      of IkResolveMethod:
+        var v = self.data.registers.pop()
+        let class = v.get_class()
+        let meth = class.get_method(inst.arg0.str)
+        self.data.registers.push Value(
+          kind: VkBoundMethod,
+          bound_method: BoundMethod(
+            self: v,
+            class: class,
+            `method`: meth,
+          )
+        )
 
       of IkInternal:
         case inst.arg0.str:

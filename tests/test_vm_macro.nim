@@ -15,3 +15,10 @@ test_vm """
   )
   (m b)
 """, new_gene_symbol("b")
+
+test_vm """
+  (macro m [a b]
+    (a + b)
+  )
+  (m 1 2)
+""", 3
