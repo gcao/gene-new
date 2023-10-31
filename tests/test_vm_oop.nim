@@ -31,7 +31,10 @@ test_vm """
   check r.instance_class.name == "A"
 
 test_vm """
+  ($_print_instructions)
+  ($_trace_start)
   (class A
+    ($_print_instructions)
     (.fn test _
       1
     )

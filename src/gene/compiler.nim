@@ -1,4 +1,4 @@
-import tables, oids, strutils
+import tables, oids, strutils, strformat
 
 import ./types
 import ./utils
@@ -19,7 +19,7 @@ proc `$`*(self: Instruction): string =
 
 proc `$`*(self: seq[Instruction]): string =
   for i, instr in self:
-    result &= $i & " " & $instr & "\n"
+    result &= fmt"{i:>3} {instr}" & "\n"
 
 proc `$`*(self: CompilationUnit): string =
   "CompilationUnit " & $self.id & "\n" & $self.instructions
@@ -237,8 +237,14 @@ proc compile_gene_unknown(self: var Compiler, input: Value) {.inline.} =
 # self + method_name => bounded_method_object (is composed of self, class, method_object(is composed of name, logic))
 # (bounded_method_object ...arguments)
 proc compile_method_call(self: var Compiler, input: Value) {.inline.} =
-  self.output.instructions.add(Instruction(kind: IkSelf))
-  self.output.instructions.add(Instruction(kind: IkResolveMethod, arg0: input.gene_type.str[1..^1]))
+  if input.gene_type.kind == VkSymbol and input.gene_type.str.starts_with("."):
+    self.output.instructions.add(Instruction(kind: IkSelf))
+    self.output.instructions.add(Instruction(kind: IkResolveMethod, arg0: input.gene_type.str[1..^1]))
+  else:
+    self.compile(input.gene_type)
+    let first = input.gene_children[0]
+    input.gene_children.delete(0)
+    self.output.instructions.add(Instruction(kind: IkResolveMethod, arg0: first.str[1..^1]))
 
   let fn_label = gen_oid()
   let end_label = gen_oid()
@@ -346,7 +352,9 @@ proc compile_gene(self: var Compiler, input: Value) =
           self.output.instructions.add(Instruction(kind: IkOr))
           return
         else:
-          discard
+          if first.str.starts_with("."):
+            self.compile_method_call(input)
+            return
 
   if `type`.kind == VkSymbol:
     case `type`.str:

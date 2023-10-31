@@ -1,4 +1,4 @@
-import tables, oids, strutils
+import tables, oids, strutils, strformat
 
 import ./types
 import ./parser
@@ -11,6 +11,9 @@ proc init_app_and_vm*() =
     state: VmWaiting,
   )
   App = Value(kind: VkApplication, app: new_app())
+
+  for callback in VmCreatedCallbacks:
+    callback()
 
 proc new_registers(): Registers =
   Registers(
@@ -185,12 +188,11 @@ proc to_function*(node: Value): Function {.gcsafe.} =
   var name: string
   var matcher = new_arg_matcher()
   var body_start: int
-  case node.gene_type.str:
-  of "fnx":
+  if node.gene_type.is_symbol("fnx"):
     matcher.parse(node.gene_children[0])
     name = "<unnamed>"
     body_start = 1
-  of "fnxx":
+  elif node.gene_type.is_symbol("fnxx"):
     name = "<unnamed>"
     body_start = 0
   else:
@@ -245,10 +247,13 @@ proc handle_args*(self: var VirtualMachine, matcher: RootMatcher, args: Value) {
 
 proc exec*(self: var VirtualMachine): Value =
   var trace = false
+  var indent = ""
   while true:
     let inst = self.data.cur_block[self.data.pc]
+    if inst.kind == IkStart:
+      indent &= "  "
     if trace:
-      echo self.data.pc, " ", inst
+      echo fmt"{indent}{self.data.pc:>3} {inst}"
     case inst.kind:
       of IkNoop:
         discard
@@ -259,6 +264,7 @@ proc exec*(self: var VirtualMachine): Value =
           self.handle_args(matcher, self.data.registers.args)
 
       of IkEnd:
+        indent.delete(indent.len-2, indent.len-1)
         let v = self.data.registers.default
         let caller = self.data.registers.caller
         if caller == nil:
@@ -461,13 +467,33 @@ proc exec*(self: var VirtualMachine): Value =
               continue
 
             of VkBoundMethod:
-              self.data.pc.inc()
               discard self.data.registers.pop()
 
               let meth = gene_type.bound_method.method
-              todo("Bound method")
+              case meth.callable.kind:
+                of VkNativeFn:
+                  self.data.registers.push(meth.callable.native_fn(self.data, v))
+                of VkFunction:
+                  self.data.pc.inc()
+                  discard self.data.registers.pop()
 
-              continue
+                  var fn = meth.callable.fn
+                  fn.compile()
+                  self.data.code_mgr.data[fn.body_compiled.id] = fn.body_compiled
+
+                  var caller = Caller(
+                    address: Address(id: self.data.cur_block.id, pc: self.data.pc),
+                    registers: self.data.registers,
+                  )
+                  self.data.registers = new_registers(caller)
+                  self.data.registers.scope.set_parent(fn.parent_scope, fn.parent_scope_max)
+                  self.data.registers.ns = fn.ns
+                  self.data.registers.args = v
+                  self.data.cur_block = fn.body_compiled
+                  self.data.pc = 0
+                  continue
+                else:
+                  todo("Bound method: " & $meth.callable.kind)
 
             else:
               discard
@@ -674,3 +700,5 @@ proc exec*(self: var VirtualMachine, code: string, module_name: string): Value =
 
   self.data = vm_data
   self.exec()
+
+include "./vm/core"

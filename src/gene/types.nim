@@ -239,10 +239,10 @@ type
       native_fn*: NativeFn
     of VkNativeFn2:
       native_fn2*: NativeFn2
-    of VkNativeMethod:
-      native_method*: NativeMethod
-    of VkNativeMethod2:
-      native_method2*: NativeMethod2
+    # of VkNativeMethod:
+    #   native_method*: NativeMethod
+    # of VkNativeMethod2:
+    #   native_method2*: NativeMethod2
     of VkInstance:
       instance_class*: Class
       instance_props*: Table[string, Value]
@@ -382,9 +382,9 @@ type
   NativeFnWrap* = proc(f: NativeFn): NativeFn2 {.gcsafe.}
   # NativeMethod* = proc(frame: Frame, self: Value, args: Value): Value {.gcsafe, nimcall.}
   # NativeMethod2* = proc(frame: Frame, self: Value, args: Value): Value {.gcsafe.}
-  NativeMethod* = proc(vm_data: VirtualMachineData, self: Value, args: Value): Value {.gcsafe, nimcall.}
-  NativeMethod2* = proc(vm_data: VirtualMachineData, self: Value, args: Value): Value {.gcsafe.}
-  NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2 {.gcsafe.}
+  # NativeMethod* = proc(vm_data: VirtualMachineData, self: Value, args: Value): Value {.gcsafe, nimcall.}
+  # NativeMethod2* = proc(vm_data: VirtualMachineData, self: Value, args: Value): Value {.gcsafe.}
+  # NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2 {.gcsafe.}
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
   # To distinguish NativeMacro and NativeMethod, we just create Value with different kind
@@ -511,6 +511,48 @@ type
     main_module*: Module
     dep_root*: DependencyRoot
     props*: Table[string, Value]  # Additional properties
+
+    global_ns*     : Value
+    gene_ns*       : Value
+    genex_ns*      : Value
+
+    object_class*   : Value
+    nil_class*      : Value
+    bool_class*     : Value
+    int_class*      : Value
+    float_class*    : Value
+    char_class*     : Value
+    string_class*   : Value
+    symbol_class*   : Value
+    complex_symbol_class*: Value
+    array_class*    : Value
+    map_class*      : Value
+    set_class*      : Value
+    gene_class*     : Value
+    stream_class*   : Value
+    document_class* : Value
+    regex_class*    : Value
+    range_class*    : Value
+    date_class*     : Value
+    datetime_class* : Value
+    time_class*     : Value
+    timezone_class* : Value
+    selector_class* : Value
+    exception_class*: Value
+    class_class*    : Value
+    mixin_class*    : Value
+    application_class*: Value
+    package_class*  : Value
+    module_class*   : Value
+    namespace_class*: Value
+    function_class* : Value
+    macro_class*    : Value
+    block_class*    : Value
+    future_class*   : Value
+    thread_class*   : Value
+    thread_message_class* : Value
+    thread_message_type_class* : Value
+    file_class*     : Value
 
   Package* = ref object
     dir*: string          # Where the package assets are installed
@@ -1598,84 +1640,84 @@ proc get_super_method*(self: Class, name: string): Method =
 
 proc get_class*(val: Value): Class =
   case val.kind:
-  # of VkApplication:
-  #   return VM.application_class.class
-  # of VkPackage:
-  #   return VM.package_class.class
-  # of VkInstance:
-  #   return val.instance_class
-  # of VkCast:
-  #   return val.cast_class
-  # of VkClass:
-  #   return VM.class_class.class
-  # of VkMixin:
-  #   return VM.mixin_class.class
-  # of VkNamespace:
-  #   return VM.namespace_class.class
-  # of VkFuture:
-  #   return VM.future_class.class
-  # of VkThread:
-  #   return VM.thread_class.class
-  # of VkThreadMessage:
-  #   return VM.thread_message_class.class
-  # of VkNativeFile:
-  #   return VM.file_class.class
-  # of VkException:
-  #   var ex = val.exception
-  #   if ex is ref Exception:
-  #     var ex = cast[ref Exception](ex)
-  #     if ex.instance != nil:
-  #       return ex.instance.instance_class
-  #     else:
-  #       return VM.exception_class.class
-  #   else:
-  #     return VM.exception_class.class
-  # of VkNil:
-  #   return VM.nil_class.class
-  # of VkBool:
-  #   return VM.bool_class.class
-  # of VkInt:
-  #   return VM.int_class.class
-  # of VkChar:
-  #   return VM.char_class.class
-  # of VkString:
-  #   return VM.string_class.class
-  # of VkSymbol:
-  #   return VM.symbol_class.class
-  # of VkComplexSymbol:
-  #   return VM.complex_symbol_class.class
-  # of VkVector:
-  #   return VM.array_class.class
-  # of VkMap:
-  #   return VM.map_class.class
-  # of VkSet:
-  #   return VM.set_class.class
-  # of VkGene:
-  #   return VM.gene_class.class
-  # of VkRegex:
-  #   return VM.regex_class.class
-  # of VkRange:
-  #   return VM.range_class.class
-  # of VkDate:
-  #   return VM.date_class.class
-  # of VkDateTime:
-  #   return VM.datetime_class.class
-  # of VkTime:
-  #   return VM.time_class.class
-  # of VkFunction:
-  #   return VM.function_class.class
-  # of VkTimezone:
-  #   return VM.timezone_class.class
-  # of VkAny:
-  #   if val.any_class == nil:
-  #     return VM.object_class.class
-  #   else:
-  #     return val.any_class
-  # of VkCustom:
-  #   if val.custom_class == nil:
-  #     return VM.object_class.class
-  #   else:
-  #     return val.custom_class
+  of VkApplication:
+    return App.app.application_class.class
+  of VkPackage:
+    return App.app.package_class.class
+  of VkInstance:
+    return val.instance_class
+  of VkCast:
+    return val.cast_class
+  of VkClass:
+    return App.app.class_class.class
+  of VkMixin:
+    return App.app.mixin_class.class
+  of VkNamespace:
+    return App.app.namespace_class.class
+  of VkFuture:
+    return App.app.future_class.class
+  of VkThread:
+    return App.app.thread_class.class
+  of VkThreadMessage:
+    return App.app.thread_message_class.class
+  of VkNativeFile:
+    return App.app.file_class.class
+  of VkException:
+    var ex = val.exception
+    if ex is ref Exception:
+      var ex = cast[ref Exception](ex)
+      if ex.instance != nil:
+        return ex.instance.instance_class
+      else:
+        return App.app.exception_class.class
+    else:
+      return App.app.exception_class.class
+  of VkNil:
+    return App.app.nil_class.class
+  of VkBool:
+    return App.app.bool_class.class
+  of VkInt:
+    return App.app.int_class.class
+  of VkChar:
+    return App.app.char_class.class
+  of VkString:
+    return App.app.string_class.class
+  of VkSymbol:
+    return App.app.symbol_class.class
+  of VkComplexSymbol:
+    return App.app.complex_symbol_class.class
+  of VkVector:
+    return App.app.array_class.class
+  of VkMap:
+    return App.app.map_class.class
+  of VkSet:
+    return App.app.set_class.class
+  of VkGene:
+    return App.app.gene_class.class
+  of VkRegex:
+    return App.app.regex_class.class
+  of VkRange:
+    return App.app.range_class.class
+  of VkDate:
+    return App.app.date_class.class
+  of VkDateTime:
+    return App.app.datetime_class.class
+  of VkTime:
+    return App.app.time_class.class
+  of VkFunction:
+    return App.app.function_class.class
+  of VkTimezone:
+    return App.app.timezone_class.class
+  of VkAny:
+    if val.any_class == nil:
+      return App.app.object_class.class
+    else:
+      return val.any_class
+  of VkCustom:
+    if val.custom_class == nil:
+      return App.app.object_class.class
+    else:
+      return val.custom_class
   else:
     todo("get_class " & $val.kind)
 
@@ -1689,25 +1731,25 @@ proc is_a*(self: Value, class: Class): bool =
     else:
       my_class = my_class.parent
 
-proc def_native_method*(self: Value, name: string, m: NativeMethod) =
+proc def_native_method*(self: Value, name: string, f: NativeFn) =
   self.class.methods[name] = Method(
     class: self.class,
     name: name,
-    callable: Value(kind: VkNativeMethod, native_method: m),
+    callable: Value(kind: VkNativeFn, native_fn: f),
   )
 
-proc def_native_method*(self: Value, name: string, m: NativeMethod2) =
+proc def_native_method*(self: Value, name: string, f: NativeFn2) =
   self.class.methods[name] = Method(
     class: self.class,
     name: name,
-    callable: Value(kind: VkNativeMethod2, native_method2: m),
+    callable: Value(kind: VkNativeFn2, native_fn2: f),
   )
 
-proc def_native_macro_method*(self: Value, name: string, m: NativeMethod) =
+proc def_native_macro_method*(self: Value, name: string, f: NativeFn) =
   self.class.methods[name] = Method(
     class: self.class,
     name: name,
-    callable: Value(kind: VkNativeMethod, native_method: m),
+    callable: Value(kind: VkNativeFn, native_fn: f),
     is_macro: true,
   )
 
@@ -1973,11 +2015,11 @@ proc new_gene_explode*(v: Value): Value =
     explode: v,
   )
 
-proc new_gene_native_method*(meth: NativeMethod): Value =
-  return Value(
-    kind: VkNativeMethod,
-    native_method: meth,
-  )
+# proc new_gene_native_method*(meth: NativeMethod): Value =
+#   return Value(
+#     kind: VkNativeMethod,
+#     native_method: meth,
+#   )
 
 proc new_gene_native_fn*(fn: NativeFn): Value =
   return Value(
