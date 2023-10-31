@@ -39,7 +39,8 @@ proc push(self: var Registers, value: Value) =
 
 proc pop(self: var Registers): Value =
   self.next_slot.dec()
-  self.data[self.next_slot]
+  result = self.data[self.next_slot]
+  self.data[self.next_slot] = nil
 
 proc default(self: Registers): Value =
   self.data[REG_DEFAULT]
@@ -245,6 +246,16 @@ proc handle_args*(self: var VirtualMachine, matcher: RootMatcher, args: Value) {
   else:
     todo($matcher.hint.mode)
 
+proc print_registers(self: var VirtualMachine) =
+  var s = "Registers "
+  for i, reg in self.data.registers.data:
+    if i > 0:
+      s &= ", "
+    if i == self.data.registers.next_slot:
+      s &= "=> "
+    s &= $self.data.registers.data[i]
+  echo s
+
 proc exec*(self: var VirtualMachine): Value =
   var trace = false
   var indent = ""
@@ -253,6 +264,7 @@ proc exec*(self: var VirtualMachine): Value =
     if inst.kind == IkStart:
       indent &= "  "
     if trace:
+      # self.print_registers()
       echo fmt"{indent}{self.data.pc:>3} {inst}"
     case inst.kind:
       of IkNoop:
@@ -475,7 +487,6 @@ proc exec*(self: var VirtualMachine): Value =
                   self.data.registers.push(meth.callable.native_fn(self.data, v))
                 of VkFunction:
                   self.data.pc.inc()
-                  discard self.data.registers.pop()
 
                   var fn = meth.callable.fn
                   fn.compile()
@@ -658,28 +669,23 @@ proc exec*(self: var VirtualMachine): Value =
         case inst.arg0.str:
           of "$_trace_start":
             trace = true
+            self.data.registers.push(Value(kind: VkNil))
           of "$_trace_end":
             trace = false
+            self.data.registers.push(Value(kind: VkNil))
           of "$_debug":
             if inst.arg1:
               echo "$_debug ", self.data.registers.current()
+            else:
+              self.data.registers.push(Value(kind: VkNil))
           of "$_print_instructions":
             echo self.data.cur_block
             if inst.arg1:
               discard self.data.registers.pop()
             self.data.registers.push(Value(kind: VkNil))
           of "$_print_registers":
-            var s = "Registers "
-            for i, reg in self.data.registers.data:
-              if i > 0:
-                s &= ", "
-              if i == self.data.registers.next_slot:
-                s &= "=> "
-              s &= $self.data.registers.data[i]
-            echo s
-            if inst.arg1:
-              discard self.data.registers.pop()
-              self.data.registers.push(Value(kind: VkNil))
+            self.print_registers()
+            self.data.registers.push(Value(kind: VkNil))
           else:
             todo(inst.arg0.str)
 

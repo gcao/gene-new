@@ -2338,20 +2338,22 @@ proc `$`*(node: Value): string {.noSideEffect.} =
   of VkNamespace:
     result = "(ns $#)" % [node.ns.name]
   of VkClass:
-    result = $node.class
+    result = "(class)"
+    # result = $node.class
   of VkInstance:
-    result = "($# " % [$node.instance_class]
-    var is_first = true
-    for k, v in node.instance_props:
-      if is_first:
-        is_first = false
-      else:
-        result &= " "
-      result &= "^"
-      result &= k
-      result &= " "
-      result &= $v
-    result &= ")"
+    result = "(instance)"
+    # result = "($# " % [$node.instance_class]
+    # var is_first = true
+    # for k, v in node.instance_props:
+    #   if is_first:
+    #     is_first = false
+    #   else:
+    #     result &= " "
+    #   result &= "^"
+    #   result &= k
+    #   result &= " "
+    #   result &= $v
+    # result &= ")"
   of VkQuote:
     result = ":" & $node.quote
   of VkUnquote:
