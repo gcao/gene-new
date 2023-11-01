@@ -11,7 +11,6 @@ test_vm """
   check r.fn.name == "f"
 
 test_vm """
-  ($_print_instructions)
   (fn f []
     1
   )
@@ -96,3 +95,10 @@ test_vm """
 #   )
 # """, proc(r: Value) =
 #   check r.fn.name == "f"
+
+test_vm """
+  (fn f [a = 1]
+    (a + 2)
+  )
+  (f)
+""", 3

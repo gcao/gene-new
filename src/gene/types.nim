@@ -801,7 +801,7 @@ type
     is_prop*: bool
     literal*: Value # if kind is MatchLiteral, this is required
     # match_name*: bool # Match symbol to name - useful for (myif true then ... else ...)
-    # default_value*: Value
+    default_value*: Value
     # default_value_expr*: Expr
     is_splat*: bool
     min_left*: int # Minimum number of args following this

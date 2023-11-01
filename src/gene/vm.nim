@@ -160,12 +160,11 @@ proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
       else:
         self.parse(group, item)
         if i < v.vec.len and v.vec[i].is_symbol("="):
-          todo("Support default values")
-          # i += 1
-          # var last_matcher = group[^1]
-          # var value = v.vec[i]
-          # i += 1
-          # last_matcher.default_value_expr = translate(value)
+          i += 1
+          var last_matcher = group[^1]
+          var value = v.vec[i]
+          i += 1
+          last_matcher.default_value = value
   of VkQuote:
     var m = new_matcher(self, MatchLiteral)
     m.literal = v.quote
