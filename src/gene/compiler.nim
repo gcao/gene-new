@@ -6,20 +6,22 @@ import "./compiler/if"
 
 proc `$`*(self: Instruction): string =
   case self.kind
-    of IkPushValue: "Push " & $self.arg0
-    of IkJump: "Jump " & $self.label
-    of IkJumpIfFalse: "JumpIfFalse " & $self.label
-    of IkAddValue: "AddValue " & $self.arg0
-    of IkLtValue: "LtValue " & $self.arg0
-    of IkMapSetProp: "MapSetProp " & $self.arg0
-    of IkMapSetPropValue: "MapSetPropValue " & $self.arg0 & " " & $self.arg1
-    of IkArrayAddChildValue: "ArrayAddChildValue " & $self.arg0
-    of IkInternal: "Internal " & $self.arg0
-    else: ($self.kind)[2..^1]
+    of IkPushValue,
+      IkJump, IkJumpIfFalse,
+      IkAddValue, IkLtValue,
+      IkMapSetProp, IkMapSetPropValue,
+      IkArrayAddChildValue,
+      IkResolveSymbol,
+      IkSetMember, IkGetMember,
+      IkSetChild, IkGetChild,
+      IkInternal:
+      ($self.kind)[2..^1] & " " & $self.arg0
+    else:
+      ($self.kind)[2..^1]
 
 proc `$`*(self: seq[Instruction]): string =
   for i, instr in self:
-    result &= fmt"{i:>3} {instr}" & "\n"
+    result &= fmt"{i:03} {instr}" & "\n"
 
 proc `$`*(self: CompilationUnit): string =
   "CompilationUnit " & $self.id & "\n" & $self.instructions
@@ -72,8 +74,11 @@ proc compile_complex_symbol(self: var Compiler, input: Value) =
   if self.quote_level > 0:
     self.output.instructions.add(Instruction(kind: IkPushValue, arg0: input))
   else:
-    let first = input.csymbol[0]
-    self.output.instructions.add(Instruction(kind: IkResolveSymbol, arg0: first))
+    var first = input.csymbol[0]
+    if first == "":
+      self.output.instructions.add(Instruction(kind: IkSelf))
+    else:
+      self.output.instructions.add(Instruction(kind: IkResolveSymbol, arg0: first))
     for s in input.csymbol[1..^1]:
       let (is_int, i) = to_int(s)
       if is_int:
@@ -117,6 +122,26 @@ proc compile_var(self: var Compiler, input: Value) =
     self.output.instructions.add(Instruction(kind: IkVar, arg0: name))
   else:
     self.output.instructions.add(Instruction(kind: IkVarValue, arg0: name, arg1: Value(kind: VkNil)))
+
+proc compile_assignment(self: var Compiler, input: Value) =
+  let `type` = input.gene_type
+  if `type`.kind == VkSymbol:
+    self.compile(input.gene_children[1])
+    self.output.instructions.add(Instruction(kind: IkAssign, arg0: `type`))
+  elif `type`.kind == VkComplexSymbol:
+    if `type`.csymbol[0] == "":
+      `type`.csymbol[0] = "self"
+    if `type`.csymbol.len == 2:
+      self.output.instructions.add(Instruction(kind: IkResolveSymbol, arg0: `type`.csymbol[0]))
+      self.compile(input.gene_children[1])
+      self.output.instructions.add(Instruction(kind: IkSetMember, arg0: `type`.csymbol[1]))
+    else:
+      let arg0 = Value(kind: VkComplexSymbol, csymbol: `type`.csymbol[0..^2])
+      self.output.instructions.add(Instruction(kind: IkResolveSymbol, arg0: arg0))
+      self.compile(input.gene_children[1])
+      self.output.instructions.add(Instruction(kind: IkSetMember, arg0: `type`.csymbol[^1]))
+  else:
+    not_allowed($`type`)
 
 proc compile_loop(self: var Compiler, input: Value) =
   var label = gen_oid()
@@ -288,8 +313,7 @@ proc compile_gene(self: var Compiler, input: Value) =
     if first.kind == VkSymbol:
       case first.str:
         of "=":
-          self.compile(input.gene_children[1])
-          self.output.instructions.add(Instruction(kind: IkAssign, arg0: `type`))
+          self.compile_assignment(input)
           return
         of "+":
           self.compile(`type`)

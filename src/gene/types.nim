@@ -1044,8 +1044,10 @@ type
     IkGeneEnd
 
     IkResolveSymbol
-    # IkResolveComplexSymbol
+    IkResolveComplexSymbol
+    IkSetMember
     IkGetMember
+    IkSetChild
     IkGetChild
 
     IkSelf

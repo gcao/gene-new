@@ -38,3 +38,17 @@ test_vm """
   )
   ((new A).test)
 """, 1
+
+test_vm """
+  (class A
+    (.fn set_x a
+      (/x = a)
+    )
+    (.fn test _
+      /x
+    )
+  )
+  (var a (new A))
+  (a .set_x 1)
+  (a .test)
+""", 1

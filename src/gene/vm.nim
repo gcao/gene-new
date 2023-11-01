@@ -265,7 +265,7 @@ proc exec*(self: var VirtualMachine): Value =
       indent &= "  "
     if trace:
       # self.print_registers()
-      echo fmt"{indent}{self.data.pc:>3} {inst}"
+      echo fmt"{indent}{self.data.pc:03} {inst}"
     case inst.kind:
       of IkNoop:
         discard
@@ -302,6 +302,8 @@ proc exec*(self: var VirtualMachine): Value =
         case inst.arg0.str:
           of "_":
             self.data.registers.push(Value(kind: VkPlaceholder))
+          of "self":
+            self.data.registers.push(self.data.registers.self)
           else:
             let scope = self.data.registers.scope
             let name = inst.arg0.str
@@ -315,6 +317,25 @@ proc exec*(self: var VirtualMachine): Value =
       of IkSelf:
         self.data.registers.push(self.data.registers.self)
 
+      of IkSetMember:
+        let name = inst.arg0.str
+        let value = self.data.registers.pop()
+        var target = self.data.registers.pop()
+        case target.kind:
+          of VkMap:
+            target.map[name] = value
+          of VkGene:
+            target.gene_props[name] = value
+          of VkNamespace:
+            target.ns[name] = value
+          of VkClass:
+            target.class.ns[name] = value
+          of VkInstance:
+            target.instance_props[name] = value
+          else:
+            todo($target.kind)
+        self.data.registers.push(value)
+
       of IkGetMember:
         let name = inst.arg0.str
         let value = self.data.registers.pop()
@@ -327,6 +348,8 @@ proc exec*(self: var VirtualMachine): Value =
             self.data.registers.push(value.ns[name])
           of VkClass:
             self.data.registers.push(value.class.ns[name])
+          of VkInstance:
+            self.data.registers.push(value.instance_props[name])
           else:
             todo($value.kind)
 
@@ -499,6 +522,7 @@ proc exec*(self: var VirtualMachine): Value =
                   self.data.registers = new_registers(caller)
                   self.data.registers.scope.set_parent(fn.parent_scope, fn.parent_scope_max)
                   self.data.registers.ns = fn.ns
+                  self.data.registers.self = gene_type.bound_method.self
                   self.data.registers.args = v
                   self.data.cur_block = fn.body_compiled
                   self.data.pc = 0
