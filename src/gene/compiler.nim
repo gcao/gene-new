@@ -83,6 +83,8 @@ proc compile_complex_symbol(self: var Compiler, input: Value) =
       let (is_int, i) = to_int(s)
       if is_int:
         self.output.instructions.add(Instruction(kind: IkGetChild, arg0: i))
+      elif s.starts_with("."):
+        self.output.instructions.add(Instruction(kind: IkCallMethodNoArgs, arg0: s[1..^1]))
       else:
         self.output.instructions.add(Instruction(kind: IkGetMember, arg0: s))
 

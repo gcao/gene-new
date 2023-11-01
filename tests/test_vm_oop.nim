@@ -52,3 +52,13 @@ test_vm """
   (a .set_x 1)
   (a .test)
 """, 1
+
+test_vm """
+  (class A
+    (.fn test _
+      1
+    )
+  )
+  (var a (new A))
+  a/.test
+""", 1
