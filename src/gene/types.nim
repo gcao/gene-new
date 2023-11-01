@@ -1077,6 +1077,7 @@ type
     matcher*: RootMatcher
     instructions*: seq[Instruction]
     labels*: Table[Label, int]
+    skip_return*: bool
 
   Address* = object
     id*: CuId

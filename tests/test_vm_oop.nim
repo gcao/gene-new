@@ -62,3 +62,13 @@ test_vm """
   (var a (new A))
   a/.test
 """, 1
+
+test_vm """
+  (class A
+    (.ctor _
+      (/test = 1)
+    )
+  )
+  (var a (new A))
+  a/test
+""", 1

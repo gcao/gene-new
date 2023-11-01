@@ -283,7 +283,7 @@ proc exec*(self: var VirtualMachine): Value =
           return v
         else:
           self.data.registers = caller.registers
-          if self.data.cur_block.kind != CkInit:
+          if not self.data.cur_block.skip_return:
             self.data.registers.push(v)
           self.data.cur_block = self.data.code_mgr.data[caller.address.id]
           self.data.pc = caller.address.pc
@@ -667,6 +667,28 @@ proc exec*(self: var VirtualMachine): Value =
           instance_class: v.gene_type.class,
         )
         self.data.registers.push(instance)
+
+        let class = instance.instance_class
+        if class.constructor != nil:
+          case class.constructor.kind:
+            of VkFunction:
+              class.constructor.fn.compile()
+              let compiled = class.constructor.fn.body_compiled
+              compiled.skip_return = true
+
+              self.data.pc.inc()
+              var caller = Caller(
+                address: Address(id: self.data.cur_block.id, pc: self.data.pc),
+                registers: self.data.registers,
+              )
+              self.data.registers = new_registers(caller)
+              self.data.registers.self = instance
+              self.data.registers.ns = class.constructor.fn.ns
+              self.data.cur_block = compiled
+              self.data.pc = 0
+              continue
+            else:
+              todo($class.constructor.kind)
 
       of IkSubClass:
         var name = inst.arg0.str

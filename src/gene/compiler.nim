@@ -260,6 +260,10 @@ proc compile_gene_unknown(self: var Compiler, input: Value) {.inline.} =
 
   self.output.instructions.add(Instruction(kind: IkGeneEnd, label: end_label))
 
+# TODO: handle special cases:
+# 1. No arguments
+# 2. All arguments are primitives or array/map of primitives
+#
 # self, method_name, arguments
 # self + method_name => bounded_method_object (is composed of self, class, method_object(is composed of name, logic))
 # (bounded_method_object ...arguments)
@@ -487,7 +491,7 @@ proc compile*(m: var Macro) =
 
 proc compile_init*(input: Value): CompilationUnit =
   var self = Compiler(output: CompilationUnit(id: gen_oid()))
-  self.output.kind = CkInit
+  self.output.skip_return = true
   self.output.instructions.add(Instruction(kind: IkStart))
 
   self.compile(input)
