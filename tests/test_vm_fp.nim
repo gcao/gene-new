@@ -4,6 +4,9 @@ import gene/types
 
 import ./helpers
 
+# Support special variables to access positional arguments?
+#   E.g. $0, $1, $-1(last)
+
 test_vm """
   (fn f []
   )

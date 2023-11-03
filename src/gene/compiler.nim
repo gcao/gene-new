@@ -7,6 +7,7 @@ import "./compiler/if"
 proc `$`*(self: Instruction): string =
   case self.kind
     of IkPushValue,
+      IkVar,
       IkJump, IkJumpIfFalse,
       IkAddValue, IkLtValue,
       IkMapSetProp, IkMapSetPropValue,
@@ -479,7 +480,29 @@ proc compile*(f: var Function) =
   if f.body_compiled != nil:
     return
 
-  f.body_compiled = compile(f.body)
+  var self = Compiler(output: CompilationUnit(id: gen_oid()))
+  self.output.instructions.add(Instruction(kind: IkStart))
+
+  # generate code for arguments
+  for m in f.matcher.children:
+    let label = gen_oid()
+    self.output.instructions.add(Instruction(
+      kind: IkJumpIfMatchSuccess,
+      arg0: m.name,
+      arg1: Value(kind: VkCuId, cu_id: label),
+    ))
+    if m.default_value != nil:
+      self.compile(m.default_value)
+      self.output.instructions.add(Instruction(kind: IkVar, arg0: m.name))
+      self.output.instructions.add(Instruction(kind: IkPop))
+    else:
+      discard
+      # TODO: generate ArgumentMissingError
+    self.output.instructions.add(Instruction(kind: IkNoop, label: label))
+
+  self.compile(f.body)
+  self.output.instructions.add(Instruction(kind: IkEnd))
+  f.body_compiled = self.output
   f.body_compiled.matcher = f.matcher
 
 proc compile*(m: var Macro) =

@@ -101,77 +101,77 @@ proc calc_min_left*(self: var RootMatcher) =
 
 proc parse(self: var RootMatcher, group: var seq[Matcher], v: Value) =
   case v.kind:
-  of VkSymbol:
-    if v.str[0] == '^':
-      var m = new_matcher(self, MatchProp)
-      if v.str.ends_with("..."):
-        m.is_splat = true
-        if v.str[1] == '^':
-          m.name = v.str[2..^4]
-          m.is_prop = true
-        else:
-          m.name = v.str[1..^4]
-      else:
-        if v.str[1] == '^':
-          m.name = v.str[2..^1]
-          m.is_prop = true
-        else:
-          m.name = v.str[1..^1]
-      group.add(m)
-    else:
-      var m = new_matcher(self, MatchData)
-      group.add(m)
-      if v.str != "_":
+    of VkSymbol:
+      if v.str[0] == '^':
+        var m = new_matcher(self, MatchProp)
         if v.str.ends_with("..."):
           m.is_splat = true
-          if v.str[0] == '^':
+          if v.str[1] == '^':
+            m.name = v.str[2..^4]
+            m.is_prop = true
+          else:
             m.name = v.str[1..^4]
-            m.is_prop = true
-          else:
-            m.name = v.str[0..^4]
         else:
-          if v.str[0] == '^':
-            m.name = v.str[1..^1]
+          if v.str[1] == '^':
+            m.name = v.str[2..^1]
             m.is_prop = true
           else:
-            m.name = v.str
-  of VkComplexSymbol:
-    if v.csymbol[0] == '^':
-      todo("parse " & $v)
-    else:
-      var m = new_matcher(self, MatchData)
-      group.add(m)
-      m.is_prop = true
-      var name = v.csymbol[1]
-      if name.ends_with("..."):
-        m.is_splat = true
-        m.name = name[0..^4]
+            m.name = v.str[1..^1]
+        group.add(m)
       else:
-        m.name = name
-  of VkVector:
-    var i = 0
-    while i < v.vec.len:
-      var item = v.vec[i]
-      i += 1
-      if item.kind == VkVector:
         var m = new_matcher(self, MatchData)
         group.add(m)
-        self.parse(m.children, item)
+        if v.str != "_":
+          if v.str.ends_with("..."):
+            m.is_splat = true
+            if v.str[0] == '^':
+              m.name = v.str[1..^4]
+              m.is_prop = true
+            else:
+              m.name = v.str[0..^4]
+          else:
+            if v.str[0] == '^':
+              m.name = v.str[1..^1]
+              m.is_prop = true
+            else:
+              m.name = v.str
+    of VkComplexSymbol:
+      if v.csymbol[0] == '^':
+        todo("parse " & $v)
       else:
-        self.parse(group, item)
-        if i < v.vec.len and v.vec[i].is_symbol("="):
-          i += 1
-          var last_matcher = group[^1]
-          var value = v.vec[i]
-          i += 1
-          last_matcher.default_value = value
-  of VkQuote:
-    var m = new_matcher(self, MatchLiteral)
-    m.literal = v.quote
-    m.name = "<literal>"
-    group.add(m)
-  else:
-    todo("parse " & $v.kind)
+        var m = new_matcher(self, MatchData)
+        group.add(m)
+        m.is_prop = true
+        var name = v.csymbol[1]
+        if name.ends_with("..."):
+          m.is_splat = true
+          m.name = name[0..^4]
+        else:
+          m.name = name
+    of VkVector:
+      var i = 0
+      while i < v.vec.len:
+        var item = v.vec[i]
+        i += 1
+        if item.kind == VkVector:
+          var m = new_matcher(self, MatchData)
+          group.add(m)
+          self.parse(m.children, item)
+        else:
+          self.parse(group, item)
+          if i < v.vec.len and v.vec[i].is_symbol("="):
+            i += 1
+            var last_matcher = group[^1]
+            var value = v.vec[i]
+            i += 1
+            last_matcher.default_value = value
+    of VkQuote:
+      var m = new_matcher(self, MatchLiteral)
+      m.literal = v.quote
+      m.name = "<literal>"
+      group.add(m)
+    else:
+      todo("parse " & $v.kind)
 
 proc parse*(self: var RootMatcher, v: Value) =
   if v == nil or v == new_gene_symbol("_"):
@@ -198,12 +198,12 @@ proc to_function*(node: Value): Function {.gcsafe.} =
   else:
     var first = node.gene_children[0]
     case first.kind:
-    of VkSymbol, VkString:
-      name = first.str
-    of VkComplexSymbol:
-      name = first.csymbol[^1]
-    else:
-      todo($first.kind)
+      of VkSymbol, VkString:
+        name = first.str
+      of VkComplexSymbol:
+        name = first.csymbol[^1]
+      else:
+        todo($first.kind)
 
     matcher.parse(node.gene_children[1])
     body_start = 2
@@ -236,14 +236,27 @@ proc to_macro(node: Value): Macro =
 
 proc handle_args*(self: var VirtualMachine, matcher: RootMatcher, args: Value) {.inline.} =
   case matcher.hint.mode:
-  of MhNone:
-    discard
-  of MhSimpleData:
-    for i, value in args.gene_children:
-      let field = matcher.children[i]
-      self.data.registers.scope.def_member(field.name, value)
-  else:
-    todo($matcher.hint.mode)
+    of MhNone:
+      discard
+    of MhSimpleData:
+      var match_result = MatchResult()
+      for i, value in args.gene_children:
+        let field = matcher.children[i]
+        match_result.fields[field.name] = MatchedField(
+          kind: MfSuccess,
+          matcher: field,
+          value: value,
+        )
+        self.data.registers.scope.def_member(field.name, value)
+      for m in matcher.children:
+        if not match_result.fields.has_key(m.name):
+          match_result.fields[m.name] = MatchedField(
+            kind: MfMissing,
+            matcher: m,
+          )
+      self.data.registers.match_result = match_result
+    else:
+      todo($matcher.hint.mode)
 
 proc print_registers(self: var VirtualMachine) =
   var s = "Registers "
@@ -369,6 +382,12 @@ proc exec*(self: var VirtualMachine): Value =
       of IkJumpIfFalse:
         if not self.data.registers.pop().bool:
           self.data.pc = self.data.cur_block.find_label(inst.arg0.cu_id) + 1
+          continue
+
+      of IkJumpIfMatchSuccess:
+        let mr = self.data.registers.match_result
+        if mr.fields.has_key(inst.arg0.str) and mr.fields[inst.arg0.str].kind == MfSuccess:
+          self.data.pc = self.data.cur_block.find_label(inst.arg1.cu_id) + 1
           continue
 
       of IkLoopStart, IkLoopEnd:

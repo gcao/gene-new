@@ -808,32 +808,18 @@ type
     children*: seq[Matcher]
     # required*: bool # computed property: true if splat is false and default value is not given
 
-  MatchResultKind* = enum
-    MatchSuccess
-    MatchMissingFields
-    MatchWrongType # E.g. map is passed but array or gene is expected
+  MatchedFieldKind* = enum
+    MfMissing
+    MfSuccess
+    MfTypeMismatch # E.g. map is passed but array or gene is expected
 
-  # MatchedField* = ref object
-  #   matcher*: Matcher
-  #   value*: Value
+  MatchedField* = ref object
+    kind*: MatchedFieldKind
+    matcher*: Matcher
+    value*: Value
 
   MatchResult* = ref object
-    message*: string
-    kind*: MatchResultKind
-    # If success
-    # fields*: seq[MatchedField]
-    # assign_only*: bool # If true, no new variables will be defined
-    # If missing fields
-    missing*: seq[string]
-    # If wrong type
-    expect_type*: string
-    found_type*: string
-
-  # Internal state when applying the matcher to an input
-  # Limited to one level
-  MatchState* = ref object
-    # prop_processed*: seq[string]
-    data_index*: int
+    fields*: Table[string, MatchedField]
 
   SelectorNoResult* = object of Exception
 
@@ -972,6 +958,8 @@ type
     IkJump        # unconditional jump
     IkJumpIfFalse
 
+    IkJumpIfMatchSuccess  # Special instruction for argument matching
+
     IkLoopStart
     IkLoopEnd
     IkContinue    # is added automatically before the loop end
@@ -1105,6 +1093,7 @@ type
     scope*: Scope
     self*: Value
     args*: Value
+    match_result*: MatchResult
     data*: array[32, Value]
     next_slot*: int
 
