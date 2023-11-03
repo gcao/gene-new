@@ -1,7 +1,8 @@
 import parseopt, times, strutils
 
 import ../types
-import ../interpreter
+# import ../interpreter
+import ../vm
 import ./base
 
 const DEFAULT_COMMAND = "run"
@@ -57,22 +58,23 @@ proc handle*(cmd: string, args: seq[string]): string =
   var options = parse_options(args)
   setup_logger(options.debugging)
 
-  let thread_id = get_free_thread()
-  init_thread(thread_id)
+  # let thread_id = get_free_thread()
+  # init_thread(thread_id)
   init_app_and_vm()
-  VM.thread_id = thread_id
-  VM.repl_on_error = options.repl_on_error
-  VM.app.args = options.args
+  # VM.thread_id = thread_id
+  # VM.repl_on_error = options.repl_on_error
+  # VM.app.args = options.args
 
   var file = options.file
   let start = cpu_time()
   var value: Value
-  if file.ends_with(".gar"):
-    value = run_archive_file(file)
-  else:
-    value = run_file(file)
-  if options.print_result:
-    echo value.to_s
+  todo()
+  # if file.ends_with(".gar"):
+  #   value = run_archive_file(file)
+  # else:
+  #   value = run_file(file)
+  # if options.print_result:
+  #   echo value.to_s
   if options.benchmark:
     echo "Time: " & $(cpu_time() - start)
 

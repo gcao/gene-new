@@ -2,29 +2,30 @@ import unittest, strutils, tables, osproc
 
 import gene/types
 import gene/parser
-import gene/interpreter
-import gene/serdes
+# import gene/interpreter
+# import gene/serdes
+import gene/vm
 
 # Uncomment below lines to see logs
 # import logging
 # addHandler(newConsoleLogger())
 
-proc test(frame: Frame, self: Value, args: Value): Value =
-  1
+# proc test(frame: Frame, self: Value, args: Value): Value =
+#   1
 
-proc test2(frame: Frame, self: Value, args: Value): Value =
-  self.instance_props["a"].int + args.gene_children[0].int + args.gene_children[1].int
+# proc test2(frame: Frame, self: Value, args: Value): Value =
+#   self.instance_props["a"].int + args.gene_children[0].int + args.gene_children[1].int
 
 proc init_all*() =
-  if not VM.is_nil() and VM.thread_id > 0:
-    cleanup_thread(VM.thread_id)
+  # if not VM.is_nil() and VM.thread_id > 0:
+  #   cleanup_thread(VM.thread_id)
 
-  let thread_id = get_free_thread()
-  init_thread(thread_id)
+  # let thread_id = get_free_thread()
+  # init_thread(thread_id)
   init_app_and_vm()
-  VM.thread_id = thread_id
-  VM.gene_ns.ns["test1"] = new_gene_native_method(test)
-  VM.gene_ns.ns["test2"] = new_gene_native_method(test2)
+  # VM.thread_id = thread_id
+  # VM.gene_ns.ns["test1"] = new_gene_native_method(test)
+  # VM.gene_ns.ns["test2"] = new_gene_native_method(test2)
 
 converter seq_to_gene*(self: seq[int]): Value =
   result = new_gene_vec()
@@ -78,32 +79,32 @@ proc test_read_all*(code: string, callback: proc(result: seq[Value])) =
   test "Parser / read_all: " & code:
     callback read_all(code)
 
-proc test_interpreter*(code: string) =
-  var code = cleanup(code)
-  test "Interpreter / eval: " & code:
-    init_all()
-    discard eval(code, "test_code")
+# proc test_interpreter*(code: string) =
+#   var code = cleanup(code)
+#   test "Interpreter / eval: " & code:
+#     init_all()
+#     discard eval(code, "test_code")
 
-proc test_interpreter*(code: string, result: Value) =
-  var code = cleanup(code)
-  test "Interpreter / eval: " & code:
-    init_all()
-    check eval(code, "test_code") == result
+# proc test_interpreter*(code: string, result: Value) =
+#   var code = cleanup(code)
+#   test "Interpreter / eval: " & code:
+#     init_all()
+#     check eval(code, "test_code") == result
 
-proc test_interpreter*(code: string, callback: proc(result: Value)) =
-  var code = cleanup(code)
-  test "Interpreter / eval: " & code:
-    init_all()
-    callback eval(code, "test_code")
+# proc test_interpreter*(code: string, callback: proc(result: Value)) =
+#   var code = cleanup(code)
+#   test "Interpreter / eval: " & code:
+#     init_all()
+#     callback eval(code, "test_code")
 
-proc test_interpreter_error*(code: string) =
-  var code = cleanup(code)
-  test "Interpreter / eval - error expected: " & code:
-    try:
-      discard eval(code, "test_code")
-      fail()
-    except ParseError:
-      discard
+# proc test_interpreter_error*(code: string) =
+#   var code = cleanup(code)
+#   test "Interpreter / eval - error expected: " & code:
+#     try:
+#       discard eval(code, "test_code")
+#       fail()
+#     except ParseError:
+#       discard
 
 proc test_parse_document*(code: string, callback: proc(result: Document)) =
   var code = cleanup(code)
@@ -160,60 +161,78 @@ proc test_parse_document*(code: string, callback: proc(result: Document)) =
 #     init_all()
 #     discard eval(read_file(file))
 
-proc test_jsgen*(code: string, result: Value) =
-  var code = cleanup(code)
-  test "JS generation: " & code:
-    init_all()
-    var generated = eval(code, "test_code").to_s
-    # if exists_env("SHOW_JS"):
-    #   echo "--------------------"
-    #   echo generated
-    #   echo()
-    var file = "/tmp/test.js"
-    write_file(file, generated)
-    # if exists_env("UGLIFY_JS"):
-    #   echo "--------------------"
-    #   var ret = exec_cmd(get_env("UGLIFY_JS") & " -b width=120 " & file)
-    #   if ret != 0:
-    #     discard exec_cmd("cat " & file)
-    #   echo "===================="
-    var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)
-    check output == result
+# proc test_jsgen*(code: string, result: Value) =
+#   var code = cleanup(code)
+#   test "JS generation: " & code:
+#     init_all()
+#     var generated = eval(code, "test_code").to_s
+#     # if exists_env("SHOW_JS"):
+#     #   echo "--------------------"
+#     #   echo generated
+#     #   echo()
+#     var file = "/tmp/test.js"
+#     write_file(file, generated)
+#     # if exists_env("UGLIFY_JS"):
+#     #   echo "--------------------"
+#     #   var ret = exec_cmd(get_env("UGLIFY_JS") & " -b width=120 " & file)
+#     #   if ret != 0:
+#     #     discard exec_cmd("cat " & file)
+#     #   echo "===================="
+#     var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)
+#     check output == result
 
-proc test_jsgen*(code: string, callback: proc(result: Value)) =
-  var code = cleanup(code)
-  test "JS generation: " & code:
-    init_all()
-    var generated = eval(code, "test_code").to_s
-    # if exists_env("SHOW_JS"):
-    #   echo "--------------------"
-    #   echo generated
-    #   echo()
-    var file = "/tmp/test.js"
-    write_file(file, generated)
-    # if exists_env("UGLIFY_JS"):
-    #   echo "--------------------"
-    #   var ret = exec_cmd(get_env("UGLIFY_JS") & " -b width=120 " & file)
-    #   if ret != 0:
-    #     discard exec_cmd("cat " & file)
-    #   echo "===================="
-    var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)
-    callback(output)
+# proc test_jsgen*(code: string, callback: proc(result: Value)) =
+#   var code = cleanup(code)
+#   test "JS generation: " & code:
+#     init_all()
+#     var generated = eval(code, "test_code").to_s
+#     # if exists_env("SHOW_JS"):
+#     #   echo "--------------------"
+#     #   echo generated
+#     #   echo()
+#     var file = "/tmp/test.js"
+#     write_file(file, generated)
+#     # if exists_env("UGLIFY_JS"):
+#     #   echo "--------------------"
+#     #   var ret = exec_cmd(get_env("UGLIFY_JS") & " -b width=120 " & file)
+#     #   if ret != 0:
+#     #     discard exec_cmd("cat " & file)
+#     #   echo "===================="
+#     var (output, _) = exec_cmd_ex("/usr/local/bin/node " & file)
+#     callback(output)
 
-proc test_serdes*(code: string, result: Value) =
-  var code = cleanup(code)
-  test "Interpreter / eval: " & code:
-    init_all()
-    var value = eval(code, "test_code")
-    var s = serialize(value).to_s
-    var value2 = deserialize(s)
-    check value2 == result
+# proc test_serdes*(code: string, result: Value) =
+#   var code = cleanup(code)
+#   test "Interpreter / eval: " & code:
+#     init_all()
+#     var value = eval(code, "test_code")
+#     var s = serialize(value).to_s
+#     var value2 = deserialize(s)
+#     check value2 == result
 
-proc test_serdes*(code: string, callback: proc(result: Value)) =
+# proc test_serdes*(code: string, callback: proc(result: Value)) =
+#   var code = cleanup(code)
+#   test "Interpreter / eval: " & code:
+#     init_all()
+#     var value = eval(code, "test_code")
+#     var s = serialize(value).to_s
+#     var value2 = deserialize(s)
+#     callback(value2)
+
+proc test_vm*(code: string) =
   var code = cleanup(code)
-  test "Interpreter / eval: " & code:
+  test "Compilation & VM: " & code:
     init_all()
-    var value = eval(code, "test_code")
-    var s = serialize(value).to_s
-    var value2 = deserialize(s)
-    callback(value2)
+    discard VM.exec(code, "test_code")
+
+proc test_vm*(code: string, result: Value) =
+  var code = cleanup(code)
+  test "Compilation & VM: " & code:
+    init_all()
+    check VM.exec(code, "test_code") == result
+
+proc test_vm*(code: string, callback: proc(result: Value)) =
+  var code = cleanup(code)
+  test "Compilation & VM: " & code:
+    init_all()
+    callback VM.exec(code, "test_code")

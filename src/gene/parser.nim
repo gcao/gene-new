@@ -540,6 +540,8 @@ proc skip_ws(self: var Parser) {.gcsafe.} =
       break
 
 proc match_symbol(s: string): Value =
+  if s == "/":
+    return new_gene_symbol(s)
   var parts: seq[string] = @[]
   var i = 0
   var part = ""

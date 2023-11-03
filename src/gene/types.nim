@@ -1,4 +1,4 @@
-import os, random, strutils, tables, unicode, hashes, sets, times, strformat, pathnorm
+import os, random, strutils, tables, unicode, hashes, sets, times, oids, strformat, pathnorm
 import nre
 import std/json
 import asyncdispatch
@@ -81,6 +81,7 @@ type
     VkClass
     VkMixin
     VkMethod
+    VkBoundMethod
     VkNativeFn
     VkNativeFn2
     VkNativeMethod
@@ -89,14 +90,16 @@ type
     VkCast
     VkEnum
     VkEnumMember
-    VkInterception
-    VkExpr
+    # VkInterception
+    # VkExpr
     VkExplode
     VkFuture
     VkThread
     VkThreadMessage
     VkJson
     VkNativeFile
+    VkCuId
+    VkCompilationUnit
 
   Value* {.acyclic.} = ref object
     case kind*: ValueKind
@@ -230,21 +233,23 @@ type
       `mixin`*: Mixin
     of VkMethod:
       `method`*: Method
+    of VkBoundMethod:
+      `bound_method`*: BoundMethod
     of VkNativeFn:
       native_fn*: NativeFn
     of VkNativeFn2:
       native_fn2*: NativeFn2
-    of VkNativeMethod:
-      native_method*: NativeMethod
-    of VkNativeMethod2:
-      native_method2*: NativeMethod2
+    # of VkNativeMethod:
+    #   native_method*: NativeMethod
+    # of VkNativeMethod2:
+    #   native_method2*: NativeMethod2
     of VkInstance:
       instance_class*: Class
       instance_props*: Table[string, Value]
-    of VkInterception:
-      interception*: Interception
-    of VkExpr:
-      expr*: Expr
+    # of VkInterception:
+    #   interception*: Interception
+    # of VkExpr:
+    #   expr*: Expr
     of VkFuture:
       future*: Future[Value]
       ft_success_callbacks*: seq[Value]
@@ -259,6 +264,10 @@ type
       json*: JsonNode
     of VkNativeFile:
       native_file*: File
+    of VkCuId:
+      cu_id*: CuId
+    of VkCompilationUnit:
+      compilation_unit: CompilationUnit
     else:
       discard
 
@@ -306,46 +315,46 @@ type
     StActive
     StInactive
 
-  InterceptionKind* = enum
-    IcBefore
-    IcBeforeFilter # logic run before target - useful for filtering
-    IcBeforeAfter # logic run before and after target - useful for invariant checking, a special variable is passed to the logic to indicate whether it's before or after
-    IcAround
-    IcAfter
-    IcAfterError # logic run after target if target throws an error
+  # InterceptionKind* = enum
+  #   IcBefore
+  #   IcBeforeFilter # logic run before target - useful for filtering
+  #   IcBeforeAfter # logic run before and after target - useful for invariant checking, a special variable is passed to the logic to indicate whether it's before or after
+  #   IcAround
+  #   IcAfter
+  #   IcAfterError # logic run after target if target throws an error
 
-  Interception* = ref object
-    kind*: InterceptionKind
-    logic*: Value
-    target*: Value
-    state*: ThreeWayState
+  # Interception* = ref object
+  #   kind*: InterceptionKind
+  #   logic*: Value
+  #   target*: Value
+  #   state*: ThreeWayState
 
-  ClassAspect* = ref object
-    ns*: Namespace # the namespace where the aspect is defined
-    name*: string
-    matcher*: RootMatcher
-    body*: seq[Value]
-    body_compiled*: Expr
-    state*: ThreeWayState
+  # ClassAspect* = ref object
+  #   ns*: Namespace # the namespace where the aspect is defined
+  #   name*: string
+  #   matcher*: RootMatcher
+  #   body*: seq[Value]
+  #   body_compiled*: Expr
+  #   state*: ThreeWayState
 
-  ClassAdviceKind* = enum
-    CaBeforeCreation
-    CaAfterCreation
-    CaBeforeMethod
-    CaBeforeAfterMethod
-    CaAroundMethod
-    CaAfterMethod
-    CaAfterMethodError
+  # ClassAdviceKind* = enum
+  #   CaBeforeCreation
+  #   CaAfterCreation
+  #   CaBeforeMethod
+  #   CaBeforeAfterMethod
+  #   CaAroundMethod
+  #   CaAfterMethod
+  #   CaAfterMethodError
 
-  ClassAdvice* = ref object
-    kind*: ClassAdviceKind
-    matcher*: Value
-    logic*: Value
+  # ClassAdvice* = ref object
+  #   kind*: ClassAdviceKind
+  #   matcher*: Value
+  #   logic*: Value
 
-  ClassInterception* = ref object
-    target*: Value
-    advices*: Table[ClassAdviceKind, seq[ClassAdvice]]
-    state*: ThreeWayState
+  # ClassInterception* = ref object
+  #   target*: Value
+  #   advices*: Table[ClassAdviceKind, seq[ClassAdvice]]
+  #   state*: ThreeWayState
 
   Exception* = object of CatchableError
     instance*: Value  # instance of Gene exception class
@@ -357,21 +366,25 @@ type
   # index of a name in a scope
   NameIndexScope* = distinct int
 
-  Translator* = proc(value: Value): Expr {.gcsafe.}
-  Evaluator* = proc(frame: Frame, expr: var Expr): Value {.gcsafe.}
+  # Translator* = proc(value: Value): Expr {.gcsafe.}
+  # Evaluator* = proc(frame: Frame, expr: var Expr): Value {.gcsafe.}
 
-  EvalCatch* = proc(frame: Frame, expr: var Expr): Value {.gcsafe.}
-  EvalWrap* = proc(eval: Evaluator): Evaluator {.gcsafe.}
+  # EvalCatch* = proc(frame: Frame, expr: var Expr): Value {.gcsafe.}
+  # EvalWrap* = proc(eval: Evaluator): Evaluator {.gcsafe.}
 
-  TranslateCatch* = proc(value: Value): Expr {.gcsafe.}
-  TranslateWrap* = proc(translate: Translator): Translator {.gcsafe.}
+  # TranslateCatch* = proc(value: Value): Expr {.gcsafe.}
+  # TranslateWrap* = proc(translate: Translator): Translator {.gcsafe.}
 
-  NativeFn* = proc(frame: Frame, args: Value): Value {.gcsafe, nimcall.}
-  NativeFn2* = proc(frame: Frame, args: Value): Value {.gcsafe.}
+  # NativeFn* = proc(frame: Frame, args: Value): Value {.gcsafe, nimcall.}
+  # NativeFn2* = proc(frame: Frame, args: Value): Value {.gcsafe.}
+  NativeFn* = proc(vm_data: VirtualMachineData, args: Value): Value {.gcsafe, nimcall.}
+  NativeFn2* = proc(vm_data: VirtualMachineData, args: Value): Value {.gcsafe.}
   NativeFnWrap* = proc(f: NativeFn): NativeFn2 {.gcsafe.}
-  NativeMethod* = proc(frame: Frame, self: Value, args: Value): Value {.gcsafe, nimcall.}
-  NativeMethod2* = proc(frame: Frame, self: Value, args: Value): Value {.gcsafe.}
-  NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2 {.gcsafe.}
+  # NativeMethod* = proc(frame: Frame, self: Value, args: Value): Value {.gcsafe, nimcall.}
+  # NativeMethod2* = proc(frame: Frame, self: Value, args: Value): Value {.gcsafe.}
+  # NativeMethod* = proc(vm_data: VirtualMachineData, self: Value, args: Value): Value {.gcsafe, nimcall.}
+  # NativeMethod2* = proc(vm_data: VirtualMachineData, self: Value, args: Value): Value {.gcsafe.}
+  # NativeMethodWrap* = proc(m: NativeMethod): NativeMethod2 {.gcsafe.}
 
   # NativeMacro is similar to NativeMethod, but args are not evaluated before passed in
   # To distinguish NativeMacro and NativeMethod, we just create Value with different kind
@@ -380,66 +393,66 @@ type
 
   GeneProcessor* = ref object of RootObj
     name*: string
-    translator*: Translator
+    # translator*: Translator
 
-  VirtualMachine* = ref object
-    app*: Application
-    runtime*: Runtime
-    modules*: Table[string, Namespace]
-    references*: References
-    repl_on_error*: bool
+  # VirtualMachine* = ref object
+  #   app*: Application
+  #   runtime*: Runtime
+  #   modules*: Table[string, Namespace]
+  #   references*: References
+  #   repl_on_error*: bool
 
-    async_wait*: uint
-    futures*: Table[int, Value]
+  #   async_wait*: uint
+  #   futures*: Table[int, Value]
 
-    main_thread*: bool
-    thread_id*: int
-    thread_callbacks*: seq[Value]
+  #   main_thread*: bool
+  #   thread_id*: int
+  #   thread_callbacks*: seq[Value]
 
-    translators*: Table[ValueKind, Translator]
-    gene_translators*: Table[string, Translator]
+  #   translators*: Table[ValueKind, Translator]
+  #   gene_translators*: Table[string, Translator]
 
-    global_ns*     : Value
-    gene_ns*       : Value
-    genex_ns*      : Value
+  #   global_ns*     : Value
+  #   gene_ns*       : Value
+  #   genex_ns*      : Value
 
-    object_class*   : Value
-    nil_class*      : Value
-    bool_class*     : Value
-    int_class*      : Value
-    float_class*    : Value
-    char_class*     : Value
-    string_class*   : Value
-    symbol_class*   : Value
-    complex_symbol_class*: Value
-    array_class*    : Value
-    map_class*      : Value
-    set_class*      : Value
-    gene_class*     : Value
-    stream_class*   : Value
-    document_class* : Value
-    regex_class*    : Value
-    range_class*    : Value
-    date_class*     : Value
-    datetime_class* : Value
-    time_class*     : Value
-    timezone_class* : Value
-    selector_class* : Value
-    exception_class*: Value
-    class_class*    : Value
-    mixin_class*    : Value
-    application_class*: Value
-    package_class*  : Value
-    module_class*   : Value
-    namespace_class*: Value
-    function_class* : Value
-    macro_class*    : Value
-    block_class*    : Value
-    future_class*   : Value
-    thread_class*   : Value
-    thread_message_class* : Value
-    thread_message_type_class* : Value
-    file_class*     : Value
+  #   object_class*   : Value
+  #   nil_class*      : Value
+  #   bool_class*     : Value
+  #   int_class*      : Value
+  #   float_class*    : Value
+  #   char_class*     : Value
+  #   string_class*   : Value
+  #   symbol_class*   : Value
+  #   complex_symbol_class*: Value
+  #   array_class*    : Value
+  #   map_class*      : Value
+  #   set_class*      : Value
+  #   gene_class*     : Value
+  #   stream_class*   : Value
+  #   document_class* : Value
+  #   regex_class*    : Value
+  #   range_class*    : Value
+  #   date_class*     : Value
+  #   datetime_class* : Value
+  #   time_class*     : Value
+  #   timezone_class* : Value
+  #   selector_class* : Value
+  #   exception_class*: Value
+  #   class_class*    : Value
+  #   mixin_class*    : Value
+  #   application_class*: Value
+  #   package_class*  : Value
+  #   module_class*   : Value
+  #   namespace_class*: Value
+  #   function_class* : Value
+  #   macro_class*    : Value
+  #   block_class*    : Value
+  #   future_class*   : Value
+  #   thread_class*   : Value
+  #   thread_message_class* : Value
+  #   thread_message_type_class* : Value
+  #   file_class*     : Value
 
   # VirtualMachine depends on a Runtime
   Runtime* = ref object
@@ -498,6 +511,48 @@ type
     main_module*: Module
     dep_root*: DependencyRoot
     props*: Table[string, Value]  # Additional properties
+
+    global_ns*     : Value
+    gene_ns*       : Value
+    genex_ns*      : Value
+
+    object_class*   : Value
+    nil_class*      : Value
+    bool_class*     : Value
+    int_class*      : Value
+    float_class*    : Value
+    char_class*     : Value
+    string_class*   : Value
+    symbol_class*   : Value
+    complex_symbol_class*: Value
+    array_class*    : Value
+    map_class*      : Value
+    set_class*      : Value
+    gene_class*     : Value
+    stream_class*   : Value
+    document_class* : Value
+    regex_class*    : Value
+    range_class*    : Value
+    date_class*     : Value
+    datetime_class* : Value
+    time_class*     : Value
+    timezone_class* : Value
+    selector_class* : Value
+    exception_class*: Value
+    class_class*    : Value
+    mixin_class*    : Value
+    application_class*: Value
+    package_class*  : Value
+    module_class*   : Value
+    namespace_class*: Value
+    function_class* : Value
+    macro_class*    : Value
+    block_class*    : Value
+    future_class*   : Value
+    thread_class*   : Value
+    thread_message_class* : Value
+    thread_message_type_class* : Value
+    file_class*     : Value
 
   Package* = ref object
     dir*: string          # Where the package assets are installed
@@ -586,6 +641,11 @@ type
     # public*: bool
     is_macro*: bool
 
+  BoundMethod* = object
+    self*: Value
+    class*: Class       # Note that class may be different from method.class
+    `method`*: Method
+
   Function* = ref object of GeneProcessor
     async*: bool
     ns*: Namespace
@@ -594,8 +654,9 @@ type
     matcher*: RootMatcher
     matching_hint*: MatchingHint
     body*: seq[Value]
-    body_compiled*: Expr
-    ret*: Expr
+    # body_compiled*: Expr
+    body_compiled*: CompilationUnit
+    # ret*: Expr
 
   BoundFunction* = ref object of GeneProcessor
     target*: Value
@@ -609,17 +670,19 @@ type
     matcher*: RootMatcher
     matching_hint*: MatchingHint
     body*: seq[Value]
-    body_compiled*: Expr
+    # body_compiled*: Expr
+    body_compiled*: CompilationUnit
 
   Block* = ref object of GeneProcessor
-    frame*: Frame
+    # frame*: Frame
     ns*: Namespace
     parent_scope*: Scope
     parent_scope_max*: NameIndexScope
     matcher*: RootMatcher
     matching_hint*: MatchingHint
     body*: seq[Value]
-    body_compiled*: Expr
+    # body_compiled*: Expr
+    body_compiled*: CompilationUnit
 
   Enum* = ref object
     name*: string
@@ -663,28 +726,28 @@ type
     thread*: Thread[int]
     channel*: Channel[ThreadMessage]
 
-  Expr* = ref object of RootObj
-    evaluator*: Evaluator
+  # Expr* = ref object of RootObj
+  #   evaluator*: Evaluator
 
-  FrameKind* = enum
-    FrUnknown # used when a frame is returned to the pool
-    FrRoot
-    FrModule
-    FrFunction
-    FrMacro
-    FrBlock
-    FrMethod
-    FrOther
+  # FrameKind* = enum
+  #   FrUnknown # used when a frame is returned to the pool
+  #   FrRoot
+  #   FrModule
+  #   FrFunction
+  #   FrMacro
+  #   FrBlock
+  #   FrMethod
+  #   FrOther
 
-  Frame* = ref object
-    parent*: Frame
-    kind*: FrameKind
-    ns*: Namespace
-    scope*: Scope
-    callable*: Value # the function/macro/method/block/native function/...
-    self*: Value
-    args*: Value # This is only available in some frames (e.g. function/macro/block)
-    props*: Table[string, Value]
+  # Frame* = ref object
+  #   parent*: Frame
+  #   kind*: FrameKind
+  #   ns*: Namespace
+  #   scope*: Scope
+  #   callable*: Value # the function/macro/method/block/native function/...
+  #   self*: Value
+  #   args*: Value # This is only available in some frames (e.g. function/macro/block)
+  #   props*: Table[string, Value]
 
   Scope* = ref object
     parent*: Scope
@@ -702,7 +765,7 @@ type
   Continue* = ref object of CatchableError
 
   Return* = ref object of CatchableError
-    frame*: Frame
+    # frame*: Frame
     val*: Value
 
   MatchingMode* = enum
@@ -738,39 +801,25 @@ type
     is_prop*: bool
     literal*: Value # if kind is MatchLiteral, this is required
     # match_name*: bool # Match symbol to name - useful for (myif true then ... else ...)
-    # default_value*: Value
-    default_value_expr*: Expr
+    default_value*: Value
+    # default_value_expr*: Expr
     is_splat*: bool
     min_left*: int # Minimum number of args following this
     children*: seq[Matcher]
     # required*: bool # computed property: true if splat is false and default value is not given
 
-  MatchResultKind* = enum
-    MatchSuccess
-    MatchMissingFields
-    MatchWrongType # E.g. map is passed but array or gene is expected
+  MatchedFieldKind* = enum
+    MfMissing
+    MfSuccess
+    MfTypeMismatch # E.g. map is passed but array or gene is expected
 
-  # MatchedField* = ref object
-  #   matcher*: Matcher
-  #   value*: Value
+  MatchedField* = ref object
+    kind*: MatchedFieldKind
+    matcher*: Matcher
+    value*: Value
 
   MatchResult* = ref object
-    message*: string
-    kind*: MatchResultKind
-    # If success
-    # fields*: seq[MatchedField]
-    # assign_only*: bool # If true, no new variables will be defined
-    # If missing fields
-    missing*: seq[string]
-    # If wrong type
-    expect_type*: string
-    found_type*: string
-
-  # Internal state when applying the matcher to an input
-  # Limited to one level
-  MatchState* = ref object
-    # prop_processed*: seq[string]
-    data_index*: int
+    fields*: Table[string, MatchedField]
 
   SelectorNoResult* = object of Exception
 
@@ -841,11 +890,229 @@ type
 
   VmCallback* = proc() {.gcsafe.}
 
-var VM* {.threadvar.}: VirtualMachine  # The current virtual machine
+  # # This can be a thread, a green thread, an actor or a coroutine etc.
+  # ComputationUnit* = ref object # A computation unit that can process a computable unit
+  #   computable*: ComputableUnit
+
+  # ComputableState* = enum
+  #   CsDefault
+  #   CsRunning
+  #   CsIdle
+  #   CsFinished
+  #   CsError
+
+  # ComputableUnit* = ref object  # A computable unit that can be assigned to a computation unit
+  #   state*: ComputableState
+  #   is_main*: bool              # If true, this is the main computable unit
+  #   chunks*: Table[int, Chunk]
+  #   chunk*: Chunk               # current chunk
+  #   pos*: int
+  #   stack*: Stack
+
+  # Chunk* = ref object
+  #   id*: int
+  #   data*: seq[Instruction]
+
+  # InstructionKind* = enum
+  #   InLoad
+  #   InTodo                      # To be implemented
+
+  # Instruction* = ref object
+  #   case kind*: InstructionKind
+  #   of InLoad:
+  #     load*: Value
+  #   else:
+  #     discard
+
+  # NewFrame* = ref object
+  #   data*: array[0..32, Value]
+  #   pos*: int
+
+  # Stack* = object
+  #   frames*: seq[NewFrame]
+
+  CuId* = Oid
+  Label* = Oid
+
+  Compiler* = ref object
+    output*: CompilationUnit
+    quote_level*: int
+
+  InstructionKind* = enum
+    IkNoop
+
+    IkStart   # start a compilation unit
+    IkEnd     # end a compilation unit
+
+    IkScopeStart
+    IkScopeEnd
+
+    IkPushValue   # push value to the next slot
+    IkPushNil
+    IkPop
+
+    IkVar
+    IkVarValue
+    IkAssign
+
+    IkJump        # unconditional jump
+    IkJumpIfFalse
+
+    IkJumpIfMatchSuccess  # Special instruction for argument matching
+
+    IkLoopStart
+    IkLoopEnd
+    IkContinue    # is added automatically before the loop end
+    IkBreak
+
+    IkAdd
+    IkAddValue    # args: literal value
+    IkSub
+    IkMul
+    IkDiv
+    IkPow
+
+    IkLt
+    IkLtValue
+    IkLe
+    IkGt
+    IkGe
+    IkEq
+    IkNe
+
+    IkAnd
+    IkOr
+
+    IkCompileInit
+
+    # IkApplication
+    # IkPackage
+    # IkModule
+
+    IkNamespace
+
+    IkFunction
+    IkReturn
+    IkCallFunction
+    IkCallFunctionNoArgs
+    IkCallSimple  # call class or namespace body
+
+    IkMacro
+    IkCallMacro
+
+    IkClass
+    IkSubClass
+    IkNew
+    IkResolveMethod
+    IkCallMethod
+    IkCallMethodNoArgs
+    IkCallInit
+
+    IkMapStart
+    IkMapSetProp        # args: key
+    IkMapSetPropValue   # args: key, literal value
+    IkMapEnd
+
+    IkArrayStart
+    IkArrayAddChild
+    IkArrayAddChildValue # args: literal value
+    IkArrayEnd
+
+    IkGeneStart
+    IkGeneStartDefault
+    IkGeneStartMacro
+    IkGeneStartMethod
+    IkGeneStartMacroMethod
+    IkGeneCheckType
+    IkGeneSetType
+    IkGeneSetProp
+    IkGeneSetPropValue        # args: key, literal value
+    IkGeneAddChild
+    IkGeneAddChildValue       # args: literal value
+    IkGeneEnd
+
+    IkResolveSymbol
+    IkSetMember
+    IkGetMember
+    IkSetChild
+    IkGetChild
+
+    IkSelf
+
+    IkYield
+    IkResume
+
+    IkInternal
+
+  Instruction* = object
+    kind*: InstructionKind
+    arg0*: Value
+    arg1*: Value
+    label*: Label
+
+  CompilationUnitKind* = enum
+    CkDefault
+    CkFunction
+    CkMacro
+    CkBlock
+    CkModule
+    CkInit      # namespace / class / object initialization
+    CkInline    # evaluation during execution
+
+  CompilationUnit* = ref object
+    id*: CuId
+    kind*: CompilationUnitKind
+    matcher*: RootMatcher
+    instructions*: seq[Instruction]
+    labels*: Table[Label, int]
+    skip_return*: bool
+
+  Address* = object
+    id*: CuId
+    pc*: int
+
+  VirtualMachineState* = enum
+    VmWaiting   # waiting for task
+    VmRunning
+    VmPaused
+
+  VirtualMachine* = ref object
+    state*: VirtualMachineState
+    data*: VirtualMachineData
+
+  VirtualMachineData* = ref object
+    is_main*: bool
+    cur_block*: CompilationUnit
+    pc*: int
+    registers*: Registers
+    code_mgr*: CodeManager
+
+  Registers* = ref object
+    caller*: Caller
+    ns*: Namespace
+    scope*: Scope
+    self*: Value
+    args*: Value
+    match_result*: MatchResult
+    data*: array[32, Value]
+    next_slot*: int
+
+  Caller* = ref object
+    address*: Address
+    registers*: Registers
+
+  CodeManager* = ref object
+    data*: Table[CuId, CompilationUnit]
+
+var VM* {.threadvar.}: VirtualMachine   # The current virtual machine
+var App* {.threadvar.}: Value
+
 # TODO: guard access to Threads with lock
 var Threads*: array[1..64, ThreadMetadata]
 var VmCreatedCallbacks*: seq[VmCallback] = @[]
 var VmCreatedCallbacksAddr* = VmCreatedCallbacks.addr
+
+# var MainComputation* {.threadvar.}: ComputationUnit   # The main thread
 
 #################### Definitions #################
 
@@ -912,6 +1179,7 @@ converter to_gene*(v: string): Value                  {.gcsafe.} = new_gene_stri
 converter to_gene*(v: char): Value                    {.gcsafe.} = new_gene_char(v)
 converter to_gene*(v: Rune): Value                    {.gcsafe.} = new_gene_char(v)
 converter to_gene*(v: Table[string, Value]): Value    {.gcsafe.} = new_gene_map(v)
+converter to_gene*(label: Oid): Value                 {.gcsafe.} = Value(kind: VkCuId, cu_id: label)
 
 # Below converter causes problem with the hash function
 # converter to_gene*(v: seq[Value]): Value           = new_gene_vec(v)
@@ -959,12 +1227,12 @@ proc `[]=`*(self: var References, key: string, val: Value) =
 proc value*(self: Reference): Value =
   self.registry[self.name].ref_target.value
 
-#################### VM ##########################
+# #################### VM ##########################
 
-proc new_vm*(): VirtualMachine =
-  return VirtualMachine(
-    async_wait: ASYNC_WAIT_LIMIT,
-  )
+# proc new_vm*(): VirtualMachine =
+#   return VirtualMachine(
+#     async_wait: ASYNC_WAIT_LIMIT,
+#   )
 
 #################### Application #################
 
@@ -1003,7 +1271,7 @@ proc new_module*(pkg: Package, name: string): Module =
   result = Module(
     pkg: pkg,
     name: name,
-    ns: new_namespace(VM.app.ns),
+    ns: new_namespace(App.ns),
   )
   result.ns.module = result
 
@@ -1107,7 +1375,9 @@ proc member_names*(self: Namespace): Value =
   for k, _ in self.members:
     result.vec.add(k)
 
-proc on_member_missing*(frame: Frame, self: Value, args: Value): Value =
+# proc on_member_missing*(frame: Frame, self: Value, args: Value): Value =
+proc on_member_missing*(vm_data: VirtualMachineData, args: Value): Value =
+  let self = args.gene_type
   case self.kind
   of VkNamespace:
     self.ns.on_member_missing.add(args.gene_children[0])
@@ -1238,50 +1508,50 @@ proc `[]=`*(self: var Scope, key: string, val: Value) {.inline.} =
   else:
     not_allowed()
 
-#################### Frame #######################
+# #################### Frame #######################
 
-proc new_frame*(): Frame = Frame(
-  self: Value(kind: VkNil),
-)
+# proc new_frame*(): Frame = Frame(
+#   self: Value(kind: VkNil),
+# )
 
-proc new_frame*(kind: FrameKind): Frame = Frame(
-  self: Value(kind: VkNil),
-  kind: kind,
-)
+# proc new_frame*(kind: FrameKind): Frame = Frame(
+#   self: Value(kind: VkNil),
+#   kind: kind,
+# )
 
-proc reset*(self: var Frame) {.inline.} =
-  self.self = nil
-  self.ns = nil
-  self.scope = nil
+# proc reset*(self: var Frame) {.inline.} =
+#   self.self = nil
+#   self.ns = nil
+#   self.scope = nil
 
-proc `[]`*(self: Frame, name: string): Value {.inline.} =
-  result = self.scope[name]
-  if result == nil:
-    return self.ns[name]
+# proc `[]`*(self: Frame, name: string): Value {.inline.} =
+#   result = self.scope[name]
+#   if result == nil:
+#     return self.ns[name]
 
-proc `[]`*(self: Frame, name: Value): Value {.inline.} =
-  case name.kind:
-  of VkSymbol:
-    result = self[name.str]
-  # of VkComplexSymbol:
-  #   var csymbol = name.csymbol
-  #   if csymbol[0] == "global":
-  #     # result = VM.app.ns
-  #     todo()
-  #   elif csymbol[0] == "gene":
-  #     result = VM.gene_ns
-  #   elif csymbol[0] == "genex":
-  #     result = VM.genex_ns
-  #   elif csymbol[0] == "":
-  #     # result = self.ns
-  #     todo()
-  #   else:
-  #     result = self[csymbol[0]]
-  #   for csymbol in csymbol[1..^1]:
-  #     # result = result.get_member(csymbol)
-  #     todo()
-  else:
-    todo()
+# proc `[]`*(self: Frame, name: Value): Value {.inline.} =
+#   case name.kind:
+#   of VkSymbol:
+#     result = self[name.str]
+#   # of VkComplexSymbol:
+#   #   var csymbol = name.csymbol
+#   #   if csymbol[0] == "global":
+#   #     # result = VM.app.ns
+#   #     todo()
+#   #   elif csymbol[0] == "gene":
+#   #     result = VM.gene_ns
+#   #   elif csymbol[0] == "genex":
+#   #     result = VM.genex_ns
+#   #   elif csymbol[0] == "":
+#   #     # result = self.ns
+#   #     todo()
+#   #   else:
+#   #     result = self[csymbol[0]]
+#   #   for csymbol in csymbol[1..^1]:
+#   #     # result = result.get_member(csymbol)
+#   #     todo()
+#   else:
+#     todo()
 
 #################### Function ####################
 
@@ -1328,8 +1598,8 @@ proc new_class*(name: string, parent: Class): Class =
 
 proc new_class*(name: string): Class =
   var parent: Class
-  if VM.object_class != nil:
-    parent = VM.object_class.class
+  # if VM.object_class != nil:
+  #   parent = VM.object_class.class
   new_class(name, parent)
 
 proc get_constructor*(self: Class): Value =
@@ -1362,27 +1632,27 @@ proc get_super_method*(self: Class, name: string): Method =
 proc get_class*(val: Value): Class =
   case val.kind:
   of VkApplication:
-    return VM.application_class.class
+    return App.app.application_class.class
   of VkPackage:
-    return VM.package_class.class
+    return App.app.package_class.class
   of VkInstance:
     return val.instance_class
   of VkCast:
     return val.cast_class
   of VkClass:
-    return VM.class_class.class
+    return App.app.class_class.class
   of VkMixin:
-    return VM.mixin_class.class
+    return App.app.mixin_class.class
   of VkNamespace:
-    return VM.namespace_class.class
+    return App.app.namespace_class.class
   of VkFuture:
-    return VM.future_class.class
+    return App.app.future_class.class
   of VkThread:
-    return VM.thread_class.class
+    return App.app.thread_class.class
   of VkThreadMessage:
-    return VM.thread_message_class.class
+    return App.app.thread_message_class.class
   of VkNativeFile:
-    return VM.file_class.class
+    return App.app.file_class.class
   of VkException:
     var ex = val.exception
     if ex is ref Exception:
@@ -1390,53 +1660,53 @@ proc get_class*(val: Value): Class =
       if ex.instance != nil:
         return ex.instance.instance_class
       else:
-        return VM.exception_class.class
+        return App.app.exception_class.class
     else:
-      return VM.exception_class.class
+      return App.app.exception_class.class
   of VkNil:
-    return VM.nil_class.class
+    return App.app.nil_class.class
   of VkBool:
-    return VM.bool_class.class
+    return App.app.bool_class.class
   of VkInt:
-    return VM.int_class.class
+    return App.app.int_class.class
   of VkChar:
-    return VM.char_class.class
+    return App.app.char_class.class
   of VkString:
-    return VM.string_class.class
+    return App.app.string_class.class
   of VkSymbol:
-    return VM.symbol_class.class
+    return App.app.symbol_class.class
   of VkComplexSymbol:
-    return VM.complex_symbol_class.class
+    return App.app.complex_symbol_class.class
   of VkVector:
-    return VM.array_class.class
+    return App.app.array_class.class
   of VkMap:
-    return VM.map_class.class
+    return App.app.map_class.class
   of VkSet:
-    return VM.set_class.class
+    return App.app.set_class.class
   of VkGene:
-    return VM.gene_class.class
+    return App.app.gene_class.class
   of VkRegex:
-    return VM.regex_class.class
+    return App.app.regex_class.class
   of VkRange:
-    return VM.range_class.class
+    return App.app.range_class.class
   of VkDate:
-    return VM.date_class.class
+    return App.app.date_class.class
   of VkDateTime:
-    return VM.datetime_class.class
+    return App.app.datetime_class.class
   of VkTime:
-    return VM.time_class.class
+    return App.app.time_class.class
   of VkFunction:
-    return VM.function_class.class
+    return App.app.function_class.class
   of VkTimezone:
-    return VM.timezone_class.class
+    return App.app.timezone_class.class
   of VkAny:
     if val.any_class == nil:
-      return VM.object_class.class
+      return App.app.object_class.class
     else:
       return val.any_class
   of VkCustom:
     if val.custom_class == nil:
-      return VM.object_class.class
+      return App.app.object_class.class
     else:
       return val.custom_class
   else:
@@ -1452,25 +1722,25 @@ proc is_a*(self: Value, class: Class): bool =
     else:
       my_class = my_class.parent
 
-proc def_native_method*(self: Value, name: string, m: NativeMethod) =
+proc def_native_method*(self: Value, name: string, f: NativeFn) =
   self.class.methods[name] = Method(
     class: self.class,
     name: name,
-    callable: Value(kind: VkNativeMethod, native_method: m),
+    callable: Value(kind: VkNativeFn, native_fn: f),
   )
 
-proc def_native_method*(self: Value, name: string, m: NativeMethod2) =
+proc def_native_method*(self: Value, name: string, f: NativeFn2) =
   self.class.methods[name] = Method(
     class: self.class,
     name: name,
-    callable: Value(kind: VkNativeMethod2, native_method2: m),
+    callable: Value(kind: VkNativeFn2, native_fn2: f),
   )
 
-proc def_native_macro_method*(self: Value, name: string, m: NativeMethod) =
+proc def_native_macro_method*(self: Value, name: string, f: NativeFn) =
   self.class.methods[name] = Method(
     class: self.class,
     name: name,
-    callable: Value(kind: VkNativeMethod, native_method: m),
+    callable: Value(kind: VkNativeFn, native_fn: f),
     is_macro: true,
   )
 
@@ -1736,11 +2006,11 @@ proc new_gene_explode*(v: Value): Value =
     explode: v,
   )
 
-proc new_gene_native_method*(meth: NativeMethod): Value =
-  return Value(
-    kind: VkNativeMethod,
-    native_method: meth,
-  )
+# proc new_gene_native_method*(meth: NativeMethod): Value =
+#   return Value(
+#     kind: VkNativeMethod,
+#     native_method: meth,
+#   )
 
 proc new_gene_native_fn*(fn: NativeFn): Value =
   return Value(
@@ -1762,17 +2032,17 @@ proc new_gene_exception*(instance: Value): ref Exception =
 proc new_gene_exception*(): ref Exception =
   return new_gene_exception(DEFAULT_ERROR_MESSAGE, nil)
 
-proc new_gene_processor*(name: string, translator: Translator): Value =
-  return Value(
-    kind: VkGeneProcessor,
-    gene_processor: GeneProcessor(name: name, translator: translator),
-  )
+# proc new_gene_processor*(name: string, translator: Translator): Value =
+#   return Value(
+#     kind: VkGeneProcessor,
+#     gene_processor: GeneProcessor(name: name, translator: translator),
+#   )
 
-proc new_gene_processor*(translator: Translator): Value =
-  return Value(
-    kind: VkGeneProcessor,
-    gene_processor: GeneProcessor(translator: translator),
-  )
+# proc new_gene_processor*(translator: Translator): Value =
+#   return Value(
+#     kind: VkGeneProcessor,
+#     gene_processor: GeneProcessor(translator: translator),
+#   )
 
 proc new_gene_class*(name: string): Value =
   return Value(
@@ -1985,10 +2255,11 @@ proc is_literal*(self: Value): bool =
 
 proc `$`*(self: Class): string {.noSideEffect.} =
   {.cast(noSideEffect).}:
-    if self.parent.is_nil or self.parent == VM.object_class.class:
-      result = "(class $#)" % [self.name]
-    else:
-      result = "(class $# < $#)" % [self.name, self.parent.name]
+    # if self.parent.is_nil or self.parent == VM.object_class.class:
+    #   result = "(class $#)" % [self.name]
+    # else:
+    #   result = "(class $# < $#)" % [self.name, self.parent.name]
+    result = "(class $# < $#)" % [self.name, self.parent.name]
 
 proc `$`*(node: Value): string {.noSideEffect.} =
   if node.is_nil:
@@ -2014,8 +2285,8 @@ proc `$`*(node: Value): string {.noSideEffect.} =
     result = node.date.format("yyyy-MM-dd")
   of VkDateTime:
     result = node.date.format("yyyy-MM-dd HH:mm:ss'.'fffzzz")
-  of VkTime:
-    result = &"{node.time.hour:02}:{node.time.minute:02}:{node.time.second:02}"
+  # of VkTime:
+  #   result = &"{node.time.hour:02}:{node.time.minute:02}:{node.time.second:02}"
   of VkVector:
     result = "["
     result &= node.vec.join(" ")
@@ -2058,20 +2329,22 @@ proc `$`*(node: Value): string {.noSideEffect.} =
   of VkNamespace:
     result = "(ns $#)" % [node.ns.name]
   of VkClass:
-    result = $node.class
+    result = "(class)"
+    # result = $node.class
   of VkInstance:
-    result = "($# " % [$node.instance_class]
-    var is_first = true
-    for k, v in node.instance_props:
-      if is_first:
-        is_first = false
-      else:
-        result &= " "
-      result &= "^"
-      result &= k
-      result &= " "
-      result &= $v
-    result &= ")"
+    result = "(instance)"
+    # result = "($# " % [$node.instance_class]
+    # var is_first = true
+    # for k, v in node.instance_props:
+    #   if is_first:
+    #     is_first = false
+    #   else:
+    #     result &= " "
+    #   result &= "^"
+    #   result &= k
+    #   result &= " "
+    #   result &= $v
+    # result &= ")"
   of VkQuote:
     result = ":" & $node.quote
   of VkUnquote:
@@ -2234,7 +2507,8 @@ proc new_matcher*(root: RootMatcher, kind: MatcherKind): Matcher =
   )
 
 proc required*(self: Matcher): bool =
-  return self.default_value_expr == nil and not self.is_splat
+  # return self.default_value_expr == nil and not self.is_splat
+  return not self.is_splat
 
 proc hint*(self: RootMatcher): MatchingHint =
   if self.children.len == 0:
@@ -2262,24 +2536,24 @@ proc prop_splat*(self: seq[Matcher]): string =
     if m.kind == MatchProp and m.is_splat:
       return m.name
 
-##################################################
+# ##################################################
 
-proc eval_wrap*(e: Evaluator): Evaluator =
-  return proc(frame: Frame, expr: var Expr): Value =
-    result = e(frame, expr)
-    if result != nil and result.kind == VkException:
-      raise result.exception
+# proc eval_wrap*(e: Evaluator): Evaluator =
+#   return proc(frame: Frame, expr: var Expr): Value =
+#     result = e(frame, expr)
+#     if result != nil and result.kind == VkException:
+#       raise result.exception
 
-# proc(){.nimcall.} can not access local variables
-# Workaround: create a new type like RemoteFn that does not use nimcall
-proc fn_wrap*(f: NativeFn): NativeFn2 =
-  return proc(frame: Frame, args: Value): Value {.gcsafe.} =
-    result = f(frame, args)
-    if result != nil and result.kind == VkException:
-      raise result.exception
+# # proc(){.nimcall.} can not access local variables
+# # Workaround: create a new type like RemoteFn that does not use nimcall
+# proc fn_wrap*(f: NativeFn): NativeFn2 =
+#   return proc(frame: Frame, args: Value): Value {.gcsafe.} =
+#     result = f(frame, args)
+#     if result != nil and result.kind == VkException:
+#       raise result.exception
 
-proc method_wrap*(m: NativeMethod): NativeMethod2 =
-  return proc(frame: Frame, self, args: Value): Value =
-    result = m(frame, self, args)
-    if result != nil and result.kind == VkException:
-      raise result.exception
+# proc method_wrap*(m: NativeMethod): NativeMethod2 =
+#   return proc(frame: Frame, self, args: Value): Value =
+#     result = m(frame, self, args)
+#     if result != nil and result.kind == VkException:
+#       raise result.exception
