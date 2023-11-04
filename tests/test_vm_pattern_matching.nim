@@ -59,3 +59,10 @@ test_vm """
   )
   (f 1 2)
 """, 3
+
+test_vm_error """
+  (fn f [a = 1 b]
+    (a + b)
+  )
+  (f 2)
+"""

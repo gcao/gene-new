@@ -386,7 +386,7 @@ proc exec*(self: var VirtualMachine): Value =
 
       of IkJumpIfMatchSuccess:
         let mr = self.data.registers.match_result
-        if mr.fields.has_key(inst.arg0.str) and mr.fields[inst.arg0.str].kind == MfSuccess:
+        if mr.fields[inst.arg0.str].kind == MfSuccess:
           self.data.pc = self.data.cur_block.find_label(inst.arg1.cu_id) + 1
           continue
 

@@ -985,6 +985,8 @@ type
 
     IkCompileInit
 
+    IkThrow
+
     # IkApplication
     # IkPackage
     # IkModule

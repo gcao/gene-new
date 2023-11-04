@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceRoot}/bin/test_wip",
             "args": [],
-            "preLaunchTask": "nimbuild - test_wip",
+            // "preLaunchTask": "nimbuild - test_wip",
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
             "environment": [],

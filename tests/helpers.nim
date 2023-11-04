@@ -236,3 +236,13 @@ proc test_vm*(code: string, callback: proc(result: Value)) =
   test "Compilation & VM: " & code:
     init_all()
     callback VM.exec(code, "test_code")
+
+proc test_vm_error*(code: string) =
+  var code = cleanup(code)
+  test "Compilation & VM: " & code:
+    init_all()
+    try:
+      discard VM.exec(code, "test_code")
+      fail()
+    except:
+      discard

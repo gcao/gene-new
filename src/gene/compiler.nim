@@ -17,6 +17,8 @@ proc `$`*(self: Instruction): string =
       IkSetChild, IkGetChild,
       IkInternal:
       ($self.kind)[2..^1] & " " & $self.arg0
+    of IkJumpIfMatchSuccess:
+      ($self.kind)[2..^1] & " " & $self.arg0 & " " & $self.arg1
     else:
       ($self.kind)[2..^1]
 
@@ -496,8 +498,7 @@ proc compile*(f: var Function) =
       self.output.instructions.add(Instruction(kind: IkVar, arg0: m.name))
       self.output.instructions.add(Instruction(kind: IkPop))
     else:
-      discard
-      # TODO: generate ArgumentMissingError
+      self.output.instructions.add(Instruction(kind: IkThrow))
     self.output.instructions.add(Instruction(kind: IkNoop, label: label))
 
   self.compile(f.body)
