@@ -1,6 +1,5 @@
 import os, random, strutils, tables, unicode, hashes, sets, times, oids, strformat, pathnorm
-import bitops
-import nre, re
+import nre
 import std/json
 import asyncdispatch
 import dynlib
@@ -30,7 +29,6 @@ type
     # VkAny can be used to represent anything
     # VkCustom can be used to represent any value that inherits from CustomValue
     VkAny
-    VkPointer
     VkCustom
     VkBool
     VkInt
@@ -103,15 +101,11 @@ type
     VkCuId
     VkCompilationUnit
 
-  BasicValue* = distinct int64
-
   Value* {.acyclic.} = ref object
     case kind*: ValueKind
     of VkAny:
       any*: pointer
       any_class*: Class
-    of VkPointer:
-      pntr*: pointer
     of VkCustom:
       custom*: CustomValue
       custom_class*: Class
@@ -144,7 +138,7 @@ type
     of VkComplexSymbol:
       csymbol*: seq[string]
     of VkRegex:
-      regex*: nre.Regex
+      regex*: Regex
       regex_pattern*: string
       regex_flags: set[RegexFlag]
     of VkRegexMatch:
@@ -1144,88 +1138,6 @@ proc new_class*(name: string, parent: Class): Class {.gcsafe.}
 proc new_match_matcher*(): RootMatcher {.gcsafe.}
 proc new_arg_matcher*(): RootMatcher {.gcsafe.}
 proc hint*(self: RootMatcher): MatchingHint {.gcsafe.}
-proc todo*()
-
-##################################################
-
-# const NAN_MASK = 0x7FFA000000000000
-const I64_MASK = 0xC000000000000000
-const F64_ZERO = 0x2000000000000000
-
-const NIL_MASK = 0x7FFA
-const NIL* = cast[BasicValue](0x7FFAA00000000000)
-
-const BOOL_MASK = 0x7FFC
-const TRUE* = cast[BasicValue](0x7FFCA00000000000)
-const FALSE* = cast[BasicValue](0x7FFC000000000000)
-
-const POINTER_MASK = 0x7FFB
-
-# proc is_i64*(v: BasicValue): bool {.inline.} =
-#   bitor(cast[int64](v).shl(1), 0x3FFFFFFFFFFFFFFF) == 0x3FFFFFFFFFFFFFFF
-
-# proc is_f64*(v: BasicValue): bool {.inline.} =
-#   bitor(cast[int64](v).shl(1), 0x3FFFFFFFFFFFFFFF) != 0x3FFFFFFFFFFFFFFF
-
-# proc to_int*(v: BasicValue): int64 {.inline.} = cast[int64](v)
-# proc to_value*(v: int64): BasicValue {.inline.} = cast[BasicValue](v)
-
-proc to_binstr*(v: int): string =
-  re.replacef(fmt"{v:064b}", re.re"([01]{8})", "$1 ")
-
-proc `==`*(a, b: BasicValue): bool {.inline.} =
-  cast[int64](a) == cast[int64](b)
-
-proc kind*(v: BasicValue): ValueKind {.inline.} =
-  let v = cast[int64](v)
-  case v.shr(48):
-    of NIL_MASK:
-      return VkNil
-    of BOOL_MASK:
-      return VkBool
-    of POINTER_MASK:
-      return VkPointer
-    else:
-      if bitand(v, I64_MASK) == 0:
-        return VkInt
-      else:
-        return VkFloat
-
-proc to_float*(v: BasicValue): float64 {.inline.} =
-  if cast[int64](v) == F64_ZERO:
-    return 0.0
-  else:
-    return cast[float64](v)
-
-proc to_value*(v: float64): BasicValue {.inline.} =
-  if v == 0.0:
-    return cast[BasicValue](F64_ZERO)
-  else:
-    return cast[BasicValue](v)
-
-proc to_bool*(v: BasicValue): bool {.inline.} =
-  if v == TRUE:
-    return true
-  let v = cast[int64](v)
-  case v.shr(48):
-    of NIL_MASK:
-      return false
-    of BOOL_MASK:
-      return false
-    else:
-      return false
-
-proc to_value*(v: bool): BasicValue {.inline.} =
-  if v:
-    return TRUE
-  else:
-    return FALSE
-
-proc to_pointer*(v: BasicValue): pointer {.inline.} =
-  cast[pointer](bitand(cast[int64](v), 0x0000FFFFFFFFFFFF))
-
-proc to_value*(v: pointer): BasicValue {.inline.} =
-  cast[BasicValue](bitor(cast[int64](v), 0x7FFB000000000000))
 
 ##################################################
 
@@ -1971,7 +1883,7 @@ proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
   s &= regex
   return Value(
     kind: VkRegex,
-    regex: nre.re(s),
+    regex: re(s),
     regex_pattern: regex,
     regex_flags: flags,
   )
@@ -1979,7 +1891,7 @@ proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
 proc new_gene_regex*(regex: string): Value =
   return Value(
     kind: VkRegex,
-    regex: nre.re(regex),
+    regex: re(regex),
     regex_pattern: regex,
   )
 
