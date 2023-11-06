@@ -1,10 +1,19 @@
 import unittest
+import bitops
 
 import gene/types
 
 test "Value kind":
-  check 0.kind == VkInt
-  check NIL.kind == VKNil
+  check 0.BasicValue.kind == VkInt
+  check NIL.kind == VkNil
+  check TRUE.kind == VkBool
+  check FALSE.kind == VkBool
+  var a = 1
+  check a.addr.to_value().kind == VkPointer
 
 test "Value conversion":
   check 0x20.shl(56).BasicValue.to_float() == 0.0
+  check 1.1.to_value().to_float() == 1.1
+  check 0.BasicValue.to_bool() == false
+  var a = 1
+  check cast[ptr int](a.addr.to_value().to_pointer())[] == 1
