@@ -1,5 +1,6 @@
 import os, random, strutils, tables, unicode, hashes, sets, times, oids, strformat, pathnorm
-import nre
+import bitops
+import nre, re
 import std/json
 import asyncdispatch
 import dynlib
@@ -101,6 +102,8 @@ type
     VkCuId
     VkCompilationUnit
 
+  BasicValue* = distinct int64
+
   Value* {.acyclic.} = ref object
     case kind*: ValueKind
     of VkAny:
@@ -138,7 +141,7 @@ type
     of VkComplexSymbol:
       csymbol*: seq[string]
     of VkRegex:
-      regex*: Regex
+      regex*: nre.Regex
       regex_pattern*: string
       regex_flags: set[RegexFlag]
     of VkRegexMatch:
@@ -1141,6 +1144,53 @@ proc hint*(self: RootMatcher): MatchingHint {.gcsafe.}
 
 ##################################################
 
+# const NAN_MASK = 0x7FFA000000000000
+const I64_MASK = 0xC000000000000000
+const F64_ZERO = 0x2000000000000000
+
+const NIL_MASK = 0x7FFA
+const NIL* = 0x7FFAA00000000000
+
+const BOOL_MASK = 0x7FFC
+const TRUE* = 0x7FFCA00000000000
+const FALSE* = 0x7FFC000000000000
+
+# proc is_i64*(v: BasicValue): bool {.inline.} =
+#   bitor(cast[int64](v).shl(1), 0x3FFFFFFFFFFFFFFF) == 0x3FFFFFFFFFFFFFFF
+
+# proc is_f64*(v: BasicValue): bool {.inline.} =
+#   bitor(cast[int64](v).shl(1), 0x3FFFFFFFFFFFFFFF) != 0x3FFFFFFFFFFFFFFF
+
+proc to_value*(v: BasicValue): int64 {.inline.} = cast[int64](v)
+proc to_value*(v: int64): BasicValue {.inline.} = cast[BasicValue](v)
+
+proc to_binstr*(v: int): string =
+  re.replacef(fmt"{v:064b}", re.re"([01]{8})", "$1 ")
+
+proc kind*(v: int): ValueKind {.inline.} =
+  case v.shr(48):
+    of NIL_MASK:
+      return VkNil
+    of BOOL_MASK:
+      return VkBool
+    else:
+      if bitand(v, I64_MASK) == 0:
+        return VkInt
+      else:
+        return VkFloat
+
+proc to_float*(v: BasicValue): float64 {.inline.} =
+  if cast[int64](v) == F64_ZERO:
+    return 0.0
+  else:
+    return v.float64
+
+proc to_value*(v: float64): BasicValue {.inline.} =
+  if v == 0.0:
+    return cast[BasicValue](F64_ZERO)
+  else:
+    return cast[BasicValue](v)
+
 proc todo*() =
   raise new_exception(Exception, "TODO")
 
@@ -1883,7 +1933,7 @@ proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
   s &= regex
   return Value(
     kind: VkRegex,
-    regex: re(s),
+    regex: nre.re(s),
     regex_pattern: regex,
     regex_flags: flags,
   )
@@ -1891,7 +1941,7 @@ proc new_gene_regex*(regex: string, flags: set[RegexFlag]): Value =
 proc new_gene_regex*(regex: string): Value =
   return Value(
     kind: VkRegex,
-    regex: re(regex),
+    regex: nre.re(regex),
     regex_pattern: regex,
   )
 
