@@ -1,4 +1,4 @@
-import re, bitops, strformat
+import re, bitops, unicode, strformat
 
 type
   ValueKind* = enum
@@ -14,7 +14,8 @@ type
     VkInt
     VkFloat
     VkChar
-    VkRune  # Unicode code point = u32
+    VkString
+    # VkRune  # Unicode code point = u32
 
   Value* = distinct int64
 
@@ -38,6 +39,14 @@ const PLACEHOLDER* = cast[Value](0x7FFE_0100_0000_0000u64)
 
 const CHAR_PREFIX = 0xFFFE
 const CHAR_MASK = 0xFFFE_0000_0000_0000u64
+# const RUNE_PREFIX = 0xFFFF
+# const RUNE_MASK = 0xFFFF_0000_0000_0000u64
+
+const EMPTY_STRING = 0x7FFA_0000_0000_0000u64
+const STRING_PREFIX  = 0xFFFA
+const STRING6_PREFIX = 0xFFFB
+const STRING_MASK = 0xFFFA_0000_0000_0000u64
+const STRING6_MASK = 0x7FFB_0000_0000_0000u64
 
 proc todo*() =
   raise new_exception(Exception, "TODO")
@@ -59,6 +68,8 @@ proc kind*(v: Value): ValueKind {.inline.} =
       return VkPointer
     of CHAR_PREFIX:
       return VkChar
+    of STRING_PREFIX, STRING6_PREFIX:
+      return VkString
     of OTHER_PREFIX:
       let other_info = cast[Value](bitand(v1, OTHER_MASK))
       case other_info:
@@ -115,3 +126,34 @@ proc to_char*(v: Value): char {.inline.} =
 
 proc to_value*(v: char): Value {.inline.} =
   cast[Value](bitor(CHAR_MASK, v.ord.uint64))
+
+# proc to_rune*(v: Value): Rune {.inline.} =
+#   todo()
+
+# proc to_value*(v: Rune): Value {.inline.} =
+#   cast[Value](bitor(RUNE_MASK, v.ord.uint64))
+
+proc to_value*(v: string): Value {.inline.} =
+  case v.len:
+    of 0:
+      return cast[Value](EMPTY_STRING)
+    of 1:
+      return cast[Value](bitor(STRING_MASK, 1.shl(40).uint64,
+        v[0].ord.uint64))
+    of 2:
+      return cast[Value](bitor(STRING_MASK, 2.shl(40).uint64,
+        v[0].ord.shl(8).uint64, v[1].ord.uint64))
+    of 3:
+      return cast[Value](bitor(STRING_MASK, 3.shl(40).uint64,
+        v[0].ord.shl(16).uint64, v[1].ord.shl(8).uint64, v[2].ord.uint64))
+    of 4:
+      return cast[Value](bitor(STRING_MASK, 4.shl(40).uint64,
+        v[0].ord.shl(24).uint64, v[1].ord.shl(16).uint64, v[2].ord.shl(8).uint64, v[3].ord.uint64))
+    of 5:
+      return cast[Value](bitor(STRING_MASK, 5.shl(40).uint64,
+        v[0].ord.shl(32).uint64, v[1].ord.shl(24).uint64, v[2].ord.shl(16).uint64, v[3].ord.shl(8).uint64, v[4].ord.uint64))
+    of 6:
+      return cast[Value](bitor(STRING6_MASK,
+        v[0].ord.shl(40).uint64, v[1].ord.shl(32).uint64, v[2].ord.shl(24).uint64, v[3].ord.shl(16).uint64, v[4].ord.shl(8).uint64, v[5].ord.uint64))
+    else:
+      todo()
