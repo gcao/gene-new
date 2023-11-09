@@ -1,4 +1,4 @@
-import re, bitops, unicode, strformat
+import tables, re, bitops, unicode, strformat
 
 type
   ValueKind* = enum
@@ -17,7 +17,36 @@ type
     VkString
     # VkRune  # Unicode code point = u32
 
+    VkMap
+
   Value* = distinct int64
+
+  Reference* = ref object
+    case kind*: ValueKind
+      of VkString:
+        str*: string
+      of VkMap:
+        map*: Table[string, Value]
+      else:
+        discard
+
+  # Design an efficient thread-local data structure to store all strings,
+  # sequences, maps, references, and other objects that are not primitive
+
+  # free(i) => available.push(i), data[i] = nil
+  # get() => if available.empty() then data.push(nil) else available.pop()
+  ManagedStrings = object
+    data: seq[string]
+    free: seq[int]
+
+  # No symbols should be removed.
+  ManagedSymbols = object
+    data:  Table[string, int]
+    data2: Table[int, string]
+
+  ManagedReferences = object
+    data: seq[Reference]
+    free: seq[int]
 
 const I64_MASK = 0xC000_0000_0000_0000u64
 const F64_ZERO = 0x2000_0000_0000_0000u64
@@ -48,8 +77,41 @@ const STRING6_PREFIX = 0xFFFB
 const STRING_MASK = 0xFFFA_0000_0000_0000u64
 const STRING6_MASK = 0x7FFB_0000_0000_0000u64
 
+# TODO: these should be thread-local
+var STRINGS*: ManagedStrings = ManagedStrings()
+var SYMBOLS*: ManagedSymbols = ManagedSymbols()
+var REFS*: ManagedReferences = ManagedReferences()
+
 proc todo*() =
   raise new_exception(Exception, "TODO")
+
+proc new_ref*(v: Reference): int =
+  if REFS.free.len == 0:
+    REFS.data.add(v)
+    return REFS.data.len - 1
+  else:
+    let i = REFS.free.pop()
+    REFS.data[i] = v
+    return i
+
+proc free_ref*(i: int) =
+  REFS.data[i] = nil
+  REFS.free.add(i)
+
+proc new_str*(s: string): int =
+  new_ref(Reference(kind: VkString, str: s))
+  # if STRINGS.free.len == 0:
+  #   STRINGS.data.add(s)
+  #   return STRINGS.data.len - 1
+  # else:
+  #   let i = STRINGS.free.pop()
+  #   STRINGS.data[i] = s
+  #   return i
+
+proc free_str*(i: int) =
+  free_ref(i)
+  # STRINGS.data[i] = ""
+  # STRINGS.free.add(i)
 
 proc to_binstr*(v: int64): string =
   re.replacef(fmt"{v: 065b}", re.re"([01]{8})", "$1 ")
@@ -156,4 +218,5 @@ proc to_value*(v: string): Value {.inline.} =
       return cast[Value](bitor(STRING6_MASK,
         v[0].ord.shl(40).uint64, v[1].ord.shl(32).uint64, v[2].ord.shl(24).uint64, v[3].ord.shl(16).uint64, v[4].ord.shl(8).uint64, v[5].ord.uint64))
     else:
-      todo()
+      let i = new_str(v).uint64
+      return cast[Value](bitor(STRING_MASK, i))

@@ -19,7 +19,7 @@ test "Value kind":
   check 'a'.to_value().kind == VkChar
 
   check "abc".to_value().kind == VkString
-  # check "abcdefghij".to_value().kind == VkString
+  check "abcdefghij".to_value().kind == VkString
 
 test "Value conversion":
   check nil.to_value().is_nil() == true
