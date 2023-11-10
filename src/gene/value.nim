@@ -65,7 +65,7 @@ const POINTER_PREFIX = 0x7FFB
 
 const REF_PREFIX = 0x7FFD
 const REF_MASK = 0x7FFD_0000_0000_0000u64
-const REF_AND_MASK = 0x0000_1111_1111_1111u64
+const REF_AND_MASK = 0x0000_FFFF_FFFF_FFFFu64
 
 const OTHER_PREFIX = 0x7FFE
 const OTHER_MASK = 0x7FFE_FF00_0000_0000u64
@@ -89,17 +89,21 @@ var STRINGS*: ManagedStrings = ManagedStrings()
 var SYMBOLS*: ManagedSymbols = ManagedSymbols()
 var REFS*: ManagedReferences = ManagedReferences()
 
+proc `$`*(self: Value): string
+proc `$`*(self: Reference): string
+proc to_ref*(v: Value): Reference
+
 proc todo*() =
   raise new_exception(Exception, "TODO")
 
-proc new_ref*(v: Reference): int =
+proc add_ref*(v: Reference): int =
   if REFS.free.len == 0:
+    result = REFS.data.len
     REFS.data.add(v)
-    return REFS.data.len - 1
   else:
-    let i = REFS.free.pop()
-    REFS.data[i] = v
-    return i
+    result = REFS.free.pop()
+    REFS.data[result] = v
+  # echo REFS.data, " ", result
 
 proc get_ref*(i: int): Reference =
   REFS.data[i]
@@ -109,7 +113,7 @@ proc free_ref*(i: int) =
   REFS.free.add(i)
 
 proc new_str*(s: string): int =
-  new_ref(Reference(kind: VkString, str: s))
+  add_ref(Reference(kind: VkString, str: s))
   # if STRINGS.free.len == 0:
   #   STRINGS.data.add(s)
   #   return STRINGS.data.len - 1
@@ -161,6 +165,16 @@ proc kind*(v: Value): ValueKind {.inline.} =
         return VkInt
       else:
         return VkFloat
+
+proc `$`*(self: Value): string =
+  case self.kind:
+    of VkString:
+      $self.to_ref.str
+    else:
+      $self.kind
+
+proc `$`*(self: Reference): string =
+  $self.kind
 
 proc is_nil*(v: Value): bool {.inline.} =
   v == NIL
@@ -237,7 +251,12 @@ proc to_value*(v: string): Value {.inline.} =
       return cast[Value](bitor(STRING_MASK, i))
 
 proc new_array*(v: varargs[Value]): Value =
-  cast[Value](bitor(REF_MASK, new_ref(Reference(kind: VkArray, arr: @v)).uint64))
+  let i = add_ref(Reference(kind: VkArray, arr: @v)).uint64
+  cast[Value](bitor(REF_MASK, i))
 
-proc new_map*(v: Table[string, Value]): Value =
-  cast[Value](bitor(REF_MASK, new_ref(Reference(kind: VkMap, map: v)).uint64))
+proc to_ref*(v: Value): Reference =
+  get_ref(cast[int](bitand(REF_AND_MASK, v.uint64)))
+
+proc new_map*(): Value =
+  let i = add_ref(Reference(kind: VkMap)).uint64
+  cast[Value](bitor(REF_MASK, i))

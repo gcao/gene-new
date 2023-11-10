@@ -21,7 +21,7 @@ test "Value kind":
   check "abc".to_value().kind == VkString
   check "abcdefghij".to_value().kind == VkString
   check new_array().kind == VkArray
-  # check new_map(Table[string, Value]()).kind == VkMap
+  check new_map().kind == VkMap
 
 test "Value conversion":
   check nil.to_value().is_nil() == true
