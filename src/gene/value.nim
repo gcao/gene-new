@@ -6,8 +6,8 @@ type
     #   void has special meaning in some places (e.g. templates)
     #   nil is the default/uninitialized value.
     #   placeholder can be interpreted any way we want
+    VkNil = 0
     VkVoid
-    VkNil
     VkPlaceholder
     VkPointer
     VkBool
@@ -17,6 +17,7 @@ type
     VkString
     # VkRune  # Unicode code point = u32
 
+    VkArray
     VkMap
 
   Value* = distinct int64
@@ -25,6 +26,8 @@ type
     case kind*: ValueKind
       of VkString:
         str*: string
+      of VkArray:
+        arr*: seq[Value]
       of VkMap:
         map*: Table[string, Value]
       else:
@@ -60,6 +63,10 @@ const FALSE* = cast[Value](0x7FFC_0000_0000_0000u64)
 
 const POINTER_PREFIX = 0x7FFB
 
+const REF_PREFIX = 0x7FFD
+const REF_MASK = 0x7FFD_0000_0000_0000u64
+const REF_AND_MASK = 0x0000_1111_1111_1111u64
+
 const OTHER_PREFIX = 0x7FFE
 const OTHER_MASK = 0x7FFE_FF00_0000_0000u64
 
@@ -93,6 +100,9 @@ proc new_ref*(v: Reference): int =
     let i = REFS.free.pop()
     REFS.data[i] = v
     return i
+
+proc get_ref*(i: int): Reference =
+  REFS.data[i]
 
 proc free_ref*(i: int) =
   REFS.data[i] = nil
@@ -128,6 +138,11 @@ proc kind*(v: Value): ValueKind {.inline.} =
       return VkBool
     of POINTER_PREFIX:
       return VkPointer
+    of REF_PREFIX:
+      # It may not be a bad idea to store the reference kind in the value itself.
+      # However we may later support changing reference in place, so it may not be a good idea.
+      let r = get_ref(cast[int](bitand(v1, REF_AND_MASK)))
+      return r.kind
     of CHAR_PREFIX:
       return VkChar
     of STRING_PREFIX, STRING6_PREFIX:
@@ -220,3 +235,9 @@ proc to_value*(v: string): Value {.inline.} =
     else:
       let i = new_str(v).uint64
       return cast[Value](bitor(STRING_MASK, i))
+
+proc new_array*(v: varargs[Value]): Value =
+  cast[Value](bitor(REF_MASK, new_ref(Reference(kind: VkArray, arr: @v)).uint64))
+
+proc new_map*(v: Table[string, Value]): Value =
+  cast[Value](bitor(REF_MASK, new_ref(Reference(kind: VkMap, map: v)).uint64))
