@@ -22,6 +22,7 @@ test "Value kind":
   check "abcdefghij".to_value().kind == VkString
   check new_array().kind == VkArray
   check new_map().kind == VkMap
+  check new_gene().kind == VkGene
 
 test "Value conversion":
   check nil.to_value().is_nil() == true

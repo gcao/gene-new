@@ -19,6 +19,7 @@ type
 
     VkArray
     VkMap
+    VkGene
 
   Value* = distinct int64
 
@@ -33,11 +34,17 @@ type
       else:
         discard
 
+  Gene* = ref object
+    `type`*: Value
+    props*: Table[string, Value]
+    children*: seq[Value]
+
   # Design an efficient thread-local data structure to store all strings,
   # sequences, maps, references, and other objects that are not primitive
 
+  # add(v)  => if available.empty() then data.push(v) else data[available.pop()] = v
   # free(i) => available.push(i), data[i] = nil
-  # get() => if available.empty() then data.push(nil) else available.pop()
+  # get(i)  => data[i]
   ManagedStrings = object
     data: seq[string]
     free: seq[int]
@@ -49,6 +56,10 @@ type
 
   ManagedReferences = object
     data: seq[Reference]
+    free: seq[int]
+
+  ManagedGenes = object
+    data: seq[Gene]
     free: seq[int]
 
 const I64_MASK = 0xC000_0000_0000_0000u64
@@ -66,6 +77,10 @@ const POINTER_PREFIX = 0x7FFB
 const REF_PREFIX = 0x7FFD
 const REF_MASK = 0x7FFD_0000_0000_0000u64
 const REF_AND_MASK = 0x0000_FFFF_FFFF_FFFFu64
+
+const GENE_PREFIX = 0x7FF8
+const GENE_MASK = 0x7FF8_0000_0000_0000u64
+const GENE_AND_MASK = 0x0000_FFFF_FFFF_FFFFu64
 
 const OTHER_PREFIX = 0x7FFE
 const OTHER_MASK = 0x7FFE_FF00_0000_0000u64
@@ -88,6 +103,7 @@ const STRING6_MASK = 0x7FFB_0000_0000_0000u64
 var STRINGS*: ManagedStrings = ManagedStrings()
 var SYMBOLS*: ManagedSymbols = ManagedSymbols()
 var REFS*: ManagedReferences = ManagedReferences()
+var GENES*: ManagedGenes = ManagedGenes()
 
 proc `$`*(self: Value): string
 proc `$`*(self: Reference): string
@@ -111,6 +127,22 @@ proc get_ref*(i: int): Reference =
 proc free_ref*(i: int) =
   REFS.data[i] = nil
   REFS.free.add(i)
+
+proc add_gene*(v: Gene): int =
+  if GENES.free.len == 0:
+    result = GENES.data.len
+    GENES.data.add(v)
+  else:
+    result = GENES.free.pop()
+    GENES.data[result] = v
+  # echo GENES.data, " ", result
+
+proc get_gene*(i: int): Gene =
+  GENES.data[i]
+
+proc free_gene*(i: int) =
+  GENES.data[i] = nil
+  GENES.free.add(i)
 
 proc new_str*(s: string): int =
   add_ref(Reference(kind: VkString, str: s))
@@ -147,6 +179,8 @@ proc kind*(v: Value): ValueKind {.inline.} =
       # However we may later support changing reference in place, so it may not be a good idea.
       let r = get_ref(cast[int](bitand(v1, REF_AND_MASK)))
       return r.kind
+    of GENE_PREFIX:
+      return VkGene
     of CHAR_PREFIX:
       return VkChar
     of STRING_PREFIX, STRING6_PREFIX:
@@ -260,3 +294,7 @@ proc to_ref*(v: Value): Reference =
 proc new_map*(): Value =
   let i = add_ref(Reference(kind: VkMap)).uint64
   cast[Value](bitor(REF_MASK, i))
+
+proc new_gene*(): Value =
+  let i = add_gene(Gene()).uint64
+  cast[Value](bitor(GENE_MASK, i))
