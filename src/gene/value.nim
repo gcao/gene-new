@@ -65,6 +65,8 @@ type
 const I64_MASK = 0xC000_0000_0000_0000u64
 const F64_ZERO = 0x2000_0000_0000_0000u64
 
+const AND_MASK = 0x0000_FFFF_FFFF_FFFFu64
+
 const NIL_PREFIX = 0x7FFA
 const NIL* = cast[Value](0x7FFA_A000_0000_0000u64)
 
@@ -93,11 +95,11 @@ const CHAR_MASK = 0xFFFE_0000_0000_0000u64
 # const RUNE_PREFIX = 0xFFFF
 # const RUNE_MASK = 0xFFFF_0000_0000_0000u64
 
-const EMPTY_STRING = 0x7FFA_0000_0000_0000u64
-const STRING_PREFIX  = 0xFFFA
-const STRING6_PREFIX = 0xFFFB
-const STRING_MASK = 0xFFFA_0000_0000_0000u64
-const STRING6_MASK = 0x7FFB_0000_0000_0000u64
+const EMPTY_STRING = 0xFFFA_0000_0000_0000u64
+const SHORT_STR_PREFIX  = 0xFFFA
+const LONG_STR_PREFIX = 0xFFFB
+const SHORT_STR_MASK = 0xFFFA_0000_0000_0000u64
+const LONG_STR_MASK = 0xFFFB_0000_0000_0000u64
 
 # TODO: these should be thread-local
 var STRINGS*: ManagedStrings = ManagedStrings()
@@ -111,6 +113,12 @@ proc to_ref*(v: Value): Reference
 
 proc todo*() =
   raise new_exception(Exception, "TODO")
+
+proc not_allowed*(message: string) =
+  raise new_exception(Exception, message)
+
+proc not_allowed*() =
+  not_allowed("Error: should not arrive here.")
 
 proc add_ref*(v: Reference): int =
   if REFS.free.len == 0:
@@ -183,7 +191,7 @@ proc kind*(v: Value): ValueKind {.inline.} =
       return VkGene
     of CHAR_PREFIX:
       return VkChar
-    of STRING_PREFIX, STRING6_PREFIX:
+    of SHORT_STR_PREFIX, LONG_STR_PREFIX:
       return VkString
     of OTHER_PREFIX:
       let other_info = cast[Value](bitand(v1, OTHER_MASK))
@@ -258,31 +266,69 @@ proc to_value*(v: char): Value {.inline.} =
 # proc to_value*(v: Rune): Value {.inline.} =
 #   cast[Value](bitor(RUNE_MASK, v.ord.uint64))
 
+proc to_str*(v: Value): string {.inline.} =
+  let v1 = cast[uint64](v)
+  # echo v1.shr(48).int64.to_binstr
+  case cast[int](v1.shr(48)):
+    of SHORT_STR_PREFIX:
+      var x = cast[int64](bitand(cast[uint64](v1), AND_MASK))
+      echo x.to_binstr
+      if x > 0xFF_FFFF:
+        if x > 0xFFFF_FFFF:
+          if x > 0xFF_FFFF_FFFF: # 6 chars
+            result = new_string(6)
+            copy_mem(result[0].addr, cast[pointer](cast[int](x.addr) - 2), 6)
+          else: # 5 chars
+            result = new_string(5)
+            copy_mem(result[0].addr, cast[pointer](cast[int](x.addr) - 3), 5)
+        else: # 4 chars
+          result = new_string(4)
+          copy_mem(result[0].addr, cast[pointer](cast[int](x.addr) - 4), 4)
+      else:
+        if x > 0xFF:
+          if x > 0xFFFF: # 3 chars
+            result = new_string(3)
+            copy_mem(result[0].addr, cast[pointer](cast[int](x.addr) - 5), 3)
+          else: # 2 chars
+            result = new_string(2)
+            copy_mem(result[0].addr, cast[pointer](cast[int](x.addr) - 6), 2)
+        else:
+          if x > 0: # 1 chars
+            result = new_string(1)
+            result[0] = cast[char](x.shr(8))
+          else: # 0 char
+            result = ""
+
+    of LONG_STR_PREFIX:
+      todo()
+    else:
+      not_allowed(fmt"${v} is not a string.")
+
 proc to_value*(v: string): Value {.inline.} =
   case v.len:
     of 0:
       return cast[Value](EMPTY_STRING)
     of 1:
-      return cast[Value](bitor(STRING_MASK, 1.shl(40).uint64,
+      return cast[Value](bitor(SHORT_STR_MASK,
         v[0].ord.uint64))
     of 2:
-      return cast[Value](bitor(STRING_MASK, 2.shl(40).uint64,
+      return cast[Value](bitor(SHORT_STR_MASK,
         v[0].ord.shl(8).uint64, v[1].ord.uint64))
     of 3:
-      return cast[Value](bitor(STRING_MASK, 3.shl(40).uint64,
+      return cast[Value](bitor(SHORT_STR_MASK,
         v[0].ord.shl(16).uint64, v[1].ord.shl(8).uint64, v[2].ord.uint64))
     of 4:
-      return cast[Value](bitor(STRING_MASK, 4.shl(40).uint64,
+      return cast[Value](bitor(SHORT_STR_MASK,
         v[0].ord.shl(24).uint64, v[1].ord.shl(16).uint64, v[2].ord.shl(8).uint64, v[3].ord.uint64))
     of 5:
-      return cast[Value](bitor(STRING_MASK, 5.shl(40).uint64,
+      return cast[Value](bitor(SHORT_STR_MASK,
         v[0].ord.shl(32).uint64, v[1].ord.shl(24).uint64, v[2].ord.shl(16).uint64, v[3].ord.shl(8).uint64, v[4].ord.uint64))
     of 6:
-      return cast[Value](bitor(STRING6_MASK,
+      return cast[Value](bitor(SHORT_STR_MASK,
         v[0].ord.shl(40).uint64, v[1].ord.shl(32).uint64, v[2].ord.shl(24).uint64, v[3].ord.shl(16).uint64, v[4].ord.shl(8).uint64, v[5].ord.uint64))
     else:
       let i = new_str(v).uint64
-      return cast[Value](bitor(STRING_MASK, i))
+      return cast[Value](bitor(LONG_STR_MASK, i))
 
 proc new_array*(v: varargs[Value]): Value =
   let i = add_ref(Reference(kind: VkArray, arr: @v)).uint64

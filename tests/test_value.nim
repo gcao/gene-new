@@ -38,3 +38,5 @@ test "Value conversion":
   check 1.1.to_value().to_float() == 1.1
   var a = 1
   check cast[ptr int64](a.addr.to_value().to_pointer())[] == 1
+
+  check "abc".to_value().to_str() == "abc"
