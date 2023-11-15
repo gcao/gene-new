@@ -152,6 +152,9 @@ proc free_gene*(i: int) =
   GENES.data[i] = nil
   GENES.free.add(i)
 
+proc get_str*(i: int): string =
+  get_ref(i).str
+
 proc new_str*(s: string): int =
   add_ref(Reference(kind: VkString, str: s))
   # if STRINGS.free.len == 0:
@@ -272,35 +275,36 @@ proc to_str*(v: Value): string {.inline.} =
   case cast[int](v1.shr(48)):
     of SHORT_STR_PREFIX:
       var x = cast[int64](bitand(cast[uint64](v1), AND_MASK))
-      echo x.to_binstr
+      # echo x.to_binstr
       if x > 0xFF_FFFF:
         if x > 0xFFFF_FFFF:
           if x > 0xFF_FFFF_FFFF: # 6 chars
             result = new_string(6)
-            copy_mem(result[0].addr, cast[pointer](cast[int](x.addr) - 2), 6)
+            copy_mem(result[0].addr, x.addr, 6)
           else: # 5 chars
             result = new_string(5)
-            copy_mem(result[0].addr, cast[pointer](cast[int](x.addr) - 3), 5)
+            copy_mem(result[0].addr, x.addr, 5)
         else: # 4 chars
           result = new_string(4)
-          copy_mem(result[0].addr, cast[pointer](cast[int](x.addr) - 4), 4)
+          copy_mem(result[0].addr, x.addr, 4)
       else:
         if x > 0xFF:
           if x > 0xFFFF: # 3 chars
             result = new_string(3)
-            copy_mem(result[0].addr, cast[pointer](cast[int](x.addr) - 5), 3)
+            copy_mem(result[0].addr, x.addr, 3)
           else: # 2 chars
             result = new_string(2)
-            copy_mem(result[0].addr, cast[pointer](cast[int](x.addr) - 6), 2)
+            copy_mem(result[0].addr, x.addr, 2)
         else:
           if x > 0: # 1 chars
             result = new_string(1)
-            result[0] = cast[char](x.shr(8))
+            copy_mem(result[0].addr, x.addr, 1)
           else: # 0 char
             result = ""
 
     of LONG_STR_PREFIX:
-      todo()
+      var x = cast[int](bitand(cast[uint64](v1), AND_MASK))
+      result = get_str(x)
     else:
       not_allowed(fmt"${v} is not a string.")
 
@@ -313,19 +317,19 @@ proc to_value*(v: string): Value {.inline.} =
         v[0].ord.uint64))
     of 2:
       return cast[Value](bitor(SHORT_STR_MASK,
-        v[0].ord.shl(8).uint64, v[1].ord.uint64))
+        v[0].ord.uint64, v[1].ord.shl(8).uint64))
     of 3:
       return cast[Value](bitor(SHORT_STR_MASK,
-        v[0].ord.shl(16).uint64, v[1].ord.shl(8).uint64, v[2].ord.uint64))
+        v[0].ord.uint64, v[1].ord.shl(8).uint64, v[2].ord.shl(16).uint64))
     of 4:
       return cast[Value](bitor(SHORT_STR_MASK,
-        v[0].ord.shl(24).uint64, v[1].ord.shl(16).uint64, v[2].ord.shl(8).uint64, v[3].ord.uint64))
+        v[0].ord.uint64, v[1].ord.shl(8).uint64, v[2].ord.shl(16).uint64, v[3].ord.shl(24).uint64))
     of 5:
       return cast[Value](bitor(SHORT_STR_MASK,
-        v[0].ord.shl(32).uint64, v[1].ord.shl(24).uint64, v[2].ord.shl(16).uint64, v[3].ord.shl(8).uint64, v[4].ord.uint64))
+        v[0].ord.uint64, v[1].ord.shl(8).uint64, v[2].ord.shl(16).uint64, v[3].ord.shl(24).uint64, v[4].ord.shl(32).uint64))
     of 6:
       return cast[Value](bitor(SHORT_STR_MASK,
-        v[0].ord.shl(40).uint64, v[1].ord.shl(32).uint64, v[2].ord.shl(24).uint64, v[3].ord.shl(16).uint64, v[4].ord.shl(8).uint64, v[5].ord.uint64))
+        v[0].ord.uint64, v[1].ord.shl(8).uint64, v[2].ord.shl(16).uint64, v[3].ord.shl(24).uint64, v[4].ord.shl(32).uint64, v[5].ord.shl(40).uint64))
     else:
       let i = new_str(v).uint64
       return cast[Value](bitor(LONG_STR_MASK, i))

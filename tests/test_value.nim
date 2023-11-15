@@ -18,7 +18,13 @@ test "Value kind":
 
   check 'a'.to_value().kind == VkChar
 
+  check "".to_value().kind == VkString
+  check "a".to_value().kind == VkString
+  check "ab".to_value().kind == VkString
   check "abc".to_value().kind == VkString
+  check "abcd".to_value().kind == VkString
+  check "abcde".to_value().kind == VkString
+  check "abcdef".to_value().kind == VkString
   check "abcdefghij".to_value().kind == VkString
   check new_array().kind == VkArray
   check new_map().kind == VkMap
@@ -39,4 +45,11 @@ test "Value conversion":
   var a = 1
   check cast[ptr int64](a.addr.to_value().to_pointer())[] == 1
 
+  check "".to_value().to_str() == ""
+  check "a".to_value().to_str() == "a"
+  check "ab".to_value().to_str() == "ab"
   check "abc".to_value().to_str() == "abc"
+  check "abcd".to_value().to_str() == "abcd"
+  check "abcde".to_value().to_str() == "abcde"
+  check "abcdef".to_value().to_str() == "abcdef"
+  check "abcdefghij".to_value().to_str() == "abcdefghij"
