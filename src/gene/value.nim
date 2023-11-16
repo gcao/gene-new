@@ -13,8 +13,7 @@ type
     VkBool
     VkInt
     VkFloat
-    VkChar
-    # VkRune  # Unicode code point = u32
+    VkChar    # Support ascii and unicode characters
     VkString
     VkSymbol
 
@@ -39,16 +38,6 @@ type
     `type`*: Value
     props*: Table[string, Value]
     children*: seq[Value]
-
-  # Design an efficient thread-local data structure to store all strings,
-  # sequences, maps, references, and other objects that are not primitive
-
-  # # add(v)  => if available.empty() then data.push(v) else data[available.pop()] = v
-  # # free(i) => available.push(i), data[i] = nil
-  # # get(i)  => data[i]
-  # ManagedStrings = object
-  #   data: seq[string]
-  #   free: seq[int64]
 
   # No symbols should be removed.
   ManagedSymbols = object
@@ -92,29 +81,23 @@ const PLACEHOLDER* = cast[Value](0x7FFE_0100_0000_0000u64)
 
 const CHAR_PREFIX = 0xFFFE
 const CHAR_MASK = 0xFFFE_0000_0000_0000u64
-# const RUNE_PREFIX = 0xFFFF
-# const RUNE_MASK = 0xFFFF_0000_0000_0000u64
 
-const EMPTY_STRING = 0xFFF8_0000_0000_0000u64
 const SHORT_STR_PREFIX  = 0xFFF8
 const LONG_STR_PREFIX = 0xFFF9
 const SHORT_STR_MASK = 0xFFF8_0000_0000_0000u64
 const LONG_STR_MASK = 0xFFF9_0000_0000_0000u64
 
-const EMPTY_SYMBOL = 0xFFFA_0000_0000_0000u64
-const SYMBOL_PREFIX  = 0xFFFA
+const EMPTY_STRING = 0xFFF8_0000_0000_0000u64
 
-# TODO: these should be thread-local
-# var STRINGS*: ManagedStrings = ManagedStrings()
-var SYMBOLS*: ManagedSymbols = ManagedSymbols()
-var REFS*: ManagedReferences = ManagedReferences()
-var GENES*: ManagedGenes = ManagedGenes()
+const SYMBOL_PREFIX  = 0xFFFA
+const EMPTY_SYMBOL = 0xFFFA_0000_0000_0000u64
 
 #################### Definitions #################
 
 proc `$`*(self: Value): string
 proc `$`*(self: Reference): string
 proc to_ref*(v: Value): Reference
+proc get_symbol*(i: int64): string {.inline.}
 
 #################### Common ######################
 
@@ -131,6 +114,11 @@ proc to_binstr*(v: int64): string =
   re.replacef(fmt"{v: 065b}", re.re"([01]{8})", "$1 ")
 
 #################### Reference ###################
+
+var REFS*: ManagedReferences
+
+proc `$`*(self: Reference): string =
+  $self.kind
 
 proc add_ref*(v: Reference): int64 =
   if REFS.free.len == 0:
@@ -150,44 +138,6 @@ proc free_ref*(i: int64) =
 
 proc to_ref*(v: Value): Reference =
   get_ref(cast[int64](bitand(REF_AND_MASK, v.uint64)))
-
-#################### Gene ########################
-
-proc add_gene*(v: Gene): int64 =
-  if GENES.free.len == 0:
-    result = GENES.data.len
-    GENES.data.add(v)
-  else:
-    result = GENES.free.pop()
-    GENES.data[result] = v
-  # echo GENES.data, " ", result
-
-proc get_gene*(i: int64): Gene =
-  GENES.data[i]
-
-proc free_gene*(i: int64) =
-  GENES.data[i] = nil
-  GENES.free.add(i)
-
-#################### String ######################
-
-proc get_str*(i: int64): string =
-  get_ref(i).str
-
-proc new_str*(s: string): int64 =
-  add_ref(Reference(kind: VkString, str: s))
-  # if STRINGS.free.len == 0:
-  #   STRINGS.data.add(s)
-  #   return STRINGS.data.len - 1
-  # else:
-  #   let i = STRINGS.free.pop()
-  #   STRINGS.data[i] = s
-  #   return i
-
-proc free_str*(i: int64) =
-  free_ref(i)
-  # STRINGS.data[i] = ""
-  # STRINGS.free.add(i)
 
 #################### Value ######################
 
@@ -240,9 +190,6 @@ proc `$`*(self: Value): string =
     else:
       result = $self.kind
 
-proc `$`*(self: Reference): string =
-  $self.kind
-
 proc is_nil*(v: Value): bool {.inline.} =
   v == NIL
 
@@ -282,14 +229,19 @@ proc to_value*(v: pointer): Value {.inline.} =
 proc to_char*(v: Value): char {.inline.} =
   todo()
 
+#################### String #####################
+
+proc get_str*(i: int64): string =
+  get_ref(i).str
+
+proc new_str*(s: string): int64 =
+  add_ref(Reference(kind: VkString, str: s))
+
+proc free_str*(i: int64) =
+  free_ref(i)
+
 proc to_value*(v: char): Value {.inline.} =
   cast[Value](bitor(CHAR_MASK, v.ord.uint64))
-
-# proc to_rune*(v: Value): Rune {.inline.} =
-#   todo()
-
-# proc to_value*(v: Rune): Value {.inline.} =
-#   cast[Value](bitor(RUNE_MASK, v.ord.uint64))
 
 proc str*(v: Value): string {.inline.} =
   let v1 = cast[uint64](v)
@@ -330,7 +282,7 @@ proc str*(v: Value): string {.inline.} =
 
     of SYMBOL_PREFIX:
       var x = cast[int64](bitand(cast[uint64](v1), AND_MASK))
-      result = SYMBOLS.store[x]
+      result = get_symbol(x)
 
     else:
       not_allowed(fmt"${v} is not a string.")
@@ -363,6 +315,11 @@ proc to_value*(v: string): Value {.inline.} =
 
 #################### Symbol #####################
 
+var SYMBOLS*: ManagedSymbols
+
+proc get_symbol*(i: int64): string {.inline.} =
+  SYMBOLS.store[i]
+
 proc to_symbol*(s: string): Value {.inline.} =
   if SYMBOLS.map.has_key(s):
     let i = SYMBOLS.map[s].uint64
@@ -378,10 +335,41 @@ proc new_array*(v: varargs[Value]): Value =
   let i = add_ref(Reference(kind: VkArray, arr: @v)).uint64
   cast[Value](bitor(REF_MASK, i))
 
+#################### Map #########################
+
 proc new_map*(): Value =
   let i = add_ref(Reference(kind: VkMap)).uint64
   cast[Value](bitor(REF_MASK, i))
 
+#################### Gene ########################
+
+var GENES*: ManagedGenes
+
+proc add_gene*(v: Gene): int64 =
+  if GENES.free.len == 0:
+    result = GENES.data.len
+    GENES.data.add(v)
+  else:
+    result = GENES.free.pop()
+    GENES.data[result] = v
+  # echo GENES.data, " ", result
+
+proc get_gene*(i: int64): Gene =
+  GENES.data[i]
+
+proc free_gene*(i: int64) =
+  GENES.data[i] = nil
+  GENES.free.add(i)
+
 proc new_gene*(): Value =
   let i = add_gene(Gene()).uint64
   cast[Value](bitor(GENE_MASK, i))
+
+#################### Helpers #####################
+
+proc init_values*() =
+  REFS = ManagedReferences()
+  GENES = ManagedGenes()
+  SYMBOLS = ManagedSymbols()
+
+init_values()

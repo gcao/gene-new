@@ -70,3 +70,9 @@ test "Value conversion":
   check "abcdefghij".to_symbol().str() == "abcdefghij"
   check "你".to_symbol().str() == "你"
   check "你从哪里来？".to_symbol().str() == "你从哪里来？"
+
+test "String / char":
+  discard
+
+test "Array":
+  discard
