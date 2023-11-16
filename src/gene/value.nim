@@ -48,20 +48,20 @@ type
   # # get(i)  => data[i]
   # ManagedStrings = object
   #   data: seq[string]
-  #   free: seq[int]
+  #   free: seq[int64]
 
   # No symbols should be removed.
   ManagedSymbols = object
     store: seq[string]
-    map:  Table[string, int]
+    map:  Table[string, int64]
 
   ManagedReferences = object
     data: seq[Reference]
-    free: seq[int]
+    free: seq[int64]
 
   ManagedGenes = object
     data: seq[Gene]
-    free: seq[int]
+    free: seq[int64]
 
 const I64_MASK = 0xC000_0000_0000_0000u64
 const F64_ZERO = 0x2000_0000_0000_0000u64
@@ -83,7 +83,6 @@ const REF_AND_MASK = 0x0000_FFFF_FFFF_FFFFu64
 
 const GENE_PREFIX = 0x7FF8
 const GENE_MASK = 0x7FF8_0000_0000_0000u64
-const GENE_AND_MASK = 0x0000_FFFF_FFFF_FFFFu64
 
 const OTHER_PREFIX = 0x7FFE
 const OTHER_MASK = 0x7FFE_FF00_0000_0000u64
@@ -111,9 +110,13 @@ var SYMBOLS*: ManagedSymbols = ManagedSymbols()
 var REFS*: ManagedReferences = ManagedReferences()
 var GENES*: ManagedGenes = ManagedGenes()
 
+#################### Definitions #################
+
 proc `$`*(self: Value): string
 proc `$`*(self: Reference): string
 proc to_ref*(v: Value): Reference
+
+#################### Common ######################
 
 proc todo*() =
   raise new_exception(Exception, "TODO")
@@ -124,7 +127,12 @@ proc not_allowed*(message: string) =
 proc not_allowed*() =
   not_allowed("Error: should not arrive here.")
 
-proc add_ref*(v: Reference): int =
+proc to_binstr*(v: int64): string =
+  re.replacef(fmt"{v: 065b}", re.re"([01]{8})", "$1 ")
+
+#################### Reference ###################
+
+proc add_ref*(v: Reference): int64 =
   if REFS.free.len == 0:
     result = REFS.data.len
     REFS.data.add(v)
@@ -133,14 +141,19 @@ proc add_ref*(v: Reference): int =
     REFS.data[result] = v
   # echo REFS.data, " ", result
 
-proc get_ref*(i: int): Reference =
+proc get_ref*(i: int64): Reference =
   REFS.data[i]
 
-proc free_ref*(i: int) =
+proc free_ref*(i: int64) =
   REFS.data[i] = nil
   REFS.free.add(i)
 
-proc add_gene*(v: Gene): int =
+proc to_ref*(v: Value): Reference =
+  get_ref(cast[int64](bitand(REF_AND_MASK, v.uint64)))
+
+#################### Gene ########################
+
+proc add_gene*(v: Gene): int64 =
   if GENES.free.len == 0:
     result = GENES.data.len
     GENES.data.add(v)
@@ -149,17 +162,19 @@ proc add_gene*(v: Gene): int =
     GENES.data[result] = v
   # echo GENES.data, " ", result
 
-proc get_gene*(i: int): Gene =
+proc get_gene*(i: int64): Gene =
   GENES.data[i]
 
-proc free_gene*(i: int) =
+proc free_gene*(i: int64) =
   GENES.data[i] = nil
   GENES.free.add(i)
 
-proc get_str*(i: int): string =
+#################### String ######################
+
+proc get_str*(i: int64): string =
   get_ref(i).str
 
-proc new_str*(s: string): int =
+proc new_str*(s: string): int64 =
   add_ref(Reference(kind: VkString, str: s))
   # if STRINGS.free.len == 0:
   #   STRINGS.data.add(s)
@@ -169,20 +184,19 @@ proc new_str*(s: string): int =
   #   STRINGS.data[i] = s
   #   return i
 
-proc free_str*(i: int) =
+proc free_str*(i: int64) =
   free_ref(i)
   # STRINGS.data[i] = ""
   # STRINGS.free.add(i)
 
-proc to_binstr*(v: int64): string =
-  re.replacef(fmt"{v: 065b}", re.re"([01]{8})", "$1 ")
+#################### Value ######################
 
 proc `==`*(a, b: Value): bool {.inline.} =
   cast[int64](a) == cast[int64](b)
 
 proc kind*(v: Value): ValueKind {.inline.} =
   let v1 = cast[uint64](v)
-  case cast[int](v1.shr(48)):
+  case cast[int64](v1.shr(48)):
     of NIL_PREFIX:
       return VkNil
     of BOOL_PREFIX:
@@ -192,7 +206,7 @@ proc kind*(v: Value): ValueKind {.inline.} =
     of REF_PREFIX:
       # It may not be a bad idea to store the reference kind in the value itself.
       # However we may later support changing reference in place, so it may not be a good idea.
-      let r = get_ref(cast[int](bitand(v1, REF_AND_MASK)))
+      let r = get_ref(cast[int64](bitand(v1, REF_AND_MASK)))
       return r.kind
     of GENE_PREFIX:
       return VkGene
@@ -247,7 +261,7 @@ proc to_value*(v: float64): Value {.inline.} =
   else:
     return cast[Value](v)
 
-proc to_bool*(v: Value): bool {.inline.} =
+converter to_bool*(v: Value): bool {.inline.} =
   not (v == FALSE or v == NIL)
 
 proc to_value*(v: bool): Value {.inline.} =
@@ -280,7 +294,7 @@ proc to_value*(v: char): Value {.inline.} =
 proc str*(v: Value): string {.inline.} =
   let v1 = cast[uint64](v)
   # echo v1.shr(48).int64.to_binstr
-  case cast[int](v1.shr(48)):
+  case cast[int64](v1.shr(48)):
     of SHORT_STR_PREFIX:
       var x = cast[int64](bitand(cast[uint64](v1), AND_MASK))
       # echo x.to_binstr
@@ -311,11 +325,11 @@ proc str*(v: Value): string {.inline.} =
             result = ""
 
     of LONG_STR_PREFIX:
-      var x = cast[int](bitand(cast[uint64](v1), AND_MASK))
+      var x = cast[int64](bitand(cast[uint64](v1), AND_MASK))
       result = get_str(x)
 
     of SYMBOL_PREFIX:
-      var x = cast[int](bitand(cast[uint64](v1), AND_MASK))
+      var x = cast[int64](bitand(cast[uint64](v1), AND_MASK))
       result = SYMBOLS.store[x]
 
     else:
@@ -347,20 +361,7 @@ proc to_value*(v: string): Value {.inline.} =
       let i = new_str(v).uint64
       return cast[Value](bitor(LONG_STR_MASK, i))
 
-proc new_array*(v: varargs[Value]): Value =
-  let i = add_ref(Reference(kind: VkArray, arr: @v)).uint64
-  cast[Value](bitor(REF_MASK, i))
-
-proc to_ref*(v: Value): Reference =
-  get_ref(cast[int](bitand(REF_AND_MASK, v.uint64)))
-
-proc new_map*(): Value =
-  let i = add_ref(Reference(kind: VkMap)).uint64
-  cast[Value](bitor(REF_MASK, i))
-
-proc new_gene*(): Value =
-  let i = add_gene(Gene()).uint64
-  cast[Value](bitor(GENE_MASK, i))
+#################### Symbol #####################
 
 proc to_symbol*(s: string): Value {.inline.} =
   if SYMBOLS.map.has_key(s):
@@ -370,3 +371,17 @@ proc to_symbol*(s: string): Value {.inline.} =
     result = cast[Value](bitor(EMPTY_SYMBOL, SYMBOLS.store.len.uint64))
     SYMBOLS.map[s] = SYMBOLS.store.len
     SYMBOLS.store.add(s)
+
+#################### Array ######################
+
+proc new_array*(v: varargs[Value]): Value =
+  let i = add_ref(Reference(kind: VkArray, arr: @v)).uint64
+  cast[Value](bitor(REF_MASK, i))
+
+proc new_map*(): Value =
+  let i = add_ref(Reference(kind: VkMap)).uint64
+  cast[Value](bitor(REF_MASK, i))
+
+proc new_gene*(): Value =
+  let i = add_gene(Gene()).uint64
+  cast[Value](bitor(GENE_MASK, i))
