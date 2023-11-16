@@ -14,8 +14,9 @@ type
     VkInt
     VkFloat
     VkChar
-    VkString
     # VkRune  # Unicode code point = u32
+    VkString
+    VkSymbol
 
     VkArray
     VkMap
@@ -25,7 +26,7 @@ type
 
   Reference* = ref object
     case kind*: ValueKind
-      of VkString:
+      of VkString, VkSymbol:
         str*: string
       of VkArray:
         arr*: seq[Value]
@@ -42,17 +43,17 @@ type
   # Design an efficient thread-local data structure to store all strings,
   # sequences, maps, references, and other objects that are not primitive
 
-  # add(v)  => if available.empty() then data.push(v) else data[available.pop()] = v
-  # free(i) => available.push(i), data[i] = nil
-  # get(i)  => data[i]
-  ManagedStrings = object
-    data: seq[string]
-    free: seq[int]
+  # # add(v)  => if available.empty() then data.push(v) else data[available.pop()] = v
+  # # free(i) => available.push(i), data[i] = nil
+  # # get(i)  => data[i]
+  # ManagedStrings = object
+  #   data: seq[string]
+  #   free: seq[int]
 
   # No symbols should be removed.
   ManagedSymbols = object
-    data:  Table[string, int]
-    data2: Table[int, string]
+    store: seq[string]
+    map:  Table[string, int]
 
   ManagedReferences = object
     data: seq[Reference]
@@ -95,14 +96,17 @@ const CHAR_MASK = 0xFFFE_0000_0000_0000u64
 # const RUNE_PREFIX = 0xFFFF
 # const RUNE_MASK = 0xFFFF_0000_0000_0000u64
 
-const EMPTY_STRING = 0xFFFA_0000_0000_0000u64
-const SHORT_STR_PREFIX  = 0xFFFA
-const LONG_STR_PREFIX = 0xFFFB
-const SHORT_STR_MASK = 0xFFFA_0000_0000_0000u64
-const LONG_STR_MASK = 0xFFFB_0000_0000_0000u64
+const EMPTY_STRING = 0xFFF8_0000_0000_0000u64
+const SHORT_STR_PREFIX  = 0xFFF8
+const LONG_STR_PREFIX = 0xFFF9
+const SHORT_STR_MASK = 0xFFF8_0000_0000_0000u64
+const LONG_STR_MASK = 0xFFF9_0000_0000_0000u64
+
+const EMPTY_SYMBOL = 0xFFFA_0000_0000_0000u64
+const SYMBOL_PREFIX  = 0xFFFA
 
 # TODO: these should be thread-local
-var STRINGS*: ManagedStrings = ManagedStrings()
+# var STRINGS*: ManagedStrings = ManagedStrings()
 var SYMBOLS*: ManagedSymbols = ManagedSymbols()
 var REFS*: ManagedReferences = ManagedReferences()
 var GENES*: ManagedGenes = ManagedGenes()
@@ -196,6 +200,8 @@ proc kind*(v: Value): ValueKind {.inline.} =
       return VkChar
     of SHORT_STR_PREFIX, LONG_STR_PREFIX:
       return VkString
+    of SYMBOL_PREFIX:
+      return VkSymbol
     of OTHER_PREFIX:
       let other_info = cast[Value](bitand(v1, OTHER_MASK))
       case other_info:
@@ -214,9 +220,11 @@ proc kind*(v: Value): ValueKind {.inline.} =
 proc `$`*(self: Value): string =
   case self.kind:
     of VkString:
-      $self.to_ref.str
+      result = $self.to_ref.str
+    of VkSymbol:
+      todo()
     else:
-      $self.kind
+      result = $self.kind
 
 proc `$`*(self: Reference): string =
   $self.kind
@@ -269,7 +277,7 @@ proc to_value*(v: char): Value {.inline.} =
 # proc to_value*(v: Rune): Value {.inline.} =
 #   cast[Value](bitor(RUNE_MASK, v.ord.uint64))
 
-proc to_str*(v: Value): string {.inline.} =
+proc str*(v: Value): string {.inline.} =
   let v1 = cast[uint64](v)
   # echo v1.shr(48).int64.to_binstr
   case cast[int](v1.shr(48)):
@@ -305,6 +313,11 @@ proc to_str*(v: Value): string {.inline.} =
     of LONG_STR_PREFIX:
       var x = cast[int](bitand(cast[uint64](v1), AND_MASK))
       result = get_str(x)
+
+    of SYMBOL_PREFIX:
+      var x = cast[int](bitand(cast[uint64](v1), AND_MASK))
+      result = SYMBOLS.store[x]
+
     else:
       not_allowed(fmt"${v} is not a string.")
 
@@ -348,3 +361,12 @@ proc new_map*(): Value =
 proc new_gene*(): Value =
   let i = add_gene(Gene()).uint64
   cast[Value](bitor(GENE_MASK, i))
+
+proc to_symbol*(s: string): Value {.inline.} =
+  if SYMBOLS.map.has_key(s):
+    let i = SYMBOLS.map[s].uint64
+    result = cast[Value](bitor(EMPTY_SYMBOL, i))
+  else:
+    result = cast[Value](bitor(EMPTY_SYMBOL, SYMBOLS.store.len.uint64))
+    SYMBOLS.map[s] = SYMBOLS.store.len
+    SYMBOLS.store.add(s)

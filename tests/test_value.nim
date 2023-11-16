@@ -26,9 +26,18 @@ test "Value kind":
   check "abcde".to_value().kind == VkString
   check "abcdef".to_value().kind == VkString
   check "abcdefghij".to_value().kind == VkString
+  check "你".to_value().kind == VkString
+  check "你从哪里来？".to_value().kind == VkString
+
   check new_array().kind == VkArray
   check new_map().kind == VkMap
   check new_gene().kind == VkGene
+
+  check "".to_symbol().kind == VkSymbol
+  check "a".to_symbol().kind == VkSymbol
+  check "abcdefghij".to_symbol().kind == VkSymbol
+  check "你".to_symbol().kind == VkSymbol
+  check "你从哪里来？".to_symbol().kind == VkSymbol
 
 test "Value conversion":
   check nil.to_value().is_nil() == true
@@ -45,11 +54,19 @@ test "Value conversion":
   var a = 1
   check cast[ptr int64](a.addr.to_value().to_pointer())[] == 1
 
-  check "".to_value().to_str() == ""
-  check "a".to_value().to_str() == "a"
-  check "ab".to_value().to_str() == "ab"
-  check "abc".to_value().to_str() == "abc"
-  check "abcd".to_value().to_str() == "abcd"
-  check "abcde".to_value().to_str() == "abcde"
-  check "abcdef".to_value().to_str() == "abcdef"
-  check "abcdefghij".to_value().to_str() == "abcdefghij"
+  check "".to_value().str() == ""
+  check "a".to_value().str() == "a"
+  check "ab".to_value().str() == "ab"
+  check "abc".to_value().str() == "abc"
+  check "abcd".to_value().str() == "abcd"
+  check "abcde".to_value().str() == "abcde"
+  check "abcdef".to_value().str() == "abcdef"
+  check "abcdefghij".to_value().str() == "abcdefghij"
+  check "你".to_value().str() == "你"
+  check "你从哪里来？".to_value().str() == "你从哪里来？"
+
+  check "".to_symbol().str() == ""
+  check "abc".to_symbol().str() == "abc"
+  check "abcdefghij".to_symbol().str() == "abcdefghij"
+  check "你".to_symbol().str() == "你"
+  check "你从哪里来？".to_symbol().str() == "你从哪里来？"
