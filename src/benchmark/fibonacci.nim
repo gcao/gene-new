@@ -1,9 +1,9 @@
 when isMainModule:
   import times
 
-  import ./gene/types
-  import ./gene/parser
-  import ./gene/interpreter
+  import ../gene/types
+  import ../gene/parser
+  import ../gene/interpreter
 
   init_app_and_vm()
 
