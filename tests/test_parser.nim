@@ -72,6 +72,7 @@ test_parser ",'test',", "test"
 
 test_parser "a", new_gene_symbol("a")
 test_parser "A", new_gene_symbol("A")
+test_parser "/", new_gene_symbol("/")
 test_parser "+a", new_gene_symbol("+a")
 test_parser "#a", new_gene_symbol("#a")
 test_parser "a#b", new_gene_symbol("a#b")

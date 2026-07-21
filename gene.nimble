@@ -22,8 +22,8 @@ task buildext, "Build the Nim extension":
   exec "nim c --app:lib -d:useMalloc --outdir:build src/genex/sqlite.nim"
   exec "nim c --app:lib -d:useMalloc --outdir:build src/genex/mysql.nim"
 
-after build:
-  exec "nimble buildext"
+# after build:
+#   exec "nimble buildext"
 
 before test:
   exec "nim c --app:lib -d:useMalloc --debuginfo:on --outdir:tests tests/extension.nim"
@@ -78,3 +78,9 @@ task test, "Runs the test suite":
   exec "nim c -r tests/test_stdlib_json.nim"
 
   exec "nim c -r tests/js/test_js.nim"
+
+task test2, "Runs VM test suite":
+  exec "nim c -r tests/test_vm.nim"
+  exec "nim c -r tests/test_vm_namespace.nim"
+  exec "nim c -r tests/test_vm_fp.nim"
+  exec "nim c -r tests/test_vm_macro.nim"
